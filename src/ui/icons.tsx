@@ -31,6 +31,7 @@ const PATHS = {
       <circle cx="17" cy="17.5" r="1.8" />
     </>
   ),
+  express: <path d="M13 3.5L5.5 13H12l-1 7.5L18.5 11H12z" />,
   coverage: (
     <>
       <path d="M3 7.5l9-4 9 4-9 4-9-4z" />
@@ -46,6 +47,12 @@ const PATHS = {
       <path d="M12 8.5v3.5M6 15.5V12h12v3.5" />
     </>
   ),
+  stock: (
+    <>
+      <path d="M3.5 20.5V9l8.5-5 8.5 5v11.5" />
+      <path d="M7.5 20.5v-7h9v7M7.5 16.5h9" />
+    </>
+  ),
   packaging: (
     <>
       <path d="M3.5 8l8.5-4.5L20.5 8v8.5L12 21l-8.5-4.5z" />
@@ -57,6 +64,12 @@ const PATHS = {
     <>
       <path d="M3 20.5V10l5 3V10l5 3V6l8 4v10.5z" />
       <path d="M3 20.5h18" />
+    </>
+  ),
+  inbound: (
+    <>
+      <path d="M12 3.5v10M8 9.5l4 4 4-4" />
+      <path d="M4 14.5v5h16v-5" />
     </>
   ),
   suppliers: (
@@ -72,6 +85,13 @@ const PATHS = {
       <path d="M9 6.5h11M9 12h11M9 17.5h11" />
       <path d="M3.5 6.5l1.3 1.3L7 5.5M3.5 12l1.3 1.3L7 11" />
       <rect x="3.5" y="16" width="3" height="3" rx=".5" />
+    </>
+  ),
+  reports: (
+    <>
+      <path d="M7 3.5h7l4 4V20.5H6.5V3.5z" />
+      <path d="M14 3.5V8h4" />
+      <path d="M9.5 17v-3M12 17v-5M14.5 17v-2" />
     </>
   ),
   data: (

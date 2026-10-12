@@ -54,12 +54,14 @@ funkce (plánování).
 ### Fáze 6: Dashboard
 ### Fáze 7: Plánování (plnění plánu a prostoje)
 ### Fáze 8: KPI
+### Fáze 9: Příjem a Zásoby
 
 Obsah modulů je v [MODULES.md](MODULES.md).
 
 ### Později
 - Expedice a dodávky (OTD outbound), Dodavatelé (OTD inbound). Dnes se sledují v jiné aplikaci.
 - Akční plán (upřesní se)
+- Mimořádné přepravy, Reporty
 - E-mailová upozornění, aktivní plánování s Ganttovým diagramem (vyžadují server)
 
 ## Otevřené otázky

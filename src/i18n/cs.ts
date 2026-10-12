@@ -21,9 +21,10 @@ export const cs = {
     groups: {
       overview: 'Přehledy',
       customers: 'Zákazníci',
-      material: 'Materiál',
-      production: 'Výroba a obaly',
-      suppliers: 'Dodavatelé a řízení',
+      material: 'Materiál a sklad',
+      production: 'Výroba',
+      suppliers: 'Dodavatelé',
+      management: 'Řízení',
       system: 'Systém',
     },
     phase: 'Fáze',
@@ -74,6 +75,12 @@ export const cs = {
       description: 'Dodáváme zákazníkům včas?',
       features: ['Včasnost dodávek zákazníkům', 'Dlužné dodávky', 'Mimořádné přepravy'],
     },
+    express: {
+      title: 'Mimořádné přepravy',
+      subtitle: 'Premium freight',
+      description: 'Kolik nás stojí mimořádné přepravy a proč vznikají.',
+      features: ['Zápis mimořádné přepravy přímo v aplikaci', 'Příčina, náklad a odpovědnost', 'Vývoj počtu a nákladů v čase'],
+    },
     coverage: {
       title: 'Coverage',
       subtitle: 'Pokrytí hotových výrobků',
@@ -90,6 +97,12 @@ export const cs = {
         'Otevřené nákupní objednávky',
         'Shortage list pro ranní poradu',
       ],
+    },
+    stock: {
+      title: 'Zásoby',
+      subtitle: 'Zdraví skladu',
+      description: 'Nemáme zásob moc nebo málo?',
+      features: ['Zásoba ve dnech spotřeby', 'Díly nad maximem a pod minimem', 'Ležáky bez pohybu'],
     },
     packaging: {
       title: 'Obaly',
@@ -111,6 +124,16 @@ export const cs = {
         'Prostoje kvůli chybějícímu materiálu',
       ],
     },
+    inbound: {
+      title: 'Příjem',
+      subtitle: 'Očekávané dodávky',
+      description: 'Co má dnes a zítra přijet a co je po termínu.',
+      features: [
+        'Očekávané dodávky na dnes a zítra',
+        'Dodávky po termínu',
+        'Vazba na shortage list komponent',
+      ],
+    },
     suppliers: {
       title: 'Dodavatelé',
       subtitle: 'OTD inbound',
@@ -122,6 +145,12 @@ export const cs = {
       subtitle: 'Úkoly z porad',
       description: 'Kdo co řeší a do kdy. Podrobnosti se upřesní.',
       features: ['Úkoly z porad', 'Odpovědná osoba, termín a stav'],
+    },
+    reports: {
+      title: 'Reporty',
+      subtitle: 'Týdenní report',
+      description: 'Souhrn pro vedení na jedno kliknutí.',
+      features: ['Týdenní souhrn z ostatních modulů', 'Export do PDF a Excelu'],
     },
     data: {
       title: 'Data',
