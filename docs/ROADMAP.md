@@ -29,13 +29,13 @@ funkce (plánování).
 - [x] Rozhodnutí o provozu a jazyku (ADR 0001, 0002)
 - [x] Anonymizace dokumentace pro veřejný repozitář
 
-### Fáze 1: Základ aplikace (probíhá)
+### Fáze 1: Základ aplikace ✅
 - [x] Projekt Vite + React + TypeScript, ESLint, Vitest
 - [x] Čeština a angličtina, světlý a tmavý režim
 - [x] Content-Security-Policy, která zakazuje odesílání dat
 - [x] Kontrola, že v repozitáři nejsou datové soubory
 - [x] CI a automatické nasazení na GitHub Pages
-- [ ] Zapnutí GitHub Pages a veřejné viditelnosti repozitáře ([DEPLOYMENT.md](DEPLOYMENT.md))
+- [x] Zveřejnění repozitáře a nasazení na https://holyfix.github.io/logistics/ ([DEPLOYMENT.md](DEPLOYMENT.md))
 
 ### Fáze 2: Načítání dat
 - Výběr sdílené složky a zapamatování přístupu

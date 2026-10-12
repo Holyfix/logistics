@@ -22,6 +22,13 @@ GitHub → repozitář → **Settings** → **General** → úplně dole **Dange
 GitHub → repozitář → **Settings** → **Pages** → **Build and deployment** →
 **Source: GitHub Actions**.
 
+### Prostředí github-pages
+
+Při zapnutí Pages GitHub založí prostředí **github-pages** a povolí nasazení jen
+z tehdejší výchozí větve. Pokud nasazení z `main` selže hned na začátku bez kroků:
+**Settings** → **Environments** → **github-pages** → **Deployment branches and tags** →
+přidat pravidlo `main`, pak v **Actions** spustit nasazení znovu.
+
 ## 4. Větev `main`
 
 Nasazení se spouští při pushi do `main` (`.github/workflows/deploy.yml`).
