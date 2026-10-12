@@ -40,3 +40,23 @@ export function formatDate(isoDate: string, locale: Locale): string {
     timeZone: 'UTC',
   }).format(date);
 }
+
+/** Rozdíl se znaménkem: „+50“, „−1 200“ (typografické minus), nula bez znaménka. */
+export function formatSigned(value: number, locale: Locale): string {
+  const abs = formatQuantity(Math.abs(value), locale);
+  return value > 0 ? `+${abs}` : value < 0 ? `−${abs}` : abs;
+}
+
+/** Procenta s nejvýše jedním desetinným místem; se znaménkem pro změnu („+12,5 %“). */
+const percentFormats = new Map<Locale, Intl.NumberFormat>();
+
+export function formatPercent(value: number, locale: Locale, signed = false): string {
+  let f = percentFormats.get(locale);
+  if (!f) percentFormats.set(locale, (f = new Intl.NumberFormat(LOCALE_TAGS[locale], { maximumFractionDigits: 1 })));
+  const digits = f.format(Math.abs(value));
+  const text = `${digits} %`;
+  // Změna, která se zaokrouhlí na nulu, je bez znaménka.
+  if (digits === '0') return text;
+  if (!signed) return value < 0 ? `−${text}` : text;
+  return value > 0 ? `+${text}` : `−${text}`;
+}

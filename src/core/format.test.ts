@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatDate, formatQuantity } from './format';
+import { formatDate, formatPercent, formatQuantity, formatSigned } from './format';
 
 describe('formatQuantity', () => {
   it('odděluje tisíce podle jazyka', () => {
@@ -21,5 +21,20 @@ describe('formatDate', () => {
   it('odmítne neplatné datum', () => {
     expect(() => formatDate('12.10.2026', 'cs')).toThrow(/Neplatné datum/);
     expect(() => formatDate('2026-02-30', 'cs')).toThrow(/Neplatné datum/);
+  });
+});
+
+describe('formatSigned a formatPercent', () => {
+  it('rozdíl se znaménkem', () => {
+    expect(formatSigned(1200, 'en')).toBe('+1,200');
+    expect(formatSigned(-5, 'cs')).toBe('−5');
+    expect(formatSigned(0, 'cs')).toBe('0');
+  });
+
+  it('procenta s jedním desetinným místem', () => {
+    expect(formatPercent(12.345, 'cs', true)).toBe('+12,3 %');
+    expect(formatPercent(-4, 'en', true)).toBe('−4 %');
+    expect(formatPercent(90.25, 'en')).toBe('90.3 %');
+    expect(formatPercent(0.03, 'cs', true)).toBe('0 %');
   });
 });
