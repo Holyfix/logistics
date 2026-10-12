@@ -43,6 +43,8 @@ export interface CallOffExport {
   backlog: Float64Array;
   /** Odesláno kumulativně k datu exportu, po dílech. */
   cumShipped: Float64Array;
+  /** Export obsahuje kumulativy (Cumulative Qty a Cum Shipped), takže jde spočítat odeslané množství. */
+  hasCumShipped: boolean;
   rowCount: number;
   issueCount: number;
   issues: DataIssue[];
@@ -184,6 +186,7 @@ export function parseCallOffExport(table: DataTable, fileName: string): ParseRes
       qty,
       backlog,
       cumShipped,
+      hasCumShipped: col.cumQty !== -1 && col.cumShipped !== -1,
       rowCount,
       issueCount,
       issues,

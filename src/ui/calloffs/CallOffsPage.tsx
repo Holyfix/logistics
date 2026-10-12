@@ -4,6 +4,7 @@ import { useI18n } from '../../i18n/I18nProvider';
 import { Icon } from '../icons';
 import { useData } from '../data/DataProvider';
 import { CurrentView } from './CurrentView';
+import { YearView } from './YearView';
 
 type Tab = 'current' | 'year' | 'compare';
 
@@ -101,6 +102,8 @@ export function CallOffsPage() {
 
       {tab === 'current' ? (
         <CurrentView current={current} previous={previous} items={items} master={master} />
+      ) : tab === 'year' ? (
+        <YearView exports={exports} filter={filter} master={master} />
       ) : (
         <div className="panel">
           <p>{t.calloffs.comingSoon}</p>
