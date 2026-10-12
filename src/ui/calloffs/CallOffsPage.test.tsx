@@ -76,30 +76,10 @@ describe('CallOffsPage', () => {
     expect(screen.getByRole('columnheader', { name: 'Po 12. 10.' })).toBeTruthy();
   });
 
-  it('přehled roku: požadavek každého týdne z jeho exportu', () => {
+  it('přehled od začátku roku je jen jako export do Excelu', () => {
     renderPage(state);
-    fireEvent.click(screen.getByRole('tab', { name: 'Přehled od začátku roku' }));
-    const [summary, items] = screen.getAllByRole('table');
-    const demand = within(summary!).getByText('Požadováno').closest('tr')!;
-    // CW 41 a CW 42 z exportů, CW 43 jako výhled z aktuálního exportu.
-    expect([...demand.querySelectorAll('td')].map((td) => td.textContent)).toEqual(['Požadováno', '0', '200', '7', '207']);
-    expect(within(summary!).getByRole('columnheader', { name: 'CW 43' }).className).toContain('col-outlook');
-    const row = within(items!).getByText('1001').closest('tr')!;
-    expect(row.textContent).toContain('150');
-    expect(within(items!).getByText('1003')).toBeTruthy();
-    // Bez kumulativů nejde odeslané množství spočítat.
-    fireEvent.click(screen.getByRole('button', { name: 'Rozdíl' }));
-    expect(within(items!).getByText('1001').closest('tr')!.textContent).toContain('—');
-  });
-
-  it('přehled roku bez výhledu ukáže jen týdny s exportem', () => {
-    renderPage(state);
-    fireEvent.click(screen.getByRole('tab', { name: 'Přehled od začátku roku' }));
-    fireEvent.change(screen.getByLabelText('Výhled'), { target: { value: 'none' } });
-    const [summary, items] = screen.getAllByRole('table');
-    expect(within(summary!).queryByRole('columnheader', { name: 'CW 43' })).toBeNull();
-    // Díl bez požadavku v zobrazených týdnech se nezobrazí.
-    expect(within(items!).queryByText('1003')).toBeNull();
+    expect(screen.getAllByRole('tab').map((t) => t.textContent)).toEqual(['Aktuální odvolávky', 'Porovnání exportů']);
+    expect(screen.getByRole('button', { name: /Excel od začátku roku/ })).toBeTruthy();
   });
 
   it('velkou tabulku vykreslí postupně, součty jsou za všechny díly', () => {

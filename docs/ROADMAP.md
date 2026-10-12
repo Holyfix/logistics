@@ -48,7 +48,7 @@ funkce (plánování).
 
 ### Fáze 3: Call-offs (probíhá)
 - [x] Aktuální odvolávky po týdnech a dnech, změny proti předchozímu exportu, export Excel/CSV
-- [x] Přehled od začátku roku: požadováno, odesláno a plnění po týdnech i po dílech, výhled z aktuálního exportu (do konce roku / celý horizont), graf, export Excel/CSV
+- [x] Excel od začátku roku pro reporting: souhrn po týdnech (požadováno, odesláno, rozdíl, plnění) a listy po dílech, s výhledem do konce roku
 - [ ] Porovnání exportů a matice vývoje odvolávek
 
 ### Fáze 4: Coverage a Komponenty

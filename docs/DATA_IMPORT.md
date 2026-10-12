@@ -48,11 +48,11 @@ Týdenní export požadavků na expedici z ERP, horizont podle dat od zákazník
 - Řádky se stejným dílem a dnem (různá odběrná místa, zakázky, reference) se sečtou.
 - **Po termínu** = kumulativ požadovaný před prvním dnem exportu minus odesláno, za každý plán zvlášť,
   sečteno za díl (záporné hodnoty se nepočítají).
-- **Přehled od začátku roku:** požadavek týdne je vždy z exportu daného týdne (chybí-li, z posledního
+- **Excel od začátku roku** (tlačítko v Call-offs): požadavek týdne je vždy z exportu daného týdne (chybí-li, z posledního
   staršího exportu). **Odesláno** v týdnu = Cum Shipped v exportu následujícího týdne minus Cum Shipped
   v exportu týdne. Proto je potřeba ukládat do složky každý týdenní export; pokles kumulativu
   (vynulování) se jako odeslané množství nepočítá.
-  Za posledním exportem navazuje výhled z aktuálního exportu (do konce roku nebo celý horizont).
+  Za posledním exportem navazuje výhled z aktuálního exportu do konce roku.
 - CSV: UTF-8 (s BOM i bez) nebo Windows-1250, oddělovač `,` / `;` / tabulátor (rozpozná se),
   čísla `1 905,0` / `1905.0`.
 - Excel (XLSX) se čte zhruba 30× pomaleji než CSV, proto je CSV doporučené.
