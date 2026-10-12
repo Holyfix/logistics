@@ -6,7 +6,6 @@ import { formatDayShort, formatQuantity, type Locale } from '../../core/format';
 import type { MasterItem } from '../../core/masterdata';
 import { useI18n } from '../../i18n/I18nProvider';
 import { ExportButtons, type ExportTable } from './ExportButtons';
-import { MoreRows, useRowLimit } from './MoreRows';
 
 const RANGES: Record<Granularity, PeriodCount[]> = { week: [12, 26, 52, 'all'], day: [15, 30, 60] };
 
@@ -27,7 +26,6 @@ export function CurrentView({ current, previous, items, master }: Props) {
   const [granularity, setGranularity] = useState<Granularity>('week');
   const [range, setRange] = useState<Record<Granularity, PeriodCount>>({ week: 12, day: 15 });
   const count = range[granularity];
-  const [limit, setLimit] = useRowLimit();
 
   const periods = useMemo(() => buildPeriods(current, granularity, count), [current, granularity, count]);
   const rows = useMemo(() => buildCurrentRows(current, previous, items, periods), [current, previous, items, periods]);
@@ -143,7 +141,7 @@ export function CurrentView({ current, previous, items, master }: Props) {
                 </tr>
               </thead>
               <tbody>
-                {rows.slice(0, limit).map((r) => {
+                {rows.map((r) => {
                   const m = master?.get(r.item);
                   return (
                     <tr key={r.item}>
@@ -194,7 +192,6 @@ export function CurrentView({ current, previous, items, master }: Props) {
             </table>
           </div>
         )}
-        <MoreRows shown={Math.min(limit, rows.length)} total={rows.length} onLimit={setLimit} />
         <p className="muted">{previous ? t.calloffs.table.changeNote : t.calloffs.table.noPrevious}</p>
       </div>
     </div>
