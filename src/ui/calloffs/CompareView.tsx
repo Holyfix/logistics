@@ -108,7 +108,9 @@ export function CompareView({ exports, filter, master }: Props) {
   const newerTotals = periods.map((_, k) => rows.reduce((s, r) => s + r.newer[k]!, 0));
   const olderSum = olderTotals.reduce((a, b) => a + b, 0);
   const newerSum = newerTotals.reduce((a, b) => a + b, 0);
-  const changed = rows.filter((r) => r.older.some((v, k) => v !== r.newer[k]));
+  // Změněný díl: v zobrazení Součet má nenulový rozdíl součtu, po týdnech změnu aspoň v jednom týdnu.
+  const changedInWeeks = rows.filter((r) => r.older.some((v, k) => v !== r.newer[k]));
+  const changed = view === 'total' ? rows.filter((r) => r.diff !== 0) : changedInWeeks;
   const shownRows = onlyChanged ? changed : rows;
   const pct = (a: number, b: number) => (a === 0 ? null : ((b - a) / a) * 100);
   const pctText = (value: number | null) => (value === null ? '—' : formatPercent(value, locale, true));
@@ -193,7 +195,7 @@ export function CompareView({ exports, filter, master }: Props) {
         </div>
         <div className="kpi">
           <span className="kpi-label">{tc.kpiItems}</span>
-          <span className="kpi-value">{formatQuantity(changed.length, locale)}</span>
+          <span className="kpi-value">{formatQuantity(changedInWeeks.length, locale)}</span>
           <span className="kpi-note">
             {tc.kpiItemsNote} ({formatQuantity(rows.length, locale)})
           </span>
@@ -279,7 +281,7 @@ export function CompareView({ exports, filter, master }: Props) {
           </span>
           <label className="check-field panel-actions">
             <input type="checkbox" checked={onlyChanged} onChange={(e) => setOnlyChanged(e.target.checked)} />
-            {tc.onlyChanged}
+            {tc.onlyChanged} ({formatQuantity(changed.length, locale)} {tc.of} {formatQuantity(rows.length, locale)})
           </label>
           <span className="segmented" role="group" aria-label={tc.view}>
             {(['total', 'weeks'] as const).map((v) => (
@@ -291,7 +293,7 @@ export function CompareView({ exports, filter, master }: Props) {
           <ExportButtons build={buildItemsExport} />
         </div>
         {shownRows.length === 0 ? (
-          <p>{t.calloffs.table.empty}</p>
+          <p>{rows.length > 0 ? tc.noChanges : t.calloffs.table.empty}</p>
         ) : (
           <div className="table-scroll table-tall">
             <table className="table table-data">
