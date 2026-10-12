@@ -23,7 +23,10 @@ npm run lint       # kontrola kódu (ESLint)
 npm run typecheck  # kontrola typů (TypeScript)
 npm run build      # produkční sestavení do dist/
 npm run check:data # kontrola, že v repozitáři nejsou datové soubory
+node scripts/generate-sample-data.mjs  # smyšlená ukázková data do sample-data/
 ```
+
+Pro vyzkoušení aplikace vyberte v modulu Data složku `sample-data`.
 
 Aplikaci je potřeba zkoušet v Microsoft Edge nebo Google Chrome. Jen ty umí číst složky z disku.
 

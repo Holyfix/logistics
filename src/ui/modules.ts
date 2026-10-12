@@ -53,7 +53,7 @@ export const GROUPS: ModuleGroup[] = [
 export const MODULES: ModuleDef[] = [
   { id: 'dashboard', group: 'overview', icon: 'dashboard', status: { kind: 'planned', phase: 6 } },
   { id: 'kpi', group: 'overview', icon: 'kpi', status: { kind: 'planned', phase: 8 } },
-  { id: 'calloffs', group: 'customers', icon: 'calloffs', status: { kind: 'planned', phase: 3 } },
+  { id: 'calloffs', group: 'customers', icon: 'calloffs', status: { kind: 'available' } },
   { id: 'coverage', group: 'customers', icon: 'coverage', status: { kind: 'planned', phase: 4 } },
   { id: 'shipments', group: 'customers', icon: 'shipments', status: { kind: 'later' } },
   { id: 'express', group: 'customers', icon: 'express', status: { kind: 'later' } },
@@ -66,7 +66,7 @@ export const MODULES: ModuleDef[] = [
   { id: 'actions', group: 'management', icon: 'actions', status: { kind: 'later' } },
   { id: 'reports', group: 'management', icon: 'reports', status: { kind: 'later' } },
   { id: 'data', group: 'system', icon: 'data', status: { kind: 'available' } },
-  { id: 'settings', group: 'system', icon: 'settings', status: { kind: 'planned', phase: 2 } },
+  { id: 'settings', group: 'system', icon: 'settings', status: { kind: 'planned', phase: 3 } },
 ];
 
 export function findModule(id: string): ModuleDef | undefined {

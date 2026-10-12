@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useI18n } from '../i18n/I18nProvider';
 import type { Locale } from '../core/format';
 import { detectSupport, isFullySupported } from '../platform/support';
+import { CallOffsPage } from './calloffs/CallOffsPage';
 import { DataPage } from './DataPage';
 import { HubPage } from './HubPage';
 import { ModulePage } from './ModulePage';
@@ -62,14 +63,15 @@ export function App() {
 
       <main className="content">
         {!supported && (
-          <div className="banner" role="alert">
+          <div className="banner" role="status">
             <strong>{t.support.title}</strong>
             <span>{t.support.body}</span>
           </div>
         )}
         {!current && <HubPage />}
         {current?.id === 'data' && <DataPage />}
-        {current && current.id !== 'data' && <ModulePage module={current} />}
+        {current?.id === 'calloffs' && <CallOffsPage />}
+        {current && current.id !== 'data' && current.id !== 'calloffs' && <ModulePage module={current} />}
       </main>
 
       <footer className="footer">

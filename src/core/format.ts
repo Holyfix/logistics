@@ -7,8 +7,18 @@ const LOCALE_TAGS: Record<Locale, string> = { cs: 'cs-CZ', en: 'en-GB' };
 const ISO_DATE = /^(\d{4})-(\d{2})-(\d{2})$/;
 
 /** Množství v kusech: celé číslo s oddělovačem tisíců podle jazyka. */
+const quantityFormats = new Map<Locale, Intl.NumberFormat>();
+
 export function formatQuantity(value: number, locale: Locale): string {
-  return new Intl.NumberFormat(LOCALE_TAGS[locale], { maximumFractionDigits: 0 }).format(value);
+  let f = quantityFormats.get(locale);
+  if (!f) quantityFormats.set(locale, (f = new Intl.NumberFormat(LOCALE_TAGS[locale], { maximumFractionDigits: 0 })));
+  return f.format(value);
+}
+
+/** Krátké datum pro záhlaví tabulky: „12. 10.“ (cs) nebo „12/10“ (en). */
+export function formatDayShort(isoDate: string, locale: Locale): string {
+  const [, m, d] = isoDate.split('-').map(Number) as [number, number, number];
+  return locale === 'cs' ? `${d}. ${m}.` : `${d}/${m}`;
 }
 
 /**
