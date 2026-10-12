@@ -3,50 +3,53 @@ import { useI18n } from '../i18n/I18nProvider';
 import type { Locale } from '../core/format';
 import { detectSupport, isFullySupported } from '../platform/support';
 import { DataPage } from './DataPage';
-import { OverviewPage } from './OverviewPage';
+import { HubPage } from './HubPage';
+import { ModulePage } from './ModulePage';
+import { findModule, type ModuleDef } from './modules';
 
 export const APP_NAME = 'Logistics';
 
-type Page = 'overview' | 'data';
-
-function pageFromHash(hash: string): Page {
-  return hash === '#data' ? 'data' : 'overview';
+/** Adresa #calloffs otevře modul, cokoli jiného rozcestník. */
+function moduleFromHash(hash: string): ModuleDef | undefined {
+  return findModule(hash.replace(/^#/, ''));
 }
 
 export function App() {
   const { t, locale, setLocale } = useI18n();
-  const [page, setPage] = useState<Page>(() => pageFromHash(location.hash));
+  const [current, setCurrent] = useState<ModuleDef | undefined>(() => moduleFromHash(location.hash));
   const [supported] = useState(() => isFullySupported(detectSupport()));
 
   useEffect(() => {
-    document.title = `${APP_NAME} · ${t.appTagline}`;
-  }, [t]);
+    const title = current ? t.modules[current.id].title : t.hub.title;
+    document.title = `${title} · ${APP_NAME}`;
+  }, [current, t]);
 
   useEffect(() => {
-    const onHashChange = () => setPage(pageFromHash(location.hash));
+    const onHashChange = () => {
+      setCurrent(moduleFromHash(location.hash));
+      window.scrollTo(0, 0);
+    };
     window.addEventListener('hashchange', onHashChange);
     return () => window.removeEventListener('hashchange', onHashChange);
   }, []);
 
-  const pages: { id: Page; label: string }[] = [
-    { id: 'overview', label: t.nav.overview },
-    { id: 'data', label: t.nav.data },
-  ];
   const locales: Locale[] = ['cs', 'en'];
 
   return (
     <div className="shell">
       <header className="topbar">
-        <div className="brand">
+        <a className="brand" href="#" aria-label={t.nav.homeLabel}>
           <span className="brand-name">{APP_NAME}</span>
           <span className="brand-tagline">{t.appTagline}</span>
-        </div>
-        <nav className="nav" aria-label={t.nav.label}>
-          {pages.map((p) => (
-            <a key={p.id} href={`#${p.id}`} className="nav-link" aria-current={page === p.id ? 'page' : undefined}>
-              {p.label}
-            </a>
-          ))}
+        </a>
+        <nav className="crumbs" aria-label={t.nav.breadcrumb}>
+          {current && (
+            <>
+              <a href="#">{t.nav.home}</a>
+              <span aria-hidden="true">›</span>
+              <span aria-current="page">{t.modules[current.id].title}</span>
+            </>
+          )}
         </nav>
         <div className="segmented" role="group" aria-label={t.language.label}>
           {locales.map((l) => (
@@ -64,7 +67,9 @@ export function App() {
             <span>{t.support.body}</span>
           </div>
         )}
-        {page === 'overview' ? <OverviewPage /> : <DataPage />}
+        {!current && <HubPage />}
+        {current?.id === 'data' && <DataPage />}
+        {current && current.id !== 'data' && <ModulePage module={current} />}
       </main>
 
       <footer className="footer">

@@ -13,6 +13,8 @@
   --warn: #fab219;
   --good: #0ca30c;
   --chip-bg: #e8eef5;
+  --accent-soft: #e3edf8;
+  --shadow: 0 1px 2px rgba(19, 32, 42, 0.06), 0 6px 18px rgba(19, 32, 42, 0.07);
   --banner-bg: #fdf1d3;
   --banner-ink: #4a3500;
 
@@ -34,6 +36,8 @@
     --grid: #212d37;
     --accent: #6fa8e8;
     --chip-bg: #1f2d3b;
+    --accent-soft: #1a2b3d;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 6px 18px rgba(0, 0, 0, 0.35);
     --banner-bg: #3a2f12;
     --banner-ink: #f6dd9c;
     color-scheme: dark;
@@ -104,6 +108,27 @@ button:focus-visible {
   display: flex;
   flex-direction: column;
   line-height: 1.1;
+  color: inherit;
+  text-decoration: none;
+}
+
+.crumbs {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  font: 600 16px/1.2 var(--font-display);
+  color: var(--ink-2);
+}
+
+.crumbs a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.crumbs a:hover {
+  text-decoration: underline;
 }
 
 .brand-name {
@@ -115,29 +140,6 @@ button:focus-visible {
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--muted);
-}
-
-.nav {
-  display: flex;
-  gap: 4px;
-  flex: 1;
-}
-
-.nav-link {
-  font: 600 16px/1 var(--font-display);
-  color: var(--ink-2);
-  text-decoration: none;
-  padding: 10px 12px;
-  border-bottom: 3px solid transparent;
-}
-
-.nav-link:hover {
-  color: var(--ink);
-}
-
-.nav-link[aria-current='page'] {
-  color: var(--ink);
-  border-bottom-color: var(--accent);
 }
 
 .segmented {
@@ -207,10 +209,6 @@ button:focus-visible {
   color: var(--ink-2);
 }
 
-.empty {
-  border-style: dashed;
-}
-
 .banner {
   display: flex;
   flex-direction: column;
@@ -219,25 +217,6 @@ button:focus-visible {
   border-radius: 6px;
   background: var(--banner-bg);
   color: var(--banner-ink);
-}
-
-.modules {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-.modules li {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-  padding-block: 9px;
-  border-bottom: 1px solid var(--grid);
-}
-
-.modules li:last-child {
-  border-bottom: 0;
 }
 
 .chip {
@@ -297,4 +276,168 @@ button:focus-visible {
   font-size: 13px;
   color: var(--muted);
   border-top: 1px solid var(--line);
+}
+
+/* Rozcestník */
+.page-head {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.groups {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 520px), 1fr));
+  gap: 24px 28px;
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+.group-title {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  gap: 14px;
+}
+
+.tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px 18px;
+  background: var(--surface);
+  color: inherit;
+  text-decoration: none;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s,
+    transform 0.15s;
+}
+
+.tile:hover {
+  border-color: var(--accent);
+  box-shadow: var(--shadow);
+  transform: translateY(-1px);
+}
+
+.tile-later {
+  background: transparent;
+  border-style: dashed;
+}
+
+.tile-top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-right: 56px;
+}
+
+.tile-icon {
+  flex: none;
+  width: 42px;
+  height: 42px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.tile-later .tile-icon {
+  background: var(--surface-2);
+  color: var(--muted);
+}
+
+.icon {
+  width: 24px;
+  height: 24px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.tile-title {
+  display: flex;
+  flex-direction: column;
+  font: 600 20px/1.15 var(--font-display);
+}
+
+.tile-title small {
+  font: 500 12.5px/1.3 var(--font-body);
+  color: var(--muted);
+}
+
+.tile-text {
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--ink-2);
+}
+
+.tile-chip {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+}
+
+/* Stránka modulu */
+.module-head {
+  flex-direction: row;
+  align-items: center;
+  gap: 14px;
+}
+
+.features {
+  margin: 0;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: var(--ink-2);
+}
+
+.muted {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.button {
+  display: inline-block;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  font: 600 14px/1 var(--font-display);
+  padding: 10px 14px;
+  border-radius: 6px;
+  text-decoration: none;
+}
+
+.button:hover {
+  border-color: var(--accent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tile {
+    transition: none;
+  }
+
+  .tile:hover {
+    transform: none;
+  }
 }

@@ -38,6 +38,7 @@ popisuje [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 | Dokument | Obsah |
 |---|---|
 | [docs/ROADMAP.md](docs/ROADMAP.md) | Plán vývoje po fázích, otevřené otázky |
+| [docs/MODULES.md](docs/MODULES.md) | Katalog modulů a jejich funkcí |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Technologie, struktura projektu, moduly |
 | [docs/DATA_MODEL.md](docs/DATA_MODEL.md) | Datový model a výpočty |
 | [docs/DATA_IMPORT.md](docs/DATA_IMPORT.md) | Zdroje dat, formát CSV, průběh načítání |

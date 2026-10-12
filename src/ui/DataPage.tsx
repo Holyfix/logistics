@@ -12,7 +12,7 @@ export function DataPage() {
 
   return (
     <section className="page" aria-labelledby="page-title">
-      <h1 id="page-title">{t.data.title}</h1>
+      <h1 id="page-title">{t.modules.data.title}</h1>
       <p className="lead">{t.data.intro}</p>
       <div className="panel">
         <div className="table-scroll">

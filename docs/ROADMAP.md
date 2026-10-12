@@ -25,7 +25,8 @@ funkce (plánování).
 
 ### Fáze 0: Analýza ✅
 - [x] Požadavky a rozsah
-- [x] Návrhy úvodní obrazovky (3 varianty, bloky W1–W9). Finální podoba se doladí později.
+- [x] Návrhy úvodní obrazovky (3 varianty, bloky W1–W9)
+- [x] Rozcestník s dlaždicemi a katalog modulů ([MODULES.md](MODULES.md))
 - [x] Rozhodnutí o provozu a jazyku (ADR 0001, 0002)
 - [x] Anonymizace dokumentace pro veřejný repozitář
 
@@ -37,39 +38,35 @@ funkce (plánování).
 - [x] CI a automatické nasazení na GitHub Pages
 - [x] Zveřejnění repozitáře a nasazení na https://holyfix.github.io/logistics/ ([DEPLOYMENT.md](DEPLOYMENT.md))
 
-### Fáze 2: Načítání dat
+### Fáze 2: Načítání dat a nastavení
 - Výběr sdílené složky a zapamatování přístupu
-- Rozpoznání exportů podle názvu a sloupců, čtení CSV na pozadí (Web Worker)
-- Kontrola dat a přehled chyb (chybějící sloupce, neznámé díly, nečíselná množství)
-- Ukládání zpracovaných dat v prohlížeči (IndexedDB), zpracování jen nových souborů
+- Čtení CSV na pozadí, automatické rozpoznání kódování a oddělovače
+- Kontrola dat a přehled chyb (modul Data)
+- Ukládání zpracovaných dat v prohlížeči, zpracování jen nových souborů
+- Zápis záznamů do sdílené složky ([ADR 0003](adr/0003-zapis-do-sdilene-slozky.md))
+- Nastavení: prahy, horizont, jméno pro zápisy
 - Kmenová data: díly, zákazníci, převod čísla dílu zákazníka na interní číslo
-- **Potřeba:** ukázky CSV exportů z ERP (pár řádků s vymyšlenými hodnotami, skutečné názvy sloupců)
+- **Potřeba:** ukázky CSV exportů z ERP
 
-### Fáze 3: Odvolávky a jejich porovnání
-- Porovnání aktuální a předchozí verze po dnech a týdnech, nové a zrušené termíny
-- Zvýraznění změn v závazném horizontu a nad nastavitelným prahem
-- Kontrola kumulativů (přijato zákazníkem vs. odesláno)
+### Fáze 3: Call-offs
+### Fáze 4: Coverage a Komponenty
+### Fáze 5: Obaly
+### Fáze 6: Dashboard
+### Fáze 7: Plánování (plnění plánu a prostoje)
+### Fáze 8: KPI
 
-### Fáze 4: Material coverage
-- Výhled zásob hotových výrobků na 14 dní, pokrytí ve dnech, semafor
-- Komponenty přes kusovník, otevřené nákupní objednávky (pokud jsou v exportu)
+Obsah modulů je v [MODULES.md](MODULES.md).
 
-### Fáze 5: Úvodní obrazovka
-- Souhrn ze všech modulů podle zvolených bloků W1–W9
-
-### Fáze 6: Plán výroby a MES
-- Plán vs. skutečnost, zahrnutí plánované výroby do coverage
-
-### Fáze 7: Plánování a Gantt
-- Kapacity linek, plánovací tabule, Ganttův diagram
-- Vyžaduje sdílenou editaci, tedy přechod na server (varianta 2 nebo 3 v [HOSTING.md](HOSTING.md))
-
-### Fáze 8: Automatizace exportů
-- Naplánované exporty z ERP přímo do sdílené složky, aby je nikdo nemusel ukládat ručně
+### Později
+- Expedice a dodávky (OTD outbound), Dodavatelé (OTD inbound). Dnes se sledují v jiné aplikaci.
+- Akční plán (upřesní se)
+- E-mailová upozornění, aktivní plánování s Ganttovým diagramem (vyžadují server)
 
 ## Otevřené otázky
 
-1. **Exporty z ERP:** ukázky CSV odvolávek, zásob, expedic/kumulativů a kusovníku (potřeba pro fázi 2).
-2. **Nákupní objednávky:** jsou v ERP otevřené nákupní objednávky s termínem dodání (pro coverage komponent)?
-3. **TISAX:** konzultace s ISB před nasazením na skutečná data.
-4. **Úvodní obrazovka:** výběr bloků W1–W9 (do fáze 5).
+1. **Exporty z ERP:** ukázky CSV odvolávek, zásob, expedic a kusovníku (pro fázi 2).
+2. **Zápis dat:** potvrdit ADR 0003 (záznamy jako soubory ve sdílené složce).
+3. **Obaly:** typy obalů, přiřazení dílů k obalům a počty kusů v obalu (odkud je vzít).
+4. **MES:** obsahují exporty prostojů jejich příčiny?
+5. **Call-offs:** kontrola kumulativu jako sloupec, ano/ne.
+6. **TISAX:** konzultace s ISB před nasazením na skutečná data.
