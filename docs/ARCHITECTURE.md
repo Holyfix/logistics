@@ -25,8 +25,9 @@ GitHub Pages ── stáhne kód aplikace ──► Prohlížeč (Edge / Chrome)
 | Kontrola kódu | ESLint (typescript-eslint, react-hooks) |
 | Písmo | Barlow, přibalené přes @fontsource (žádné externí požadavky) |
 | Překlady | Vlastní typované slovníky `cs` / `en` (chybějící překlad = chyba při kompilaci) |
-| Čtení složky | File System Access API (fáze 2) |
-| Úložiště | IndexedDB (fáze 2) |
+| Čtení složky | File System Access API (Edge, Chrome), jinak `<input webkitdirectory>` |
+| Úložiště | IndexedDB (uložená složka, zpracované exporty) |
+| Excel | read-excel-file (čtení), write-excel-file (export) |
 | Grafy | Apache ECharts (od fáze 3) |
 | CI/CD | GitHub Actions → GitHub Pages |
 

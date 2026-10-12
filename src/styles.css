@@ -16,6 +16,9 @@
   --accent-soft: #e3edf8;
   --banner-bg: #fdf1d3;
   --banner-ink: #4a3500;
+  --up: #006300;
+  --down: #b42d2d;
+  --changed: #fff4d6;
 
   --font-display: 'Barlow Semi Condensed', 'Arial Narrow', system-ui, sans-serif;
   --font-body: 'Barlow', system-ui, -apple-system, 'Segoe UI', sans-serif;
@@ -38,6 +41,9 @@
     --accent-soft: #1a2b3d;
     --banner-bg: #3a2f12;
     --banner-ink: #f6dd9c;
+    --up: #2fbf2f;
+    --down: #ef7070;
+    --changed: #3a3115;
     color-scheme: dark;
   }
 }
@@ -399,6 +405,303 @@ button:focus-visible {
   text-decoration: none;
 }
 
+.button {
+  cursor: pointer;
+}
+
 .button:hover {
   border-color: var(--accent);
+}
+
+.button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.button-primary {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--surface);
+}
+
+.button-primary:hover {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+
+.button-small {
+  font-size: 13px;
+  padding: 7px 10px;
+}
+
+.link-button {
+  appearance: none;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font: 600 14px/1 var(--font-display);
+  padding: 8px 4px;
+  cursor: pointer;
+}
+
+.actions-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+/* Data a moduly s tabulkami */
+.n {
+  text-align: right;
+}
+
+.table td.wrap {
+  white-space: normal;
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.error {
+  color: var(--down);
+}
+
+.progress {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.progress progress {
+  width: min(320px, 100%);
+}
+
+.issues {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 13px;
+  color: var(--ink-2);
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 4px 16px;
+  margin: 0;
+}
+
+.facts dt {
+  color: var(--ink-2);
+}
+
+.facts dd {
+  margin: 0;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.page-head-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 8px 24px;
+}
+
+.source-info {
+  margin: 0;
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px 12px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px 14px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.field span {
+  font: 600 11px/1 var(--font-display);
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.field select,
+.field input {
+  font: inherit;
+  color: inherit;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 7px 9px;
+  min-width: 150px;
+}
+
+.field-wide input {
+  min-width: min(240px, 100%);
+}
+
+.filters-note {
+  flex-basis: 100%;
+  margin: 0;
+}
+
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 4px;
+  border-bottom: 1px solid var(--line);
+}
+
+.tab {
+  appearance: none;
+  border: 0;
+  background: none;
+  font: 600 16px/1.2 var(--font-display);
+  padding: 10px 12px 9px;
+  color: var(--ink-2);
+  border-bottom: 3px solid transparent;
+  margin-bottom: -1px;
+  cursor: pointer;
+}
+
+.tab:hover {
+  color: var(--ink);
+}
+
+.tab[aria-selected='true'] {
+  color: var(--ink);
+  border-bottom-color: var(--accent);
+}
+
+.kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
+  gap: 12px;
+}
+
+.kpi {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px 14px;
+}
+
+.kpi-label {
+  font-size: 13px;
+  color: var(--ink-2);
+}
+
+.kpi-value {
+  font: 700 28px/1 var(--font-display);
+}
+
+.kpi-note {
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+.panel-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+
+.panel-head .segmented {
+  margin-left: auto;
+}
+
+/* Datová tabulka: pevné záhlaví a první sloupec, posun uvnitř panelu */
+.table-tall {
+  max-height: 70vh;
+  overflow: auto;
+}
+
+.table-data {
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 13.5px;
+}
+
+.table-data th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--surface);
+}
+
+.table-data td {
+  padding: 6px 8px;
+  background: var(--surface);
+}
+
+.table-data td:first-child {
+  min-width: 0;
+}
+
+.table-data .sticky-col {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  box-shadow: 1px 0 0 var(--line);
+}
+
+.table-data th.sticky-col {
+  z-index: 3;
+}
+
+.table-data td.desc {
+  white-space: normal;
+  min-width: 200px;
+  color: var(--ink-2);
+}
+
+.table-data tfoot td {
+  position: sticky;
+  bottom: 0;
+  font-weight: 700;
+  background: var(--surface-2);
+  border-top: 1px solid var(--line);
+}
+
+.table-data tfoot td.sticky-col {
+  z-index: 3;
+}
+
+.table-data td.cell-changed {
+  background: var(--changed);
+}
+
+.delta {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.delta-up {
+  color: var(--up);
+}
+
+.delta-down {
+  color: var(--down);
 }

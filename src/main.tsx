@@ -8,6 +8,7 @@ import '@fontsource/barlow-semi-condensed/700.css';
 import './styles.css';
 import { I18nProvider } from './i18n/I18nProvider';
 import { App } from './ui/App';
+import { DataProvider } from './ui/data/DataProvider';
 
 const root = document.getElementById('root');
 if (!root) throw new Error('Chybí prvek #root');
@@ -15,7 +16,9 @@ if (!root) throw new Error('Chybí prvek #root');
 createRoot(root).render(
   <StrictMode>
     <I18nProvider>
-      <App />
+      <DataProvider>
+        <App />
+      </DataProvider>
     </I18nProvider>
   </StrictMode>,
 );

@@ -13,7 +13,7 @@ Pořadí skupin na rozcestníku (karty se čtou shora dolů po sloupcích):
 |---|---|---|---|
 | Přehledy | **Dashboard** | Co je dnes potřeba řešit? | Fáze 6 |
 | Přehledy | **KPI** | Jak se nám daří v čase? | Fáze 8 |
-| Zákazníci | **Call-offs** | Co zákazníci chtějí a jak se to mění? | Fáze 3 |
+| Zákazníci | **Call-offs** | Co zákazníci chtějí a jak se to mění? | Fáze 3, aktuální odvolávky hotové |
 | Zákazníci | **Coverage** | Vystačí hotové výrobky na odvolávky? | Fáze 4 |
 | Zákazníci | **Expedice a dodávky** (OTD outbound) | Dodáváme zákazníkům včas? | Později |
 | Zákazníci | **Mimořádné přepravy** | Kolik stojí mimořádné přepravy a proč vznikají? | Později |
@@ -25,8 +25,8 @@ Pořadí skupin na rozcestníku (karty se čtou shora dolů po sloupcích):
 | Dodavatelé | **Dodavatelé** (OTD inbound) | Dodávají nám dodavatelé včas? | Později |
 | Řízení | **Akční plán** | Kdo co řeší a do kdy? | Později, upřesní se |
 | Řízení | **Reporty** | Týdenní souhrn pro vedení | Později |
-| Systém | **Data** | Jaká data jsou načtená a jsou v pořádku? | Fáze 2 |
-| Systém | **Nastavení** | Prahy, horizont, jméno pro zápisy | Fáze 2 |
+| Systém | **Data** | Jaká data jsou načtená a jsou v pořádku? | Hotové |
+| Systém | **Nastavení** | Prahy, horizont, jméno pro zápisy | Později |
 
 OTD inbound a outbound se dnes sledují v jiné aplikaci, proto jsou moduly Expedice
 a Dodavatelé odložené. Modul Kapacity (odvolávky vs. kapacita linek) byl zvažován a vyřazen.
@@ -47,10 +47,15 @@ a Dodavatelé odložené. Modul Kapacity (odvolávky vs. kapacita linek) byl zva
 - Smysl dává, až budou data za několik týdnů
 
 ### Call-offs
-- Porovnání aktuální a předchozí verze odvolávky po dnech a týdnech
-- Změny v závazném horizontu a nad nastavitelným prahem, nové a zrušené termíny
-- Poptávka po týdnech podle zákazníků
-- Otevřená otázka: kontrola kumulativu jako jeden sloupec (samostatný modul není potřeba)
+Hlavní údaj je **Discrete Qty** (požadavek na den), kumulativy jsou doplňková informace.
+Filtry: zákazník, projekt, strana (LHD/RHD) z kmenových dat, hledání dílu.
+
+- ✅ **Aktuální odvolávky:** nejnovější export po týdnech nebo dnech, nedodáno po termínu,
+  změna proti předchozímu exportu (zvýraznění od 20 %), export do Excelu a CSV
+- ⏳ **Přehled od začátku roku:** požadavek na každý týden z exportu téhož týdne, po dílech i celkem;
+  odesláno z kumulativu jako doplňková informace
+- ⏳ **Porovnání exportů:** dva libovolné exporty po týdnech a dílech, matice vývoje odvolávek
+  (řádky = exporty, sloupce = týdny dodání)
 
 ### Coverage
 - Výhled zásob hotových výrobků na 14 dní, pokrytí ve dnech, semafor

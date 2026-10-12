@@ -2,12 +2,15 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { I18nProvider } from '../i18n/I18nProvider';
 import { App } from './App';
+import { DataProvider } from './data/DataProvider';
 import { MODULES } from './modules';
 
 function renderApp() {
   return render(
     <I18nProvider>
-      <App />
+      <DataProvider>
+        <App />
+      </DataProvider>
     </I18nProvider>,
   );
 }
@@ -63,8 +66,8 @@ describe('App', () => {
     expect(screen.getByRole('heading', { level: 1, name: 'Home' })).toBeTruthy();
   });
 
-  it('upozorní, když prohlížeč neumí číst složky', () => {
+  it('upozorní, když si prohlížeč neumí zapamatovat složku', () => {
     renderApp();
-    expect(screen.getByRole('alert').textContent).toMatch(/Edge|Chrome/);
+    expect(screen.getByRole('status').textContent).toMatch(/Edge|Chrome/);
   });
 });

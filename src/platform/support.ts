@@ -17,6 +17,7 @@ export function detectSupport(win: object = window): BrowserSupport {
   };
 }
 
+/** Vše pro zapamatování složky. Bez File System Access API aplikace funguje s jednorázovým výběrem složky. */
 export function isFullySupported(support: BrowserSupport): boolean {
   return support.directoryAccess && support.indexedDb && support.workers;
 }

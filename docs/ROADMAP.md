@@ -38,17 +38,19 @@ funkce (plánování).
 - [x] CI a automatické nasazení na GitHub Pages
 - [x] Zveřejnění repozitáře a nasazení na https://holyfix.github.io/logistics/ ([DEPLOYMENT.md](DEPLOYMENT.md))
 
-### Fáze 2: Načítání dat a nastavení
-- Výběr sdílené složky a zapamatování přístupu
-- Čtení CSV na pozadí, automatické rozpoznání kódování a oddělovače
-- Kontrola dat a přehled chyb (modul Data)
-- Ukládání zpracovaných dat v prohlížeči, zpracování jen nových souborů
-- Zápis záznamů do sdílené složky ([ADR 0003](adr/0003-zapis-do-sdilene-slozky.md))
-- Nastavení: prahy, horizont, jméno pro zápisy
-- Kmenová data: díly, zákazníci, převod čísla dílu zákazníka na interní číslo
-- **Potřeba:** ukázky CSV exportů z ERP
+### Fáze 2: Načítání dat ✅
+- [x] Výběr sdílené složky (Edge/Chrome si ji pamatují, jinde jednorázový výběr)
+- [x] Rozpoznání exportů podle názvu, čtení CSV i Excelu na pozadí, kódování UTF-8 / Windows-1250
+- [x] Mezipaměť v prohlížeči, zpracují se jen nové soubory
+- [x] Modul Data: stav exportů, chyby v datech, šablona kmenových dat
+- [x] Kmenová data dílů (zákazník, projekt, strana LHD/RHD) z Excelu nebo CSV
+- [ ] Zápis záznamů do sdílené složky (ADR 0003): odloženo, až bude potřeba (Obaly)
 
-### Fáze 3: Call-offs
+### Fáze 3: Call-offs (probíhá)
+- [x] Aktuální odvolávky po týdnech a dnech, změny proti předchozímu exportu, export Excel/CSV
+- [ ] Přehled od začátku roku (po dílech i celkem)
+- [ ] Porovnání exportů a matice vývoje odvolávek
+
 ### Fáze 4: Coverage a Komponenty
 ### Fáze 5: Obaly
 ### Fáze 6: Dashboard
@@ -66,8 +68,8 @@ Obsah modulů je v [MODULES.md](MODULES.md).
 
 ## Otevřené otázky
 
-1. **Exporty z ERP:** ukázky CSV odvolávek, zásob, expedic a kusovníku (pro fázi 2).
-2. **Zápis dat:** potvrdit ADR 0003 (záznamy jako soubory ve sdílené složce).
+1. **Kmenová data:** tabulka dílů od uživatele (Item Number, Zákazník, Projekt, Strana).
+2. **Další exporty z ERP:** zásoby, expedice, kusovník (pro fázi 4).
 3. **Obaly:** typy obalů, přiřazení dílů k obalům a počty kusů v obalu (odkud je vzít).
 4. **MES:** obsahují exporty prostojů jejich příčiny?
 5. **Call-offs:** kontrola kumulativu jako sloupec, ano/ne.
