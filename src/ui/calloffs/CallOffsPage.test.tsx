@@ -64,6 +64,12 @@ describe('CallOffsPage', () => {
     expect(rows.filter((r) => r.closest('tbody')).map((r) => r.querySelector('strong')?.textContent)).toEqual(['1003']);
   });
 
+  it('ukáže celý horizont exportu', () => {
+    renderPage(state);
+    fireEvent.change(screen.getByLabelText('Rozsah'), { target: { value: 'all' } });
+    expect(screen.getByRole('columnheader', { name: 'CW 43' })).toBeTruthy();
+  });
+
   it('přepne na dny', () => {
     renderPage(state);
     fireEvent.click(screen.getByRole('button', { name: 'Dny' }));

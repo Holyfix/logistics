@@ -627,8 +627,31 @@ button:focus-visible {
   gap: 8px 12px;
 }
 
-.panel-head .segmented {
+.panel-head .inline-field {
   margin-left: auto;
+}
+
+.inline-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.inline-field span {
+  font: 600 11px/1 var(--font-display);
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.inline-field select {
+  font: inherit;
+  font-size: 14px;
+  color: inherit;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 6px 8px;
 }
 
 /* Datová tabulka: pevné záhlaví a první sloupec, posun uvnitř panelu */
@@ -668,6 +691,11 @@ button:focus-visible {
 
 .table-data th.sticky-col {
   z-index: 3;
+}
+
+/* Číslo dílu vždy na jednom řádku (i s příponou, např. -9051). */
+.table-data td.sticky-col {
+  white-space: nowrap;
 }
 
 .table-data td.desc {
