@@ -49,16 +49,12 @@ logistics/
     └── deploy.yml   # nasazení na GitHub Pages z větve main
 ```
 
-## Moduly (plán)
+## Moduly
 
-| Modul | Složka | Fáze |
-|---|---|---|
-| Načítání exportů (CSV, kontrola, cache) | `core/import`, `platform/folder`, `platform/store` | 2 |
-| Kmenová data | `core/masterdata` | 2 |
-| Odvolávky a porovnání | `core/calloffs`, `ui/calloffs` | 3 |
-| Coverage a kusovník | `core/coverage`, `ui/coverage` | 4 |
-| Úvodní obrazovka | `ui/overview` | 5 |
-| Výroba | `core/production`, `ui/production` | 6 |
+Seznam modulů, skupiny a stav jsou v `src/ui/modules.ts`, popis v [MODULES.md](MODULES.md).
+Výpočty každého modulu budou v `src/core/<modul>`, zobrazení v `src/ui/<modul>`.
+Rozcestník (`src/ui/HubPage.tsx`) zobrazí dlaždici pro každý modul. Adresa `#<id-modulu>`
+otevře modul, cokoli jiného rozcestník.
 
 ## Zásady
 
