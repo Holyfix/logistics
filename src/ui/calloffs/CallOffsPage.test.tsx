@@ -91,12 +91,26 @@ describe('CallOffsPage', () => {
     // Jen změněné díly.
     const itemRows = () => within(items!).getAllByRole('row').filter((r) => r.closest('tbody'));
     expect(itemRows().map((r) => r.querySelector('strong')?.textContent)).toEqual(['1001']);
-    fireEvent.click(screen.getByLabelText('Jen změněné díly'));
+    expect(screen.getByLabelText(/Jen změněné díly/).closest('label')!.textContent).toContain('(1 z 3)');
+    fireEvent.click(screen.getByLabelText(/Jen změněné díly/));
     expect(itemRows()).toHaveLength(3);
     // Matice: CW 43 starší export neobsahuje, CW 42 vzrostl o třetinu.
     const last = within(matrix!).getByText('CW 42/2026').closest('tr')!;
     expect(cells(last)).toEqual(['CW 42/2026', '200▲ +33,3 %', '7']);
     expect(cells(within(matrix!).getByText('CW 41/2026').closest('tr')!)).toEqual(['CW 41/2026', '150', '·']);
+  });
+
+  it('jen změněné díly: v součtu skryje díl, jehož změny v týdnech se vyrovnají', () => {
+    const older = exportOf('Odvolavky_CW41.csv', ['2001,SHIFT,12.10.2026,10', '2001,SHIFT,19.10.2026,20', '2002,SAME,12.10.2026,5']);
+    const newer = exportOf('Odvolavky_CW42.csv', ['2001,SHIFT,12.10.2026,20', '2001,SHIFT,19.10.2026,10', '2002,SAME,12.10.2026,5']);
+    renderPage({ ...state, data: { ...state.data!, exports: [older, newer], master: null } });
+    fireEvent.click(screen.getByRole('tab', { name: 'Porovnání exportů' }));
+    const items = () => screen.getAllByRole('table')[1]!;
+    expect(screen.getByText('Žádný díl se mezi vybranými exporty nezměnil.')).toBeTruthy();
+    expect(screen.getByText(/Jen změněné díly/).textContent).toContain('(0 z 2)');
+    fireEvent.click(screen.getByRole('button', { name: 'Rozdíl po týdnech' }));
+    expect(within(items()).getByText('2001')).toBeTruthy();
+    expect(within(items()).queryByText('2002')).toBeNull();
   });
 
   it('porovnání s jedním exportem vysvětlí, co chybí', () => {
