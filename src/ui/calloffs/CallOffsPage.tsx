@@ -4,9 +4,9 @@ import { useI18n } from '../../i18n/I18nProvider';
 import { Icon } from '../icons';
 import { useData } from '../data/DataProvider';
 import { CurrentView } from './CurrentView';
-import { YearView } from './YearView';
+import { YearExportButton } from './YearExportButton';
 
-type Tab = 'current' | 'year' | 'compare';
+type Tab = 'current' | 'compare';
 
 export function CallOffsPage() {
   const { t } = useI18n();
@@ -93,17 +93,18 @@ export function CallOffsPage() {
       </div>
 
       <div className="tabs" role="tablist" aria-label={t.modules.calloffs.title}>
-        {(['current', 'year', 'compare'] as const).map((id) => (
+        {(['current', 'compare'] as const).map((id) => (
           <button key={id} type="button" role="tab" className="tab" aria-selected={tab === id} onClick={() => setTab(id)}>
             {t.calloffs.tabs[id]}
           </button>
         ))}
+        <span className="tabs-actions">
+          <YearExportButton exports={exports} master={master} filter={filter} />
+        </span>
       </div>
 
       {tab === 'current' ? (
         <CurrentView current={current} previous={previous} items={items} master={master} />
-      ) : tab === 'year' ? (
-        <YearView exports={exports} filter={filter} master={master} />
       ) : (
         <div className="panel">
           <p>{t.calloffs.comingSoon}</p>

@@ -76,19 +76,22 @@ describe('CallOffsPage', () => {
     expect(screen.getByRole('columnheader', { name: 'Po 12. 10.' })).toBeTruthy();
   });
 
-  it('přehled roku: požadavek každého týdne z jeho exportu', () => {
+  it('přehled od začátku roku je jen jako export do Excelu', () => {
     renderPage(state);
-    fireEvent.click(screen.getByRole('tab', { name: 'Přehled od začátku roku' }));
-    const [summary, items] = screen.getAllByRole('table');
-    const demand = within(summary!).getByText('Požadováno').closest('tr')!;
-    expect([...demand.querySelectorAll('td')].map((td) => td.textContent)).toEqual(['Požadováno', '0', '200', '200']);
-    const row = within(items!).getByText('1001').closest('tr')!;
-    expect(row.textContent).toContain('150');
-    // Díl bez požadavku v týdnech roku se nezobrazí.
-    expect(within(items!).queryByText('1003')).toBeNull();
-    // Bez kumulativů nejde odeslané množství spočítat.
-    fireEvent.click(screen.getByRole('button', { name: 'Rozdíl' }));
-    expect(within(items!).getByText('1001').closest('tr')!.textContent).toContain('—');
+    expect(screen.getAllByRole('tab').map((t) => t.textContent)).toEqual(['Aktuální odvolávky', 'Porovnání exportů']);
+    expect(screen.getByRole('button', { name: /Excel od začátku roku/ })).toBeTruthy();
+  });
+
+  it('velkou tabulku vykreslí postupně, součty jsou za všechny díly', () => {
+    const many = exportOf('Odvolavky_CW42.csv', Array.from({ length: 250 }, (_, i) => `${5000 + i},PART,12.10.2026,1`));
+    renderPage({ ...state, data: { ...state.data!, exports: [many], master: null } });
+    const body = () => within(screen.getByRole('table')).getAllByRole('row').filter((r) => r.closest('tbody'));
+    expect(body()).toHaveLength(200);
+    expect(screen.getByText(/Zobrazeno 200 z 250 dílů/)).toBeTruthy();
+    expect(screen.getByRole('table').querySelector('tfoot')!.textContent).toContain('250');
+    fireEvent.click(screen.getByRole('button', { name: 'Zobrazit vše' }));
+    expect(body()).toHaveLength(250);
+    expect(screen.queryByRole('button', { name: 'Zobrazit vše' })).toBeNull();
   });
 
   it('bez dat nabídne výběr složky', () => {

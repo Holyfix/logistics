@@ -19,8 +19,6 @@
   --up: #006300;
   --down: #b42d2d;
   --changed: #fff4d6;
-  --series-1: #8db3dd;
-  --series-2: #c2560f;
 
   --font-display: 'Barlow Semi Condensed', 'Arial Narrow', system-ui, sans-serif;
   --font-body: 'Barlow', system-ui, -apple-system, 'Segoe UI', sans-serif;
@@ -46,8 +44,6 @@
     --up: #2fbf2f;
     --down: #ef7070;
     --changed: #3a3115;
-    --series-1: #3e6c9c;
-    --series-2: #f29a4a;
     color-scheme: dark;
   }
 }
@@ -743,90 +739,15 @@ button:focus-visible {
   color: var(--down);
 }
 
-/* Tabulka jen tak široká, jak potřebuje obsah (např. souhrn po týdnech). */
-.table-auto {
-  width: auto;
-}
-
-.table-auto td.n,
-.table-auto th.n {
-  min-width: 72px;
-}
-
-/* Grafy */
-.chart {
-  display: block;
-  width: 100%;
-  min-width: 640px;
-  height: auto;
-  margin: 4px 0 8px;
-}
-
-.chart-axis {
-  font: 500 12px var(--font-body);
-  fill: var(--muted);
-}
-
-.chart-grid {
-  stroke: var(--grid);
-}
-
-.chart-baseline {
-  stroke: var(--line);
-}
-
-.chart-region {
-  fill: var(--surface-2);
-}
-
-.chart-bar {
-  fill: var(--series-1);
-}
-
-.chart-line {
-  fill: none;
-  stroke: var(--series-2);
-  stroke-width: 2.5;
-  stroke-linejoin: round;
-}
-
-.chart-dot {
-  fill: var(--series-2);
-  stroke: var(--surface);
-  stroke-width: 1.5;
-}
-
-.legend {
+.more-rows {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px 18px;
-  margin: 10px 0 0;
-  padding: 0;
-  list-style: none;
-  font-size: 13px;
-  color: var(--ink-2);
-}
-
-.legend li {
-  display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px 12px;
+  margin-top: 10px;
 }
 
-.legend-bar,
-.legend-line {
-  display: inline-block;
-  width: 12px;
-}
-
-.legend-bar {
-  height: 12px;
-  border-radius: 2px;
-  background: var(--series-1);
-}
-
-.legend-line {
-  height: 3px;
-  border-radius: 2px;
-  background: var(--series-2);
+.tabs-actions {
+  margin-left: auto;
+  align-self: center;
 }

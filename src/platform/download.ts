@@ -23,14 +23,34 @@ export function downloadCsv(fileName: string, csv: string): void {
   downloadBlob(fileName, new Blob([csv], { type: 'text/csv;charset=utf-8' }));
 }
 
+type XlsxValue = string | number | null;
+
+export interface XlsxSheet {
+  name: string;
+  header: string[];
+  rows: XlsxValue[][];
+  /** Kolik prvních sloupců zůstane při posunu vidět. */
+  stickyColumns?: number;
+}
+
 /** Excel se vytváří až při stažení, knihovna se načte jen tehdy. */
-export async function downloadXlsx(fileName: string, sheetName: string, header: string[], rows: (string | number | null)[][]): Promise<void> {
+export async function downloadXlsxSheets(fileName: string, sheets: XlsxSheet[]): Promise<void> {
   const { default: writeXlsxFile } = await import('write-excel-file/browser');
-  const data = [
-    header.map((value) => ({ value, fontWeight: 'bold' as const })),
-    // Prázdná buňka je v knihovně null místo objektu.
-    ...rows.map((row) => row.map((value) => (value === null ? null : { value }))),
-  ];
-  const blob = await writeXlsxFile(data, { sheet: sheetName.slice(0, 31), stickyRowsCount: 1 }).toBlob();
+  const blob = await writeXlsxFile(
+    sheets.map((sheet) => ({
+      sheet: sheet.name.slice(0, 31),
+      stickyRowsCount: 1,
+      ...(sheet.stickyColumns ? { stickyColumnsCount: sheet.stickyColumns } : {}),
+      data: [
+        sheet.header.map((value) => ({ value, fontWeight: 'bold' as const })),
+        // Prázdná buňka je v knihovně null místo objektu.
+        ...sheet.rows.map((row) => row.map((value) => (value === null ? null : { value }))),
+      ],
+    })),
+  ).toBlob();
   downloadBlob(fileName, blob);
+}
+
+export function downloadXlsx(fileName: string, sheetName: string, header: string[], rows: XlsxValue[][]): Promise<void> {
+  return downloadXlsxSheets(fileName, [{ name: sheetName, header, rows }]);
 }
