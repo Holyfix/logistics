@@ -23,9 +23,10 @@ export const en: Messages = {
     groups: {
       overview: 'Overviews',
       customers: 'Customers',
-      material: 'Material',
-      production: 'Production and packaging',
-      suppliers: 'Suppliers and follow-up',
+      material: 'Material and warehouse',
+      production: 'Production',
+      suppliers: 'Suppliers',
+      management: 'Management',
       system: 'System',
     },
     phase: 'Phase',
@@ -76,6 +77,12 @@ export const en: Messages = {
       description: 'Are we delivering to customers on time?',
       features: ['On-time delivery to customers', 'Backlog', 'Premium freight'],
     },
+    express: {
+      title: 'Premium freight',
+      subtitle: 'Special transports',
+      description: 'What premium freight costs us and why it happens.',
+      features: ['Premium freight entry in the app', 'Cause, cost and responsibility', 'Count and cost over time'],
+    },
     coverage: {
       title: 'Coverage',
       subtitle: 'Finished goods coverage',
@@ -92,6 +99,12 @@ export const en: Messages = {
         'Open purchase orders',
         'Shortage list for the morning meeting',
       ],
+    },
+    stock: {
+      title: 'Stock',
+      subtitle: 'Warehouse health',
+      description: 'Do we have too much or too little stock?',
+      features: ['Stock in days of consumption', 'Parts above maximum and below minimum', 'Slow movers without movement'],
     },
     packaging: {
       title: 'Packaging',
@@ -113,6 +126,12 @@ export const en: Messages = {
         'Downtime caused by missing material',
       ],
     },
+    inbound: {
+      title: 'Inbound',
+      subtitle: 'Expected deliveries',
+      description: 'What should arrive today and tomorrow, and what is overdue.',
+      features: ['Expected deliveries for today and tomorrow', 'Overdue deliveries', 'Link to the component shortage list'],
+    },
     suppliers: {
       title: 'Suppliers',
       subtitle: 'OTD inbound',
@@ -124,6 +143,12 @@ export const en: Messages = {
       subtitle: 'Meeting actions',
       description: 'Who handles what and by when. Details to be specified.',
       features: ['Actions from meetings', 'Owner, due date and status'],
+    },
+    reports: {
+      title: 'Reports',
+      subtitle: 'Weekly report',
+      description: 'A summary for management in one click.',
+      features: ['Weekly summary from the other modules', 'Export to PDF and Excel'],
     },
     data: {
       title: 'Data',
