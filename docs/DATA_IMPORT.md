@@ -11,16 +11,20 @@ Soubory se rozpoznají podle názvu (nezáleží na velikosti písmen ani diakri
 | Export odvolávek | název obsahuje „Odvolávky“ / „call-off“, nebo leží ve složce `odvolavky` / `call-offs` | CSV (doporučeno) nebo XLSX |
 | Kmenová data dílů | název obsahuje „kmenová“ / „master“ | XLSX nebo CSV |
 
-Příklad:
+Doporučená struktura (složka se v aplikaci vybírá celá, podsložky se prohledají):
 
 ```
-logistics-data/
-├── kmenova-data.xlsx
-└── odvolavky/
-    ├── Odvolávky_CW40.csv
-    ├── Odvolávky_CW41.csv
-    └── Odvolávky_CW42.csv
+Logistics/
+├── kmenova-data.xlsx     kmenová data dílů
+├── Call-offs/            týdenní exporty odvolávek (název souboru s týdnem, např. CW42)
+├── Zásoby/               později: Coverage, Komponenty, Zásoby
+├── Kusovník/             později: Komponenty
+├── Objednávky/           později: Příjem (otevřené nákupní objednávky)
+├── Výroba/               později: Plánování (plnění plánu a prostoje)
+└── Obaly/                později: Obaly
 ```
+
+Složky pro další moduly jsou návrh, upřesní se při jejich vývoji. Soubory, které aplikace nezná, ignoruje.
 
 - **Týden exportu** se bere z názvu souboru (`CW42`, `KW 42`), jinak z prvního data v exportu.
   Pokud se liší, aplikace upozorní. Rok je z prvního data v exportu.
