@@ -1,6 +1,6 @@
 // Výpočty pro pohled „Aktuální odvolávky“.
 
-import { mondayOf, weekLabel, weekday, type DayNumber } from '../dates';
+import { isoWeek, mondayOf, weekLabel, weekday, type DayNumber } from '../dates';
 import type { CallOffExport } from './parse';
 
 export type Granularity = 'day' | 'week';
@@ -41,23 +41,28 @@ function daysWithDemand(exp: CallOffExport): Set<DayNumber> {
   return new Set(exp.days);
 }
 
+/** Počet období v tabulce, nebo celý horizont exportu. */
+export type PeriodCount = number | 'all';
+
 /**
  * Období pro tabulku: týdny od týdne exportu, nebo dny od prvního dne exportu.
  * Víkendy se zobrazí jen tehdy, když na ně připadá požadavek.
+ * Týdny z jiného roku, než je rok exportu, mají v popisku i rok (CW 1/2027).
  */
-export function buildPeriods(exp: CallOffExport, granularity: Granularity, count: number): Period[] {
+export function buildPeriods(exp: CallOffExport, granularity: Granularity, count: PeriodCount): Period[] {
+  const limit = count === 'all' ? Infinity : count;
   const periods: Period[] = [];
   if (granularity === 'week') {
     const start = mondayOf(exp.firstDay);
-    for (let i = 0; i < count; i++) {
+    for (let i = 0; i < limit; i++) {
       const s = start + i * 7;
       if (s > exp.lastDay) break;
-      periods.push({ start: s, end: s + 6, label: weekLabel(s) });
+      periods.push({ start: s, end: s + 6, label: weekLabel(s, isoWeek(s).year !== exp.year) });
     }
     return periods;
   }
   const withDemand = daysWithDemand(exp);
-  for (let day = exp.firstDay; periods.length < count && day <= exp.lastDay; day++) {
+  for (let day = exp.firstDay; periods.length < limit && day <= exp.lastDay; day++) {
     if (weekday(day) >= 6 && !withDemand.has(day)) continue;
     periods.push({ start: day, end: day, label: '' });
   }

@@ -1,13 +1,13 @@
 import { useMemo, useState } from 'react';
 import type { CallOffExport } from '../../core/calloffs/parse';
-import { buildCurrentRows, buildPeriods, changeOf, type Granularity, type Period } from '../../core/calloffs/views';
+import { buildCurrentRows, buildPeriods, changeOf, type Granularity, type Period, type PeriodCount } from '../../core/calloffs/views';
 import { dayToIso, weekday } from '../../core/dates';
 import { formatDayShort, formatQuantity, type Locale } from '../../core/format';
 import type { MasterItem } from '../../core/masterdata';
 import { useI18n } from '../../i18n/I18nProvider';
 import { ExportButtons, type ExportTable } from './ExportButtons';
 
-const PERIOD_COUNT: Record<Granularity, number> = { week: 12, day: 15 };
+const RANGES: Record<Granularity, PeriodCount[]> = { week: [12, 26, 52, 'all'], day: [15, 30, 60] };
 
 function signed(value: number, locale: Locale): string {
   const abs = formatQuantity(Math.abs(value), locale);
@@ -24,8 +24,10 @@ interface Props {
 export function CurrentView({ current, previous, items, master }: Props) {
   const { t, locale } = useI18n();
   const [granularity, setGranularity] = useState<Granularity>('week');
+  const [range, setRange] = useState<Record<Granularity, PeriodCount>>({ week: 12, day: 15 });
+  const count = range[granularity];
 
-  const periods = useMemo(() => buildPeriods(current, granularity, PERIOD_COUNT[granularity]), [current, granularity]);
+  const periods = useMemo(() => buildPeriods(current, granularity, count), [current, granularity, count]);
   const rows = useMemo(() => buildCurrentRows(current, previous, items, periods), [current, previous, items, periods]);
 
   const totals = periods.map((_, k) => rows.reduce((sum, r) => sum + r.values[k]!, 0));
@@ -93,6 +95,22 @@ export function CurrentView({ current, previous, items, master }: Props) {
           <span className="muted">
             {t.calloffs.currentExport} CW {current.week}/{current.year}, {t.calloffs.table.unit}
           </span>
+          <label className="inline-field">
+            <span>{t.calloffs.range.label}</span>
+            <select
+              value={String(count)}
+              onChange={(e) => {
+                const value = e.target.value === 'all' ? 'all' : Number(e.target.value);
+                setRange((r) => ({ ...r, [granularity]: value }));
+              }}
+            >
+              {RANGES[granularity].map((option) => (
+                <option key={option} value={String(option)}>
+                  {option === 'all' ? t.calloffs.range.all : `${option} ${granularity === 'week' ? t.calloffs.range.weeks : t.calloffs.range.days}`}
+                </option>
+              ))}
+            </select>
+          </label>
           <span className="segmented" role="group" aria-label={t.calloffs.granularity.label}>
             {(['week', 'day'] as const).map((g) => (
               <button key={g} type="button" aria-pressed={granularity === g} onClick={() => setGranularity(g)}>

@@ -250,6 +250,12 @@ export const en: Messages = {
       week: 'Weeks',
       day: 'Days',
     },
+    range: {
+      label: 'Range',
+      weeks: 'weeks',
+      days: 'days',
+      all: 'Full horizon',
+    },
     kpi: {
       items: 'Parts',
       itemsNote: 'after filters',

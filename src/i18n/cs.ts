@@ -252,6 +252,12 @@ export const cs = {
       week: 'Týdny',
       day: 'Dny',
     },
+    range: {
+      label: 'Rozsah',
+      weeks: 'týdnů',
+      days: 'dní',
+      all: 'Celý horizont',
+    },
     kpi: {
       items: 'Dílů',
       itemsNote: 'po filtru',

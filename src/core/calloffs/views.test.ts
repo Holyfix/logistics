@@ -33,6 +33,15 @@ describe('buildPeriods', () => {
     expect(dayToIso(periods[0]!.start)).toBe('2026-10-12');
   });
 
+  it('celý horizont a rok u týdnů z dalšího roku', () => {
+    const exp = exportOf('CW52.csv', [
+      ['A', '21.12.2026', 1],
+      ['A', '04.01.2027', 2],
+    ]);
+    expect(buildPeriods(exp, 'week', 'all').map((p) => p.label)).toEqual(['CW 52', 'CW 53', 'CW 1/2027']);
+    expect(buildPeriods(cur, 'week', 'all')).toHaveLength(3);
+  });
+
   it('dny vynechají víkend bez požadavku', () => {
     const days = buildPeriods(cur, 'day', 7).map((p) => dayToIso(p.start));
     expect(days).toEqual(['2026-10-12', '2026-10-13', '2026-10-14', '2026-10-15', '2026-10-16', '2026-10-17', '2026-10-19']);
