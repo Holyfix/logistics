@@ -1,0 +1,18 @@
+node_modules/
+dist/
+coverage/
+*.log
+.DS_Store
+.vite/
+
+# Firemní data do repozitáře nepatří (repozitář je veřejný).
+# Smyšlená testovací data jsou povolena jen v sample-data/.
+*.csv
+*.tsv
+*.xls
+*.xlsx
+*.xlsm
+*.xlsb
+*.ods
+*.edi
+!sample-data/**
