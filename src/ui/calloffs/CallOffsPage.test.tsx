@@ -76,6 +76,21 @@ describe('CallOffsPage', () => {
     expect(screen.getByRole('columnheader', { name: 'Po 12. 10.' })).toBeTruthy();
   });
 
+  it('přehled roku: požadavek každého týdne z jeho exportu', () => {
+    renderPage(state);
+    fireEvent.click(screen.getByRole('tab', { name: 'Přehled od začátku roku' }));
+    const [summary, items] = screen.getAllByRole('table');
+    const demand = within(summary!).getByText('Požadováno').closest('tr')!;
+    expect([...demand.querySelectorAll('td')].map((td) => td.textContent)).toEqual(['Požadováno', '0', '200', '200']);
+    const row = within(items!).getByText('1001').closest('tr')!;
+    expect(row.textContent).toContain('150');
+    // Díl bez požadavku v týdnech roku se nezobrazí.
+    expect(within(items!).queryByText('1003')).toBeNull();
+    // Bez kumulativů nejde odeslané množství spočítat.
+    fireEvent.click(screen.getByRole('button', { name: 'Rozdíl' }));
+    expect(within(items!).getByText('1001').closest('tr')!.textContent).toContain('—');
+  });
+
   it('bez dat nabídne výběr složky', () => {
     renderPage({ ...state, status: 'noFolder', data: null });
     expect(screen.getByRole('link', { name: 'Vybrat složku s exporty' }).getAttribute('href')).toBe('#data');

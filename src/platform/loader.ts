@@ -28,7 +28,7 @@ export interface LoadProgress {
 }
 
 // Verze formátu v mezipaměti: při změně zpracování se exporty načtou znovu.
-const CACHE_VERSION = 1;
+const CACHE_VERSION = 2;
 const cacheKey = (f: SourceFile) => `v${CACHE_VERSION}|${f.path}|${f.size}|${f.lastModified}`;
 
 let worker: Worker | null = null;
