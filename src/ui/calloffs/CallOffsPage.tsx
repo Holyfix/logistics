@@ -3,6 +3,7 @@ import { EMPTY_FILTER, filterItems, filterOptions, MISSING_MASTER, type ItemFilt
 import { useI18n } from '../../i18n/I18nProvider';
 import { Icon } from '../icons';
 import { useData } from '../data/DataProvider';
+import { CompareView } from './CompareView';
 import { CurrentView } from './CurrentView';
 import { YearExportButton } from './YearExportButton';
 
@@ -106,9 +107,7 @@ export function CallOffsPage() {
       {tab === 'current' ? (
         <CurrentView current={current} previous={previous} items={items} master={master} />
       ) : (
-        <div className="panel">
-          <p>{t.calloffs.comingSoon}</p>
-        </div>
+        <CompareView exports={exports} filter={filter} master={master} />
       )}
     </section>
   );

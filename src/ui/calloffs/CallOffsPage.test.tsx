@@ -82,6 +82,29 @@ describe('CallOffsPage', () => {
     expect(screen.getByRole('button', { name: /Excel od začátku roku/ })).toBeTruthy();
   });
 
+  it('porovná dva exporty po týdnech, po dílech a v matici vývoje', () => {
+    renderPage(state);
+    fireEvent.click(screen.getByRole('tab', { name: 'Porovnání exportů' }));
+    const [summary, items, matrix] = screen.getAllByRole('table');
+    const cells = (row: HTMLElement) => [...row.querySelectorAll('td')].map((td) => td.textContent);
+    expect(cells(within(summary!).getByText('Rozdíl').closest('tr')!)).toEqual(['Rozdíl', '+50', '+50']);
+    // Jen změněné díly.
+    const itemRows = () => within(items!).getAllByRole('row').filter((r) => r.closest('tbody'));
+    expect(itemRows().map((r) => r.querySelector('strong')?.textContent)).toEqual(['1001']);
+    fireEvent.click(screen.getByLabelText('Jen změněné díly'));
+    expect(itemRows()).toHaveLength(3);
+    // Matice: CW 43 starší export neobsahuje, CW 42 vzrostl o třetinu.
+    const last = within(matrix!).getByText('CW 42/2026').closest('tr')!;
+    expect(cells(last)).toEqual(['CW 42/2026', '200▲ +33,3 %', '7']);
+    expect(cells(within(matrix!).getByText('CW 41/2026').closest('tr')!)).toEqual(['CW 41/2026', '150', '·']);
+  });
+
+  it('porovnání s jedním exportem vysvětlí, co chybí', () => {
+    renderPage({ ...state, data: { ...state.data!, exports: [cw42] } });
+    fireEvent.click(screen.getByRole('tab', { name: 'Porovnání exportů' }));
+    expect(screen.getByText(/aspoň dva exporty/)).toBeTruthy();
+  });
+
   it('velkou tabulku vykreslí postupně, součty jsou za všechny díly', () => {
     const many = exportOf('Odvolavky_CW42.csv', Array.from({ length: 250 }, (_, i) => `${5000 + i},PART,12.10.2026,1`));
     renderPage({ ...state, data: { ...state.data!, exports: [many], master: null } });

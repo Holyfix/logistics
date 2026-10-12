@@ -751,3 +751,12 @@ button:focus-visible {
   margin-left: auto;
   align-self: center;
 }
+
+.check-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  color: var(--ink-2);
+  cursor: pointer;
+}

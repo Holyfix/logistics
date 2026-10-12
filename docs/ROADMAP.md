@@ -46,10 +46,10 @@ funkce (plánování).
 - [x] Kmenová data dílů (zákazník, projekt, strana LHD/RHD) z Excelu nebo CSV
 - [ ] Zápis záznamů do sdílené složky (ADR 0003): odloženo, až bude potřeba (Obaly)
 
-### Fáze 3: Call-offs (probíhá)
+### Fáze 3: Call-offs (hotovo)
 - [x] Aktuální odvolávky po týdnech a dnech, změny proti předchozímu exportu, export Excel/CSV
 - [x] Excel od začátku roku pro reporting: souhrn po týdnech (požadováno, odesláno, rozdíl, plnění) a listy po dílech, s výhledem do konce roku
-- [ ] Porovnání exportů a matice vývoje odvolávek
+- [x] Porovnání exportů: dva libovolné exporty po týdnech a po dílech, matice vývoje (10 exportů × 10 týdnů), export Excel/CSV
 
 ### Fáze 4: Coverage a Komponenty
 ### Fáze 5: Obaly
