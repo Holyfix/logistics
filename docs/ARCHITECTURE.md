@@ -53,7 +53,7 @@ logistics/
 
 Seznam modulů, skupiny a stav jsou v `src/ui/modules.ts`, popis v [MODULES.md](MODULES.md).
 Výpočty každého modulu budou v `src/core/<modul>`, zobrazení v `src/ui/<modul>`.
-Rozcestník (`src/ui/HubPage.tsx`) zobrazí dlaždici pro každý modul. Adresa `#<id-modulu>`
+Rozcestník (`src/ui/HubPage.tsx`) zobrazí kartu pro každou skupinu a v ní řádek pro každý modul. Adresa `#<id-modulu>`
 otevře modul, cokoli jiného rozcestník.
 
 ## Zásady

@@ -17,7 +17,7 @@ export const cs = {
   },
   hub: {
     title: 'Rozcestník',
-    intro: 'Vyberte modul. Až budou načtená data, dlaždice ukážou hlavní číslo a stav.',
+    intro: 'Vyberte modul. Až budou načtená data, u každého modulu se zobrazí hlavní číslo a stav.',
     groups: {
       overview: 'Přehledy',
       customers: 'Zákazníci',

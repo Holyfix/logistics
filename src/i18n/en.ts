@@ -19,7 +19,7 @@ export const en: Messages = {
   },
   hub: {
     title: 'Home',
-    intro: 'Choose a module. Once data is loaded, the tiles will show the key figure and status.',
+    intro: 'Choose a module. Once data is loaded, each module will show its key figure and status.',
     groups: {
       overview: 'Overviews',
       customers: 'Customers',

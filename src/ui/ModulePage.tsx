@@ -11,7 +11,7 @@ export function ModulePage({ module }: { module: ModuleDef }) {
   return (
     <section className="page" aria-labelledby="page-title">
       <div className="page-head module-head">
-        <span className="tile-icon">
+        <span className="module-icon">
           <Icon name={module.icon} />
         </span>
         <div>

@@ -14,7 +14,6 @@
   --good: #0ca30c;
   --chip-bg: #e8eef5;
   --accent-soft: #e3edf8;
-  --shadow: 0 1px 2px rgba(19, 32, 42, 0.06), 0 6px 18px rgba(19, 32, 42, 0.07);
   --banner-bg: #fdf1d3;
   --banner-ink: #4a3500;
 
@@ -37,7 +36,6 @@
     --accent: #6fa8e8;
     --chip-bg: #1f2d3b;
     --accent-soft: #1a2b3d;
-    --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 6px 18px rgba(0, 0, 0, 0.35);
     --banner-bg: #3a2f12;
     --banner-ink: #f6dd9c;
     color-scheme: dark;
@@ -278,79 +276,75 @@ button:focus-visible {
   border-top: 1px solid var(--line);
 }
 
-/* Rozcestník */
+/* Rozcestník: karty skupin ve sloupcích, moduly jako řádky */
 .page-head {
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
 
-.groups {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
+.hub {
+  columns: 3 320px;
+  column-gap: 16px;
 }
 
-.group {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  min-width: 0;
+.hub-card {
+  break-inside: avoid;
+  margin-bottom: 16px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden;
 }
 
-.group-title {
+.hub-card-title {
   font-size: 13px;
   font-weight: 600;
   letter-spacing: 0.09em;
   text-transform: uppercase;
   color: var(--muted);
+  padding: 12px 16px 8px;
 }
 
-.tiles {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr));
-  gap: 14px;
-}
-
-.tile {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding: 16px 18px;
-  background: var(--surface);
-  color: inherit;
-  text-decoration: none;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  transition:
-    border-color 0.15s,
-    box-shadow 0.15s,
-    transform 0.15s;
-}
-
-.tile:hover {
-  border-color: var(--accent);
-  box-shadow: var(--shadow);
-  transform: translateY(-1px);
-}
-
-.tile-later {
-  background: transparent;
-  border-style: dashed;
-}
-
-.tile-top {
+.hub-item {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding-right: 56px;
+  padding: 10px 16px;
+  border-top: 1px solid var(--grid);
+  color: inherit;
+  text-decoration: none;
 }
 
-.tile-icon {
+.hub-item:hover {
+  background: var(--surface-2);
+}
+
+.hub-item:focus-visible {
+  outline-offset: -2px;
+}
+
+.hub-item-name {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  font: 600 16px/1.2 var(--font-display);
+}
+
+.hub-item-name small {
+  font: 500 12.5px/1.3 var(--font-body);
+  color: var(--muted);
+}
+
+.hub-item-later .hub-item-name {
+  color: var(--ink-2);
+}
+
+.module-icon {
   flex: none;
-  width: 42px;
-  height: 42px;
+  width: 36px;
+  height: 36px;
   border-radius: 8px;
   display: grid;
   place-items: center;
@@ -358,42 +352,19 @@ button:focus-visible {
   color: var(--accent);
 }
 
-.tile-later .tile-icon {
+.hub-item-later .module-icon {
   background: var(--surface-2);
   color: var(--muted);
 }
 
 .icon {
-  width: 24px;
-  height: 24px;
+  width: 20px;
+  height: 20px;
   fill: none;
   stroke: currentColor;
   stroke-width: 1.8;
   stroke-linecap: round;
   stroke-linejoin: round;
-}
-
-.tile-title {
-  display: flex;
-  flex-direction: column;
-  font: 600 20px/1.15 var(--font-display);
-}
-
-.tile-title small {
-  font: 500 12.5px/1.3 var(--font-body);
-  color: var(--muted);
-}
-
-.tile-text {
-  font-size: 14px;
-  line-height: 1.4;
-  color: var(--ink-2);
-}
-
-.tile-chip {
-  position: absolute;
-  top: 14px;
-  right: 14px;
 }
 
 /* Stránka modulu */
@@ -430,14 +401,4 @@ button:focus-visible {
 
 .button:hover {
   border-color: var(--accent);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .tile {
-    transition: none;
-  }
-
-  .tile:hover {
-    transform: none;
-  }
 }

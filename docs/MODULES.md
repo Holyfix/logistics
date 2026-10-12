@@ -1,12 +1,13 @@
 # Moduly
 
 Katalog modulů aplikace. V kódu: `src/ui/modules.ts` (seznam, skupiny, stav),
-texty v `src/i18n/cs.ts` a `en.ts`. Úvodní stránka je rozcestník s dlaždicemi.
-Až budou data, dlaždice ukážou hlavní číslo a stav (varianta B z návrhu).
+texty v `src/i18n/cs.ts` a `en.ts`. Úvodní stránka je rozcestník: každá skupina je karta
+a moduly jsou v ní řádky; karty se skládají do sloupců. Až budou data, u každého modulu
+se zobrazí hlavní číslo a stav.
 
 ## Přehled
 
-Skupiny jsou na rozcestníku pod sebou v tomto pořadí (rozložení 2 z návrhu struktury).
+Pořadí skupin na rozcestníku (karty se čtou shora dolů po sloupcích):
 
 | Skupina | Modul | Otázka, na kterou odpovídá | Stav |
 |---|---|---|---|
