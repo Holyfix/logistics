@@ -6,15 +6,16 @@ function StatusChip({ module }: { module: ModuleDef }) {
   const { t } = useI18n();
   if (module.status.kind === 'planned') {
     return (
-      <span className="chip tile-chip">
+      <span className="chip">
         {t.hub.phase} {module.status.phase}
       </span>
     );
   }
-  if (module.status.kind === 'later') return <span className="chip tile-chip">{t.hub.later}</span>;
+  if (module.status.kind === 'later') return <span className="chip">{t.hub.later}</span>;
   return null;
 }
 
+/** Rozcestník: každá skupina je karta, moduly jsou v ní řádky. Karty se skládají do sloupců. */
 export function HubPage() {
   const { t } = useI18n();
 
@@ -24,31 +25,28 @@ export function HubPage() {
         <h1 id="page-title">{t.hub.title}</h1>
         <p className="lead">{t.hub.intro}</p>
       </div>
-      <div className="groups">
+      <div className="hub">
         {GROUPS.map((group) => (
-          <div key={group} className={`group group-${group}`}>
-            <h2 className="group-title">{t.hub.groups[group]}</h2>
-            <div className="tiles">
-              {MODULES.filter((m) => m.group === group).map((m) => {
-                const text = t.modules[m.id];
-                return (
-                  <a key={m.id} href={`#${m.id}`} className={`tile tile-${m.status.kind}`}>
-                    <StatusChip module={m} />
-                    <span className="tile-top">
-                      <span className="tile-icon">
-                        <Icon name={m.icon} />
-                      </span>
-                      <span className="tile-title">
-                        {text.title}
-                        <small>{text.subtitle}</small>
-                      </span>
-                    </span>
-                    <span className="tile-text">{text.description}</span>
-                  </a>
-                );
-              })}
-            </div>
-          </div>
+          <section key={group} className="hub-card" aria-labelledby={`group-${group}`}>
+            <h2 id={`group-${group}`} className="hub-card-title">
+              {t.hub.groups[group]}
+            </h2>
+            {MODULES.filter((m) => m.group === group).map((m) => {
+              const text = t.modules[m.id];
+              return (
+                <a key={m.id} href={`#${m.id}`} className={`hub-item hub-item-${m.status.kind}`}>
+                  <span className="module-icon">
+                    <Icon name={m.icon} />
+                  </span>
+                  <span className="hub-item-name">
+                    {text.title}
+                    <small>{text.subtitle}</small>
+                  </span>
+                  <StatusChip module={m} />
+                </a>
+              );
+            })}
+          </section>
         ))}
       </div>
     </section>

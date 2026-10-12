@@ -41,7 +41,7 @@ describe('App', () => {
   it('ukáže na rozcestníku dlaždici pro každý modul', () => {
     renderApp();
     for (const m of MODULES) {
-      expect(document.querySelector(`a.tile[href="#${m.id}"]`), m.id).not.toBeNull();
+      expect(document.querySelector(`a.hub-item[href="#${m.id}"]`), m.id).not.toBeNull();
     }
   });
 
