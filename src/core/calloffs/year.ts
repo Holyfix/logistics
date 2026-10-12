@@ -34,11 +34,14 @@ export function exportYears(exports: readonly CallOffExport[]): number[] {
   return [...new Set(exports.map((e) => e.year))].sort((a, b) => b - a);
 }
 
+/** Výhled za posledním exportem: žádný, do konce roku, nebo celý horizont exportu. */
+export type Outlook = 'none' | 'year' | 'all';
+
 /**
  * Týdny roku od prvního do posledního exportu v roce. Za ně se volitelně přidá výhled
  * z posledního exportu roku. Exporty musí být seřazené podle týdne exportu.
  */
-export function buildYearWeeks(exports: readonly CallOffExport[], year: number, outlook = 0): YearWeek[] {
+export function buildYearWeeks(exports: readonly CallOffExport[], year: number, outlook: Outlook = 'none'): YearWeek[] {
   const inYear = exports.filter((e) => e.year === year);
   if (inYear.length === 0) return [];
   const byStart = new Map(exports.map((e) => [e.exportDay, e]));
@@ -56,9 +59,8 @@ export function buildYearWeeks(exports: readonly CallOffExport[], year: number, 
   }
 
   const latest = byStart.get(last)!;
-  for (let k = 1; k <= outlook; k++) {
-    const start = last + k * 7;
-    if (start > latest.lastDay) break;
+  const limit = outlook === 'all' ? latest.lastDay : outlook === 'year' ? Math.min(latest.lastDay, mondayOfIsoWeek(year + 1, 1) - 1) : last;
+  for (let start = last + 7; start <= limit; start += 7) {
     const iso = isoWeek(start);
     weeks.push({
       year: iso.year,

@@ -33,11 +33,23 @@ const cw43 = exportOf('CW43.csv', [
 const exports = [cw40, cw41, cw43];
 
 describe('buildYearWeeks', () => {
-  const weeks = buildYearWeeks(exports, 2026, 1);
+  const weeks = buildYearWeeks(exports, 2026, 'year');
 
-  it('týdny od prvního do posledního exportu a výhled', () => {
-    expect(weeks.map((w) => w.label)).toEqual(['CW 40', 'CW 41', 'CW 42', 'CW 43', 'CW 44']);
-    expect(weeks.map((w) => w.outlook)).toEqual([false, false, false, false, true]);
+  it('týdny od prvního do posledního exportu a výhled z posledního exportu', () => {
+    expect(weeks.map((w) => w.label)).toEqual(['CW 40', 'CW 41', 'CW 42', 'CW 43', 'CW 44', 'CW 45']);
+    expect(weeks.map((w) => w.outlook)).toEqual([false, false, false, false, true, true]);
+    expect(weeks[5]!.source).toBe(cw43);
+    expect(buildYearWeeks(exports, 2026)).toHaveLength(4);
+  });
+
+  it('výhled do konce roku nebo přes konec roku', () => {
+    const cw52 = exportOf('CW52.csv', [
+      ['A', '21.12.2026', 1, 0],
+      ['A', '28.12.2026', 2, 0],
+      ['A', '04.01.2027', 3, 0],
+    ]);
+    expect(buildYearWeeks([cw52], 2026, 'year').map((w) => w.label)).toEqual(['CW 52', 'CW 53']);
+    expect(buildYearWeeks([cw52], 2026, 'all').map((w) => w.label)).toEqual(['CW 52', 'CW 53', 'CW 1/2027']);
   });
 
   it('chybějící týden vezme požadavek ze staršího exportu', () => {
@@ -47,7 +59,7 @@ describe('buildYearWeeks', () => {
   });
 
   it('odeslané jen mezi dvěma po sobě jdoucími exporty', () => {
-    expect(weeks.map((w) => w.shipped !== null)).toEqual([true, false, false, false, false]);
+    expect(weeks.map((w) => w.shipped !== null)).toEqual([true, false, false, false, false, false]);
   });
 
   it('rok bez exportů nemá týdny', () => {

@@ -81,14 +81,37 @@ describe('CallOffsPage', () => {
     fireEvent.click(screen.getByRole('tab', { name: 'Přehled od začátku roku' }));
     const [summary, items] = screen.getAllByRole('table');
     const demand = within(summary!).getByText('Požadováno').closest('tr')!;
-    expect([...demand.querySelectorAll('td')].map((td) => td.textContent)).toEqual(['Požadováno', '0', '200', '200']);
+    // CW 41 a CW 42 z exportů, CW 43 jako výhled z aktuálního exportu.
+    expect([...demand.querySelectorAll('td')].map((td) => td.textContent)).toEqual(['Požadováno', '0', '200', '7', '207']);
+    expect(within(summary!).getByRole('columnheader', { name: 'CW 43' }).className).toContain('col-outlook');
     const row = within(items!).getByText('1001').closest('tr')!;
     expect(row.textContent).toContain('150');
-    // Díl bez požadavku v týdnech roku se nezobrazí.
-    expect(within(items!).queryByText('1003')).toBeNull();
+    expect(within(items!).getByText('1003')).toBeTruthy();
     // Bez kumulativů nejde odeslané množství spočítat.
     fireEvent.click(screen.getByRole('button', { name: 'Rozdíl' }));
     expect(within(items!).getByText('1001').closest('tr')!.textContent).toContain('—');
+  });
+
+  it('přehled roku bez výhledu ukáže jen týdny s exportem', () => {
+    renderPage(state);
+    fireEvent.click(screen.getByRole('tab', { name: 'Přehled od začátku roku' }));
+    fireEvent.change(screen.getByLabelText('Výhled'), { target: { value: 'none' } });
+    const [summary, items] = screen.getAllByRole('table');
+    expect(within(summary!).queryByRole('columnheader', { name: 'CW 43' })).toBeNull();
+    // Díl bez požadavku v zobrazených týdnech se nezobrazí.
+    expect(within(items!).queryByText('1003')).toBeNull();
+  });
+
+  it('velkou tabulku vykreslí postupně, součty jsou za všechny díly', () => {
+    const many = exportOf('Odvolavky_CW42.csv', Array.from({ length: 250 }, (_, i) => `${5000 + i},PART,12.10.2026,1`));
+    renderPage({ ...state, data: { ...state.data!, exports: [many], master: null } });
+    const body = () => within(screen.getByRole('table')).getAllByRole('row').filter((r) => r.closest('tbody'));
+    expect(body()).toHaveLength(200);
+    expect(screen.getByText(/Zobrazeno 200 z 250 dílů/)).toBeTruthy();
+    expect(screen.getByRole('table').querySelector('tfoot')!.textContent).toContain('250');
+    fireEvent.click(screen.getByRole('button', { name: 'Zobrazit vše' }));
+    expect(body()).toHaveLength(250);
+    expect(screen.queryByRole('button', { name: 'Zobrazit vše' })).toBeNull();
   });
 
   it('bez dat nabídne výběr složky', () => {
