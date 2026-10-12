@@ -1,4 +1,4 @@
-# log1032 – logistický přehled pro automotive
+# Logistics – logistický přehled pro automotive
 
 Webová aplikace pro logistiku dodavatele dílů do automotive (1 závod, 1 sklad).
 Načítá CSV exporty z ERP uložené ve firemní sdílené složce a počítá z nich

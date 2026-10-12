@@ -5,6 +5,8 @@ import { detectSupport, isFullySupported } from '../platform/support';
 import { DataPage } from './DataPage';
 import { OverviewPage } from './OverviewPage';
 
+export const APP_NAME = 'Logistics';
+
 type Page = 'overview' | 'data';
 
 function pageFromHash(hash: string): Page {
@@ -15,6 +17,10 @@ export function App() {
   const { t, locale, setLocale } = useI18n();
   const [page, setPage] = useState<Page>(() => pageFromHash(location.hash));
   const [supported] = useState(() => isFullySupported(detectSupport()));
+
+  useEffect(() => {
+    document.title = `${APP_NAME} · ${t.appTagline}`;
+  }, [t]);
 
   useEffect(() => {
     const onHashChange = () => setPage(pageFromHash(location.hash));
@@ -32,7 +38,7 @@ export function App() {
     <div className="shell">
       <header className="topbar">
         <div className="brand">
-          <span className="brand-name">log1032</span>
+          <span className="brand-name">{APP_NAME}</span>
           <span className="brand-tagline">{t.appTagline}</span>
         </div>
         <nav className="nav" aria-label={t.nav.label}>

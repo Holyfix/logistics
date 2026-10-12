@@ -22,7 +22,7 @@ export const CONTENT_SECURITY_POLICY = [
 
 function contentSecurityPolicy(): Plugin {
   return {
-    name: 'log1032-csp',
+    name: 'logistics-csp',
     apply: 'build',
     transformIndexHtml: {
       order: 'post',
@@ -40,7 +40,7 @@ const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 
 };
 
 export default defineConfig({
-  // Relativní cesty: funguje na https://<uživatel>.github.io/log1032/ i lokálně.
+  // Relativní cesty: funguje na https://<uživatel>.github.io/logistics/ i lokálně.
   base: './',
   plugins: [react(), contentSecurityPolicy()],
   define: {

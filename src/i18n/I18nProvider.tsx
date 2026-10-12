@@ -4,7 +4,7 @@ import { cs, type Messages } from './cs';
 import { en } from './en';
 
 const MESSAGES: Record<Locale, Messages> = { cs, en };
-const STORAGE_KEY = 'log1032-locale';
+const STORAGE_KEY = 'logistics-locale';
 
 interface I18nContextValue {
   locale: Locale;

@@ -19,8 +19,9 @@ describe('App', () => {
     renderApp();
     fireEvent.click(screen.getByRole('button', { name: 'Čeština' }));
     expect(screen.getByRole('heading', { level: 1, name: 'Přehled' })).toBeTruthy();
-    expect(localStorage.getItem('log1032-locale')).toBe('cs');
+    expect(localStorage.getItem('logistics-locale')).toBe('cs');
     expect(document.documentElement.lang).toBe('cs');
+    expect(document.title).toBe('Logistics · Logistický přehled');
 
     fireEvent.click(screen.getByRole('button', { name: 'English' }));
     expect(screen.getByRole('heading', { level: 1, name: 'Overview' })).toBeTruthy();

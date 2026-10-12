@@ -30,5 +30,5 @@ Pokud je potřeba nasadit ručně: **Actions** → **Deploy to GitHub Pages** �
 
 ## 5. Výsledek
 
-Aplikace poběží na `https://<uživatel>.github.io/log1032/`.
+Aplikace poběží na `https://holyfix.github.io/logistics/`.
 Adresu ukazuje **Settings → Pages** i výstup posledního nasazení v záložce **Actions**.

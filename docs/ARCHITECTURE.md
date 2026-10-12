@@ -33,7 +33,7 @@ GitHub Pages ── stáhne kód aplikace ──► Prohlížeč (Edge / Chrome)
 ## Struktura projektu
 
 ```
-log1032/
+logistics/
 ├── src/
 │   ├── core/        # čisté výpočty a pomocné funkce, bez DOM a Reactu (běží i v Node.js)
 │   ├── platform/    # přístup k prohlížeči: podpora API, složky, IndexedDB, Web Worker
