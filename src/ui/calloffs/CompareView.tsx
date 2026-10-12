@@ -7,7 +7,6 @@ import { formatPercent, formatQuantity, formatSigned } from '../../core/format';
 import type { MasterItem } from '../../core/masterdata';
 import { useI18n } from '../../i18n/I18nProvider';
 import { ExportButtons, type ExportTable } from './ExportButtons';
-import { MoreRows, useRowLimit } from './MoreRows';
 
 const RANGES: PeriodCount[] = [12, 26, 'all'];
 /** Od jaké změny proti předchozímu exportu se buňka matice zvýrazní (v %). */
@@ -31,7 +30,6 @@ export function CompareView({ exports, filter, master }: Props) {
   const [range, setRange] = useState<PeriodCount>(12);
   const [view, setView] = useState<ItemView>('total');
   const [onlyChanged, setOnlyChanged] = useState(true);
-  const [limit, setLimit] = useRowLimit();
 
   // Výběr se vždy srovná tak, aby starší byl opravdu starší.
   // Po novém načtení složky nemusí vybraný export existovat; pak platí výchozí dvojice.
@@ -323,7 +321,7 @@ export function CompareView({ exports, filter, master }: Props) {
                 </tr>
               </thead>
               <tbody>
-                {shownRows.slice(0, limit).map((r) => {
+                {shownRows.map((r) => {
                   const m = master?.get(r.item);
                   return (
                     <tr key={r.item}>
@@ -357,7 +355,6 @@ export function CompareView({ exports, filter, master }: Props) {
             </table>
           </div>
         )}
-        <MoreRows shown={Math.min(limit, shownRows.length)} total={shownRows.length} onLimit={setLimit} />
       </div>
 
       {matrix && (

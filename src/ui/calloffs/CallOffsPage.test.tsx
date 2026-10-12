@@ -105,16 +105,11 @@ describe('CallOffsPage', () => {
     expect(screen.getByText(/aspoň dva exporty/)).toBeTruthy();
   });
 
-  it('velkou tabulku vykreslí postupně, součty jsou za všechny díly', () => {
+  it('ukáže všechny díly najednou', () => {
     const many = exportOf('Odvolavky_CW42.csv', Array.from({ length: 250 }, (_, i) => `${5000 + i},PART,12.10.2026,1`));
     renderPage({ ...state, data: { ...state.data!, exports: [many], master: null } });
-    const body = () => within(screen.getByRole('table')).getAllByRole('row').filter((r) => r.closest('tbody'));
-    expect(body()).toHaveLength(200);
-    expect(screen.getByText(/Zobrazeno 200 z 250 dílů/)).toBeTruthy();
-    expect(screen.getByRole('table').querySelector('tfoot')!.textContent).toContain('250');
-    fireEvent.click(screen.getByRole('button', { name: 'Zobrazit vše' }));
-    expect(body()).toHaveLength(250);
-    expect(screen.queryByRole('button', { name: 'Zobrazit vše' })).toBeNull();
+    const body = within(screen.getByRole('table')).getAllByRole('row').filter((r) => r.closest('tbody'));
+    expect(body).toHaveLength(250);
   });
 
   it('bez dat nabídne výběr složky', () => {

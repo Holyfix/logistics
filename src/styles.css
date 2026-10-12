@@ -739,14 +739,6 @@ button:focus-visible {
   color: var(--down);
 }
 
-.more-rows {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px 12px;
-  margin-top: 10px;
-}
-
 .tabs-actions {
   margin-left: auto;
   align-self: center;
