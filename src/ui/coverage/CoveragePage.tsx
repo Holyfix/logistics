@@ -8,7 +8,7 @@ import {
   summarizeByVariant,
   type CoverageFilter,
 } from '../../core/coverage/compute';
-import { dayToIso, weekday, type DayNumber } from '../../core/dates';
+import { dayFromParts, dayToIso, parseDay, weekday, type DayNumber } from '../../core/dates';
 import { formatDayShort, formatQuantity } from '../../core/format';
 import { useI18n } from '../../i18n/I18nProvider';
 import { ExportButtons, type ExportTable } from '../calloffs/ExportButtons';
@@ -25,7 +25,13 @@ function isNegative(v: number | null | undefined): boolean {
   return v !== null && v !== undefined && v < 0;
 }
 
-export function CoveragePage() {
+/** Dnešní den podle místního času počítače. */
+function localToday(): DayNumber {
+  const now = new Date();
+  return dayFromParts(now.getFullYear(), now.getMonth() + 1, now.getDate())!;
+}
+
+export function CoveragePage({ today = localToday() }: { today?: DayNumber } = {}) {
   const { t, locale } = useI18n();
   const tc = t.coverage;
   const { state } = useData();
@@ -135,11 +141,24 @@ export function CoveragePage() {
     rows: summary.map((s) => [s.variant || tc.summary.none, ...s.values]),
   });
 
-  const valueCell = (v: number | null, key: number) => (
-    <td key={key} className={`n${isNegative(v) ? ' cell-negative' : ''}`}>
-      {v === null ? <span className="muted">—</span> : formatQuantity(v, locale)}
-    </td>
+  // Hranice pokrytí 2 dny: konec zítřka (dnes + 1).
+  const boundary = today + 1;
+  const dayClass = (d: DayNumber) => `${weekday(d) >= 6 ? ' col-weekend' : ''}${d === boundary ? ' col-boundary' : ''}`;
+  const dayHead = (d: DayNumber) => (
+    <th key={d} className={`n${dayClass(d)}`} title={d === boundary ? tc.legend.boundary : undefined}>
+      {dayLabel(d)}
+    </th>
   );
+  /** Buňka pokrytí; `uncoveredDay` je den, kdy zákazník hlásí první nepokrytí. */
+  const valueCell = (v: number | null, k: number, uncoveredDay: DayNumber | null = null) => {
+    const day = table.days[k]!;
+    const state = isNegative(v) ? ' cell-negative' : v !== null && day === uncoveredDay ? ' cell-uncovered' : '';
+    return (
+      <td key={k} className={`n${dayClass(day)}${state}`} title={state === ' cell-uncovered' ? tc.legend.uncovered : undefined}>
+        {v === null ? <span className="muted">—</span> : formatQuantity(v, locale)}
+      </td>
+    );
+  };
 
   return (
     <section className="page" aria-labelledby="page-title">
@@ -236,11 +255,7 @@ export function CoveragePage() {
             <thead>
               <tr>
                 <th className="sticky-col">{tc.summary.variant}</th>
-                {table.days.map((d) => (
-                  <th key={d} className="n">
-                    {dayLabel(d)}
-                  </th>
-                ))}
+                {table.days.map(dayHead)}
               </tr>
             </thead>
             <tbody>
@@ -279,11 +294,7 @@ export function CoveragePage() {
                   <th className="n">{tc.table.customerStock}</th>
                   <th className="n">{tc.table.transit}</th>
                   <th>{tc.table.firstUncovered}</th>
-                  {table.days.map((d) => (
-                    <th key={d} className="n">
-                      {dayLabel(d)}
-                    </th>
-                  ))}
+                  {table.days.map(dayHead)}
                 </tr>
               </thead>
               <tbody>
@@ -310,13 +321,27 @@ export function CoveragePage() {
                         <span className="muted">—</span>
                       )}
                     </td>
-                    {l.values.map((v, k) => valueCell(v, k))}
+                    {l.values.map((v, k) => valueCell(v, k, l.uncoveredAt ? parseDay(l.uncoveredAt) : null))}
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
         )}
+        <ul className="cov-legend">
+          <li>
+            <i className="swatch swatch-negative" /> {tc.legend.negative}
+          </li>
+          <li>
+            <i className="swatch swatch-uncovered" /> {tc.legend.uncovered}
+          </li>
+          <li>
+            <i className="swatch swatch-weekend" /> {tc.legend.weekend}
+          </li>
+          <li>
+            <i className="swatch swatch-boundary" /> {tc.legend.boundary}
+          </li>
+        </ul>
         <p className="muted">{tc.table.note}</p>
       </div>
     </section>
