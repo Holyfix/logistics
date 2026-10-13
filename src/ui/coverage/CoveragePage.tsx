@@ -10,7 +10,7 @@ import {
 } from '../../core/coverage/compute';
 import { dayFromParts, dayToIso, parseDay, weekday, type DayNumber } from '../../core/dates';
 import { formatDayShort, formatQuantity } from '../../core/format';
-import { stockByItem } from '../../core/stock';
+import { stockByItem, stockRule } from '../../core/stock';
 import { useI18n } from '../../i18n/I18nProvider';
 import { ExportButtons, type ExportTable } from '../calloffs/ExportButtons';
 import { useData } from '../data/DataProvider';
@@ -39,7 +39,9 @@ export function CoveragePage({ today = localToday() }: { today?: DayNumber } = {
   const sources = state.data?.coverage ?? NO_SOURCES;
   const master = state.data?.master?.data;
   const stockData = state.data?.stock?.data;
-  const stock = useMemo(() => (stockData ? stockByItem(stockData) : undefined), [stockData]);
+  const settings = state.data?.settings?.data;
+  const rule = useMemo(() => stockRule(settings), [settings]);
+  const stock = useMemo(() => (stockData ? stockByItem(stockData, rule) : undefined), [stockData, rule]);
 
   const [transit, setTransit] = useState(true);
   const [ourStock, setOurStock] = useState(false);
@@ -361,7 +363,10 @@ export function CoveragePage({ today = localToday() }: { today?: DayNumber } = {
         </ul>
         <p className="muted">
           {tc.table.note}
-          {stock && ` ${tc.table.ourStockNote}`}
+          {stock &&
+            ` ${tc.table.ourStockNote
+              .replace('{zones}', rule.zones.join(', '))
+              .replace('{excluded}', rule.excludedLocations.length > 0 ? rule.excludedLocations.join(', ') : tc.table.ourStockNoExclusions)}`}
         </p>
       </div>
     </section>

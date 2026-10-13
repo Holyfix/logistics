@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { parseCsv } from './csv';
-import { parseStock, stockByItem, stockItemCount } from './stock';
+import { DEFAULT_STOCK_ZONES, parseStock, stockByItem, stockItemCount, stockRule } from './stock';
 
 // Smyšlený export skladu ve formátu z ERP: čárka jako oddělovač, čísla v českém formátu, dvakrát sloupec Description.
 const csv = [
@@ -42,11 +42,18 @@ describe('parseStock', () => {
 });
 
 describe('stockByItem', () => {
-  it('sečte kladná množství v zónách SALE a PURCH, plná i neúplná balení dohromady', () => {
+  it('sečte kladná množství na lokacích ve výchozích zónách, plná i neúplná balení dohromady', () => {
     const r = parseStock(parseCsv(csv));
     if (!r.ok) throw new Error();
-    // 1 200 + 24 (SALE) + 12 (PURCH); výroba, záporná a nulová lokace se nepočítají
-    expect(stockByItem(r.value)).toEqual(new Map([['900100', 1236]]));
-    expect(stockByItem(r.value, ['LAB'])).toEqual(new Map([['900101', 5]]));
+    // 1 200 + 24 (SALE) + 12 (PURCH) + 8 (WRKC); karanténa (LAB), záporná a nulová lokace se nepočítají
+    expect(stockByItem(r.value)).toEqual(new Map([['900100', 1244]]));
+    expect(stockByItem(r.value, { zones: ['lab'], excludedLocations: [] })).toEqual(new Map([['900101', 5]]));
+  });
+
+  it('vyloučené lokace z nastavení se nepočítají (bez ohledu na velikost písmen)', () => {
+    const r = parseStock(parseCsv(csv));
+    if (!r.ok) throw new Error();
+    expect(stockByItem(r.value, stockRule({ stockZones: null, stockExcludedLocations: ['a-01'] }))).toEqual(new Map([['900100', 44]]));
+    expect(stockRule(null)).toEqual({ zones: DEFAULT_STOCK_ZONES, excludedLocations: [] });
   });
 });

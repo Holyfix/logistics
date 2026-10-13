@@ -23,7 +23,7 @@ const state: DataState = {
   folderName: 'data',
   progress: null,
   error: '',
-  data: { folderName: 'data', exports: [cw41, cw42], master: { path: 'kmenova-data.csv', data: master.value }, coverage: [], stock: null, failed: [], loadedAt: 0 },
+  data: { folderName: 'data', exports: [cw41, cw42], master: { path: 'kmenova-data.csv', data: master.value }, coverage: [], stock: null, settings: null, failed: [], loadedAt: 0 },
 };
 
 function renderPage(initial: DataState) {

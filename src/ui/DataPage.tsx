@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { dayToIso } from '../core/dates';
 import { formatDate, formatQuantity } from '../core/format';
 import { masterDataTemplate } from '../core/masterdata';
-import { stockByItem, stockItemCount } from '../core/stock';
+import { stockByItem, stockItemCount, stockRule } from '../core/stock';
 import type { DataIssue } from '../core/table';
 import { useI18n } from '../i18n/I18nProvider';
 import { downloadXlsx } from '../platform/download';
@@ -48,8 +48,9 @@ export function DataPage() {
 
   const stockFacts = useMemo(() => {
     if (!data?.stock) return null;
-    const byItem = stockByItem(data.stock.data);
-    return { items: stockItemCount(data.stock.data), withStock: byItem.size, pieces: [...byItem.values()].reduce((a, b) => a + b, 0) };
+    const rule = stockRule(data.settings?.data);
+    const byItem = stockByItem(data.stock.data, rule);
+    return { rule, items: stockItemCount(data.stock.data), withStock: byItem.size, pieces: [...byItem.values()].reduce((a, b) => a + b, 0) };
   }, [data]);
 
   const downloadTemplate = () => {
@@ -239,11 +240,23 @@ export function DataPage() {
                 </dd>
                 <dt>{t.data.stock.qtyColumn}</dt>
                 <dd>{data.stock.data.qtyColumn}</dd>
+                <dt>{t.data.stock.zones}</dt>
+                <dd>{stockFacts.rule.zones.join(', ')}</dd>
+                <dt>{t.data.stock.excluded}</dt>
+                <dd>
+                  {stockFacts.rule.excludedLocations.length > 0 ? stockFacts.rule.excludedLocations.join(', ') : <span className="muted">{t.data.stock.noExcluded}</span>}
+                  {data.settings && <span className="muted"> ({data.settings.path})</span>}
+                </dd>
               </dl>
             ) : (
               <p>{t.data.stock.none}</p>
             )}
             {data.stock && data.stock.data.issueCount > 0 && <IssueList issues={data.stock.data.issues} count={data.stock.data.issueCount} />}
+            {data.settings && data.settings.data.unknown.length > 0 && (
+              <p className="muted">
+                {t.data.stock.unknownSettings}: {data.settings.data.unknown.join(', ')}
+              </p>
+            )}
           </div>
 
           {data.failed.length > 0 && (
@@ -269,6 +282,7 @@ export function DataPage() {
           <li>{t.data.structure.master}</li>
           <li>{t.data.structure.coverage}</li>
           <li>{t.data.structure.stock}</li>
+          <li>{t.data.structure.settings}</li>
         </ul>
       </div>
     </section>

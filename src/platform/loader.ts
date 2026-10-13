@@ -3,6 +3,7 @@
 import type { CallOffExport } from '../core/calloffs/parse';
 import type { CoverageSource } from '../core/coverage/compute';
 import type { MasterData } from '../core/masterdata';
+import type { Settings } from '../core/settings';
 import type { StockData } from '../core/stock';
 import { classifyPath, coverageScope, formatOf } from '../core/sources';
 import { idbDelete, idbGet, idbKeys, idbSet, STORE_CALLOFFS } from './idb';
@@ -24,6 +25,8 @@ export interface LoadedData {
   coverage: CoverageSource[];
   /** Náš sklad: nejnovější soubor skladu. */
   stock: { path: string; lastModified: number; data: StockData } | null;
+  /** Nastavení ze sdílené složky (Settings.csv). */
+  settings: { path: string; data: Settings } | null;
   failed: FailedFile[];
   loadedAt: number;
 }
@@ -69,6 +72,7 @@ export async function loadFolder(source: FolderSource, onProgress: (p: LoadProgr
     .filter((f) => classifyPath(f.path) === 'masterdata')
     .sort((a, b) => b.lastModified - a.lastModified);
   const stockFiles = files.filter((f) => classifyPath(f.path) === 'stock').sort((a, b) => b.lastModified - a.lastModified);
+  const settingsFile = files.filter((f) => classifyPath(f.path) === 'settings').sort((a, b) => b.lastModified - a.lastModified)[0];
 
   // Coverage: pro každou destinaci a projekt platí naposledy změněný soubor (i z hlubší podsložky).
   const coverageFiles = new Map<string, SourceFile>();
@@ -161,5 +165,12 @@ export async function loadFolder(source: FolderSource, onProgress: (p: LoadProgr
     onProgress({ done: done + 1, total });
   }
 
-  return { folderName: source.name, exports, master, coverage, stock, failed, loadedAt: Date.now() };
+  let settings: LoadedData['settings'] = null;
+  if (settingsFile) {
+    const response = await parseInWorker({ kind: 'settings', format: formatOf(settingsFile.path)!, name: settingsFile.path, file: settingsFile.file });
+    if (response.kind === 'settings') settings = { path: settingsFile.path, data: response.result };
+    else if (response.kind === 'error') failed.push({ path: settingsFile.path, reason: 'unreadable', detail: response.message });
+  }
+
+  return { folderName: source.name, exports, master, coverage, stock, settings, failed, loadedAt: Date.now() };
 }

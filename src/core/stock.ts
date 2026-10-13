@@ -15,8 +15,16 @@ export const STOCK_COLUMNS = {
   status: ['Status', 'Inventory Status'],
 } as const;
 
-/** Zóny, ze kterých se bere zásoba hotových dílů pro pokrytí (stejně jako v původním Excelu). */
-export const COVERAGE_ZONES = ['SALE', 'PURCH'] as const;
+/** Zóny, které se počítají do našeho skladu (příjem, sklady, výroba); jiné lze nastavit v Settings.csv. */
+export const DEFAULT_STOCK_ZONES = ['INCOME', 'MEZ', 'PRE', 'PURCH', 'SALE', 'WRKC'] as const;
+
+export interface StockRule {
+  zones: readonly string[];
+  /** Lokace, které se nepočítají (porovnává se bez ohledu na velikost písmen). */
+  excludedLocations: readonly string[];
+}
+
+export const DEFAULT_STOCK_RULE: StockRule = { zones: DEFAULT_STOCK_ZONES, excludedLocations: [] };
 
 export interface StockRow {
   item: string;
@@ -82,16 +90,23 @@ export function parseStock(table: DataTable): StockResult {
 }
 
 /**
- * Zásoba po dílech: součet kladných množství ve vybraných zónách. Plná i neúplná balení
- * se počítají dohromady; záporné a nulové lokace se nepočítají.
+ * Zásoba po dílech: součet kladných množství na lokacích ve vybraných zónách, bez vyloučených lokací.
+ * Plná i neúplná balení se počítají dohromady; záporné a nulové lokace se nepočítají.
  */
-export function stockByItem(stock: StockData, zones: readonly string[] = COVERAGE_ZONES): Map<string, number> {
+export function stockByItem(stock: StockData, rule: StockRule = DEFAULT_STOCK_RULE): Map<string, number> {
+  const zones = new Set(rule.zones.map((z) => z.toUpperCase()));
+  const excluded = new Set(rule.excludedLocations.map((l) => l.toUpperCase()));
   const result = new Map<string, number>();
   for (const row of stock.rows) {
-    if (row.qty <= 0 || !zones.includes(row.zone)) continue;
+    if (row.qty <= 0 || !zones.has(row.zone) || excluded.has(row.location.toUpperCase())) continue;
     result.set(row.item, (result.get(row.item) ?? 0) + row.qty);
   }
   return result;
+}
+
+/** Pravidlo pro náš sklad podle nastavení ve sdílené složce. */
+export function stockRule(settings: { stockZones: string[] | null; stockExcludedLocations: string[] } | null | undefined): StockRule {
+  return { zones: settings?.stockZones ?? DEFAULT_STOCK_ZONES, excludedLocations: settings?.stockExcludedLocations ?? [] };
 }
 
 /** Počet různých dílů v souboru. */

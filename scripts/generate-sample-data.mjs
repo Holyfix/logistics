@@ -199,7 +199,10 @@ items
     if (idx % 3 === 0) stockLines.push(['1000', it.item, it.description, 'EA', 'PROD', czQty(Math.ceil(pack / 2)), 'B-01', 'PURCH', 'WRH', 'WH1'].join(','));
     stockLines.push(['1000', it.item, it.description, 'EA', 'PROD', czQty(Math.round(rnd() * 30)), 'L-01', 'WRKC', 'PROD', 'WH1'].join(','));
     if (idx % 5 === 0) stockLines.push(['1000', it.item, it.description, 'EA', 'HOLD', czQty(2), 'HOLD', 'LAB', 'PROD', 'WH1'].join(','));
+    // Externí lokace: díly už zamontované u odběratele, v Settings.csv vyloučené ze skladu.
+    if (idx % 4 === 2) stockLines.push(['1000', it.item, it.description, 'EA', 'EXT', czQty(pack * 3), 'EXT-01', 'SALE', 'WRH', 'WH1'].join(','));
   });
 writeFileSync('sample-data/Stock_13.10.2026.csv', '\ufeff' + stockLines.join('\r\n') + '\r\n');
+writeFileSync('sample-data/Settings.csv', '\ufeffSetting;Value\r\nStock excluded locations;EXT-01\r\n');
 
 console.log(`Vytvořeno: 3 exporty, ${items.length} dílů, mapování pro ${items.length - 1} dílů, coverage ve 3 formátech, sklad.`);

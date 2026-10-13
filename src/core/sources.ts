@@ -1,6 +1,6 @@
 // Rozpoznání souborů ve sdílené složce podle cesty a názvu.
 
-export type SourceKind = 'calloffs' | 'masterdata' | 'coverage' | 'stock' | 'ignored';
+export type SourceKind = 'calloffs' | 'masterdata' | 'coverage' | 'stock' | 'settings' | 'ignored';
 export type SourceFormat = 'csv' | 'xlsx';
 
 function normalize(s: string): string {
@@ -23,6 +23,7 @@ export function formatOf(path: string): SourceFormat | null {
  * Coverage: Excel ve složce „coverage“ (i v podsložkách destinace a projektu).
  * Odvolávky: soubor ve složce „odvolavky“ / „call-offs“, nebo s „odvolavk“ / „call-off“ v názvu.
  * Náš sklad: soubor ve složce „stock“ / „sklad“, nebo s názvem začínajícím „stock“ / „sklad“ (např. Stock_13.10.2026.csv).
+ * Nastavení: soubor s názvem začínajícím „settings“ / „nastaveni“ (např. Settings.csv).
  * Dočasné soubory Excelu (~$…) se ignorují.
  */
 export function classifyPath(path: string): SourceKind {
@@ -31,6 +32,7 @@ export function classifyPath(path: string): SourceKind {
   const name = parts[parts.length - 1]!;
   if (name.startsWith('~$')) return 'ignored';
   if (/kmenov|master|mapping/.test(name)) return 'masterdata';
+  if (/^(settings|nastaveni)/.test(name)) return 'settings';
   const folders = parts.slice(0, -1);
   if (folders.includes('coverage')) return formatOf(path) === 'xlsx' ? 'coverage' : 'ignored';
   if (folders.some((f) => /^(odvolavky|call-?offs?)$/.test(f)) || /odvolavk|call-?off/.test(name)) return 'calloffs';

@@ -191,7 +191,8 @@ export const en: Messages = {
       calloffs: 'Call-off exports (CSV or Excel): the name contains “Odvolávky” and the week, e.g. Odvolávky_CW42.csv, or the file is in a folder named “odvolavky”.',
       master: 'Part mapping (Excel or CSV): the name contains “mapping”, “kmenová” or “master”, e.g. Item_Mapping.xlsx. The table is on the first sheet with headers in the first row.',
       coverage: 'Customer coverage (Excel): folder Coverage/<destination>/<project>/, e.g. Coverage/Site A/P100/report.xlsx. The newest file for each destination and project is used; the format is recognised from the content.',
-      stock: 'Our stock (CSV or Excel): the name starts with “Stock” or “Sklad”, e.g. Stock_13.10.2026.csv, or it is in the “Stock” folder. The newest file is used. Required columns: Item Number and quantity (Qty Available or Qty On Hand - Inv Detail), for coverage also Zone ID.',
+      stock: 'Our stock (CSV or Excel): the name starts with “Stock” or “Sklad”, e.g. Stock_13.10.2026.csv, or it is in the “Stock” folder. The newest file is used. Required columns: Item Number, quantity per location (Qty On Hand - Inv Detail), Location and Zone ID.',
+      settings: 'Settings (CSV or Excel): Settings.csv with the name in the first column and comma-separated values in the second. “Stock excluded locations” = locations not counted in our stock; “Stock zones” = zones counted (default INCOME, MEZ, PRE, PURCH, SALE, WRKC).',
     },
     calloffs: {
       heading: 'Call-off exports',
@@ -221,7 +222,11 @@ export const en: Messages = {
       modified: 'Modified',
       rows: 'Rows (locations)',
       items: 'Parts',
-      zoneItems: 'Parts with stock in zones SALE and PURCH',
+      zoneItems: 'Parts with stock for coverage',
+      zones: 'Zones counted',
+      excluded: 'Excluded locations',
+      noExcluded: 'none (can be set in Settings.csv)',
+      unknownSettings: 'Unknown settings in the settings file',
       qtyColumn: 'Quantity from column',
     },
     failed: {
@@ -315,7 +320,8 @@ export const en: Messages = {
       empty: 'No part matches the filters.',
       unmapped: 'not in the mapping',
       fileCustomerNumber: 'In the customer file',
-      ourStockNote: 'Our stock = stock of the part in zones SALE and PURCH from the stock file (full and partial packages together); with “Add our stock” it is added to every day.',
+      ourStockNote: 'Our stock = sum of positive quantities of the part on locations in zones {zones} from the stock file (full and partial packages together), without excluded locations: {excluded}. With “Add our stock” it is added to every day.',
+      ourStockNoExclusions: 'none',
       note: 'Coverage = balance at the customer without transit at the end of the day, optionally + transit. Negative values are red. Customer numbers use one format without padding zeros (hover to see the number as written in the customer file). Parts without mapping are shown by customer number.',
     },
     legend: {
