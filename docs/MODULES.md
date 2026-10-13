@@ -17,7 +17,7 @@ Pořadí skupin na rozcestníku (karty se čtou shora dolů po sloupcích):
 | Zákazníci | **Coverage** | Vystačí díly u zákazníka? Pokrytí na jednotlivé dny | Fáze 4 (probíhá) |
 | Zákazníci | **Expedice a dodávky** (OTD outbound) | Dodáváme zákazníkům včas? | Později |
 | Zákazníci | **Mimořádné přepravy** | Kolik stojí mimořádné přepravy a proč vznikají? | Později |
-| Materiál a sklad | **Komponenty** | Máme materiál na výrobu? | Fáze 4 |
+| Materiál a sklad | **Komponenty** | Máme materiál na výrobu? | Fáze 4 (probíhá) |
 | Materiál a sklad | **Zásoby** | Nemáme zásob moc nebo málo? | Fáze 9 |
 | Materiál a sklad | **Obaly** | Na kolik dílů a dní vystačí obaly? | Fáze 5 |
 | Výroba | **Plánování** (plnění plánu a prostoje) | Vyrobili jsme, co jsme měli? Proč ne? | Fáze 7 |
@@ -70,8 +70,9 @@ Filtry: zákazník, projekt, strana (LHD/RHD) z kmenových dat, hledání dílu.
 - Příčina, náklad, odpovědnost; vývoj počtu a nákladů v čase
 
 ### Komponenty
-- Rozpad poptávky přes kusovník, pokrytí nakupovaných komponent
-- Otevřené nákupní objednávky (pokud jsou v exportu)
+- ✅ Rozpad poptávky přes víceúrovňový kusovník (hrubý rozpad), komponenty vybrané v Item Mappingu
+- ✅ Poptávka: soubor zákazníka jako fix, zbytek 14 dní z odvolávek; pokrytí ze skladu po dnech, na rozcestníku komponenty v záporu
+- ⏳ Otevřené nákupní objednávky (pokud jsou v exportu)
 - Shortage list pro ranní poradu
 
 ### Zásoby

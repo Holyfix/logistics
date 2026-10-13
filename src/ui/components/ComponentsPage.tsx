@@ -1,0 +1,298 @@
+import { useMemo, useState } from 'react';
+import type { ComponentLine } from '../../core/components/compute';
+import { dayToIso, weekday, type DayNumber } from '../../core/dates';
+import { formatAmount, formatDayShort, formatQuantity } from '../../core/format';
+import { useI18n } from '../../i18n/I18nProvider';
+import { ExportButtons, type ExportTable } from '../calloffs/ExportButtons';
+import { useData } from '../data/DataProvider';
+import { Icon } from '../icons';
+import { localToday, useComponents } from './useComponents';
+
+/** Komponenty v záporu „brzy“: dnes nebo zítra. */
+const SOON_DAYS = 2;
+
+export function ComponentsPage({ today = localToday() }: { today?: DayNumber } = {}) {
+  const { t, locale } = useI18n();
+  const tc = t.components;
+  const { state } = useData();
+  const table = useComponents(today);
+
+  const [project, setProject] = useState('');
+  const [query, setQuery] = useState('');
+  const [onlyShort, setOnlyShort] = useState(false);
+
+  const projects = useMemo(() => [...new Set(table?.components.flatMap((c) => c.projects) ?? [])].sort((a, b) => a.localeCompare(b, 'cs')), [table]);
+  const lines = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return (table?.components ?? []).filter(
+      (c) =>
+        (!project || c.projects.includes(project)) &&
+        (!onlyShort || c.shortDay !== null) &&
+        (!q || `${c.item} ${c.description}`.toLowerCase().includes(q)),
+    );
+  }, [table, project, query, onlyShort]);
+
+  const head = (
+    <div className="page-head module-head">
+      <span className="module-icon">
+        <Icon name="components" />
+      </span>
+      <div>
+        <h1 id="page-title">{t.modules.components.title}</h1>
+        <p className="lead">{t.modules.components.description}</p>
+      </div>
+    </div>
+  );
+
+  if (!table) {
+    return (
+      <section className="page" aria-labelledby="page-title">
+        {head}
+        <div className="panel">
+          <p>{state.status === 'loading' ? t.data.folder.loading : tc.noBom}</p>
+          {state.status !== 'loading' && (
+            <p>
+              <a className="button button-primary" href="#data">
+                {tc.noDataAction}
+              </a>
+            </p>
+          )}
+        </div>
+      </section>
+    );
+  }
+
+  const { days, products } = table;
+  const dayLabel = (d: DayNumber) => `${t.calloffs.weekdays[weekday(d) - 1]} ${formatDayShort(dayToIso(d), locale)}`;
+  const weekend = (d: DayNumber) => (weekday(d) >= 6 ? ' col-weekend' : '');
+  const amount = (v: number, um: string) => formatAmount(v, locale, um);
+  const sourceLabel = (c: ComponentLine) => (c.source === 'P' ? tc.table.purchased : c.source ? tc.table.made : '—');
+  const short = table.components.filter((c) => c.shortDay !== null).length;
+  const soon = table.components.filter((c) => c.shortDay !== null && c.shortDay < SOON_DAYS).length;
+  const withCustomer = products.filter((p) => p.fixed.some(Boolean)).length;
+  const noDemand = products.filter((p) => p.qty.every((q) => q === 0)).length;
+  const boms = state.data?.boms.length ?? 0;
+  const fileBase = `${tc.export.fileName}_${dayToIso(today)}`;
+
+  const buildExport = (): ExportTable => ({
+    fileName: fileBase,
+    sheetName: tc.export.sheet,
+    header: [tc.table.item, tc.table.description, tc.table.um, tc.table.source, tc.table.stock, tc.table.usage, tc.table.until, tc.table.products, ...days.map(dayToIso)],
+    rows: lines.map((c) => [
+      c.item,
+      c.description,
+      c.um,
+      sourceLabel(c),
+      c.stock,
+      round(c.usage.reduce((a, b) => a + b, 0)),
+      c.shortDay === null ? tc.table.whole : dayToIso(days[c.shortDay]!),
+      c.products.join(', '),
+      ...c.balance.map(round),
+    ]),
+  });
+  const buildDemandExport = (): ExportTable => ({
+    fileName: `${fileBase}_${tc.export.demandSheet.toLowerCase()}`,
+    sheetName: tc.export.demandSheet,
+    header: [tc.demand.item, tc.demand.description, tc.demand.project, tc.demand.total, ...days.map(dayToIso)],
+    rows: products.map((p) => [p.item, p.description, p.project, p.qty.reduce((a, b) => a + b, 0), ...p.qty]),
+  });
+
+  return (
+    <section className="page" aria-labelledby="page-title">
+      <div className="page-head-row">
+        {head}
+        <p className="muted source-info">
+          {tc.sources}: <strong>{boms}</strong> · <strong>{products.length}</strong> {tc.products}
+        </p>
+      </div>
+
+      <div className="kpis">
+        <div className="kpi">
+          <span className="kpi-label">{tc.kpi.short}</span>
+          <span className="kpi-value">{formatQuantity(short, locale)}</span>
+          <span className="kpi-note">
+            {tc.kpi.shortNote} {dayLabel(days.at(-1)!)}
+          </span>
+        </div>
+        <div className="kpi">
+          <span className="kpi-label">{tc.kpi.soon}</span>
+          <span className="kpi-value">{formatQuantity(soon, locale)}</span>
+          <span className="kpi-note">{tc.kpi.soonNote}</span>
+        </div>
+        <div className="kpi">
+          <span className="kpi-label">{tc.kpi.tracked}</span>
+          <span className="kpi-value">{formatQuantity(table.components.length, locale)}</span>
+          <span className="kpi-note">{table.byMapping ? tc.kpi.byMapping : tc.kpi.allPurchased}</span>
+        </div>
+        <div className="kpi">
+          <span className="kpi-label">{tc.kpi.demand}</span>
+          <span className="kpi-value">{formatQuantity(products.length, locale)}</span>
+          <span className="kpi-note">
+            {tc.kpi.demandNote}: {formatQuantity(withCustomer, locale)}, {tc.kpi.noDemand}: {formatQuantity(noDemand, locale)}
+          </span>
+        </div>
+      </div>
+
+      <div className="filters" role="group" aria-label={tc.filters.label}>
+        <label className="field">
+          <span>{tc.filters.project}</span>
+          <select value={project} onChange={(e) => setProject(e.target.value)}>
+            <option value="">{tc.filters.all}</option>
+            {projects.map((p) => (
+              <option key={p} value={p}>
+                {p}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="field field-wide">
+          <span>{tc.filters.search}</span>
+          <input type="search" value={query} placeholder={tc.filters.searchPlaceholder} onChange={(e) => setQuery(e.target.value)} />
+        </label>
+        <label className="check-field">
+          <input type="checkbox" checked={onlyShort} onChange={(e) => setOnlyShort(e.target.checked)} />
+          {tc.filters.onlyShort}
+        </label>
+        <button
+          type="button"
+          className="link-button"
+          onClick={() => {
+            setProject('');
+            setQuery('');
+            setOnlyShort(false);
+          }}
+        >
+          {tc.filters.reset}
+        </button>
+      </div>
+
+      <div className="panel">
+        <div className="panel-head">
+          <h2>{tc.table.heading}</h2>
+          <span className="muted">{tc.table.sub}</span>
+          <span className="panel-actions">
+            <ExportButtons build={buildExport} />
+          </span>
+        </div>
+        {!state.data?.stock && <p className="muted">{tc.table.noStock}</p>}
+        {lines.length === 0 ? (
+          <p>{tc.table.empty}</p>
+        ) : (
+          <div className="table-scroll table-tall">
+            <table className="table table-data">
+              <thead>
+                <tr>
+                  <th className="sticky-col">{tc.table.item}</th>
+                  <th>{tc.table.description}</th>
+                  <th>{tc.table.um}</th>
+                  <th>{tc.table.source}</th>
+                  <th className="n">{tc.table.stock}</th>
+                  <th className="n">{tc.table.usage}</th>
+                  <th>{tc.table.until}</th>
+                  {days.map((d) => (
+                    <th key={d} className={`n${weekend(d)}`}>
+                      {dayLabel(d)}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {lines.map((c) => (
+                  <tr key={c.item}>
+                    <td className="sticky-col">
+                      <strong>{c.item}</strong>
+                    </td>
+                    <td className="desc" title={`${tc.table.products}: ${c.products.join(', ')}`}>
+                      {c.description}
+                    </td>
+                    <td>{c.um}</td>
+                    <td>{sourceLabel(c)}</td>
+                    <td className="n">{c.stock === null ? <span className="muted">—</span> : amount(c.stock, c.um)}</td>
+                    <td className="n">{amount(c.usage.reduce((a, b) => a + b, 0), c.um)}</td>
+                    <td>
+                      {c.shortDay === null ? (
+                        <span className="muted">{tc.table.whole}</span>
+                      ) : (
+                        <>
+                          {tc.table.shortFrom} {dayLabel(days[c.shortDay]!)}
+                        </>
+                      )}
+                    </td>
+                    {c.balance.map((v, k) => (
+                      <td key={k} className={`n${weekend(days[k]!)}${v < -1e-9 ? ' cell-negative' : ''}`}>
+                        {amount(v, c.um)}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        {table.markedNotInBom.length > 0 && (
+          <p className="muted">
+            {tc.table.markedNotInBom}: {table.markedNotInBom.join(', ')}
+          </p>
+        )}
+        <p className="muted">{tc.table.note}</p>
+      </div>
+
+      <div className="panel">
+        <div className="panel-head">
+          <h2>{tc.demand.heading}</h2>
+          <span className="muted">{tc.demand.sub}</span>
+          <span className="panel-actions">
+            <ExportButtons build={buildDemandExport} />
+          </span>
+        </div>
+        <div className="table-scroll table-tall">
+          <table className="table table-data">
+            <thead>
+              <tr>
+                <th className="sticky-col">{tc.demand.item}</th>
+                <th>{tc.demand.description}</th>
+                <th>{tc.demand.project}</th>
+                <th className="n">{tc.demand.total}</th>
+                {days.map((d) => (
+                  <th key={d} className={`n${weekend(d)}`}>
+                    {dayLabel(d)}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {products.map((p) => (
+                <tr key={p.item}>
+                  <td className="sticky-col">
+                    <strong>{p.item}</strong>
+                  </td>
+                  <td className="desc">{p.description}</td>
+                  <td>{p.project || '—'}</td>
+                  <td className="n">{formatQuantity(p.qty.reduce((a, b) => a + b, 0), locale)}</td>
+                  {p.qty.map((q, k) => (
+                    <td key={k} className={`n${weekend(days[k]!)}${p.fixed[k] ? ' cell-fixed' : ' cell-forecast'}`}>
+                      {q === 0 ? <span className="muted">0</span> : formatQuantity(q, locale)}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <ul className="cov-legend">
+          <li>
+            <i className="swatch swatch-fixed" /> {tc.demand.fixed}
+          </li>
+          <li>
+            <i className="swatch" /> {tc.demand.forecast}
+          </li>
+        </ul>
+        <p className="muted">{tc.demand.note}</p>
+      </div>
+    </section>
+  );
+}
+
+function round(v: number): number {
+  return Math.round(v * 1000) / 1000;
+}

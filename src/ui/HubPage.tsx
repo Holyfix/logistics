@@ -4,6 +4,7 @@ import { buildCoverage, SHORTAGE_DAYS, shortage } from '../core/coverage/compute
 import { formatQuantity } from '../core/format';
 import { useI18n } from '../i18n/I18nProvider';
 import { useData } from './data/DataProvider';
+import { localToday, useComponents } from './components/useComponents';
 import { Icon } from './icons';
 import { GROUPS, MODULES, type ModuleDef, type ModuleId } from './modules';
 
@@ -65,6 +66,8 @@ function useMetrics(): Partial<Record<ModuleId, ReactNode>> {
     return { withoutTransit: pieces(false), withTransit: pieces(true) };
   }, [coverage, master]);
 
+  const components = useComponents(useMemo(localToday, []));
+
   const metrics: Partial<Record<ModuleId, ReactNode>> = {};
   const tm = t.hub.metrics;
   if (summary?.changes === null || (summary && !summary.previous)) {
@@ -98,6 +101,10 @@ function useMetrics(): Partial<Record<ModuleId, ReactNode>> {
         title={`${th.title}: ${th.withoutTransit} ${pcs(a.pieces)} (${th.parts} ${formatQuantity(a.parts, locale)}), ${th.withTransit} ${pcs(b.pieces)} (${th.parts} ${formatQuantity(b.parts, locale)})`}
       />
     );
+  }
+  if (components) {
+    const short = components.components.filter((c) => c.shortDay !== null).length;
+    metrics.components = <Metric value={formatQuantity(short, locale)} label={t.components.hub.label} tone={short > 0 ? 'crit' : 'ok'} title={t.components.hub.title} />;
   }
   return metrics;
 }

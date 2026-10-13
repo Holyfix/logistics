@@ -55,11 +55,21 @@ for (const week of [40, 41, 42]) {
 
 // Mapování dílů ve formátu Item_Mapping: číslo zákazníka je smyšlené (A + 10 číslic, mezery, varianta).
 const customerNumber = (idx) => `A90000000${String(10 + (idx % 4)).padStart(2, '0')}  0000${String(1000 + idx)}`;
+// Komponenty z kusovníku: nakupované (sledované v modulu Komponenty) a mezivýroba (nesleduje se).
+const COMPONENTS = [
+  { item: 'K-1001', description: 'SCREW M5 BLACK', um: 'EA', source: 'P', qty: 6, track: true },
+  { item: 'K-1002', description: 'CLIP PANEL', um: 'EA', source: 'P', qty: 4, track: true },
+  { item: 'K-1003', description: 'LABEL', um: 'EA', source: 'P', qty: 1, track: true },
+  { item: 'K-2001', description: 'GRANULATE PP', um: 'KG', source: 'P', qty: 0.85, track: true, sub: true },
+  { item: 'K-2002', description: 'FOAM PAD', um: 'EA', source: 'P', qty: 2, track: true, sub: true },
+];
 const master = [
-  'Item Number;Customer Number;Description;Variant;Type;Project;Safety Stock;Safety Time;Order Multiple',
+  'Item Number;Customer Number;Description;Variant;Type;Project;Safety Stock;Safety Time;Order Multiple;Component Coverage',
   ...items
     .filter((it) => it.project)
-    .map((it, idx) => [it.item, customerNumber(idx), it.description, it.side + (idx % 4 === 1 ? ' HUD' : ''), it.description.split(' ')[1], it.project, 0, 0, [8, 12, 16, 24][idx % 4]].join(';')),
+    .map((it, idx) => [it.item, customerNumber(idx), it.description, it.side + (idx % 4 === 1 ? ' HUD' : ''), it.description.split(' ')[1], it.project, 0, 0, [8, 12, 16, 24][idx % 4], ''].join(';')),
+  ...COMPONENTS.map((c) => [c.item, '', c.description, '', 'COMPONENT', '', 0, 0, '', c.track ? 'Ano' : ''].join(';')),
+  'S-0100;;CARRIER SUB-ASSY;;SUB;;0;0;;',
 ];
 writeFileSync('sample-data/Item_Mapping.csv', '\ufeff' + master.join('\r\n') + '\r\n');
 
@@ -200,6 +210,23 @@ items
     stockLines.push(['1000', it.item, it.description, 'EA', 'PROD', czQty(Math.round(rnd() * 30)), 'L-01', 'WRKC', 'PROD', 'WH1'].join(','));
     if (idx % 5 === 0) stockLines.push(['1000', it.item, it.description, 'EA', 'HOLD', czQty(2), 'HOLD', 'LAB', 'PROD', 'WH1'].join(','));
   });
+// Sklad komponent (nákup) s různým pokrytím.
+COMPONENTS.forEach((c, k) => {
+  const qty = [80_000, 20_000, 15_000, 3_000, 0][k];
+  stockLines.push(['1000', c.item, c.description, c.um, 'OK', czQty(qty), `C-0${k + 1}`, 'PURCH', 'WRH', 'WH1'].join(','));
+});
 writeFileSync('sample-data/Stock_13.10.2026.csv', '\ufeff' + stockLines.join('\r\n') + '\r\n');
 
-console.log(`Vytvořeno: 3 exporty, ${items.length} dílů, mapování pro ${items.length - 1} dílů, coverage ve 3 formátech, sklad.`);
+// Kusovník ve formátu exportu z ERP: odsazené úrovně, množství na nadřazený díl.
+const bomRows = [['Level', 'Component Item', 'Description', 'Quantity Per', 'UM', 'Purchase/Manufacture', 'Start Eff'].map(bold)];
+const text = (value) => ({ value, type: String });
+for (const it of items.filter((i) => i.project === 'P100' || i.project === 'P300')) {
+  bomRows.push([text('Parent'), text(it.item), text(it.description), null, text('EA'), text('L'), null]);
+  for (const c of COMPONENTS.filter((x) => !x.sub)) bomRows.push([text('1'), text(c.item), text(c.description), { value: c.qty, type: Number }, text(c.um), text(c.source), text('01.01.2026')]);
+  bomRows.push([text('1'), text('S-0100'), text('CARRIER SUB-ASSY'), { value: 1, type: Number }, text('EA'), text('L'), text('01.01.2026')]);
+  for (const c of COMPONENTS.filter((x) => x.sub)) bomRows.push([text('.2'), text(c.item), text(c.description), { value: c.qty, type: Number }, text(c.um), text(c.source), text('01.01.2026')]);
+}
+mkdirSync('sample-data/BOM', { recursive: true });
+await writeXlsxFile(bomRows, { sheet: 'Sheet1' }).toFile('sample-data/BOM/MBOM_ASSY_PANEL.xlsx');
+
+console.log(`Vytvořeno: 3 exporty, ${items.length} dílů, mapování pro ${items.length - 1} dílů, coverage ve 3 formátech, sklad, kusovník.`);

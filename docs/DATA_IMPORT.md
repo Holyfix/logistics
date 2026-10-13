@@ -12,6 +12,7 @@ Soubory se rozpoznají podle názvu (nezáleží na velikosti písmen ani diakri
 | Mapování dílů (kmenová data) | název obsahuje „mapping“ / „kmenová“ / „master“ | XLSX nebo CSV |
 | Pokrytí od zákazníka (Coverage) | leží ve složce `Coverage` (i v podsložkách) | XLSX / XLSM |
 | Náš sklad (Stock) | název začíná „Stock“ / „Sklad“, nebo leží ve složce `Stock` / `Sklad` | CSV nebo XLSX |
+| Kusovník (BOM) | název začíná „MBOM“ / „BOM“ / „Kusovník“, nebo leží ve složce `BOM` / `Kusovník` | XLSX nebo CSV |
 
 Doporučená struktura (složka se v aplikaci vybírá celá, podsložky se prohledají):
 
@@ -21,7 +22,7 @@ Logistics/
 ├── Call-offs/            týdenní exporty odvolávek (název souboru s týdnem, např. CW42)
 ├── Coverage/<destinace>/<projekt>/   soubory pokrytí od zákazníka
 ├── Stock_13.10.2026.csv  náš sklad (celý sklad po lokacích; Coverage, později Komponenty, Zásoby)
-├── Kusovník/             později: Komponenty
+├── BOM/                  kusovníky z ERP (MBOM_<výrobek>.xlsx) pro modul Komponenty
 ├── Objednávky/           později: Příjem (otevřené nákupní objednávky)
 ├── Výroba/               později: Plánování (plnění plánu a prostoje)
 └── Obaly/                později: Obaly
@@ -75,7 +76,8 @@ Tabulku udržuje uživatel. Jeden řádek = jeden díl. V Excelu na prvním list
 | Zákazník | Customer | ne |
 | Strana | Side, Řízení; jinak se odvodí ze začátku varianty | ne |
 | Safety Stock, Safety Time | Pojistná zásoba, Pojistná doba | ne |
-| Order Multiple | Balení, Kusů v balení (pro náš sklad v Coverage) | ne |
+| Order Multiple | Balení, Kusů v balení | ne |
+| Component Coverage | Coverage Component, Komponenta | ne; „Ano“ (nebo Y, X, 1) = komponenta se sleduje v modulu Komponenty |
 
 Další sloupce (např. Yield Percent, Cost Total) aplikace ignoruje.
 
@@ -130,7 +132,30 @@ Soubor obsahuje celý sklad, takže ho mohou použít i další moduly (Komponen
 - Díl se se skladem páruje přes mapování (Item Number), díl bez mapování sklad nemá.
 - U Excelu se čte list „Data“, jinak první list.
 
+## Kusovník (BOM) a modul Komponenty
+
+Export víceúrovňového kusovníku z ERP, jeden soubor na výrobek (např. `MBOM_<výrobek>.xlsx`). Načtou se všechny soubory;
+když je hotový díl ve víc souborech, použije se nejnovější soubor.
+
+| Sloupec | Další povolené názvy | Povinný |
+|---|---|---|
+| Level | Úroveň: „Parent“ = hotový díl, pak `1`, `.2`, `..3` … | ano |
+| Component Item | Component, Komponenta | ano |
+| Quantity Per | Qty Per, Množství (na 1 ks nadřazeného dílu) | ano |
+| Description, UM, Purchase/Manufacture | Popis, MJ, P/M (P = nákup, L = výroba) | ne |
+
+- **Množství na hotový díl** = součin „Quantity Per“ od hotového dílu dolů; stejná komponenta na víc místech se sečte.
+  Rozpad je hrubý: zásoba mezivýrob se neodečítá. „Start Eff“ se nepoužívá.
+- **Které komponenty se zobrazí:** ty, které mají v Item Mappingu ve sloupci „Component Coverage“ hodnotu „Ano“.
+  Když sloupec v mappingu není, zobrazí se všechny nakupované komponenty (P). Mezivýroby tak lze vynechat.
+- **Horizont** je 14 dní od dneška.
+- **Poptávka hotového dílu na den:** dny, které pokrývá soubor zákazníka (Coverage), se berou z něj jako fix
+  (denní spotřeba u zákazníka = pokles zůstatku bez transitu); ostatní dny z nejnovějšího exportu odvolávek (forecast).
+  Hotový díl se se souborem zákazníka páruje přes mapování (Customer Number).
+- **Spotřeba komponenty** = poptávka hotových dílů × množství z kusovníku; **stav** = náš sklad (stejné lokace jako v Coverage)
+  − kumulovaná spotřeba. Komponenta je v záporu ode dne, kdy stav klesne pod nulu.
+
 ## Testovací data
 
-`sample-data/` obsahuje smyšlené exporty, mapování, soubory coverage a sklad ve stejném formátu
+`sample-data/` obsahuje smyšlené exporty, mapování, soubory coverage, sklad a kusovník ve stejném formátu
 (`node scripts/generate-sample-data.mjs`). Skutečné exporty do repozitáře nepatří.

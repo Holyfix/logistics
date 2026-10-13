@@ -256,6 +256,45 @@ export function DataPage() {
             <p className="muted">{t.data.stock.rule}</p>
           </div>
 
+          <div className="panel">
+            <h2>{t.data.bom.heading}</h2>
+            {data.boms.length === 0 ? (
+              <p>{t.data.bom.none}</p>
+            ) : (
+              <div className="table-scroll">
+                <table className="table">
+                  <thead>
+                    <tr>
+                      <th>{t.data.bom.file}</th>
+                      <th className="n">{t.data.bom.products}</th>
+                      <th className="n">{t.data.bom.components}</th>
+                      <th>{t.data.bom.modified}</th>
+                      <th>{t.data.calloffs.issues}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.boms.map((b) => (
+                      <tr key={b.path}>
+                        <td>{b.path}</td>
+                        <td className="n">{formatQuantity(b.data.parents.size, locale)}</td>
+                        <td className="n">{formatQuantity(new Set([...b.data.parents.values()].flat().map((c) => c.item)).size, locale)}</td>
+                        <td>{new Date(b.lastModified).toLocaleString(locale === 'cs' ? 'cs-CZ' : 'en-GB', { dateStyle: 'short', timeStyle: 'short' })}</td>
+                        <td className="wrap">{b.data.issueCount === 0 ? <span className="muted">{t.data.calloffs.noIssues}</span> : <IssueList issues={b.data.issues} count={b.data.issueCount} />}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            {data.master && (
+              <p className="muted">
+                {data.master.data.hasComponentColumn
+                  ? `${t.data.bom.marked}: ${formatQuantity([...data.master.data.items.values()].filter((m) => m.componentCoverage).length, locale)}`
+                  : t.data.bom.noColumn}
+              </p>
+            )}
+          </div>
+
           {data.failed.length > 0 && (
             <div className="panel">
               <h2>{t.data.failed.heading}</h2>
@@ -279,6 +318,7 @@ export function DataPage() {
           <li>{t.data.structure.master}</li>
           <li>{t.data.structure.coverage}</li>
           <li>{t.data.structure.stock}</li>
+          <li>{t.data.structure.bom}</li>
         </ul>
       </div>
     </section>

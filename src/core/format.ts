@@ -15,6 +15,18 @@ export function formatQuantity(value: number, locale: Locale): string {
   return f.format(value);
 }
 
+/** Množství v dané jednotce: kusy celé, ostatní (kg, m …) nejvýš na 2 desetinná místa. */
+const amountFormats = new Map<Locale, Intl.NumberFormat>();
+
+export function formatAmount(value: number, locale: Locale, um = 'EA'): string {
+  if (um === 'EA' || um === '') return formatQuantity(value, locale);
+  let f = amountFormats.get(locale);
+  if (!f) amountFormats.set(locale, (f = new Intl.NumberFormat(LOCALE_TAGS[locale], { maximumFractionDigits: 2 })));
+  // Bez „-0“ u zaokrouhlených malých záporných hodnot.
+  const rounded = Math.round(value * 100) / 100;
+  return f.format(rounded === 0 ? 0 : rounded);
+}
+
 /** Krátké datum pro záhlaví tabulky: „12. 10.“ (cs) nebo „12/10“ (en). */
 export function formatDayShort(isoDate: string, locale: Locale): string {
   const [, m, d] = isoDate.split('-').map(Number) as [number, number, number];
