@@ -18,12 +18,14 @@ export interface ProductDemand {
   description: string;
   project: string;
   qty: number[];
-  /** Sklad u sekvencéru (ze souboru Coverage); null, když hotový díl v souborech Coverage není. */
-  sequencerStock: number | null;
-  /** Transit k sekvencéru, který dorazí během horizontu (kumulativně po dnech). */
-  sequencerTransit: number[] | null;
-  /** Náš sklad hotového dílu; null, když soubor skladu není načtený. */
-  ourStock: number | null;
+  /**
+   * Požadavek na nás pro „Zákazník pokryt do“: ve dnech souboru sekvencéra chybějící množství podle jeho souboru
+   * (stav se skladem a transitem), za koncem souboru odvolávky po spotřebování zbytku skladu u sekvencéru.
+   * Bez souboru sekvencéra stejné jako odvolávky.
+   */
+  netQty: number[];
+  /** Den je ze souboru sekvencéra (fixní plán), jinak z odvolávek. */
+  fixed: boolean[];
 }
 
 export interface ComponentLine {
@@ -85,9 +87,6 @@ function callOffDemand(exp: CallOffExport | undefined): Map<string, Map<DayNumbe
  */
 function customerShortDays(bom: BomData, products: readonly ProductDemand[], stock: ReadonlyMap<string, number> | undefined): Map<string, number> {
   const left = new Map(stock ?? []);
-  // Hotové díly u sekvencéru (sklad a transit) se spotřebují stejně jako náš sklad hotových dílů.
-  const add = (item: string, qty: number) => left.set(item, (left.get(item) ?? 0) + qty);
-  for (const p of products) if (p.sequencerStock !== null) add(p.item, p.sequencerStock + (p.sequencerTransit?.[0] ?? 0));
   const first = new Map<string, number>();
   const consume = (item: string, qty: number, children: readonly BomNode[], day: number) => {
     const have = Math.max(0, left.get(item) ?? 0);
@@ -104,49 +103,87 @@ function customerShortDays(bom: BomData, products: readonly ProductDemand[], sto
   };
   const days = products[0]?.qty.length ?? 0;
   for (let day = 0; day < days; day++) {
-    if (day > 0) for (const p of products) if (p.sequencerTransit) add(p.item, p.sequencerTransit[day]! - p.sequencerTransit[day - 1]!);
     for (const product of products) {
-      const q = product.qty[day]!;
+      const q = product.netQty[day]!;
       if (q > 0) consume(product.item, q, bom.trees.get(product.item) ?? [], day);
     }
   }
   return first;
 }
 
-/** Sklad a transit u sekvencéru po našich číslech hotových dílů (spárované přes mapování), transit po dnech horizontu. */
-function sequencerByItem(
-  sources: readonly CoverageSource[],
-  master: MasterData | undefined,
-  days: readonly DayNumber[],
-): Map<string, { stock: number; transit: number[] }> {
-  const result = new Map<string, { stock: number; transit: number[] }>();
+/** Stav u sekvencéru se skladem a transitem po dnech jeho souboru, po našich číslech hotových dílů (přes mapování). */
+interface SequencerPlan {
+  /** Stav (sklad + transit − kumulovaná spotřeba) na konci dne; mezi dny souboru platí poslední známý stav. */
+  balance: (day: DayNumber) => number;
+  fileDays: DayNumber[];
+  last: DayNumber;
+}
+
+function sequencerPlans(sources: readonly CoverageSource[], master: MasterData | undefined): Map<string, SequencerPlan> {
+  const rows = new Map<string, { days: readonly DayNumber[]; values: number[]; initial: number }[]>();
   for (const { report } of sources) {
+    if (report.days.length === 0) continue;
     for (const row of report.rows) {
       const m = master?.byCustomerKey.get(row.customerKey) ?? (row.supplierItem ? master?.items.get(row.supplierItem) : undefined);
       const item = (m?.item ?? row.supplierItem).toUpperCase();
       if (!item) continue;
-      // Transit k dispozici k danému dni: kumulativní hodnota posledního dne souboru, který není později.
-      const transit = days.map((d) => {
-        let value = 0;
-        for (let k = 0; k < report.days.length && report.days[k]! <= d; k++) value = row.transit[k]!;
-        return value;
-      });
-      const entry = result.get(item);
-      if (entry) {
-        entry.stock += row.customerStock;
-        transit.forEach((t, k) => (entry.transit[k]! += t));
-      } else {
-        result.set(item, { stock: row.customerStock, transit });
-      }
+      const values = row.balance.map((b, k) => b + row.transit[k]!);
+      const list = rows.get(item) ?? [];
+      list.push({ days: report.days, values, initial: row.customerStock + (row.transit[0] ?? 0) });
+      rows.set(item, list);
     }
   }
+  const result = new Map<string, SequencerPlan>();
+  for (const [item, list] of rows) {
+    const valueOn = (r: (typeof list)[number], day: DayNumber) => {
+      let value = r.initial;
+      for (let k = 0; k < r.days.length && r.days[k]! <= day; k++) value = r.values[k]!;
+      return value;
+    };
+    result.set(item, {
+      balance: (day) => list.reduce((sum, r) => sum + valueOn(r, day), 0),
+      fileDays: [...new Set(list.flatMap((r) => r.days))].sort((x, y) => x - y),
+      last: Math.max(...list.map((r) => r.days.at(-1)!)),
+    });
+  }
   return result;
+}
+
+/**
+ * Požadavek na nás po dnech horizontu. Ve dnech souboru sekvencéra je kumulovaný požadavek největší dosavadní
+ * chybějící množství (záporný stav); když se stav později zlepší (dorazí transit), požadavek se nesnižuje.
+ * Chybějící množství ze dnů před dneškem patří do dneška. Za koncem souboru se odvolávky kryjí nejdřív zbytkem
+ * u sekvencéru (stav posledního dne + to, co jsme měli dodat), zbytek je požadavek na nás.
+ */
+function netRequirement(qty: readonly number[], days: readonly DayNumber[], plan: SequencerPlan | undefined): { netQty: number[]; fixed: boolean[] } {
+  if (!plan) return { netQty: [...qty], fixed: qty.map(() => false) };
+  let required = 0;
+  for (const d of plan.fileDays) if (d < days[0]!) required = Math.max(required, -plan.balance(d));
+  let counted = 0;
+  let leftover: number | null = null;
+  const netQty: number[] = [];
+  const fixed: boolean[] = [];
+  days.forEach((d, k) => {
+    if (d <= plan.last) {
+      required = Math.max(required, -plan.balance(d));
+      netQty.push(required - counted);
+      counted = required;
+      fixed.push(true);
+    } else {
+      leftover ??= Math.max(0, plan.balance(plan.last) + required);
+      const fromSequencer = Math.min(leftover, qty[k]!);
+      leftover -= fromSequencer;
+      netQty.push(qty[k]! - fromSequencer);
+      fixed.push(false);
+    }
+  });
+  return { netQty, fixed };
 }
 
 export interface ComponentInputs {
   bom: BomData;
   master: MasterData | undefined;
-  /** Soubory pokrytí od sekvencéru: sklad a transit hotových dílů pro „Zákazník pokryt do“. */
+  /** Soubory pokrytí od sekvencéru: fixní požadavek (chybějící množství) pro „Zákazník pokryt do“. */
   coverage?: readonly CoverageSource[];
   /** Nejnovější export odvolávek. */
   callOffs: CallOffExport | undefined;
@@ -163,21 +200,18 @@ export interface ComponentInputs {
 export function buildComponents({ bom, master, coverage = [], callOffs, stock, today }: ComponentInputs): ComponentTable {
   const days = Array.from({ length: COMPONENT_DAYS }, (_, k) => today + k);
   const calls = callOffDemand(callOffs);
-  const sequencer = sequencerByItem(coverage, master, days);
+  const plans = sequencerPlans(coverage, master);
   const masterByItem = new Map([...(master?.items.values() ?? [])].map((m) => [m.item.toUpperCase(), m]));
 
   const products: ProductDemand[] = [...bom.parents.keys()].sort().map((item) => {
     const qty = days.map((d) => calls.get(item)?.get(d) ?? 0);
     const m = masterByItem.get(item);
-    const seq = sequencer.get(item);
     return {
       item,
       description: m?.description || bom.info.get(item)?.description || '',
       project: m?.project ?? '',
       qty,
-      sequencerStock: seq?.stock ?? null,
-      sequencerTransit: seq?.transit ?? null,
-      ourStock: stock ? (stock.get(item) ?? 0) : null,
+      ...netRequirement(qty, days, plans.get(item)),
     };
   });
 

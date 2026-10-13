@@ -387,7 +387,7 @@ export const en: Messages = {
       noUsage: 'no usage',
       customer: 'Customer covered until',
       customerNote: 'info',
-      customerTitle: 'Until when customer call-offs are covered when, day by day, stock and transit at the sequencer (Coverage files) are used first, then our finished parts, intermediates and only then the component (like MRP, without production lead time).',
+      customerTitle: 'Last working day we can cover the customer: on days of the sequencer file our requirement is the shortage from that file (stock + transit − customer plan), later call-offs after the rest at the sequencer is used. The requirement is covered from our finished parts, then intermediates and only then the component (like MRP, without production lead time).',
       notCovered: 'not covered even today',
       whole: 'whole horizon',
       shortFrom: 'short from',
@@ -396,7 +396,7 @@ export const en: Messages = {
       empty: 'No component matches the filters.',
       noStock: 'No stock file loaded, stock is taken as 0.',
       markedNotInBom: 'Marked components that are not in any BOM',
-      note: 'Usage = demand for finished parts × quantity from the BOM (all levels; stock of intermediate parts is not deducted). Balance = our stock − cumulative usage. Stock uses the same locations as Coverage. Lasts = stock ÷ average usage per production day (Mon–Fri). Customer covered until = for information only: stock and transit at the sequencer are used first, then our finished parts and intermediates, then the component.',
+      note: 'Usage = demand for finished parts × quantity from the BOM (all levels; stock of intermediate parts is not deducted). Balance = our stock − cumulative usage. Stock uses the same locations as Coverage. Lasts = stock ÷ average usage per production day (Mon–Fri). Customer covered until = for information only: the requirement is the shortage from the sequencer file (later call-offs), covered from our finished parts, intermediates and only then the component.',
     },
     demand: {
       heading: 'Demand for finished parts',
@@ -413,7 +413,7 @@ export const en: Messages = {
     },
     legend: {
       negative: 'Component negative',
-      customer: 'Customer covered until: last day call-offs are covered using stock and transit at the sequencer, our finished parts and intermediates (may be on a negative cell)',
+      customer: 'Customer covered until: last day we cover the shortage from the sequencer file (later call-offs) with our finished parts, intermediates and the component (may be on a negative cell)',
       weekend: 'Weekend',
     },
     export: { fileName: 'components', sheet: 'Components', demandSheet: 'Demand' },

@@ -158,11 +158,16 @@ když je hotový díl ve víc souborech, použije se nejnovější soubor.
 - **Vystačí** = na kolik dní výroby stačí samotná komponenta (sklad ÷ průměrná spotřeba za pracovní den po–pá
   v horizontu) a od kterého dne chybí.
   Hotové díly ani mezivýroba se tu neodečítají: je to údaj pro řízení komponent.
-- **Zákazník pokryt do** (informace) = poslední pracovní den, kdy jsou odvolávky zákazníka pokryté, když se jako v MRP
-  den po dni nejdřív spotřebuje sklad a transit u sekvencéru (ze souborů Coverage; transit podle dne příjezdu),
-  pak naše hotové díly, mezivýroba (úroveň po úrovni) a teprve potom komponenta. Odvolávky zákazníka se zásobou
-  sekvencéru nepočítají, proto se odečítá. Bez doby výroby a bez otevřených objednávek. U vyráběného dílu,
-  pod kterým jsou v kusovníku další díly, se neurčuje („—“).
+- **Zákazník pokryt do** (informace) = poslední pracovní den, kdy zákazníka pokryjeme. Požadavek na nás po dnech:
+  - ve dnech, které pokrývá soubor sekvencéra (Coverage), je to **chybějící množství podle jeho souboru**
+    (stav = sklad + transit − kumulovaná spotřeba podle plánu zákazníka; záporný stav = kolik od nás musí přijít).
+    Když se stav později zlepší (dorazí transit), požadavek se nesnižuje; chybějící množství ze dnů před dneškem patří do dneška;
+  - za koncem souboru odvolávky, které nejdřív pokryje zbytek u sekvencéru (stav posledního dne + to, co jsme měli dodat);
+  - u hotového dílu bez souboru sekvencéra odvolávky.
+
+  Požadavek se jako v MRP den po dni kryje z našich hotových dílů, pak z mezivýroby (úroveň po úrovni) a teprve potom
+  z komponenty. Bez doby výroby a bez otevřených objednávek. U vyráběného dílu, pod kterým jsou v kusovníku další díly,
+  se neurčuje („—“).
 - Den „Zákazník pokryt do“ je ve stavu po dnech označený rámečkem.
 - Tabulka **Poptávka hotových dílů** má jako poslední řádek součet jednotlivých dnů (podle filtru).
 

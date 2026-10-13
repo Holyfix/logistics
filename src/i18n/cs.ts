@@ -389,7 +389,7 @@ export const cs = {
       noUsage: 'bez spotřeby',
       customer: 'Zákazník pokryt do',
       customerNote: 'info',
-      customerTitle: 'Do kdy jsou pokryté odvolávky zákazníka, když se den po dni spotřebuje nejdřív sklad a transit u sekvencéru (soubory Coverage), pak naše hotové díly, mezivýroba a teprve potom komponenta (jako MRP, bez doby výroby).',
+      customerTitle: 'Poslední pracovní den, kdy zákazníka pokryjeme: ve dnech souboru sekvencéra je požadavek na nás chybějící množství podle jeho souboru (sklad + transit − plán zákazníka), dál odvolávky po spotřebování zbytku u sekvencéru. Požadavek se kryje z našich hotových dílů, pak z mezivýroby a teprve potom z komponenty (jako MRP, bez doby výroby).',
       notCovered: 'nepokryto ani dnes',
       whole: 'celý horizont',
       shortFrom: 'chybí od',
@@ -398,7 +398,7 @@ export const cs = {
       empty: 'Filtru neodpovídá žádná komponenta.',
       noStock: 'Soubor skladu není načtený, počítá se se skladem 0.',
       markedNotInBom: 'Označené komponenty, které nejsou v žádném kusovníku',
-      note: 'Spotřeba = poptávka hotových dílů × množství z kusovníku (přes všechny úrovně; zásoba mezivýrob se neodečítá). Stav = náš sklad − kumulovaná spotřeba. Do skladu se počítají stejné lokace jako v Coverage. Vystačí = sklad ÷ průměrná spotřeba za den výroby (po–pá). Zákazník pokryt do = jen pro informaci: nejdřív se spotřebuje sklad a transit u sekvencéru, pak naše hotové díly a mezivýroba, teprve potom komponenta.',
+      note: 'Spotřeba = poptávka hotových dílů × množství z kusovníku (přes všechny úrovně; zásoba mezivýrob se neodečítá). Stav = náš sklad − kumulovaná spotřeba. Do skladu se počítají stejné lokace jako v Coverage. Vystačí = sklad ÷ průměrná spotřeba za den výroby (po–pá). Zákazník pokryt do = jen pro informaci: požadavek je chybějící množství podle souboru sekvencéra (dál odvolávky), kryje se z našich hotových dílů, mezivýroby a teprve potom z komponenty.',
     },
     demand: {
       heading: 'Poptávka hotových dílů',
@@ -415,7 +415,7 @@ export const cs = {
     },
     legend: {
       negative: 'Komponenta v záporu',
-      customer: 'Zákazník pokryt do: poslední den, kdy jsou odvolávky pokryté se skladem a transitem u sekvencéru, našimi hotovými díly a mezivýrobou (může být i na záporné buňce)',
+      customer: 'Zákazník pokryt do: poslední den, kdy pokryjeme chybějící množství podle souboru sekvencéra (dál odvolávky) z našich hotových dílů, mezivýroby a komponenty (může být i na záporné buňce)',
       weekend: 'Víkend',
     },
     export: { fileName: 'komponenty', sheet: 'Komponenty', demandSheet: 'Poptávka' },
