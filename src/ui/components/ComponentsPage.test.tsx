@@ -85,7 +85,7 @@ describe('ComponentsPage', () => {
   it('poptávka hotových dílů z odvolávek', () => {
     renderWith(<ComponentsPage today={day(13)} />);
     const [fg] = rows(1);
-    expect(cells(fg!).slice(0, 7)).toEqual(['FG-1', 'PANEL LHD', 'P1', '20', '5', '5', '10']);
+    expect(cells(fg!).slice(0, 9)).toEqual(['FG-1', 'PANEL LHD', 'P1', '—', '0', '20', '5', '5', '10']);
     expect(document.querySelector('.source-info')!.textContent).toContain('odvolávky CW 42/2026');
   });
 

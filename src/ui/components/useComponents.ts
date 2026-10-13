@@ -20,6 +20,7 @@ export function useComponents(today: DayNumber): ComponentTable | null {
     return buildComponents({
       bom: mergeBoms(data.boms.map((b) => b.data)),
       master: data.master?.data,
+      coverage: data.coverage,
       callOffs: data.exports.at(-1),
       stock: data.stock ? stockByItem(data.stock.data) : undefined,
       today,

@@ -2,6 +2,7 @@
 
 import type { BomData, BomNode } from '../bom';
 import type { CallOffExport } from '../calloffs/parse';
+import type { CoverageSource } from '../coverage/compute';
 import { weekday, type DayNumber } from '../dates';
 import type { MasterData } from '../masterdata';
 
@@ -17,6 +18,12 @@ export interface ProductDemand {
   description: string;
   project: string;
   qty: number[];
+  /** Sklad u sekvencéru (ze souboru Coverage); null, když hotový díl v souborech Coverage není. */
+  sequencerStock: number | null;
+  /** Transit k sekvencéru, který dorazí během horizontu (kumulativně po dnech). */
+  sequencerTransit: number[] | null;
+  /** Náš sklad hotového dílu; null, když soubor skladu není načtený. */
+  ourStock: number | null;
 }
 
 export interface ComponentLine {
@@ -78,6 +85,9 @@ function callOffDemand(exp: CallOffExport | undefined): Map<string, Map<DayNumbe
  */
 function customerShortDays(bom: BomData, products: readonly ProductDemand[], stock: ReadonlyMap<string, number> | undefined): Map<string, number> {
   const left = new Map(stock ?? []);
+  // Hotové díly u sekvencéru (sklad a transit) se spotřebují stejně jako náš sklad hotových dílů.
+  const add = (item: string, qty: number) => left.set(item, (left.get(item) ?? 0) + qty);
+  for (const p of products) if (p.sequencerStock !== null) add(p.item, p.sequencerStock + (p.sequencerTransit?.[0] ?? 0));
   const first = new Map<string, number>();
   const consume = (item: string, qty: number, children: readonly BomNode[], day: number) => {
     const have = Math.max(0, left.get(item) ?? 0);
@@ -94,6 +104,7 @@ function customerShortDays(bom: BomData, products: readonly ProductDemand[], sto
   };
   const days = products[0]?.qty.length ?? 0;
   for (let day = 0; day < days; day++) {
+    if (day > 0) for (const p of products) if (p.sequencerTransit) add(p.item, p.sequencerTransit[day]! - p.sequencerTransit[day - 1]!);
     for (const product of products) {
       const q = product.qty[day]!;
       if (q > 0) consume(product.item, q, bom.trees.get(product.item) ?? [], day);
@@ -102,9 +113,41 @@ function customerShortDays(bom: BomData, products: readonly ProductDemand[], sto
   return first;
 }
 
+/** Sklad a transit u sekvencéru po našich číslech hotových dílů (spárované přes mapování), transit po dnech horizontu. */
+function sequencerByItem(
+  sources: readonly CoverageSource[],
+  master: MasterData | undefined,
+  days: readonly DayNumber[],
+): Map<string, { stock: number; transit: number[] }> {
+  const result = new Map<string, { stock: number; transit: number[] }>();
+  for (const { report } of sources) {
+    for (const row of report.rows) {
+      const m = master?.byCustomerKey.get(row.customerKey) ?? (row.supplierItem ? master?.items.get(row.supplierItem) : undefined);
+      const item = (m?.item ?? row.supplierItem).toUpperCase();
+      if (!item) continue;
+      // Transit k dispozici k danému dni: kumulativní hodnota posledního dne souboru, který není později.
+      const transit = days.map((d) => {
+        let value = 0;
+        for (let k = 0; k < report.days.length && report.days[k]! <= d; k++) value = row.transit[k]!;
+        return value;
+      });
+      const entry = result.get(item);
+      if (entry) {
+        entry.stock += row.customerStock;
+        transit.forEach((t, k) => (entry.transit[k]! += t));
+      } else {
+        result.set(item, { stock: row.customerStock, transit });
+      }
+    }
+  }
+  return result;
+}
+
 export interface ComponentInputs {
   bom: BomData;
   master: MasterData | undefined;
+  /** Soubory pokrytí od sekvencéru: sklad a transit hotových dílů pro „Zákazník pokryt do“. */
+  coverage?: readonly CoverageSource[];
   /** Nejnovější export odvolávek. */
   callOffs: CallOffExport | undefined;
   /** Náš sklad po dílech (velkými písmeny); undefined, když soubor skladu není načtený. */
@@ -117,15 +160,25 @@ export interface ComponentInputs {
  * ukazují jen stav na konci dne a spotřebu prvního dne z nich nejde spolehlivě určit.
  * Spotřeba komponenty = poptávka hotových dílů × množství z kusovníku (hrubý rozpad, zásoba mezivýrob se neodečítá).
  */
-export function buildComponents({ bom, master, callOffs, stock, today }: ComponentInputs): ComponentTable {
+export function buildComponents({ bom, master, coverage = [], callOffs, stock, today }: ComponentInputs): ComponentTable {
   const days = Array.from({ length: COMPONENT_DAYS }, (_, k) => today + k);
   const calls = callOffDemand(callOffs);
+  const sequencer = sequencerByItem(coverage, master, days);
   const masterByItem = new Map([...(master?.items.values() ?? [])].map((m) => [m.item.toUpperCase(), m]));
 
   const products: ProductDemand[] = [...bom.parents.keys()].sort().map((item) => {
     const qty = days.map((d) => calls.get(item)?.get(d) ?? 0);
     const m = masterByItem.get(item);
-    return { item, description: m?.description || bom.info.get(item)?.description || '', project: m?.project ?? '', qty };
+    const seq = sequencer.get(item);
+    return {
+      item,
+      description: m?.description || bom.info.get(item)?.description || '',
+      project: m?.project ?? '',
+      qty,
+      sequencerStock: seq?.stock ?? null,
+      sequencerTransit: seq?.transit ?? null,
+      ourStock: stock ? (stock.get(item) ?? 0) : null,
+    };
   });
 
   const byMapping = master?.hasComponentColumn ?? false;

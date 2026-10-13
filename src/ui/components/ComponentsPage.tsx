@@ -126,8 +126,17 @@ export function ComponentsPage({ today = localToday() }: { today?: DayNumber } =
   const buildDemandExport = (): ExportTable => ({
     fileName: `${fileBase}_${tc.export.demandSheet.toLowerCase()}`,
     sheetName: tc.export.demandSheet,
-    header: [tc.demand.item, tc.demand.description, tc.demand.project, tc.demand.total, ...days.map(dayToIso)],
-    rows: shownProducts.map((p) => [p.item, p.description, p.project, p.qty.reduce((a, b) => a + b, 0), ...p.qty]),
+    header: [tc.demand.item, tc.demand.description, tc.demand.project, tc.demand.sequencerStock, tc.demand.sequencerTransit, tc.demand.ourStock, tc.demand.total, ...days.map(dayToIso)],
+    rows: shownProducts.map((p) => [
+      p.item,
+      p.description,
+      p.project,
+      p.sequencerStock,
+      p.sequencerTransit?.at(-1) ?? null,
+      p.ourStock,
+      p.qty.reduce((a, b) => a + b, 0),
+      ...p.qty,
+    ]),
   });
 
   return (
@@ -301,6 +310,11 @@ export function ComponentsPage({ today = localToday() }: { today?: DayNumber } =
                 <th className="sticky-col">{tc.demand.item}</th>
                 <th>{tc.demand.description}</th>
                 <th>{tc.demand.project}</th>
+                <th className="n" title={tc.demand.sequencerTitle}>
+                  {tc.demand.sequencer}
+                  <span className="th-note">{tc.demand.sequencerNote}</span>
+                </th>
+                <th className="n">{tc.demand.ourStock}</th>
                 <th className="n">{tc.demand.total}</th>
                 {days.map((d) => (
                   <th key={d} className={`n${weekend(d)}`}>
@@ -317,6 +331,10 @@ export function ComponentsPage({ today = localToday() }: { today?: DayNumber } =
                   </td>
                   <td className="desc">{p.description}</td>
                   <td>{p.project || '—'}</td>
+                  <td className="n" title={p.sequencerStock === null ? undefined : `${tc.demand.sequencerStock}: ${formatQuantity(p.sequencerStock, locale)}, ${tc.demand.sequencerTransit}: ${formatQuantity(p.sequencerTransit?.at(-1) ?? 0, locale)}`}>
+                    {p.sequencerStock === null ? <span className="muted">—</span> : formatQuantity(p.sequencerStock + (p.sequencerTransit?.at(-1) ?? 0), locale)}
+                  </td>
+                  <td className="n">{p.ourStock === null ? <span className="muted">—</span> : formatQuantity(p.ourStock, locale)}</td>
                   <td className="n">{formatQuantity(p.qty.reduce((a, b) => a + b, 0), locale)}</td>
                   {p.qty.map((q, k) => (
                     <td key={k} className={`n${weekend(days[k]!)}`}>
