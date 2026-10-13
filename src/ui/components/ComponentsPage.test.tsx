@@ -69,12 +69,16 @@ describe('ComponentsPage', () => {
     renderWith(<ComponentsPage today={day(13)} />);
     const [clip, resin] = rows(0);
     // spona: sklad 30, spotřeba 10, 10, 20 → 20, 10, −10
-    // spotřeba 40 za 10 dní výroby (po–pá) → Ø 4, sklad 30 → 7,5 dne výroby; zákazník pokryt do středy (bez skladu hotových dílů)
-    expect(cells(clip!).slice(0, 9)).toEqual(['CLIP-1', 'CLIP', 'EA', 'nákup', '30', '40', '4', '7,5 dne výrobychybí od Čt 15. 10.', 'St 14. 10.']);
-    expect(cells(clip!).slice(9, 12)).toEqual(['20', '10', '-10']);
-    expect(clip!.querySelectorAll('td')[11]!.className).toContain('cell-negative');
+    // spotřeba za 7 dní 40, za 10 dní výroby (po–pá) Ø 4 → sklad 30 vystačí na 7,5 dne výroby; zákazník pokryt do středy
+    expect(cells(clip!).slice(0, 8)).toEqual(['CLIP-1', 'CLIP', 'EA', 'nákup', '30', '40', '7,5 dne výrobychybí od Čt 15. 10.', 'St 14. 10.']);
+    expect(cells(clip!).slice(8, 11)).toEqual(['20', '10', '-10']);
+    expect(clip!.querySelectorAll('td')[10]!.className).toContain('cell-negative');
+    // den „Zákazník pokryt do“ je v řádku označený
+    expect(clip!.querySelectorAll('td')[9]!.className).toContain('cell-customer');
+    expect(clip!.querySelectorAll('td.cell-customer')).toHaveLength(1);
     // pryskyřice v kg na desetinná místa
-    expect(cells(resin!).slice(4, 12)).toEqual(['100', '5', '0,5', '200,0 dne výrobycelý horizont', 'celý horizont', '98,75', '97,5', '95']);
+    expect(cells(resin!).slice(4, 11)).toEqual(['100', '5', '200,0 dne výrobycelý horizont', 'celý horizont', '98,75', '97,5', '95']);
+    expect(resin!.querySelectorAll('td.cell-customer')).toHaveLength(0);
     // mezivýroba bez označení se nezobrazí
     expect(screen.queryByText('SUB-1')).toBeNull();
     // pořadí ukazatelů: v záporu do 2 dnů, v záporu do 14 dní, …
@@ -85,7 +89,10 @@ describe('ComponentsPage', () => {
   it('poptávka hotových dílů z odvolávek', () => {
     renderWith(<ComponentsPage today={day(13)} />);
     const [fg] = rows(1);
-    expect(cells(fg!).slice(0, 9)).toEqual(['FG-1', 'PANEL LHD', 'P1', '—', '0', '20', '5', '5', '10']);
+    expect(cells(fg!).slice(0, 7)).toEqual(['FG-1', 'PANEL LHD', 'P1', '20', '5', '5', '10']);
+    // součet dnů jako poslední řádek
+    const total = screen.getAllByRole('table')[1]!.querySelector('tfoot tr')!;
+    expect(cells(total).slice(0, 7)).toEqual(['Celkem', '', '', '20', '5', '5', '10']);
     expect(document.querySelector('.source-info')!.textContent).toContain('odvolávky CW 42/2026');
   });
 
@@ -125,6 +132,6 @@ describe('ComponentsPage', () => {
     cleanup();
     renderWith(<HubPage />);
     const metric = screen.getByRole('link', { name: /Komponenty/ }).querySelector('.metric');
-    expect(metric!.textContent).toMatch(/^(1 díl nepokrytý|[2-4] různé díly nepokryté|\d+ různých dílů nepokrytých) na 2 dny$/);
+    expect(metric!.textContent).toMatch(/^\d+ nepokryto na 2 dny$/);
   });
 });
