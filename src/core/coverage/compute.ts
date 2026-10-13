@@ -67,11 +67,12 @@ export function buildCoverage(sources: readonly CoverageSource[], master: Master
   const lines: CoverageLine[] = [];
   for (const source of sources) {
     const { report } = source;
-    for (const row of report.rows) {
+    for (const [index, row] of report.rows.entries()) {
       const m = master?.byCustomerKey.get(row.customerKey) ?? (row.supplierItem ? master?.items.get(row.supplierItem) : undefined);
       const totals = row.balance.map((b, k) => b + (options.transit ? row.transit[k]! : 0));
       lines.push({
-        id: `${source.path}|${row.customerKey}`,
+        // Pořadí řádku zaručí jednoznačný klíč i pro řádky bez čísla zákazníka.
+        id: `${source.path}|${index}|${row.customerKey}`,
         location: source.location,
         project: m?.project || source.project,
         item: m?.item ?? '',

@@ -134,7 +134,7 @@ function parseOverview(sheet: Sheet): CoverageReport | null {
     });
   });
 
-  return { format: 'overview', sheet: sheet.name, days: blocks.map((b) => b.day), rows, issueCount, issues };
+  return { format: 'overview', sheet: sheet.name, days: blocks.map((b) => b.day), rows: mergeDuplicates(rows), issueCount, issues };
 }
 
 /**
@@ -180,7 +180,7 @@ function parseArticles(sheet: Sheet): CoverageReport | null {
       uncoveredAt: col.uncoveredAt === -1 ? '' : dateTimeText(row[col.uncoveredAt]),
     };
   });
-  return { format: 'articles', sheet: sheet.name, days: dayColumns.map((d) => d.day), rows, issueCount: 0, issues: [] };
+  return { format: 'articles', sheet: sheet.name, days: dayColumns.map((d) => d.day), rows: mergeDuplicates(rows), issueCount: 0, issues: [] };
 }
 
 /**
@@ -237,7 +237,33 @@ function parseBestand(sheet: Sheet): CoverageReport | null {
     };
   });
 
-  return { format: 'bestand', sheet: sheet.name, days: dayColumns.map((d) => d.day), rows, issueCount: 0, issues: [] };
+  return { format: 'bestand', sheet: sheet.name, days: dayColumns.map((d) => d.day), rows: mergeDuplicates(rows), issueCount: 0, issues: [] };
+}
+
+/**
+ * Stejný díl víckrát v jednom souboru (zákazník ho vede na víc řádcích, druhý bývá prázdný):
+ * řádky se sečtou, popis a první nepokrytí se vezmou z prvního řádku, který je má.
+ */
+export function mergeDuplicates(rows: readonly CoverageRow[]): CoverageRow[] {
+  const merged = new Map<string, CoverageRow>();
+  for (const row of rows) {
+    const key = row.customerKey || row.supplierItem;
+    const first = merged.get(key);
+    if (!first) {
+      merged.set(key, { ...row, balance: [...row.balance], transit: [...row.transit] });
+      continue;
+    }
+    first.customerStock += row.customerStock;
+    row.balance.forEach((v, k) => (first.balance[k]! += v));
+    row.transit.forEach((v, k) => (first.transit[k]! += v));
+    first.supplierItem ||= row.supplierItem;
+    first.description ||= row.description;
+    if (!first.uncoveredAt && row.uncoveredAt) {
+      first.uncoveredAt = row.uncoveredAt;
+      first.firstUncovered = row.firstUncovered;
+    }
+  }
+  return [...merged.values()];
 }
 
 /** Sloupce dnů: datum v záhlaví a aspoň jedna hodnota (prázdné sloupce se starým datem se vynechají). */

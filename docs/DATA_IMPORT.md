@@ -102,6 +102,7 @@ na názvu souboru nezáleží. Díly se párují s mapováním podle čísla zá
 - Dny, které soubor nemá (víkend), převezmou poslední známý stav; dny za horizontem souboru jsou prázdné.
 - Sloupce s datem bez jediné hodnoty (např. staré dny v šabloně zákazníka) se vynechají.
 - Pomocné řádky bez čísla dílu zákazníka (např. blok kumulované poptávky pod daty) se přeskočí.
+- Stejný díl na víc řádcích jednoho souboru (druhý řádek bývá prázdný) se sečte do jednoho řádku.
 - Další formáty zákazníka, náš sklad a dodatečný transit (naše expedice) se doplní postupně.
 
 ## Testovací data
