@@ -4,6 +4,7 @@ import {
   coverageOptions,
   EMPTY_COVERAGE_FILTER,
   filterCoverage,
+  shortage,
   summarizeByVariant,
   type CoverageFilter,
 } from '../../core/coverage/compute';
@@ -17,6 +18,8 @@ import { Icon } from '../icons';
 type RowsMode = 'all' | 'negativeAny' | 'negativeOn';
 
 const NO_SOURCES: never[] = [];
+/** Za kolik prvních dnů se počítají chybějící kusy (stejně jako číslo na rozcestníku). */
+const SHORTAGE_DAYS = 2;
 
 function isNegative(v: number | null | undefined): boolean {
   return v !== null && v !== undefined && v < 0;
@@ -91,8 +94,9 @@ export function CoveragePage() {
     </label>
   );
 
-  const firstNegative = lines.filter((l) => isNegative(l.values[0])).length;
+  const soon = shortage(lines, SHORTAGE_DAYS);
   const anyNegative = lines.filter((l) => l.values.some(isNegative)).length;
+  const lastDay = table.days.at(-1);
   const transitNote = transit ? tc.kpi.withTransit : tc.kpi.withoutTransit;
 
   const fileBase = `${tc.export.fileName}_${dayToIso(table.days[0] ?? 0)}${transit ? '_transit' : ''}`;
@@ -149,21 +153,29 @@ export function CoveragePage() {
 
       <div className="kpis">
         <div className="kpi">
-          <span className="kpi-label">{tc.kpi.items}</span>
-          <span className="kpi-value">{formatQuantity(lines.length, locale)}</span>
-          <span className="kpi-note">{tc.kpi.itemsNote}</span>
-        </div>
-        <div className="kpi">
           <span className="kpi-label">
-            {tc.kpi.negativeFirst} ({table.days[0] !== undefined ? dayLabel(table.days[0]) : '—'})
+            {tc.kpi.shortage}
+            {table.days.length > 0 && ` (${table.days.slice(0, SHORTAGE_DAYS).map(dayLabel).join(', ')})`}
           </span>
-          <span className="kpi-value">{formatQuantity(firstNegative, locale)}</span>
-          <span className="kpi-note">{transitNote}</span>
+          <span className="kpi-value">
+            {formatQuantity(soon.pieces, locale)} {t.calloffs.table.unit}
+          </span>
+          <span className="kpi-note">
+            {tc.kpi.shortageParts}: {formatQuantity(soon.parts, locale)}, {transitNote}
+          </span>
         </div>
         <div className="kpi">
           <span className="kpi-label">{tc.kpi.negativeAny}</span>
           <span className="kpi-value">{formatQuantity(anyNegative, locale)}</span>
-          <span className="kpi-note">{transitNote}</span>
+          <span className="kpi-note">
+            {tc.kpi.negativeAnyNote}
+            {lastDay !== undefined && ` ${dayLabel(lastDay)}`}, {transitNote}
+          </span>
+        </div>
+        <div className="kpi">
+          <span className="kpi-label">{tc.kpi.items}</span>
+          <span className="kpi-value">{formatQuantity(lines.length, locale)}</span>
+          <span className="kpi-note">{tc.kpi.itemsNote}</span>
         </div>
         <div className="kpi">
           <span className="kpi-label">{tc.kpi.unmapped}</span>

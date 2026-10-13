@@ -146,3 +146,20 @@ export function summarizeByVariant(days: readonly DayNumber[], lines: readonly C
 export function negativeSoon(table: CoverageTable, days: number): number {
   return table.lines.filter((line) => line.values.slice(0, days).some(isNegative)).length;
 }
+
+/**
+ * Chybějící kusy v prvních `days` dnech: u každého dílu nejhorší záporný stav v těch dnech
+ * (stav je kumulativní, takže je to celé chybějící množství), sečteno přes díly.
+ */
+export function shortage(lines: readonly CoverageLine[], days: number): { pieces: number; parts: number } {
+  let pieces = 0;
+  let parts = 0;
+  for (const line of lines) {
+    const worst = Math.min(0, ...line.values.slice(0, days).filter((v): v is number => v !== null));
+    if (worst < 0) {
+      pieces -= worst;
+      parts++;
+    }
+  }
+  return { pieces, parts };
+}

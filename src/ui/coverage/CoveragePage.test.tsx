@@ -62,6 +62,17 @@ describe('CoveragePage', () => {
     expect(bodyRows()[0]!.querySelector('.cell-negative')).not.toBeNull();
   });
 
+  it('ukazatele: chybějící kusy v prvních 2 dnech, záporné v horizontu, díly, bez mapování', () => {
+    renderWith(<CoveragePage />);
+    const kpis = () => [...document.querySelectorAll('.kpi')].map((k) => k.querySelector('.kpi-label')!.textContent);
+    expect(kpis()).toEqual(['Chybí v prvních 2 dnech (Út 13. 10., St 14. 10.)', 'V záporu v horizontu', 'Dílů', 'Bez mapování']);
+    const first = () => document.querySelector('.kpi')!;
+    expect(first().querySelector('.kpi-value')!.textContent).toBe('0 ks');
+    fireEvent.click(screen.getByLabelText('Přičíst transit'));
+    expect(first().querySelector('.kpi-value')!.textContent).toBe('2 ks');
+    expect(first().querySelector('.kpi-note')!.textContent).toBe('dílů v záporu: 1, bez transitu');
+  });
+
   it('záporné kdykoli a ke zvolenému dni', () => {
     renderWith(<CoveragePage />);
     fireEvent.click(screen.getByLabelText('Přičíst transit'));

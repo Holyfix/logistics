@@ -3,7 +3,7 @@ import { parseCsv } from '../csv';
 import { dayFromParts, dayToIso } from '../dates';
 import { parseMasterData } from '../masterdata';
 import type { Cell } from '../table';
-import { buildCoverage, coverageOptions, EMPTY_COVERAGE_FILTER, filterCoverage, negativeSoon, summarizeByVariant, type CoverageSource } from './compute';
+import { buildCoverage, coverageOptions, EMPTY_COVERAGE_FILTER, filterCoverage, negativeSoon, shortage, summarizeByVariant, type CoverageLine, type CoverageSource } from './compute';
 import { parseCoverageWorkbook } from './parse';
 
 const d = (day: number) => new Date(Date.UTC(2026, 9, day));
@@ -182,5 +182,15 @@ describe('buildCoverage', () => {
     ]);
     expect(negativeSoon(t, 2)).toBe(0);
     expect(negativeSoon(t, 3)).toBe(1);
+  });
+});
+
+describe('shortage', () => {
+  const line = (values: (number | null)[]) => ({ values }) as CoverageLine;
+  it('nejhorší záporný stav v prvních dnech, sečteno přes díly', () => {
+    const lines = [line([5, -3, -20]), line([-4, -1, 0]), line([2, 1, -9]), line([null, -2, null])];
+    expect(shortage(lines, 2)).toEqual({ pieces: 9, parts: 3 });
+    expect(shortage(lines, 3)).toEqual({ pieces: 35, parts: 4 });
+    expect(shortage([], 2)).toEqual({ pieces: 0, parts: 0 });
   });
 });

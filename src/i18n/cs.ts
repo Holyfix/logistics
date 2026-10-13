@@ -274,8 +274,10 @@ export const cs = {
     kpi: {
       items: 'Dílů',
       itemsNote: 'po filtru',
-      negativeFirst: 'V záporu první den',
+      shortage: 'Chybí v prvních 2 dnech',
+      shortageParts: 'dílů v záporu',
       negativeAny: 'V záporu v horizontu',
+      negativeAnyNote: 'dílů se záporem aspoň v jednom dni do',
       unmapped: 'Bez mapování',
       unmappedNote: 'díly zákazníka, které nejsou v mapování',
       withTransit: 's transitem',

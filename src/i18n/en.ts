@@ -272,8 +272,10 @@ export const en: Messages = {
     kpi: {
       items: 'Parts',
       itemsNote: 'after filters',
-      negativeFirst: 'Negative on the first day',
+      shortage: 'Missing in the first 2 days',
+      shortageParts: 'negative parts',
       negativeAny: 'Negative within the horizon',
+      negativeAnyNote: 'parts negative on at least one day until',
       unmapped: 'Not mapped',
       unmappedNote: 'customer parts missing from the mapping',
       withTransit: 'with transit',
