@@ -330,7 +330,7 @@ export const en: Messages = {
       boundary: '2-day coverage limit (today + 1)',
     },
     export: { fileName: 'coverage', sheet: 'Coverage', summarySheet: 'Variants' },
-    hub: { label: 'within 2 days', title: 'Parts that go negative within 2 days according to the customer files (with transit)' },
+    hub: { withoutTransit: 'without transit', withTransit: 'with transit', parts: 'parts', title: 'Pieces missing in the first 2 days according to customer files' },
   },
   calloffs: {
     noData: 'No call-off exports loaded yet.',

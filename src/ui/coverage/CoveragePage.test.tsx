@@ -157,10 +157,12 @@ describe('CoveragePage', () => {
     expect(screen.getByRole('link', { name: 'Otevřít Data' }).getAttribute('href')).toBe('#data');
   });
 
-  it('na rozcestníku počet dílů v záporu do 2 dnů', () => {
+  it('na rozcestníku chybějící kusy v prvních 2 dnech bez transitu a s transitem', () => {
     renderWith(<HubPage />);
     const metric = screen.getByRole('link', { name: /Coverage/ }).querySelector('.metric')!;
-    expect(metric.textContent).toBe('0 do 2 dnů');
-    expect(metric.querySelector('.dot-ok')).not.toBeNull();
+    // bez transitu chybí 2 ks (stav 4, −2), s transitem nic (9, 3) → jen pozor
+    expect([...metric.querySelectorAll('b')].map((b) => b.parentElement!.textContent)).toEqual(['2 ks bez transitu', '0 ks s transitem']);
+    expect(metric.querySelector('.dot-warn')).not.toBeNull();
+    expect(metric.getAttribute('title')).toBe('Chybějící kusy v prvních 2 dnech podle souborů zákazníka: bez transitu 2 ks (dílů 1), s transitem 0 ks (dílů 0)');
   });
 });
