@@ -78,18 +78,24 @@ export function ComponentsPage({ today = localToday() }: { today?: DayNumber } =
   const noDemand = products.filter((p) => p.qty.every((q) => q === 0)).length;
   const boms = state.data?.boms.length ?? 0;
   const fileBase = `${tc.export.fileName}_${dayToIso(today)}`;
+  const demandTotals = days.map((_, k) => shownProducts.reduce((sum, p) => sum + p.qty[k]!, 0));
   const productionDays = (c: ComponentLine) => (c.productionDays === null ? tc.table.noUsage : `${formatOneDecimal(c.productionDays, locale)} ${tc.table.productionDays}`);
   /** Poslední pracovní den před indexem dne (pro „pokryt do“); null, když chybí už dnes. */
   const coveredUntil = (short: number): DayNumber | null => {
     for (let k = short - 1; k >= 0; k--) if (weekday(days[k]!) <= 5) return days[k]!;
     return null;
   };
+  /** Den „Zákazník pokryt do“; null, když se neurčuje, vystačí na celý horizont nebo chybí už dnes. */
+  const customerUntil = (c: ComponentLine): DayNumber | null =>
+    c.customerKnown && c.customerShortDay !== null ? coveredUntil(c.customerShortDay) : null;
   const customerText = (c: ComponentLine) => {
     if (!c.customerKnown) return '—';
     if (c.customerShortDay === null) return tc.table.whole;
-    const until = coveredUntil(c.customerShortDay);
+    const until = customerUntil(c);
     return until === null ? tc.table.notCovered : dayLabel(until);
   };
+  /** Spotřeba za prvních 7 dní horizontu. */
+  const usage7 = (c: ComponentLine) => c.usage.slice(0, USAGE_DAYS).reduce((a, b) => a + b, 0);
 
   const buildExport = (): ExportTable => ({
     fileName: fileBase,
@@ -101,7 +107,6 @@ export function ComponentsPage({ today = localToday() }: { today?: DayNumber } =
       tc.table.source,
       tc.table.stock,
       tc.table.usage,
-      tc.table.avgDaily,
       tc.table.productionDaysHead,
       tc.table.until,
       tc.table.customer,
@@ -114,8 +119,7 @@ export function ComponentsPage({ today = localToday() }: { today?: DayNumber } =
       c.um,
       sourceLabel(c),
       c.stock,
-      round(c.usage.reduce((a, b) => a + b, 0)),
-      round(c.avgDaily),
+      round(usage7(c)),
       c.productionDays === null ? null : Math.round(c.productionDays * 10) / 10,
       c.shortDay === null ? tc.table.whole : dayToIso(days[c.shortDay]!),
       customerText(c),
@@ -126,17 +130,11 @@ export function ComponentsPage({ today = localToday() }: { today?: DayNumber } =
   const buildDemandExport = (): ExportTable => ({
     fileName: `${fileBase}_${tc.export.demandSheet.toLowerCase()}`,
     sheetName: tc.export.demandSheet,
-    header: [tc.demand.item, tc.demand.description, tc.demand.project, tc.demand.sequencerStock, tc.demand.sequencerTransit, tc.demand.ourStock, tc.demand.total, ...days.map(dayToIso)],
-    rows: shownProducts.map((p) => [
-      p.item,
-      p.description,
-      p.project,
-      p.sequencerStock,
-      p.sequencerTransit?.at(-1) ?? null,
-      p.ourStock,
-      p.qty.reduce((a, b) => a + b, 0),
-      ...p.qty,
-    ]),
+    header: [tc.demand.item, tc.demand.description, tc.demand.project, tc.demand.total, ...days.map(dayToIso)],
+    rows: [
+      ...shownProducts.map((p) => [p.item, p.description, p.project, p.qty.reduce((a, b) => a + b, 0), ...p.qty]),
+      [tc.demand.sum, '', '', demandTotals.reduce((a, b) => a + b, 0), ...demandTotals],
+    ],
   });
 
   return (
@@ -231,7 +229,6 @@ export function ComponentsPage({ today = localToday() }: { today?: DayNumber } =
                   <th>{tc.table.source}</th>
                   <th className="n">{tc.table.stock}</th>
                   <th className="n">{tc.table.usage}</th>
-                  <th className="n">{tc.table.avgDaily}</th>
                   <th>{tc.table.until}</th>
                   <th title={tc.table.customerTitle}>
                     {tc.table.customer}
@@ -258,8 +255,7 @@ export function ComponentsPage({ today = localToday() }: { today?: DayNumber } =
                     <td>{c.um}</td>
                     <td>{sourceLabel(c)}</td>
                     <td className="n">{c.stock === null ? <span className="muted">—</span> : amount(c.stock, c.um)}</td>
-                    <td className="n">{amount(c.usage.reduce((a, b) => a + b, 0), c.um)}</td>
-                    <td className="n">{amount(c.avgDaily, c.um)}</td>
+                    <td className="n">{amount(usage7(c), c.um)}</td>
                     <td className="cell-until">
                       <strong>{productionDays(c)}</strong>
                       {c.shortDay === null ? (
@@ -273,11 +269,18 @@ export function ComponentsPage({ today = localToday() }: { today?: DayNumber } =
                     <td className="muted" title={tc.table.customerTitle}>
                       {customerText(c)}
                     </td>
-                    {c.balance.map((v, k) => (
-                      <td key={k} className={`n${weekend(days[k]!)}${v < -1e-9 ? ' cell-negative' : ''}`}>
-                        {amount(v, c.um)}
-                      </td>
-                    ))}
+                    {c.balance.map((v, k) => {
+                      const until = customerUntil(c) === days[k];
+                      return (
+                        <td
+                          key={k}
+                          className={`n${weekend(days[k]!)}${v < -1e-9 ? ' cell-negative' : ''}${until ? ' cell-customer' : ''}`}
+                          title={until ? tc.legend.customer : undefined}
+                        >
+                          {amount(v, c.um)}
+                        </td>
+                      );
+                    })}
                   </tr>
                 ))}
               </tbody>
@@ -289,6 +292,17 @@ export function ComponentsPage({ today = localToday() }: { today?: DayNumber } =
             {tc.table.markedNotInBom}: {table.markedNotInBom.join(', ')}
           </p>
         )}
+        <ul className="cov-legend">
+          <li>
+            <i className="swatch swatch-negative" /> {tc.legend.negative}
+          </li>
+          <li>
+            <i className="swatch swatch-customer" /> {tc.legend.customer}
+          </li>
+          <li>
+            <i className="swatch swatch-weekend" /> {tc.legend.weekend}
+          </li>
+        </ul>
         <p className="muted">{tc.table.note}</p>
       </div>
 
@@ -310,11 +324,6 @@ export function ComponentsPage({ today = localToday() }: { today?: DayNumber } =
                 <th className="sticky-col">{tc.demand.item}</th>
                 <th>{tc.demand.description}</th>
                 <th>{tc.demand.project}</th>
-                <th className="n" title={tc.demand.sequencerTitle}>
-                  {tc.demand.sequencer}
-                  <span className="th-note">{tc.demand.sequencerNote}</span>
-                </th>
-                <th className="n">{tc.demand.ourStock}</th>
                 <th className="n">{tc.demand.total}</th>
                 {days.map((d) => (
                   <th key={d} className={`n${weekend(d)}`}>
@@ -331,10 +340,6 @@ export function ComponentsPage({ today = localToday() }: { today?: DayNumber } =
                   </td>
                   <td className="desc">{p.description}</td>
                   <td>{p.project || '—'}</td>
-                  <td className="n" title={p.sequencerStock === null ? undefined : `${tc.demand.sequencerStock}: ${formatQuantity(p.sequencerStock, locale)}, ${tc.demand.sequencerTransit}: ${formatQuantity(p.sequencerTransit?.at(-1) ?? 0, locale)}`}>
-                    {p.sequencerStock === null ? <span className="muted">—</span> : formatQuantity(p.sequencerStock + (p.sequencerTransit?.at(-1) ?? 0), locale)}
-                  </td>
-                  <td className="n">{p.ourStock === null ? <span className="muted">—</span> : formatQuantity(p.ourStock, locale)}</td>
                   <td className="n">{formatQuantity(p.qty.reduce((a, b) => a + b, 0), locale)}</td>
                   {p.qty.map((q, k) => (
                     <td key={k} className={`n${weekend(days[k]!)}`}>
@@ -344,6 +349,23 @@ export function ComponentsPage({ today = localToday() }: { today?: DayNumber } =
                 </tr>
               ))}
             </tbody>
+            {shownProducts.length > 0 && (
+              <tfoot>
+                <tr className="row-total">
+                  <td className="sticky-col">
+                    <strong>{tc.demand.sum}</strong>
+                  </td>
+                  <td />
+                  <td />
+                  <td className="n">{formatQuantity(demandTotals.reduce((a, b) => a + b, 0), locale)}</td>
+                  {demandTotals.map((q, k) => (
+                    <td key={k} className={`n${weekend(days[k]!)}`}>
+                      {formatQuantity(q, locale)}
+                    </td>
+                  ))}
+                </tr>
+              </tfoot>
+            )}
           </table>
         </div>
         {!callOffs && <p className="muted">{tc.demand.noCallOffs}</p>}
@@ -353,6 +375,9 @@ export function ComponentsPage({ today = localToday() }: { today?: DayNumber } =
     </section>
   );
 }
+
+/** Za kolik prvních dnů se ukazuje spotřeba komponenty. */
+const USAGE_DAYS = 7;
 
 function round(v: number): number {
   return Math.round(v * 1000) / 1000;

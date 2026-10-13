@@ -107,8 +107,8 @@ describe('dny výroby a pokrytí zákazníka (čistý rozpad)', () => {
   });
 });
 
-describe('Zákazník pokryt do se skladem a transitem u sekvencéru', () => {
-  // Stejný příklad (A 100 ks/den, sklad A 150, S 100, K 400) + u sekvencéru 200 ks A a ve středu dorazí transit 100 ks.
+describe('Zákazník pokryt do podle souboru sekvencéra (fix) a odvolávek', () => {
+  // A: odvolávky 100 ks každý pracovní den. A = 1× S (mezivýroba), S = 2× K (nákup). Náš sklad A 150, S 100, K 400.
   const monday = dayFromParts(2026, 10, 12)!;
   const tree = parseBom([
     ['Level', 'Component Item', 'Description', 'Quantity Per', 'UM', 'Purchase/Manufacture'],
@@ -121,7 +121,7 @@ describe('Zákazník pokryt do se skladem a transitem u sekvencéru', () => {
   const calls = { items: ['A'], offsets: Int32Array.from([0, workdays.length]), days: Int32Array.from(workdays), qty: Float64Array.from(workdays.map(() => 100)) } as unknown as CallOffExport;
   const m = parseMasterData(parseCsv('Item Number;Customer Number;Component Coverage\nA;CA;\nK;;Ano'));
   if (!m.ok) throw new Error();
-  const seq: CoverageSource = {
+  const sequencer = (days: number[], balance: number[], transit: number[], stock: number): CoverageSource => ({
     path: 'Coverage/X/P/r.xlsx',
     fileName: 'r.xlsx',
     location: 'X',
@@ -130,24 +130,45 @@ describe('Zákazník pokryt do se skladem a transitem u sekvencéru', () => {
     report: {
       format: 'overview',
       sheet: 's',
-      days: [monday, monday + 2],
-      rows: [{ customerNumber: 'CA', customerKey: 'CA', supplierItem: '', description: '', customerStock: 200, balance: [100, 0], transit: [0, 100], firstUncovered: '', uncoveredAt: '' }],
+      days,
+      rows: [{ customerNumber: 'CA', customerKey: 'CA', supplierItem: '', description: '', customerStock: stock, balance, transit, firstUncovered: '', uncoveredAt: '' }],
       issueCount: 0,
       issues: [],
     },
-  };
-  const t = buildComponents({ bom: tree.value, master: m.value, coverage: [seq], callOffs: calls, stock: new Map([['A', 150], ['S', 100], ['K', 400]]), today: monday });
+  });
+  const build = (seq: CoverageSource) =>
+    buildComponents({ bom: tree.value, master: m.value, coverage: [seq], callOffs: calls, stock: new Map([['A', 150], ['S', 100], ['K', 400]]), today: monday });
 
-  it('hotový díl má sklad u sekvencéru, transit po dnech a náš sklad', () => {
-    expect(t.products[0]).toMatchObject({ item: 'A', sequencerStock: 200, ourStock: 150 });
-    expect(t.products[0]!.sequencerTransit!.slice(0, 4)).toEqual([0, 0, 100, 100]);
+  it('sekvencér vystačí do konce souboru; za ním zbytek u sekvencéru, pak odvolávky na nás', () => {
+    // sklad 200, do středy spotřeba 200, ve středu dorazí transit 100 → stav se transitem po, st = 100
+    const t = build(sequencer([monday, monday + 2], [100, 0], [0, 100], 200));
+    const a = t.products[0]!;
+    expect(a.fixed.slice(0, 4)).toEqual([true, true, true, false]);
+    // čt 100 pokryje zbytek u sekvencéru, od pátku odvolávky na nás
+    expect(a.netQty).toEqual([0, 0, 0, 0, 100, 0, 0, 100, 100, 100, 100, 100, 0, 0]);
+    // náš sklad A 150 (pá, po), S 100 (po, út), pak K: út 100, st 200 → 100, čt chybí → pokryto do st 21. 10.
+    const k = t.components.find((c) => c.item === 'K')!;
+    expect(k.customerShortDay).toBe(10);
+    // vlastní pokrytí komponenty podle odvolávek se nemění
+    expect(k.shortDay).toBe(2);
   });
 
-  it('nejdřív sekvencér a transit, pak náš sklad a mezivýroba, K chybí až ve středu dalšího týdne', () => {
-    const k = t.components.find((c) => c.item === 'K')!;
-    // 450 ks hotových A (200 + 100 + 150) na 4,5 dne, pak 100 ks S, pak K na 2 dny → chybí den 9 (St 21. 10.)
-    expect(k.customerShortDay).toBe(9);
-    // vlastní pokrytí komponenty se nemění
-    expect(k.shortDay).toBe(2);
+  it('chybějící množství podle souboru je požadavek; pozdější transit ho nesnižuje', () => {
+    // stav se transitem: po 50, út −30, st −80, čt −20 (dorazil transit) → požadavek 0, 30, 50, 0
+    const t = build(sequencer([monday, monday + 1, monday + 2, monday + 3], [50, -30, -80, -120], [0, 0, 0, 100], 100));
+    // pá za koncem souboru: u sekvencéru zbývá −20 + 80 dodaných = 60 ks, z odvolávky 100 zbude na nás 40
+    expect(t.products[0]!.netQty.slice(0, 5)).toEqual([0, 30, 50, 0, 40]);
+  });
+
+  it('chybějící množství ze dnů před dneškem patří do dneška', () => {
+    const t = buildComponents({
+      bom: tree.value,
+      master: m.value,
+      coverage: [sequencer([monday - 1, monday, monday + 1], [-40, -60, -60], [0, 0, 0], 0)],
+      callOffs: calls,
+      stock: new Map(),
+      today: monday,
+    });
+    expect(t.products[0]!.netQty.slice(0, 3)).toEqual([60, 0, 100]);
   });
 });

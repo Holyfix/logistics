@@ -105,10 +105,7 @@ function useMetrics(): Partial<Record<ModuleId, ReactNode>> {
   }
   if (components) {
     const soon = components.components.filter((c) => c.shortDay !== null && c.shortDay < COMPONENT_SOON_DAYS).length;
-    const labels = t.components.hub.label;
-    const form = new Intl.PluralRules(locale).select(soon);
-    const label = form === 'one' ? labels.one : form === 'few' ? labels.few : labels.other;
-    metrics.components = <Metric value={formatQuantity(soon, locale)} label={label} tone={soon > 0 ? 'crit' : 'ok'} title={t.components.hub.title} />;
+    metrics.components = <Metric value={formatQuantity(soon, locale)} label={t.components.hub.label} tone={soon > 0 ? 'crit' : 'ok'} title={t.components.hub.title} />;
   }
   return metrics;
 }

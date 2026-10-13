@@ -72,7 +72,7 @@ Filtry: zákazník, projekt, strana (LHD/RHD) z kmenových dat, hledání dílu.
 ### Komponenty
 - ✅ Rozpad poptávky přes víceúrovňový kusovník (hrubý rozpad), komponenty vybrané v Item Mappingu
 - ✅ Poptávka z odvolávek na 14 dní; pokrytí ze skladu po dnech, na rozcestníku počet druhů komponent nepokrytých na 2 dny
-- ✅ Ø spotřeba za den výroby, „Vystačí“ ve dnech výroby a informace „Zákazník pokryt do“ (čistý rozpad: sklad a transit u sekvencéru, náš sklad hotových dílů, mezivýroba)
+- ✅ Spotřeba 7 dní, „Vystačí“ ve dnech výroby a informace „Zákazník pokryt do“ (označená i ve stavu po dnech) (požadavek = chybějící množství podle souboru sekvencéra, dál odvolávky; kryje se naším skladem hotových dílů, mezivýrobou a komponentou)
 - ✅ Poptávka hotových dílů se řídí filtrem komponent (projekt, vybraná komponenta → hotové díly, které ji mají v kusovníku)
 - ⏳ Otevřené nákupní objednávky (pokud jsou v exportu)
 - Shortage list pro ranní poradu
