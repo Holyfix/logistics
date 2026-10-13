@@ -330,7 +330,7 @@ export function ComponentsPage({ today = localToday() }: { today?: DayNumber } =
                   <td className="n muted">{formatQuantity(sum(p.callOffs), locale)}</td>
                   <td className="n">{formatQuantity(sum(p.production), locale)}</td>
                   {p.production.map((q, k) => (
-                    <td key={k} className={`n${weekend(days[k]!)}${p.fixed[k] ? ' cell-fixed' : ''}`}>
+                    <td key={k} className={`n${weekend(days[k]!)}${p.fixed[k] ? '' : ' cell-forecast'}`}>
                       {q === 0 ? <span className="muted">0</span> : formatQuantity(q, locale)}
                     </td>
                   ))}
@@ -361,10 +361,10 @@ export function ComponentsPage({ today = localToday() }: { today?: DayNumber } =
         {shownProducts.length === 0 && <p>{tc.demand.empty}</p>}
         <ul className="cov-legend">
           <li>
-            <i className="swatch swatch-fixed" /> {tc.demand.fixed}
+            <i className="swatch" /> {tc.demand.fixed}
           </li>
           <li>
-            <i className="swatch" /> {tc.demand.forecast}
+            <i className="swatch swatch-forecast" /> {tc.demand.forecast}
           </li>
         </ul>
         <p className="muted">{netOwnStock ? tc.demand.note : tc.demand.noteGross}</p>

@@ -917,12 +917,12 @@ button:focus-visible {
   color: var(--down);
 }
 
-/* Komponenty: potřeba ze souboru sekvencéra (fixní plán zákazníka) je podbarvená. */
-.table-data td.cell-fixed {
+/* Komponenty: potřeba z odvolávek je podbarvená, ze souboru sekvencéra (fixní plán zákazníka) bez podkladu. */
+.table-data td.cell-forecast {
   background: var(--accent-soft);
 }
 
-.swatch-fixed {
+.swatch-forecast {
   background: var(--accent-soft);
 }
 

@@ -85,7 +85,8 @@ describe('ComponentsPage', () => {
     renderWith(<ComponentsPage today={day(13)} />);
     const [fg] = rows(1);
     expect(cells(fg!).slice(0, 8)).toEqual(['FG-1', 'PANEL LHD', 'P1', '20', '20', '5', '5', '10']);
-    expect(fg!.querySelectorAll('td.cell-fixed')).toHaveLength(0);
+    // bez souboru sekvencéra jsou všechny dny z odvolávek (podbarvené)
+    expect(fg!.querySelectorAll('td.cell-forecast')).toHaveLength(14);
     // součet dnů jako poslední řádek
     const total = screen.getAllByRole('table')[1]!.querySelector('tfoot tr')!;
     expect(cells(total).slice(0, 8)).toEqual(['Celkem', '', '', '20', '20', '5', '5', '10']);
