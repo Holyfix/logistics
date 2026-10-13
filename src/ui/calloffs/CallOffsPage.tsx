@@ -69,6 +69,23 @@ export function CallOffsPage() {
     </label>
   );
 
+  // Filtry jsou v pohledu hned nad tabulkou s díly, aby se nemuselo posouvat na začátek stránky.
+  const filters = (
+    <div className="filters" role="group" aria-label={t.calloffs.filters.label}>
+      {select('customer', t.calloffs.filters.customer, options.customers, options.missing > 0 && master ? { value: MISSING_MASTER, label: `${t.calloffs.filters.missing} (${options.missing})` } : undefined)}
+      {select('project', t.calloffs.filters.project, options.projects)}
+      {select('side', t.calloffs.filters.side, options.sides)}
+      <label className="field field-wide">
+        <span>{t.calloffs.filters.search}</span>
+        <input type="search" value={filter.query} placeholder={t.calloffs.filters.searchPlaceholder} onChange={(e) => set('query')(e.target.value)} />
+      </label>
+      <button type="button" className="link-button" onClick={() => setFilter(EMPTY_FILTER)}>
+        {t.calloffs.filters.reset}
+      </button>
+      {!master && <p className="muted filters-note">{t.calloffs.filters.noMaster}</p>}
+    </div>
+  );
+
   return (
     <section className="page" aria-labelledby="page-title">
       <div className="page-head-row">
@@ -77,20 +94,6 @@ export function CallOffsPage() {
           {t.calloffs.currentExport}: <strong>CW {current.week}/{current.year}</strong> ({current.fileName}) · {t.calloffs.exportsLoaded}:{' '}
           <strong>{exports.length}</strong>
         </p>
-      </div>
-
-      <div className="filters" role="group" aria-label={t.calloffs.filters.label}>
-        {select('customer', t.calloffs.filters.customer, options.customers, options.missing > 0 && master ? { value: MISSING_MASTER, label: `${t.calloffs.filters.missing} (${options.missing})` } : undefined)}
-        {select('project', t.calloffs.filters.project, options.projects)}
-        {select('side', t.calloffs.filters.side, options.sides)}
-        <label className="field field-wide">
-          <span>{t.calloffs.filters.search}</span>
-          <input type="search" value={filter.query} placeholder={t.calloffs.filters.searchPlaceholder} onChange={(e) => set('query')(e.target.value)} />
-        </label>
-        <button type="button" className="link-button" onClick={() => setFilter(EMPTY_FILTER)}>
-          {t.calloffs.filters.reset}
-        </button>
-        {!master && <p className="muted filters-note">{t.calloffs.filters.noMaster}</p>}
       </div>
 
       <div className="tabs" role="tablist" aria-label={t.modules.calloffs.title}>
@@ -105,9 +108,9 @@ export function CallOffsPage() {
       </div>
 
       {tab === 'current' ? (
-        <CurrentView current={current} previous={previous} items={items} master={master} />
+        <CurrentView current={current} previous={previous} items={items} master={master} filters={filters} />
       ) : (
-        <CompareView exports={exports} filter={filter} master={master} />
+        <CompareView exports={exports} filter={filter} master={master} filters={filters} />
       )}
     </section>
   );
