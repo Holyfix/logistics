@@ -1,7 +1,7 @@
 // Pokrytí na jednotlivé dny ze souborů zákazníka, spojené s mapováním dílů.
 
 import type { DayNumber } from '../dates';
-import type { MasterData } from '../masterdata';
+import { customerDisplay, type MasterData } from '../masterdata';
 import type { CoverageReport } from './parse';
 
 /** Načtený soubor pokrytí; destinace a projekt jsou z cesty ve sdílené složce. */
@@ -25,7 +25,10 @@ export interface CoverageLine {
   project: string;
   /** Naše číslo dílu z mapování; prázdné, když díl v mapování chybí. */
   item: string;
+  /** Číslo zákazníka v jednotném zápisu „A1234567890 1234“ (z mapování, jinak ze souboru). */
   customerNumber: string;
+  /** Číslo zákazníka tak, jak je v souboru (každý formát ho zapisuje jinak). */
+  fileCustomerNumber: string;
   description: string;
   variant: string;
   side: string;
@@ -76,7 +79,8 @@ export function buildCoverage(sources: readonly CoverageSource[], master: Master
         location: source.location,
         project: m?.project || source.project,
         item: m?.item ?? '',
-        customerNumber: row.customerNumber,
+        customerNumber: customerDisplay(m?.customerNumber || row.customerNumber),
+        fileCustomerNumber: row.customerNumber,
         description: m?.description || row.description,
         variant: m?.variant ?? '',
         side: m?.side ?? '',
@@ -103,7 +107,7 @@ export function filterCoverage(table: CoverageTable, filter: CoverageFilter): Co
     if (filter.location && line.location !== filter.location) return false;
     if (filter.project && line.project !== filter.project) return false;
     if (filter.variant && line.variant !== filter.variant) return false;
-    if (query && !`${line.item} ${line.customerNumber} ${line.description}`.toLowerCase().includes(query)) return false;
+    if (query && !`${line.item} ${line.customerNumber} ${line.customerNumber.replace(/\s+/g, '')} ${line.fileCustomerNumber} ${line.description}`.toLowerCase().includes(query)) return false;
     if (filter.rows.kind === 'negativeAny') return line.values.some(isNegative);
     if (filter.rows.kind === 'negativeOn') return isNegative(line.values[dayIndex]);
     return true;

@@ -57,8 +57,10 @@ describe('CoveragePage', () => {
     const [mapped, unmapped] = bodyRows();
     expect(cells(mapped!).slice(-2)).toEqual(['9', '3']);
     expect(cells(unmapped!)[0]).toBe('—není v mapování');
-    expect(cells(unmapped!)[1]).toBe('A1234567890      0002');
-    expect(cells(mapped!).slice(0, 2)).toEqual(['900100', 'A1234567890      0001']);
+    expect(cells(unmapped!)[1]).toBe('A1234567890 0002');
+    // jednotný zápis čísla zákazníka, zápis ze souboru v nápovědě
+    expect(cells(mapped!).slice(0, 2)).toEqual(['900100', 'A1234567890 0001']);
+    expect(mapped!.querySelectorAll('td')[1]!.title).toBe('V souboru zákazníka: A1234567890      0001');
     fireEvent.click(screen.getByLabelText('Přičíst transit'));
     expect(cells(bodyRows()[0]!).slice(-2)).toEqual(['4', '-2']);
     expect(bodyRows()[0]!.querySelector('.cell-negative')).not.toBeNull();
