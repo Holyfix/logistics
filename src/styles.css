@@ -917,14 +917,13 @@ button:focus-visible {
   color: var(--down);
 }
 
-/* Komponenty: den „Zákazník pokryt do“ v řádku komponenty. */
-.table-data td.cell-customer {
-  font-weight: 700;
-  box-shadow: inset 0 0 0 2px var(--accent);
+/* Komponenty: potřeba ze souboru sekvencéra (fixní plán zákazníka) je podbarvená. */
+.table-data td.cell-fixed {
+  background: var(--accent-soft);
 }
 
-.swatch-customer {
-  border: 2px solid var(--accent);
+.swatch-fixed {
+  background: var(--accent-soft);
 }
 
 /* Součtový řádek tabulky. */
