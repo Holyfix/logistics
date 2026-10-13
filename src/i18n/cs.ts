@@ -332,7 +332,7 @@ export const cs = {
       boundary: 'Hranice pokrytí 2 dny (dnes + 1)',
     },
     export: { fileName: 'coverage', sheet: 'Coverage', summarySheet: 'Varianty' },
-    hub: { label: 'do 2 dnů', title: 'Díly, které podle souborů zákazníka (s transitem) spadnou do záporu do 2 dnů' },
+    hub: { withoutTransit: 'bez transitu', withTransit: 's transitem', parts: 'dílů', title: 'Chybějící kusy v prvních 2 dnech podle souborů zákazníka' },
   },
   calloffs: {
     noData: 'Zatím nejsou načtené žádné exporty odvolávek.',

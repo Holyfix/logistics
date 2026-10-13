@@ -4,6 +4,7 @@ import {
   coverageOptions,
   EMPTY_COVERAGE_FILTER,
   filterCoverage,
+  SHORTAGE_DAYS,
   shortage,
   summarizeByVariant,
   type CoverageFilter,
@@ -19,8 +20,6 @@ import { Icon } from '../icons';
 type RowsMode = 'all' | 'negativeAny' | 'negativeOn';
 
 const NO_SOURCES: never[] = [];
-/** Za kolik prvních dnů se počítají chybějící kusy (stejně jako číslo na rozcestníku). */
-const SHORTAGE_DAYS = 2;
 
 function isNegative(v: number | null | undefined): boolean {
   return v !== null && v !== undefined && v < 0;

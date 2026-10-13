@@ -1,6 +1,6 @@
 import { useMemo, type ReactNode } from 'react';
 import { callOffSummary } from '../core/calloffs/views';
-import { buildCoverage, negativeSoon } from '../core/coverage/compute';
+import { buildCoverage, SHORTAGE_DAYS, shortage } from '../core/coverage/compute';
 import { formatQuantity } from '../core/format';
 import { useI18n } from '../i18n/I18nProvider';
 import { useData } from './data/DataProvider';
@@ -32,6 +32,22 @@ function Metric({ value, label, tone, title }: { value: string; label: string; t
   );
 }
 
+/** Dvě čísla nad sebou (např. bez transitu a s transitem) se společnou značkou stavu. */
+function MetricRows({ rows, tone, title }: { rows: { value: string; label: string }[]; tone: Tone; title: string }) {
+  return (
+    <span className="metric metric-rows" title={title}>
+      <span>
+        {rows.map((r) => (
+          <span key={r.label}>
+            <b>{r.value}</b> {r.label}
+          </span>
+        ))}
+      </span>
+      <i className={`dot dot-${tone}`} aria-hidden="true" />
+    </span>
+  );
+}
+
 function useMetrics(): Partial<Record<ModuleId, ReactNode>> {
   const { t, locale } = useI18n();
   const { state } = useData();
@@ -42,8 +58,12 @@ function useMetrics(): Partial<Record<ModuleId, ReactNode>> {
     const current = exports?.at(-1);
     return current ? callOffSummary(current, exports!.at(-2)) : null;
   }, [exports]);
-  // Rozcestník počítá pokrytí s transitem, stejně jako výchozí pohled modulu.
-  const negative = useMemo(() => (coverage?.length ? negativeSoon(buildCoverage(coverage, master, { transit: true }), 2) : null), [coverage, master]);
+  // Chybějící kusy v prvních 2 dnech podle souborů zákazníka, bez transitu a s transitem (bez našeho skladu).
+  const missing = useMemo(() => {
+    if (!coverage?.length) return null;
+    const pieces = (transit: boolean) => shortage(buildCoverage(coverage, master, { transit }).lines, SHORTAGE_DAYS);
+    return { withoutTransit: pieces(false), withTransit: pieces(true) };
+  }, [coverage, master]);
 
   const metrics: Partial<Record<ModuleId, ReactNode>> = {};
   const tm = t.hub.metrics;
@@ -62,8 +82,22 @@ function useMetrics(): Partial<Record<ModuleId, ReactNode>> {
       />
     );
   }
-  if (negative !== null) {
-    metrics.coverage = <Metric value={formatQuantity(negative, locale)} label={t.coverage.hub.label} tone={negative > 0 ? 'crit' : 'ok'} title={t.coverage.hub.title} />;
+  if (missing !== null) {
+    const th = t.coverage.hub;
+    const { withoutTransit: a, withTransit: b } = missing;
+    const pcs = (n: number) => `${formatQuantity(n, locale)} ${t.calloffs.table.unit}`;
+    // Kritické, když chybí i s transitem; pozor, když chybí jen bez transitu.
+    const tone: Tone = b.pieces > 0 ? 'crit' : a.pieces > 0 ? 'warn' : 'ok';
+    metrics.coverage = (
+      <MetricRows
+        rows={[
+          { value: pcs(a.pieces), label: th.withoutTransit },
+          { value: pcs(b.pieces), label: th.withTransit },
+        ]}
+        tone={tone}
+        title={`${th.title}: ${th.withoutTransit} ${pcs(a.pieces)} (${th.parts} ${formatQuantity(a.parts, locale)}), ${th.withTransit} ${pcs(b.pieces)} (${th.parts} ${formatQuantity(b.parts, locale)})`}
+      />
+    );
   }
   return metrics;
 }

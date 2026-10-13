@@ -162,10 +162,8 @@ export function summarizeByVariant(days: readonly DayNumber[], lines: readonly C
     .sort((a, b) => Number(!a.variant) - Number(!b.variant) || a.variant.localeCompare(b.variant, 'cs'));
 }
 
-/** Díly v záporu během prvních `days` dnů (pro rozcestník). */
-export function negativeSoon(table: CoverageTable, days: number): number {
-  return table.lines.filter((line) => line.values.slice(0, days).some(isNegative)).length;
-}
+/** Za kolik prvních dnů se počítají chybějící kusy (modul Coverage i rozcestník). */
+export const SHORTAGE_DAYS = 2;
 
 /**
  * Chybějící kusy v prvních `days` dnech: u každého dílu nejhorší záporný stav v těch dnech

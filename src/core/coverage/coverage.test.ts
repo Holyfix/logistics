@@ -3,7 +3,7 @@ import { parseCsv } from '../csv';
 import { dayFromParts, dayToIso } from '../dates';
 import { parseMasterData } from '../masterdata';
 import type { Cell } from '../table';
-import { buildCoverage, coverageOptions, EMPTY_COVERAGE_FILTER, filterCoverage, negativeSoon, shortage, summarizeByVariant, type CoverageLine, type CoverageSource } from './compute';
+import { buildCoverage, coverageOptions, EMPTY_COVERAGE_FILTER, filterCoverage, shortage, summarizeByVariant, type CoverageLine, type CoverageSource } from './compute';
 import { parseCoverageWorkbook } from './parse';
 
 const d = (day: number) => new Date(Date.UTC(2026, 9, day));
@@ -198,14 +198,12 @@ describe('buildCoverage', () => {
     expect(coverageOptions(t)).toEqual({ locations: ['Lokalita A'], projects: ['P1', 'P100'], variants: ['LHD HUD'], unmapped: 1 });
   });
 
-  it('souhrn po variantách a díly v záporu brzy', () => {
+  it('souhrn po variantách', () => {
     const t = buildCoverage([source], master.value, { transit: false });
     expect(summarizeByVariant(t.days, t.lines)).toEqual([
       { variant: 'LHD HUD', values: [10, 0, -9] },
       { variant: '', values: [45, 40, 35] },
     ]);
-    expect(negativeSoon(t, 2)).toBe(0);
-    expect(negativeSoon(t, 3)).toBe(1);
   });
 });
 
