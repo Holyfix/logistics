@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { parseBom } from '../bom';
 import type { CallOffExport } from '../calloffs/parse';
+import type { CoverageSource } from '../coverage/compute';
 import { parseCsv } from '../csv';
 import { dayFromParts } from '../dates';
 import { parseMasterData } from '../masterdata';
@@ -69,5 +70,84 @@ describe('buildComponents', () => {
     expect(t.components.map((c) => c.item)).toEqual(['CLIP-1']);
     expect(t.components[0]!.stock).toBeNull();
     expect(t.markedNotInBom).toEqual([]);
+  });
+});
+
+describe('dny výroby a pokrytí zákazníka (čistý rozpad)', () => {
+  // A: 100 ks každý pracovní den. A = 1× S (mezivýroba), S = 2× K (nákup). Sklad A 150, S 100, K 400.
+  const monday = dayFromParts(2026, 10, 12)!;
+  const tree = parseBom([
+    ['Level', 'Component Item', 'Description', 'Quantity Per', 'UM', 'Purchase/Manufacture'],
+    ['Parent', 'A', 'PRODUCT', null, 'EA', 'L'],
+    ['1', 'S', 'SUB', 1, 'EA', 'L'],
+    ['.2', 'K', 'PART', 2, 'EA', 'P'],
+  ]);
+  if (!tree.ok) throw new Error();
+  const workdays = Array.from({ length: 14 }, (_, k) => monday + k).filter((d) => (d - monday) % 7 < 5);
+  const calls = { items: ['A'], offsets: Int32Array.from([0, workdays.length]), days: Int32Array.from(workdays), qty: Float64Array.from(workdays.map(() => 100)) } as unknown as CallOffExport;
+  const m = parseMasterData(parseCsv('Item Number;Component Coverage\nK;Ano\nS;Ano'));
+  if (!m.ok) throw new Error();
+  const t = buildComponents({ bom: tree.value, master: m.value, callOffs: calls, stock: new Map([['A', 150], ['S', 100], ['K', 400]]), today: monday });
+  const k = t.components.find((c) => c.item === 'K')!;
+
+  it('samotná komponenta: 200 ks za den výroby, 400 ks stačí na 2 dny, chybí od středy', () => {
+    expect(k.avgDaily).toBe(200);
+    expect(k.productionDays).toBe(2);
+    expect(k.shortDay).toBe(2);
+  });
+
+  it('zákazník: nejdřív hotové díly a mezivýroba ze skladu, K chybí až v pátek', () => {
+    expect(tree.value.trees.get('A')).toEqual([{ item: 'S', qty: 1, children: [{ item: 'K', qty: 2, children: [] }] }]);
+    expect(k.customerKnown).toBe(true);
+    expect(k.customerShortDay).toBe(4);
+  });
+
+  it('u vyráběného dílu s komponentami se pokrytí zákazníka neurčuje', () => {
+    expect(t.components.find((c) => c.item === 'S')).toMatchObject({ customerKnown: false, customerShortDay: null });
+  });
+});
+
+describe('Zákazník pokryt do se skladem a transitem u sekvencéru', () => {
+  // Stejný příklad (A 100 ks/den, sklad A 150, S 100, K 400) + u sekvencéru 200 ks A a ve středu dorazí transit 100 ks.
+  const monday = dayFromParts(2026, 10, 12)!;
+  const tree = parseBom([
+    ['Level', 'Component Item', 'Description', 'Quantity Per', 'UM', 'Purchase/Manufacture'],
+    ['Parent', 'A', 'PRODUCT', null, 'EA', 'L'],
+    ['1', 'S', 'SUB', 1, 'EA', 'L'],
+    ['.2', 'K', 'PART', 2, 'EA', 'P'],
+  ]);
+  if (!tree.ok) throw new Error();
+  const workdays = Array.from({ length: 14 }, (_, k) => monday + k).filter((d) => (d - monday) % 7 < 5);
+  const calls = { items: ['A'], offsets: Int32Array.from([0, workdays.length]), days: Int32Array.from(workdays), qty: Float64Array.from(workdays.map(() => 100)) } as unknown as CallOffExport;
+  const m = parseMasterData(parseCsv('Item Number;Customer Number;Component Coverage\nA;CA;\nK;;Ano'));
+  if (!m.ok) throw new Error();
+  const seq: CoverageSource = {
+    path: 'Coverage/X/P/r.xlsx',
+    fileName: 'r.xlsx',
+    location: 'X',
+    project: 'P',
+    lastModified: 0,
+    report: {
+      format: 'overview',
+      sheet: 's',
+      days: [monday, monday + 2],
+      rows: [{ customerNumber: 'CA', customerKey: 'CA', supplierItem: '', description: '', customerStock: 200, balance: [100, 0], transit: [0, 100], firstUncovered: '', uncoveredAt: '' }],
+      issueCount: 0,
+      issues: [],
+    },
+  };
+  const t = buildComponents({ bom: tree.value, master: m.value, coverage: [seq], callOffs: calls, stock: new Map([['A', 150], ['S', 100], ['K', 400]]), today: monday });
+
+  it('hotový díl má sklad u sekvencéru, transit po dnech a náš sklad', () => {
+    expect(t.products[0]).toMatchObject({ item: 'A', sequencerStock: 200, ourStock: 150 });
+    expect(t.products[0]!.sequencerTransit!.slice(0, 4)).toEqual([0, 0, 100, 100]);
+  });
+
+  it('nejdřív sekvencér a transit, pak náš sklad a mezivýroba, K chybí až ve středu dalšího týdne', () => {
+    const k = t.components.find((c) => c.item === 'K')!;
+    // 450 ks hotových A (200 + 100 + 150) na 4,5 dne, pak 100 ks S, pak K na 2 dny → chybí den 9 (St 21. 10.)
+    expect(k.customerShortDay).toBe(9);
+    // vlastní pokrytí komponenty se nemění
+    expect(k.shortDay).toBe(2);
   });
 });

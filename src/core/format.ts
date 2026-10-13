@@ -27,6 +27,15 @@ export function formatAmount(value: number, locale: Locale, um = 'EA'): string {
   return f.format(rounded === 0 ? 0 : rounded);
 }
 
+/** Číslo s jedním desetinným místem, např. „4,5“ (cs) nebo „4.5“ (en). */
+const oneDecimalFormats = new Map<Locale, Intl.NumberFormat>();
+
+export function formatOneDecimal(value: number, locale: Locale): string {
+  let f = oneDecimalFormats.get(locale);
+  if (!f) oneDecimalFormats.set(locale, (f = new Intl.NumberFormat(LOCALE_TAGS[locale], { minimumFractionDigits: 1, maximumFractionDigits: 1 })));
+  return f.format(value);
+}
+
 /** Krátké datum pro záhlaví tabulky: „12. 10.“ (cs) nebo „12/10“ (en). */
 export function formatDayShort(isoDate: string, locale: Locale): string {
   const [, m, d] = isoDate.split('-').map(Number) as [number, number, number];

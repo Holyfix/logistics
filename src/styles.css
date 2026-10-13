@@ -900,3 +900,19 @@ button:focus-visible {
   color: var(--accent);
   text-decoration: underline;
 }
+
+/* Doplňující řádek v záhlaví sloupce (např. „info“). */
+.th-note {
+  display: block;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.cell-until {
+  white-space: nowrap;
+}
+
+.cell-short {
+  color: var(--down);
+}
