@@ -18,8 +18,8 @@ describe('parseMasterData', () => {
     const r = parseMasterData(
       parseCsv(
         [
-          'Item Number;Customer Number;Description;Variant;Type;Project',
-          '900100-0001;A1234567890  00000001;ASSY DOOR LHD;LHD HUD;DOOR;P100',
+          'Item Number;Customer Number;Description;Variant;Type;Project;Safety Stock;Safety Time;Order Multiple;Yield Percent;Cost Total',
+          '900100-0001;A1234567890  00000001;ASSY DOOR LHD;LHD HUD;DOOR;P100;0;0;16;100,00%;2 166,96615',
           '900101-0001;A1234567890  00000002;ASSY DOOR RHD;RHD;DOOR;P100',
           '900102;;SPARE;;;P200',
           '900103;A1234567890      0001;DUP;LHD;DOOR;P100',
@@ -37,8 +37,11 @@ describe('parseMasterData', () => {
       project: 'P100',
       customer: '',
       side: 'LHD',
+      safetyStock: 0,
+      safetyTime: 0,
+      orderMultiple: 16,
     });
-    expect(r.value.items.get('900101-0001')?.side).toBe('RHD');
+    expect(r.value.items.get('900101-0001')).toMatchObject({ side: 'RHD', orderMultiple: null });
     expect(r.value.items.get('900102')?.side).toBe('');
     expect(r.value.byCustomerKey.get('A12345678900001')?.item).toBe('900100-0001');
     expect(r.value.issues.map((i) => i.message)).toEqual(['duplicateCustomerNumber']);
@@ -69,6 +72,9 @@ describe('masterDataTemplate', () => {
       project: 'P',
       customer: '',
       side: 'LHD',
+      safetyStock: 0,
+      safetyTime: null,
+      orderMultiple: 16,
     };
     const t = masterDataTemplate(
       [
@@ -77,10 +83,10 @@ describe('masterDataTemplate', () => {
       ],
       new Map([['1', known]]),
     );
-    expect(t.header).toEqual(['Item Number', 'Customer Number', 'Description', 'Variant', 'Type', 'Project']);
+    expect(t.header).toEqual(['Item Number', 'Customer Number', 'Description', 'Variant', 'Type', 'Project', 'Safety Stock', 'Safety Time', 'Order Multiple']);
     expect(t.rows).toEqual([
-      ['1', 'C1', 'X', 'LHD', 'IP', 'P'],
-      ['2', '', 'Popis 2', '', '', ''],
+      ['1', 'C1', 'X', 'LHD', 'IP', 'P', '0', '', '16'],
+      ['2', '', 'Popis 2', '', '', '', '', '', ''],
     ]);
   });
 });

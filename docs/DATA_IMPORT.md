@@ -73,6 +73,10 @@ Tabulku udržuje uživatel. Jeden řádek = jeden díl. V Excelu na prvním list
 | Project | Projekt | ne |
 | Zákazník | Customer | ne |
 | Strana | Side, Řízení; jinak se odvodí ze začátku varianty | ne |
+| Safety Stock, Safety Time | Pojistná zásoba, Pojistná doba | ne |
+| Order Multiple | Balení, Kusů v balení (pro náš sklad v Coverage) | ne |
+
+Další sloupce (např. Yield Percent, Cost Total) aplikace ignoruje.
 
 - Šablonu se všemi díly z aktuálního exportu odvolávek stáhnete v modulu Data.
 - Díly bez kmenových dat lze v Call-offs vyfiltrovat volbou „Bez kmenových dat“.

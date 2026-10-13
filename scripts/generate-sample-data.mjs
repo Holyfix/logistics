@@ -56,8 +56,10 @@ for (const week of [40, 41, 42]) {
 // Mapování dílů ve formátu Item_Mapping: číslo zákazníka je smyšlené (A + 10 číslic, mezery, varianta).
 const customerNumber = (idx) => `A90000000${String(10 + (idx % 4)).padStart(2, '0')}  0000${String(1000 + idx)}`;
 const master = [
-  'Item Number;Customer Number;Description;Variant;Type;Project',
-  ...items.filter((it) => it.project).map((it, idx) => [it.item, customerNumber(idx), it.description, it.side + (idx % 4 === 1 ? ' HUD' : ''), it.description.split(' ')[1], it.project].join(';')),
+  'Item Number;Customer Number;Description;Variant;Type;Project;Safety Stock;Safety Time;Order Multiple',
+  ...items
+    .filter((it) => it.project)
+    .map((it, idx) => [it.item, customerNumber(idx), it.description, it.side + (idx % 4 === 1 ? ' HUD' : ''), it.description.split(' ')[1], it.project, 0, 0, [8, 12, 16, 24][idx % 4]].join(';')),
 ];
 writeFileSync('sample-data/Item_Mapping.csv', '\ufeff' + master.join('\r\n') + '\r\n');
 

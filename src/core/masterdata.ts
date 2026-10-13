@@ -1,7 +1,7 @@
 // Kmenová data dílů (mapování): tabulka, kterou udržuje uživatel (Excel nebo CSV ve sdílené složce).
 
 import { findColumn } from './csv';
-import { cellText, MAX_ISSUES, type DataIssue, type DataTable } from './table';
+import { cellNumber, cellText, MAX_ISSUES, type DataIssue, type DataTable } from './table';
 
 export const MASTER_COLUMNS = {
   item: ['Item Number', 'Díl', 'Číslo dílu', 'Item', 'Part Number'],
@@ -12,6 +12,9 @@ export const MASTER_COLUMNS = {
   project: ['Project', 'Projekt'],
   customer: ['Zákazník', 'Customer'],
   side: ['Strana', 'Side', 'Řízení'],
+  safetyStock: ['Safety Stock', 'Pojistná zásoba'],
+  safetyTime: ['Safety Time', 'Pojistná doba'],
+  orderMultiple: ['Order Multiple', 'Balení', 'Kusů v balení'],
 } as const;
 
 export const SIDES = ['LHD', 'RHD'] as const;
@@ -29,6 +32,10 @@ export interface MasterItem {
   customer: string;
   /** LHD / RHD: ze sloupce Strana, jinak ze začátku varianty (např. „LHD HUD“). */
   side: string;
+  safetyStock: number | null;
+  safetyTime: number | null;
+  /** Kusů v plném balení; podle něj se náš sklad dělí na plná a neúplná balení. */
+  orderMultiple: number | null;
 }
 
 export interface MasterData {
@@ -86,6 +93,7 @@ export function parseMasterData(table: DataTable): MasterResult {
       issue({ row: rowNo, column: MASTER_COLUMNS.side[0], value: side, message: 'unknownSide' });
     }
     const customerNumber = text(row, col.customerNumber);
+    const number = (c: number) => (c === -1 ? null : cellNumber(row[c]));
     const entry: MasterItem = {
       item,
       customerNumber,
@@ -96,6 +104,9 @@ export function parseMasterData(table: DataTable): MasterResult {
       project: text(row, col.project),
       customer: text(row, col.customer),
       side,
+      safetyStock: number(col.safetyStock),
+      safetyTime: number(col.safetyTime),
+      orderMultiple: number(col.orderMultiple),
     };
     items.set(item, entry);
     if (entry.customerKey) {
@@ -116,10 +127,11 @@ export function masterDataTemplate(
   parts: readonly { item: string; description: string }[],
   existing: Map<string, MasterItem> | undefined,
 ): { header: string[]; rows: string[][] } {
-  const header = ['Item Number', 'Customer Number', 'Description', 'Variant', 'Type', 'Project'];
+  const header = ['Item Number', 'Customer Number', 'Description', 'Variant', 'Type', 'Project', 'Safety Stock', 'Safety Time', 'Order Multiple'];
   const rows = parts.map(({ item, description }) => {
     const m = existing?.get(item);
-    return [item, m?.customerNumber ?? '', m?.description || description, m?.variant ?? '', m?.type ?? '', m?.project ?? ''];
+    const n = (v: number | null | undefined) => (v === null || v === undefined ? '' : String(v));
+    return [item, m?.customerNumber ?? '', m?.description || description, m?.variant ?? '', m?.type ?? '', m?.project ?? '', n(m?.safetyStock), n(m?.safetyTime), n(m?.orderMultiple)];
   });
   return { header, rows };
 }
