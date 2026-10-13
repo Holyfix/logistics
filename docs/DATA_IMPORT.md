@@ -163,9 +163,10 @@ když je hotový díl ve víc souborech, použije se nejnovější soubor.
 - **Stav komponenty** po dnech = náš sklad komponenty − kumulovaná potřeba; záporné číslo = kolik kusů komponenty chybí,
   aby byl zákazník ten den pokrytý. **Pokryto do** = poslední pracovní den se stavem ≥ 0.
 - **Potřeba 7 dní** = potřeba komponenty za prvních 7 dní. **Zásoba (dní výroby)** = sklad komponenty ÷ průměrná
-  denní spotřeba podle odvolávek (pracovní dny po–pá): jak dlouho komponenta vydrží, jakmile se začne vyrábět.
-- Tabulka **Potřeba výroby hotových dílů** ukazuje potřebu výroby po dnech (dny ze souboru sekvencéra jsou podbarvené),
-  pro srovnání odvolávky za 14 dní a jako poslední řádek součet; řídí se filtry nad pokrytím komponent.
+  denní spotřeba podle odvolávek za prvních 7 dní (pracovní dny po–pá v nich): jak dlouho komponenta vydrží,
+  jakmile se začne vyrábět.
+- Tabulka **Potřeba výroby hotových dílů** ukazuje potřebu výroby po dnech (dny z odvolávek jsou podbarvené, dny ze souboru sekvencéra bez podkladu),
+  potřebu za 7 dní a jako poslední řádek součet; řídí se filtry nad pokrytím komponent.
 - Bez otevřených nákupních objednávek a bez doby výroby.
 
 ## Testovací data

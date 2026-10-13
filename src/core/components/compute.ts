@@ -10,6 +10,9 @@ import type { MasterData } from '../masterdata';
 /** Horizont pokrytí komponent ve dnech (od dneška). */
 export const COMPONENT_DAYS = 14;
 
+/** Za kolik prvních dnů se počítá průměrná spotřeba pro zásobu ve dnech výroby. */
+export const RESERVE_DAYS = 7;
+
 /** Komponenty v záporu „brzy“: dnes nebo zítra (modul i rozcestník). */
 export const COMPONENT_SOON_DAYS = 2;
 
@@ -46,7 +49,7 @@ export interface ComponentLine {
   balance: number[];
   /** Index prvního dne v záporu; null, když vystačí na celý horizont. */
   shortDay: number | null;
-  /** Průměrná spotřeba za den výroby podle odvolávek (pracovní dny po–pá v horizontu). */
+  /** Průměrná spotřeba za den výroby podle odvolávek za prvních 7 dní (pracovní dny po–pá). */
   avgDaily: number;
   /** Zásoba komponenty ve dnech výroby (sklad ÷ průměrná spotřeba); null bez spotřeby. */
   productionDays: number | null;
@@ -231,11 +234,11 @@ export function buildComponents({ bom, master, coverage = [], callOffs, stock, t
   const byMapping = master?.hasComponentColumn ?? false;
   const wanted = (item: string) => (byMapping ? masterByItem.get(item)?.componentCoverage === true : bom.info.get(item)?.source === 'P');
 
-  // Dny výroby: pracovní dny po–pá v horizontu (o víkendu odvolávky nebývají).
-  const workDays = days.filter((d) => weekday(d) <= 5).length || 1;
+  // Průměrná spotřeba pro zásobu: odvolávky za prvních 7 dní ÷ pracovní dny po–pá v nich (o víkendu odvolávky nebývají).
+  const workDays = days.slice(0, RESERVE_DAYS).filter((d) => weekday(d) <= 5).length || 1;
   const lines = new Map<string, ComponentLine>();
   for (const product of products) {
-    const callOffTotal = product.callOffs.reduce((a, b) => a + b, 0);
+    const callOffTotal = product.callOffs.slice(0, RESERVE_DAYS).reduce((a, b) => a + b, 0);
     for (const component of bom.parents.get(product.item) ?? []) {
       if (!wanted(component.item)) continue;
       let line = lines.get(component.item);

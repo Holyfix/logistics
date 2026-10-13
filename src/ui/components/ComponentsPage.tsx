@@ -134,10 +134,10 @@ export function ComponentsPage({ today = localToday() }: { today?: DayNumber } =
   const buildDemandExport = (): ExportTable => ({
     fileName: `${fileBase}_${tc.export.demandSheet.toLowerCase()}`,
     sheetName: tc.export.demandSheet,
-    header: [tc.demand.item, tc.demand.description, tc.demand.project, tc.demand.callOffs, tc.demand.total, ...days.map(dayToIso)],
+    header: [tc.demand.item, tc.demand.description, tc.demand.project, tc.demand.total, ...days.map(dayToIso)],
     rows: [
-      ...shownProducts.map((p) => [p.item, p.description, p.project, sum(p.callOffs), sum(p.production), ...p.production]),
-      [tc.demand.sum, '', '', sum(shownProducts.map((p) => sum(p.callOffs))), sum(productionTotals), ...productionTotals],
+      ...shownProducts.map((p) => [p.item, p.description, p.project, sum(p.production.slice(0, NEED_DAYS)), ...p.production]),
+      [tc.demand.sum, '', '', sum(productionTotals.slice(0, NEED_DAYS)), ...productionTotals],
     ],
   });
 
@@ -310,7 +310,6 @@ export function ComponentsPage({ today = localToday() }: { today?: DayNumber } =
                 <th className="sticky-col">{tc.demand.item}</th>
                 <th>{tc.demand.description}</th>
                 <th>{tc.demand.project}</th>
-                <th className="n">{tc.demand.callOffs}</th>
                 <th className="n">{tc.demand.total}</th>
                 {days.map((d) => (
                   <th key={d} className={`n${weekend(d)}`}>
@@ -327,10 +326,9 @@ export function ComponentsPage({ today = localToday() }: { today?: DayNumber } =
                   </td>
                   <td className="desc">{p.description}</td>
                   <td>{p.project || '—'}</td>
-                  <td className="n muted">{formatQuantity(sum(p.callOffs), locale)}</td>
-                  <td className="n">{formatQuantity(sum(p.production), locale)}</td>
+                  <td className="n">{formatQuantity(sum(p.production.slice(0, NEED_DAYS)), locale)}</td>
                   {p.production.map((q, k) => (
-                    <td key={k} className={`n${weekend(days[k]!)}${p.fixed[k] ? ' cell-fixed' : ''}`}>
+                    <td key={k} className={`n${weekend(days[k]!)}${p.fixed[k] ? '' : ' cell-forecast'}`}>
                       {q === 0 ? <span className="muted">0</span> : formatQuantity(q, locale)}
                     </td>
                   ))}
@@ -345,8 +343,7 @@ export function ComponentsPage({ today = localToday() }: { today?: DayNumber } =
                   </td>
                   <td />
                   <td />
-                  <td className="n">{formatQuantity(sum(shownProducts.map((p) => sum(p.callOffs))), locale)}</td>
-                  <td className="n">{formatQuantity(sum(productionTotals), locale)}</td>
+                  <td className="n">{formatQuantity(sum(productionTotals.slice(0, NEED_DAYS)), locale)}</td>
                   {productionTotals.map((q, k) => (
                     <td key={k} className={`n${weekend(days[k]!)}`}>
                       {formatQuantity(q, locale)}
@@ -361,10 +358,10 @@ export function ComponentsPage({ today = localToday() }: { today?: DayNumber } =
         {shownProducts.length === 0 && <p>{tc.demand.empty}</p>}
         <ul className="cov-legend">
           <li>
-            <i className="swatch swatch-fixed" /> {tc.demand.fixed}
+            <i className="swatch" /> {tc.demand.fixed}
           </li>
           <li>
-            <i className="swatch" /> {tc.demand.forecast}
+            <i className="swatch swatch-forecast" /> {tc.demand.forecast}
           </li>
         </ul>
         <p className="muted">{netOwnStock ? tc.demand.note : tc.demand.noteGross}</p>

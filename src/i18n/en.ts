@@ -395,7 +395,7 @@ export const en: Messages = {
       empty: 'No component matches the filters.',
       noStock: 'No stock file loaded, stock is taken as 0.',
       markedNotInBom: 'Marked components that are not in any BOM',
-      note: 'Need = customer shortage (stock + transit at the sequencer from its file, later call-offs) not covered by our stock of finished parts and intermediates, × BOM. Balance = our component stock − cumulative need; a negative number = how many component pieces are missing to cover the customer that day. Covered until = last working day with balance 0 or more. Reserve = component stock ÷ average daily usage by call-offs (Mon–Fri). Stock uses the same locations as Coverage.',
+      note: 'Need = customer shortage (stock + transit at the sequencer from its file, later call-offs) not covered by our stock of finished parts and intermediates, × BOM. Balance = our component stock − cumulative need; a negative number = how many component pieces are missing to cover the customer that day. Covered until = last working day with balance 0 or more. Reserve = component stock ÷ average daily usage by call-offs over the first 7 days (Mon–Fri). Stock uses the same locations as Coverage.',
       noteGross: 'Need = customer shortage (stock + transit at the sequencer from its file, later call-offs) × BOM, without deducting our stock of finished parts and intermediates. Balance = our component stock − cumulative need. Covered until = last working day with balance 0 or more.',
     },
     demand: {
@@ -404,8 +404,7 @@ export const en: Messages = {
       item: 'Finished part',
       description: 'Description',
       project: 'Project',
-      callOffs: 'Call-offs 14 days',
-      total: 'Need 14 days',
+      total: 'Need 7 days',
       sum: 'Total',
       noCallOffs: 'No call-off export loaded; beyond the sequencer files the need is 0.',
       shown: 'shown',

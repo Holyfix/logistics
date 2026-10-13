@@ -103,7 +103,7 @@ describe('odečet našeho skladu hotových dílů a mezivýroby', () => {
     expect(k.usage.slice(0, 5)).toEqual([0, 0, 100, 200, 200]);
     expect(k.balance.slice(0, 5)).toEqual([400, 400, 300, 100, -100]);
     expect(k.shortDay).toBe(4);
-    // zásoba podle odvolávek: 200 ks za den výroby → 2 dny
+    // zásoba podle odvolávek za prvních 7 dní (5 dní výroby po 200 ks) → 2 dny
     expect(k.avgDaily).toBe(200);
     expect(k.productionDays).toBe(2);
     // mezivýroba: potřeba na její úrovni, vlastní sklad 100

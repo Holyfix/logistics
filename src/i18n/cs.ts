@@ -397,7 +397,7 @@ export const cs = {
       empty: 'Filtru neodpovídá žádná komponenta.',
       noStock: 'Soubor skladu není načtený, počítá se se skladem 0.',
       markedNotInBom: 'Označené komponenty, které nejsou v žádném kusovníku',
-      note: 'Potřeba = chybějící množství u zákazníka (sklad + transit u sekvencéra podle jeho souboru, dál odvolávky), které nepokryje náš sklad hotových dílů a mezivýroba, × kusovník. Stav = náš sklad komponenty − kumulovaná potřeba; záporné číslo = kolik kusů komponenty chybí, aby byl zákazník ten den pokrytý. Pokryto do = poslední pracovní den se stavem 0 nebo víc. Zásoba = sklad komponenty ÷ průměrná denní spotřeba podle odvolávek (po–pá). Do skladu se počítají stejné lokace jako v Coverage.',
+      note: 'Potřeba = chybějící množství u zákazníka (sklad + transit u sekvencéra podle jeho souboru, dál odvolávky), které nepokryje náš sklad hotových dílů a mezivýroba, × kusovník. Stav = náš sklad komponenty − kumulovaná potřeba; záporné číslo = kolik kusů komponenty chybí, aby byl zákazník ten den pokrytý. Pokryto do = poslední pracovní den se stavem 0 nebo víc. Zásoba = sklad komponenty ÷ průměrná denní spotřeba podle odvolávek za prvních 7 dní (po–pá). Do skladu se počítají stejné lokace jako v Coverage.',
       noteGross: 'Potřeba = chybějící množství u zákazníka (sklad + transit u sekvencéra podle jeho souboru, dál odvolávky) × kusovník, bez odečtu našeho skladu hotových dílů a mezivýroby. Stav = náš sklad komponenty − kumulovaná potřeba. Pokryto do = poslední pracovní den se stavem 0 nebo víc.',
     },
     demand: {
@@ -406,8 +406,7 @@ export const cs = {
       item: 'Hotový díl',
       description: 'Popis',
       project: 'Projekt',
-      callOffs: 'Odvolávky 14 dní',
-      total: 'Potřeba 14 dní',
+      total: 'Potřeba 7 dní',
       sum: 'Celkem',
       noCallOffs: 'Není načtený žádný export odvolávek; za koncem souborů sekvencéra je potřeba 0.',
       shown: 'zobrazeno',
