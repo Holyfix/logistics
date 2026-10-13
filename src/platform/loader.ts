@@ -4,6 +4,7 @@ import type { CallOffExport } from '../core/calloffs/parse';
 import type { CoverageSource } from '../core/coverage/compute';
 import type { MasterData } from '../core/masterdata';
 import type { StockData } from '../core/stock';
+import type { BomData } from '../core/bom';
 import { classifyPath, coverageScope, formatOf } from '../core/sources';
 import { idbDelete, idbGet, idbKeys, idbSet, STORE_CALLOFFS } from './idb';
 import { listFiles, type FolderSource, type SourceFile } from './folder';
@@ -24,6 +25,8 @@ export interface LoadedData {
   coverage: CoverageSource[];
   /** Náš sklad: nejnovější soubor skladu. */
   stock: { path: string; lastModified: number; data: StockData } | null;
+  /** Kusovníky (všechny soubory, od nejnovějšího). */
+  boms: { path: string; lastModified: number; data: BomData }[];
   failed: FailedFile[];
   loadedAt: number;
 }
@@ -69,6 +72,7 @@ export async function loadFolder(source: FolderSource, onProgress: (p: LoadProgr
     .filter((f) => classifyPath(f.path) === 'masterdata')
     .sort((a, b) => b.lastModified - a.lastModified);
   const stockFiles = files.filter((f) => classifyPath(f.path) === 'stock').sort((a, b) => b.lastModified - a.lastModified);
+  const bomFiles = files.filter((f) => classifyPath(f.path) === 'bom').sort((a, b) => b.lastModified - a.lastModified);
 
   // Coverage: pro každou destinaci a projekt platí naposledy změněný soubor (i z hlubší podsložky).
   const coverageFiles = new Map<string, SourceFile>();
@@ -84,7 +88,7 @@ export async function loadFolder(source: FolderSource, onProgress: (p: LoadProgr
   }
 
   const parsed: { file: SourceFile; exp: CallOffExport }[] = [];
-  const total = calloffFiles.length + (masterFiles.length > 0 ? 1 : 0) + coverageFiles.size + (stockFiles.length > 0 ? 1 : 0);
+  const total = calloffFiles.length + (masterFiles.length > 0 ? 1 : 0) + coverageFiles.size + (stockFiles.length > 0 ? 1 : 0) + bomFiles.length;
   let done = 0;
   onProgress({ done, total });
 
@@ -158,8 +162,17 @@ export async function loadFolder(source: FolderSource, onProgress: (p: LoadProgr
     else if (response.kind === 'stock' && !response.result.ok)
       failed.push({ path: stockFile.path, reason: 'missingColumns', detail: response.result.columns.join(', ') });
     else if (response.kind === 'error') failed.push({ path: stockFile.path, reason: 'unreadable', detail: response.message });
-    onProgress({ done: done + 1, total });
+    onProgress({ done: ++done, total });
   }
 
-  return { folderName: source.name, exports, master, coverage, stock, failed, loadedAt: Date.now() };
+  const boms: LoadedData['boms'] = [];
+  for (const file of bomFiles) {
+    const response = await parseInWorker({ kind: 'bom', format: formatOf(file.path)!, name: file.path, file: file.file });
+    if (response.kind === 'bom' && response.result.ok) boms.push({ path: file.path, lastModified: file.lastModified, data: response.result.value });
+    else if (response.kind === 'bom' && !response.result.ok) failed.push({ path: file.path, reason: 'missingColumns', detail: response.result.columns.join(', ') });
+    else if (response.kind === 'error') failed.push({ path: file.path, reason: 'unreadable', detail: response.message });
+    onProgress({ done: ++done, total });
+  }
+
+  return { folderName: source.name, exports, master, coverage, stock, boms, failed, loadedAt: Date.now() };
 }

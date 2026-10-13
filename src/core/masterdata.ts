@@ -15,7 +15,11 @@ export const MASTER_COLUMNS = {
   safetyStock: ['Safety Stock', 'Pojistná zásoba'],
   safetyTime: ['Safety Time', 'Pojistná doba'],
   orderMultiple: ['Order Multiple', 'Balení', 'Kusů v balení'],
+  componentCoverage: ['Component Coverage', 'Coverage Component', 'Coverage komponent', 'Komponenta'],
 } as const;
+
+/** Hodnoty, které ve sloupci Component Coverage znamenají „sledovat“. */
+const YES = new Set(['ano', 'a', 'yes', 'y', 'x', '1', 'true', 'pravda']);
 
 export const SIDES = ['LHD', 'RHD'] as const;
 
@@ -36,12 +40,16 @@ export interface MasterItem {
   safetyTime: number | null;
   /** Kusů v plném balení; podle něj se náš sklad dělí na plná a neúplná balení. */
   orderMultiple: number | null;
+  /** Komponenta se zobrazuje v modulu Komponenty (sloupec Component Coverage). */
+  componentCoverage: boolean;
 }
 
 export interface MasterData {
   items: Map<string, MasterItem>;
   /** Díly podle normalizovaného čísla zákazníka. */
   byCustomerKey: Map<string, MasterItem>;
+  /** Mapování má sloupec Component Coverage (jinak se v Komponentách zobrazí všechny nakupované komponenty). */
+  hasComponentColumn: boolean;
   issueCount: number;
   issues: DataIssue[];
 }
@@ -114,6 +122,7 @@ export function parseMasterData(table: DataTable): MasterResult {
       safetyStock: number(col.safetyStock),
       safetyTime: number(col.safetyTime),
       orderMultiple: number(col.orderMultiple),
+      componentCoverage: YES.has(text(row, col.componentCoverage).toLowerCase()),
     };
     items.set(item, entry);
     if (entry.customerKey) {
@@ -126,7 +135,7 @@ export function parseMasterData(table: DataTable): MasterResult {
     }
   });
 
-  return { ok: true, value: { items, byCustomerKey, issueCount, issues } };
+  return { ok: true, value: { items, byCustomerKey, hasComponentColumn: col.componentCoverage !== -1, issueCount, issues } };
 }
 
 /** Šablona mapování dílů: všechny známé díly, u existujících předvyplněné hodnoty. */
@@ -134,11 +143,11 @@ export function masterDataTemplate(
   parts: readonly { item: string; description: string }[],
   existing: Map<string, MasterItem> | undefined,
 ): { header: string[]; rows: string[][] } {
-  const header = ['Item Number', 'Customer Number', 'Description', 'Variant', 'Type', 'Project', 'Safety Stock', 'Safety Time', 'Order Multiple'];
+  const header = ['Item Number', 'Customer Number', 'Description', 'Variant', 'Type', 'Project', 'Safety Stock', 'Safety Time', 'Order Multiple', 'Component Coverage'];
   const rows = parts.map(({ item, description }) => {
     const m = existing?.get(item);
     const n = (v: number | null | undefined) => (v === null || v === undefined ? '' : String(v));
-    return [item, m?.customerNumber ?? '', m?.description || description, m?.variant ?? '', m?.type ?? '', m?.project ?? '', n(m?.safetyStock), n(m?.safetyTime), n(m?.orderMultiple)];
+    return [item, m?.customerNumber ?? '', m?.description || description, m?.variant ?? '', m?.type ?? '', m?.project ?? '', n(m?.safetyStock), n(m?.safetyTime), n(m?.orderMultiple), m?.componentCoverage ? 'Ano' : ''];
   });
   return { header, rows };
 }

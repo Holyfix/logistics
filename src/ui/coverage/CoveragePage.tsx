@@ -9,12 +9,13 @@ import {
   summarizeByVariant,
   type CoverageFilter,
 } from '../../core/coverage/compute';
-import { dayFromParts, dayToIso, parseDay, weekday, type DayNumber } from '../../core/dates';
+import { dayToIso, parseDay, weekday, type DayNumber } from '../../core/dates';
 import { formatDayShort, formatQuantity } from '../../core/format';
 import { excludedLocationsIn, STOCK_ZONES, stockByItem } from '../../core/stock';
 import { useI18n } from '../../i18n/I18nProvider';
 import { ExportButtons, type ExportTable } from '../calloffs/ExportButtons';
 import { useData } from '../data/DataProvider';
+import { localToday } from '../components/useComponents';
 import { Icon } from '../icons';
 
 type RowsMode = 'all' | 'negativeAny' | 'negativeOn';
@@ -25,11 +26,6 @@ function isNegative(v: number | null | undefined): boolean {
   return v !== null && v !== undefined && v < 0;
 }
 
-/** Dnešní den podle místního času počítače. */
-function localToday(): DayNumber {
-  const now = new Date();
-  return dayFromParts(now.getFullYear(), now.getMonth() + 1, now.getDate())!;
-}
 
 export function CoveragePage({ today = localToday() }: { today?: DayNumber } = {}) {
   const { t, locale } = useI18n();

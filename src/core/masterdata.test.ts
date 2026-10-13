@@ -49,7 +49,9 @@ describe('parseMasterData', () => {
       safetyStock: 0,
       safetyTime: 0,
       orderMultiple: 16,
+      componentCoverage: false,
     });
+    expect(r.value.hasComponentColumn).toBe(false);
     expect(r.value.items.get('900101-0001')).toMatchObject({ side: 'RHD', orderMultiple: null });
     expect(r.value.items.get('900102')?.side).toBe('');
     expect(r.value.byCustomerKey.get('A12345678900001')?.item).toBe('900100-0001');
@@ -62,6 +64,13 @@ describe('parseMasterData', () => {
     expect(r.value.items.get('1002')).toMatchObject({ customer: 'Zákazník B', project: 'P300', side: 'XYZ' });
     expect(r.value.items.get('1001')?.side).toBe('RHD');
     expect(r.value.issues.map((i) => i.message)).toEqual(['unknownSide', 'duplicateItem']);
+  });
+
+  it('sloupec Component Coverage označí komponenty pro modul Komponenty', () => {
+    const r = parseMasterData(parseCsv('Item Number;Component Coverage\nK1;Ano\nK2;y\nK3;\nK4;ne\nK5;X'));
+    if (!r.ok) throw new Error();
+    expect(r.value.hasComponentColumn).toBe(true);
+    expect([...r.value.items.values()].filter((m) => m.componentCoverage).map((m) => m.item)).toEqual(['K1', 'K2', 'K5']);
   });
 
   it('vyžaduje sloupec s číslem dílu', () => {
@@ -84,6 +93,7 @@ describe('masterDataTemplate', () => {
       safetyStock: 0,
       safetyTime: null,
       orderMultiple: 16,
+      componentCoverage: false,
     };
     const t = masterDataTemplate(
       [
@@ -92,10 +102,10 @@ describe('masterDataTemplate', () => {
       ],
       new Map([['1', known]]),
     );
-    expect(t.header).toEqual(['Item Number', 'Customer Number', 'Description', 'Variant', 'Type', 'Project', 'Safety Stock', 'Safety Time', 'Order Multiple']);
+    expect(t.header).toEqual(['Item Number', 'Customer Number', 'Description', 'Variant', 'Type', 'Project', 'Safety Stock', 'Safety Time', 'Order Multiple', 'Component Coverage']);
     expect(t.rows).toEqual([
-      ['1', 'C1', 'X', 'LHD', 'IP', 'P', '0', '', '16'],
-      ['2', '', 'Popis 2', '', '', '', '', '', ''],
+      ['1', 'C1', 'X', 'LHD', 'IP', 'P', '0', '', '16', ''],
+      ['2', '', 'Popis 2', '', '', '', '', '', '', ''],
     ]);
   });
 });

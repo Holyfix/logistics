@@ -1,6 +1,6 @@
 // Rozpoznání souborů ve sdílené složce podle cesty a názvu.
 
-export type SourceKind = 'calloffs' | 'masterdata' | 'coverage' | 'stock' | 'ignored';
+export type SourceKind = 'calloffs' | 'masterdata' | 'coverage' | 'stock' | 'bom' | 'ignored';
 export type SourceFormat = 'csv' | 'xlsx';
 
 function normalize(s: string): string {
@@ -23,6 +23,7 @@ export function formatOf(path: string): SourceFormat | null {
  * Coverage: Excel ve složce „coverage“ (i v podsložkách destinace a projektu).
  * Odvolávky: soubor ve složce „odvolavky“ / „call-offs“, nebo s „odvolavk“ / „call-off“ v názvu.
  * Náš sklad: soubor ve složce „stock“ / „sklad“, nebo s názvem začínajícím „stock“ / „sklad“ (např. Stock_13.10.2026.csv).
+ * Kusovník: soubor ve složce „bom“ / „kusovnik(y)“, nebo s názvem začínajícím „mbom“ / „bom“ / „kusovnik“.
  * Dočasné soubory Excelu (~$…) se ignorují.
  */
 export function classifyPath(path: string): SourceKind {
@@ -35,6 +36,7 @@ export function classifyPath(path: string): SourceKind {
   if (folders.includes('coverage')) return formatOf(path) === 'xlsx' ? 'coverage' : 'ignored';
   if (folders.some((f) => /^(odvolavky|call-?offs?)$/.test(f)) || /odvolavk|call-?off/.test(name)) return 'calloffs';
   if (folders.some((f) => /^(stock|sklad)$/.test(f)) || /^(stock|sklad)/.test(name)) return 'stock';
+  if (folders.some((f) => /^(m?bom|kusovniky?)$/.test(f)) || /^(m?bom|kusovnik)/.test(name)) return 'bom';
   return 'ignored';
 }
 

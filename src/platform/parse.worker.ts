@@ -5,18 +5,20 @@ import { parseCallOffExport, type CallOffExport, type ParseResult } from '../cor
 import { parseCoverageWorkbook, type CoverageResult } from '../core/coverage/parse';
 import { parseCsv } from '../core/csv';
 import { parseMasterData, type MasterResult } from '../core/masterdata';
+import { parseBom, type BomResult } from '../core/bom';
 import { parseStock, type StockResult } from '../core/stock';
 import { decodeText } from '../core/text';
 import type { SourceFormat } from '../core/sources';
 import type { Cell, DataTable } from '../core/table';
 
-export type ParseRequest = { id: number; kind: 'calloffs' | 'masterdata' | 'coverage' | 'stock'; format: SourceFormat; name: string; buffer: ArrayBuffer };
+export type ParseRequest = { id: number; kind: 'calloffs' | 'masterdata' | 'coverage' | 'stock' | 'bom'; format: SourceFormat; name: string; buffer: ArrayBuffer };
 
 export type ParseResponse =
   | { id: number; kind: 'calloffs'; result: ParseResult<CallOffExport> }
   | { id: number; kind: 'masterdata'; result: MasterResult }
   | { id: number; kind: 'coverage'; result: CoverageResult }
   | { id: number; kind: 'stock'; result: StockResult }
+  | { id: number; kind: 'bom'; result: BomResult }
   | { id: number; kind: 'error'; message: string };
 
 function toTable(data: Cell[][]): DataTable {
@@ -37,6 +39,12 @@ self.onmessage = async (event: MessageEvent<ParseRequest>) => {
       const sheets = await readXlsxFile(buffer);
       const result = parseCoverageWorkbook(sheets.map((s) => ({ name: s.sheet, data: s.data as Cell[][] })));
       (self as unknown as Worker).postMessage({ id, kind, result } satisfies ParseResponse);
+      return;
+    }
+    if (kind === 'bom') {
+      // Kusovník: první list (záhlaví může být o pár řádků níž).
+      const data = format === 'csv' ? (({ header, rows }) => [header, ...rows])(parseCsv(decodeText(buffer))) : ((await readSheet(buffer)) as Cell[][]);
+      (self as unknown as Worker).postMessage({ id, kind, result: parseBom(data) } satisfies ParseResponse);
       return;
     }
     if (kind === 'stock') {

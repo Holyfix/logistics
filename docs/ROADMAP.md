@@ -58,7 +58,8 @@ funkce (plánování).
 - [x] Coverage: formát Bestand (stav bez transitu, jen řádky klienta ze souboru)
 - [x] Coverage: náš sklad ze souboru Stock (zóny příjmu, skladů a výroby, bez externí lokace se zamontovanými díly, jedno číslo bez rozdělení balení)
 - [ ] Coverage: dodatečný transit z naší expedice
-- [ ] Komponenty
+- [x] Komponenty: kusovník, poptávka (soubor zákazníka + odvolávky), pokrytí komponent na 14 dní
+- [ ] Komponenty: otevřené nákupní objednávky
 ### Fáze 5: Obaly
 ### Fáze 6: Dashboard
 ### Fáze 7: Plánování (plnění plánu a prostoje)
