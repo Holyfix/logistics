@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { buildCompareRows, buildMatrix, compareItems, comparePeriods, type CompareRow } from '../../core/calloffs/compare';
 import { filterItems, type ItemFilter } from '../../core/calloffs/filter';
 import type { CallOffExport } from '../../core/calloffs/parse';
@@ -20,9 +20,11 @@ interface Props {
   exports: readonly CallOffExport[];
   filter: ItemFilter;
   master: ReadonlyMap<string, MasterItem> | undefined;
+  /** Filtry dílů; zobrazí se pod výběrem exportů. */
+  filters: ReactNode;
 }
 
-export function CompareView({ exports, filter, master }: Props) {
+export function CompareView({ exports, filter, master, filters }: Props) {
   const { t, locale } = useI18n();
   const tc = t.calloffs.compare;
   const [olderDay, setOlderDay] = useState(exports.at(-2)?.exportDay);
@@ -97,6 +99,7 @@ export function CompareView({ exports, filter, master }: Props) {
     return (
       <div className="stack">
         {selection}
+        {filters}
         <div className="panel">
           <p>{older === newer ? tc.same : tc.noOverlap}</p>
         </div>
@@ -172,6 +175,7 @@ export function CompareView({ exports, filter, master }: Props) {
   return (
     <div className="stack">
       {selection}
+      {filters}
 
       <div className="kpis">
         <div className="kpi">

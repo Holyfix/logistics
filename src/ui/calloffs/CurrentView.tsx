@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import type { CallOffExport } from '../../core/calloffs/parse';
 import {
   buildCurrentRows,
@@ -28,9 +28,11 @@ interface Props {
   previous: CallOffExport | undefined;
   items: string[];
   master: ReadonlyMap<string, MasterItem> | undefined;
+  /** Filtry dílů; zobrazí se mezi ukazateli a tabulkou. */
+  filters: ReactNode;
 }
 
-export function CurrentView({ current, previous, items, master }: Props) {
+export function CurrentView({ current, previous, items, master, filters }: Props) {
   const { t, locale } = useI18n();
   const [granularity, setGranularity] = useState<Granularity>('week');
   const [range, setRange] = useState<Record<Granularity, PeriodCount>>({ week: DEFAULT_WEEKS, day: 15 });
@@ -97,6 +99,8 @@ export function CurrentView({ current, previous, items, master }: Props) {
           <span className="kpi-note">{previous ? `${t.calloffs.kpi.changesNote} CW ${previous.week}` : t.calloffs.table.noPrevious}</span>
         </div>
       </div>
+
+      {filters}
 
       <div className="panel">
         <div className="panel-head">

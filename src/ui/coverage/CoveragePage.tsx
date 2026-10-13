@@ -150,6 +150,32 @@ export function CoveragePage() {
         </p>
       </div>
 
+      <div className="kpis">
+        <div className="kpi">
+          <span className="kpi-label">{tc.kpi.items}</span>
+          <span className="kpi-value">{formatQuantity(lines.length, locale)}</span>
+          <span className="kpi-note">{tc.kpi.itemsNote}</span>
+        </div>
+        <div className="kpi">
+          <span className="kpi-label">
+            {tc.kpi.negativeFirst} ({table.days[0] !== undefined ? dayLabel(table.days[0]) : '—'})
+          </span>
+          <span className="kpi-value">{formatQuantity(firstNegative, locale)}</span>
+          <span className="kpi-note">{transitNote}</span>
+        </div>
+        <div className="kpi">
+          <span className="kpi-label">{tc.kpi.negativeAny}</span>
+          <span className="kpi-value">{formatQuantity(anyNegative, locale)}</span>
+          <span className="kpi-note">{transitNote}</span>
+        </div>
+        <div className="kpi">
+          <span className="kpi-label">{tc.kpi.unmapped}</span>
+          <span className="kpi-value">{formatQuantity(options.unmapped, locale)}</span>
+          <span className="kpi-note">{tc.kpi.unmappedNote}</span>
+        </div>
+      </div>
+
+      {/* Filtry hned nad souhrnem a tabulkou, aby se nemuselo posouvat na začátek stránky. */}
       <div className="filters" role="group" aria-label={tc.filters.label}>
         {select('location', tc.filters.location, options.locations)}
         {select('project', tc.filters.project, options.projects)}
@@ -161,9 +187,7 @@ export function CoveragePage() {
         <button type="button" className="link-button" onClick={() => setFilter(EMPTY_COVERAGE_FILTER)}>
           {tc.filters.reset}
         </button>
-      </div>
-
-      <div className="filters" role="group" aria-label={tc.options.label}>
+        <span className="filters-break" role="presentation" />
         <label className="check-field">
           <input type="checkbox" checked={transit} onChange={(e) => setTransit(e.target.checked)} />
           {tc.options.transit}
@@ -188,31 +212,6 @@ export function CoveragePage() {
             </select>
           </label>
         )}
-      </div>
-
-      <div className="kpis">
-        <div className="kpi">
-          <span className="kpi-label">{tc.kpi.items}</span>
-          <span className="kpi-value">{formatQuantity(lines.length, locale)}</span>
-          <span className="kpi-note">{tc.kpi.itemsNote}</span>
-        </div>
-        <div className="kpi">
-          <span className="kpi-label">
-            {tc.kpi.negativeFirst} ({table.days[0] !== undefined ? dayLabel(table.days[0]) : '—'})
-          </span>
-          <span className="kpi-value">{formatQuantity(firstNegative, locale)}</span>
-          <span className="kpi-note">{transitNote}</span>
-        </div>
-        <div className="kpi">
-          <span className="kpi-label">{tc.kpi.negativeAny}</span>
-          <span className="kpi-value">{formatQuantity(anyNegative, locale)}</span>
-          <span className="kpi-note">{transitNote}</span>
-        </div>
-        <div className="kpi">
-          <span className="kpi-label">{tc.kpi.unmapped}</span>
-          <span className="kpi-value">{formatQuantity(options.unmapped, locale)}</span>
-          <span className="kpi-note">{tc.kpi.unmappedNote}</span>
-        </div>
       </div>
 
       <div className="panel">
