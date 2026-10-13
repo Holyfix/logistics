@@ -69,11 +69,12 @@ describe('ComponentsPage', () => {
     renderWith(<ComponentsPage today={day(13)} />);
     const [clip, resin] = rows(0);
     // spona: sklad 30, spotřeba 10, 10, 20 → 20, 10, −10
-    expect(cells(clip!).slice(0, 7)).toEqual(['CLIP-1', 'CLIP', 'EA', 'nákup', '30', '40', 'záporné od Čt 15. 10.']);
-    expect(cells(clip!).slice(7, 10)).toEqual(['20', '10', '-10']);
-    expect(clip!.querySelectorAll('td')[9]!.className).toContain('cell-negative');
+    // spotřeba 40 za 10 dní výroby (po–pá) → Ø 4, sklad 30 → 7,5 dne výroby; zákazník pokryt do středy (bez skladu hotových dílů)
+    expect(cells(clip!).slice(0, 9)).toEqual(['CLIP-1', 'CLIP', 'EA', 'nákup', '30', '40', '4', '7,5 dne výrobychybí od Čt 15. 10.', 'St 14. 10.']);
+    expect(cells(clip!).slice(9, 12)).toEqual(['20', '10', '-10']);
+    expect(clip!.querySelectorAll('td')[11]!.className).toContain('cell-negative');
     // pryskyřice v kg na desetinná místa
-    expect(cells(resin!).slice(4, 10)).toEqual(['100', '5', 'celý horizont', '98,75', '97,5', '95']);
+    expect(cells(resin!).slice(4, 12)).toEqual(['100', '5', '0,5', '200,0 dne výrobycelý horizont', 'celý horizont', '98,75', '97,5', '95']);
     // mezivýroba bez označení se nezobrazí
     expect(screen.queryByText('SUB-1')).toBeNull();
     // pořadí ukazatelů: v záporu do 2 dnů, v záporu do 14 dní, …

@@ -1,8 +1,8 @@
 // Pokrytí komponent přes kusovník: poptávka hotových dílů × kusovník, odečtená od našeho skladu.
 
-import type { BomData } from '../bom';
+import type { BomData, BomNode } from '../bom';
 import type { CallOffExport } from '../calloffs/parse';
-import type { DayNumber } from '../dates';
+import { weekday, type DayNumber } from '../dates';
 import type { MasterData } from '../masterdata';
 
 /** Horizont pokrytí komponent ve dnech (od dneška). */
@@ -33,6 +33,17 @@ export interface ComponentLine {
   balance: number[];
   /** Index prvního dne v záporu; null, když vystačí na celý horizont. */
   shortDay: number | null;
+  /** Průměrná spotřeba za den výroby (pracovní dny po–pá v horizontu). */
+  avgDaily: number;
+  /** Na kolik dní výroby stačí samotná komponenta (sklad ÷ průměrná spotřeba); null bez spotřeby. */
+  productionDays: number | null;
+  /**
+   * Index prvního dne, kdy kvůli komponentě nejsou pokryté odvolávky, když se nejdřív spotřebují hotové díly
+   * a mezivýroba na skladě (výpočet jako MRP). null = pokryto na celý horizont nebo nejde určit (díl se vyrábí).
+   */
+  customerShortDay: number | null;
+  /** Pokrytí zákazníka jde u dílu určit (nakupuje se nebo pod ním v kusovníku nic není). */
+  customerKnown: boolean;
   /** Hotové díly, ve kterých je komponenta. */
   products: string[];
   projects: string[];
@@ -58,6 +69,37 @@ function callOffDemand(exp: CallOffExport | undefined): Map<string, Map<DayNumbe
     result.set(item.toUpperCase(), byDay);
   });
   return result;
+}
+
+/**
+ * Čistý rozpad jako v MRP, den po dni: poptávka hotového dílu se nejdřív kryje ze skladu hotových dílů, zbytek se
+ * rozpadne na komponenty; vyráběné díly (mezivýroba) se kryjí ze svého skladu a teprve zbytek jde o úroveň níž.
+ * Vrátí první den, kdy nakupovanému dílu (nebo dílu bez dalšího rozpadu) chybí zásoba. Bez průběžné doby výroby.
+ */
+function customerShortDays(bom: BomData, products: readonly ProductDemand[], stock: ReadonlyMap<string, number> | undefined): Map<string, number> {
+  const left = new Map(stock ?? []);
+  const first = new Map<string, number>();
+  const consume = (item: string, qty: number, children: readonly BomNode[], day: number) => {
+    const have = Math.max(0, left.get(item) ?? 0);
+    const used = Math.min(have, qty);
+    left.set(item, (left.get(item) ?? 0) - used);
+    const rest = qty - used;
+    if (rest <= 1e-9) return;
+    if (children.length > 0 && bom.info.get(item)?.source !== 'P') {
+      for (const child of children) consume(child.item, rest * child.qty, child.children, day);
+    } else {
+      left.set(item, (left.get(item) ?? 0) - rest);
+      if (!first.has(item)) first.set(item, day);
+    }
+  };
+  const days = products[0]?.qty.length ?? 0;
+  for (let day = 0; day < days; day++) {
+    for (const product of products) {
+      const q = product.qty[day]!;
+      if (q > 0) consume(product.item, q, bom.trees.get(product.item) ?? [], day);
+    }
+  }
+  return first;
 }
 
 export interface ComponentInputs {
@@ -105,6 +147,10 @@ export function buildComponents({ bom, master, callOffs, stock, today }: Compone
           usage: days.map(() => 0),
           balance: [],
           shortDay: null,
+          avgDaily: 0,
+          productionDays: null,
+          customerShortDay: null,
+          customerKnown: false,
           products: [],
           projects: [],
         };
@@ -116,11 +162,26 @@ export function buildComponents({ bom, master, callOffs, stock, today }: Compone
     }
   }
 
+  // Dny výroby: pracovní dny po–pá v horizontu (o víkendu odvolávky nebývají).
+  const workDays = days.filter((d) => weekday(d) <= 5).length || 1;
+  const netShort = customerShortDays(bom, products, stock);
+  const madeWithParts = new Set<string>();
+  const walk = (nodes: readonly BomNode[]) => {
+    for (const n of nodes) {
+      if (n.children.length > 0) madeWithParts.add(n.item);
+      walk(n.children);
+    }
+  };
+  for (const tree of bom.trees.values()) walk(tree);
   for (const line of lines.values()) {
     let left = line.stock ?? 0;
     line.balance = line.usage.map((u) => (left -= u));
     const k = line.balance.findIndex((v) => v < -1e-9);
     line.shortDay = k === -1 ? null : k;
+    line.avgDaily = line.usage.reduce((a, b) => a + b, 0) / workDays;
+    line.productionDays = line.avgDaily > 0 ? Math.max(0, line.stock ?? 0) / line.avgDaily : null;
+    line.customerKnown = line.source === 'P' || !madeWithParts.has(line.item);
+    line.customerShortDay = line.customerKnown ? (netShort.get(line.item) ?? null) : null;
     line.projects.sort();
   }
 

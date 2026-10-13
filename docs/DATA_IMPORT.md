@@ -154,6 +154,12 @@ když je hotový díl ve víc souborech, použije se nejnovější soubor.
   prvního dne z nich nejde spolehlivě určit. Nedodáno po termínu (backlog) se nepřičítá.
 - **Spotřeba komponenty** = poptávka hotových dílů × množství z kusovníku; **stav** = náš sklad (stejné lokace jako v Coverage)
   − kumulovaná spotřeba. Komponenta je v záporu ode dne, kdy stav klesne pod nulu.
+- **Ø spotřeba / den výroby** = spotřeba za horizont ÷ počet pracovních dní (po–pá) v horizontu.
+- **Vystačí** = na kolik dní výroby stačí samotná komponenta (sklad ÷ Ø spotřeba) a od kterého dne chybí.
+  Hotové díly ani mezivýroba se tu neodečítají: je to údaj pro řízení komponent.
+- **Zákazník pokryt do** (informace) = poslední pracovní den, kdy jsou odvolávky pokryté, když se jako v MRP nejdřív
+  spotřebují hotové díly na skladě, pak mezivýroba (úroveň po úrovni) a teprve potom komponenta. Bez doby výroby
+  a bez otevřených objednávek. U vyráběného dílu, pod kterým jsou v kusovníku další díly, se neurčuje („—“).
 
 ## Testovací data
 

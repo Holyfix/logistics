@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { COMPONENT_SOON_DAYS, type ComponentLine } from '../../core/components/compute';
 import { dayToIso, weekday, type DayNumber } from '../../core/dates';
-import { formatAmount, formatDayShort, formatQuantity } from '../../core/format';
+import { formatAmount, formatDayShort, formatOneDecimal, formatQuantity } from '../../core/format';
 import { useI18n } from '../../i18n/I18nProvider';
 import { ExportButtons, type ExportTable } from '../calloffs/ExportButtons';
 import { useData } from '../data/DataProvider';
@@ -78,11 +78,36 @@ export function ComponentsPage({ today = localToday() }: { today?: DayNumber } =
   const noDemand = products.filter((p) => p.qty.every((q) => q === 0)).length;
   const boms = state.data?.boms.length ?? 0;
   const fileBase = `${tc.export.fileName}_${dayToIso(today)}`;
+  const productionDays = (c: ComponentLine) => (c.productionDays === null ? tc.table.noUsage : `${formatOneDecimal(c.productionDays, locale)} ${tc.table.productionDays}`);
+  /** Poslední pracovní den před indexem dne (pro „pokryt do“); null, když chybí už dnes. */
+  const coveredUntil = (short: number): DayNumber | null => {
+    for (let k = short - 1; k >= 0; k--) if (weekday(days[k]!) <= 5) return days[k]!;
+    return null;
+  };
+  const customerText = (c: ComponentLine) => {
+    if (!c.customerKnown) return '—';
+    if (c.customerShortDay === null) return tc.table.whole;
+    const until = coveredUntil(c.customerShortDay);
+    return until === null ? tc.table.notCovered : dayLabel(until);
+  };
 
   const buildExport = (): ExportTable => ({
     fileName: fileBase,
     sheetName: tc.export.sheet,
-    header: [tc.table.item, tc.table.description, tc.table.um, tc.table.source, tc.table.stock, tc.table.usage, tc.table.until, tc.table.products, ...days.map(dayToIso)],
+    header: [
+      tc.table.item,
+      tc.table.description,
+      tc.table.um,
+      tc.table.source,
+      tc.table.stock,
+      tc.table.usage,
+      tc.table.avgDaily,
+      tc.table.productionDaysHead,
+      tc.table.until,
+      tc.table.customer,
+      tc.table.products,
+      ...days.map(dayToIso),
+    ],
     rows: lines.map((c) => [
       c.item,
       c.description,
@@ -90,7 +115,10 @@ export function ComponentsPage({ today = localToday() }: { today?: DayNumber } =
       sourceLabel(c),
       c.stock,
       round(c.usage.reduce((a, b) => a + b, 0)),
+      round(c.avgDaily),
+      c.productionDays === null ? null : Math.round(c.productionDays * 10) / 10,
       c.shortDay === null ? tc.table.whole : dayToIso(days[c.shortDay]!),
+      customerText(c),
       c.products.join(', '),
       ...c.balance.map(round),
     ]),
@@ -194,7 +222,12 @@ export function ComponentsPage({ today = localToday() }: { today?: DayNumber } =
                   <th>{tc.table.source}</th>
                   <th className="n">{tc.table.stock}</th>
                   <th className="n">{tc.table.usage}</th>
+                  <th className="n">{tc.table.avgDaily}</th>
                   <th>{tc.table.until}</th>
+                  <th title={tc.table.customerTitle}>
+                    {tc.table.customer}
+                    <span className="th-note">{tc.table.customerNote}</span>
+                  </th>
                   {days.map((d) => (
                     <th key={d} className={`n${weekend(d)}`}>
                       {dayLabel(d)}
@@ -217,14 +250,19 @@ export function ComponentsPage({ today = localToday() }: { today?: DayNumber } =
                     <td>{sourceLabel(c)}</td>
                     <td className="n">{c.stock === null ? <span className="muted">—</span> : amount(c.stock, c.um)}</td>
                     <td className="n">{amount(c.usage.reduce((a, b) => a + b, 0), c.um)}</td>
-                    <td>
+                    <td className="n">{amount(c.avgDaily, c.um)}</td>
+                    <td className="cell-until">
+                      <strong>{productionDays(c)}</strong>
                       {c.shortDay === null ? (
-                        <span className="muted">{tc.table.whole}</span>
+                        <small className="muted cell-note">{tc.table.whole}</small>
                       ) : (
-                        <>
+                        <small className="cell-note cell-short">
                           {tc.table.shortFrom} {dayLabel(days[c.shortDay]!)}
-                        </>
+                        </small>
                       )}
+                    </td>
+                    <td className="muted" title={tc.table.customerTitle}>
+                      {customerText(c)}
                     </td>
                     {c.balance.map((v, k) => (
                       <td key={k} className={`n${weekend(days[k]!)}${v < -1e-9 ? ' cell-negative' : ''}`}>

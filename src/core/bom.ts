@@ -21,6 +21,14 @@ export interface BomComponent {
   level: number;
 }
 
+/** Uzel stromu kusovníku: díl s množstvím na 1 ks nadřazeného dílu a díly pod ním. */
+export interface BomNode {
+  item: string;
+  /** Quantity Per: množství na 1 ks nadřazeného dílu. */
+  qty: number;
+  children: BomNode[];
+}
+
 export interface BomItemInfo {
   description: string;
   um: string;
@@ -31,6 +39,8 @@ export interface BomItemInfo {
 export interface BomData {
   /** Hotové díly (řádky „Parent“) a jejich rozpad. */
   parents: Map<string, BomComponent[]>;
+  /** Strom kusovníku po hotových dílech (přímé komponenty hotového dílu a pod nimi další úrovně). */
+  trees: Map<string, BomNode[]>;
   /** Popis, jednotka a druh podle čísla dílu (komponenty i hotové díly). */
   info: Map<string, BomItemInfo>;
   issueCount: number;
@@ -67,6 +77,7 @@ export function parseBom(data: readonly Cell[][]): BomResult {
   if (col.qty === -1) return { ok: false, error: 'missingColumns', columns: [BOM_COLUMNS.qty[0]] };
 
   const parents = new Map<string, BomComponent[]>();
+  const trees = new Map<string, BomNode[]>();
   const info = new Map<string, BomItemInfo>();
   const issues: DataIssue[] = [];
   let issueCount = 0;
@@ -79,6 +90,8 @@ export function parseBom(data: readonly Cell[][]): BomResult {
   let current: Map<string, BomComponent> | null = null;
   // Množství na 1 ks hotového dílu pro poslední komponentu na každé úrovni (index = úroveň).
   let path: number[] = [1];
+  // Seznam potomků pro poslední díl na každé úrovni (index 0 = hotový díl).
+  let nodes: BomNode[][] = [];
 
   const finish = (parent: string | null, components: Map<string, BomComponent> | null) => {
     if (parent && components) parents.set(parent, [...components.values()]);
@@ -102,6 +115,8 @@ export function parseBom(data: readonly Cell[][]): BomResult {
       // Stejný hotový díl dvakrát v jednom souboru: platí poslední výskyt.
       current = new Map();
       path = [1];
+      nodes = [[]];
+      trees.set(item, nodes[0]!);
       continue;
     }
     if (!current) {
@@ -118,6 +133,10 @@ export function parseBom(data: readonly Cell[][]): BomResult {
     const qty = above * qtyPer;
     path = path.slice(0, level);
     path[level] = qty;
+    const node: BomNode = { item, qty: qtyPer, children: [] };
+    nodes[Math.min(level - 1, nodes.length - 1)]!.push(node);
+    nodes = nodes.slice(0, level);
+    nodes[level] = node.children;
     const existing = current.get(item);
     if (existing) {
       existing.qty += qty;
@@ -128,16 +147,21 @@ export function parseBom(data: readonly Cell[][]): BomResult {
   }
   finish(parent, current);
 
-  return { ok: true, value: { parents, info, issueCount, issues } };
+  return { ok: true, value: { parents, trees, info, issueCount, issues } };
 }
 
 /** Spojí kusovníky z víc souborů; když je hotový díl ve víc souborech, platí soubor uvedený dřív (nejnovější). */
 export function mergeBoms(boms: readonly BomData[]): BomData {
   const parents = new Map<string, BomComponent[]>();
+  const trees = new Map<string, BomNode[]>();
   const info = new Map<string, BomItemInfo>();
   for (const bom of boms) {
-    for (const [parent, components] of bom.parents) if (!parents.has(parent)) parents.set(parent, components);
+    for (const [parent, components] of bom.parents) {
+      if (parents.has(parent)) continue;
+      parents.set(parent, components);
+      trees.set(parent, bom.trees.get(parent) ?? []);
+    }
     for (const [item, i] of bom.info) if (!info.has(item)) info.set(item, i);
   }
-  return { parents, info, issueCount: boms.reduce((n, b) => n + b.issueCount, 0), issues: boms.flatMap((b) => b.issues).slice(0, MAX_ISSUES) };
+  return { parents, trees, info, issueCount: boms.reduce((n, b) => n + b.issueCount, 0), issues: boms.flatMap((b) => b.issues).slice(0, MAX_ISSUES) };
 }

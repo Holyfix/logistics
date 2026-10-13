@@ -71,3 +71,37 @@ describe('buildComponents', () => {
     expect(t.markedNotInBom).toEqual([]);
   });
 });
+
+describe('dny výroby a pokrytí zákazníka (čistý rozpad)', () => {
+  // A: 100 ks každý pracovní den. A = 1× S (mezivýroba), S = 2× K (nákup). Sklad A 150, S 100, K 400.
+  const monday = dayFromParts(2026, 10, 12)!;
+  const tree = parseBom([
+    ['Level', 'Component Item', 'Description', 'Quantity Per', 'UM', 'Purchase/Manufacture'],
+    ['Parent', 'A', 'PRODUCT', null, 'EA', 'L'],
+    ['1', 'S', 'SUB', 1, 'EA', 'L'],
+    ['.2', 'K', 'PART', 2, 'EA', 'P'],
+  ]);
+  if (!tree.ok) throw new Error();
+  const workdays = Array.from({ length: 14 }, (_, k) => monday + k).filter((d) => (d - monday) % 7 < 5);
+  const calls = { items: ['A'], offsets: Int32Array.from([0, workdays.length]), days: Int32Array.from(workdays), qty: Float64Array.from(workdays.map(() => 100)) } as unknown as CallOffExport;
+  const m = parseMasterData(parseCsv('Item Number;Component Coverage\nK;Ano\nS;Ano'));
+  if (!m.ok) throw new Error();
+  const t = buildComponents({ bom: tree.value, master: m.value, callOffs: calls, stock: new Map([['A', 150], ['S', 100], ['K', 400]]), today: monday });
+  const k = t.components.find((c) => c.item === 'K')!;
+
+  it('samotná komponenta: 200 ks za den výroby, 400 ks stačí na 2 dny, chybí od středy', () => {
+    expect(k.avgDaily).toBe(200);
+    expect(k.productionDays).toBe(2);
+    expect(k.shortDay).toBe(2);
+  });
+
+  it('zákazník: nejdřív hotové díly a mezivýroba ze skladu, K chybí až v pátek', () => {
+    expect(tree.value.trees.get('A')).toEqual([{ item: 'S', qty: 1, children: [{ item: 'K', qty: 2, children: [] }] }]);
+    expect(k.customerKnown).toBe(true);
+    expect(k.customerShortDay).toBe(4);
+  });
+
+  it('u vyráběného dílu s komponentami se pokrytí zákazníka neurčuje', () => {
+    expect(t.components.find((c) => c.item === 'S')).toMatchObject({ customerKnown: false, customerShortDay: null });
+  });
+});
