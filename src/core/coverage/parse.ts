@@ -3,10 +3,10 @@
 
 import { findColumn, normalizeHeader } from '../csv';
 import { cellDay, cellNumber, cellText, MAX_ISSUES, type Cell, type DataIssue } from '../table';
-import type { DayNumber } from '../dates';
+import { dayFromParts, type DayNumber } from '../dates';
 import { customerKey } from '../masterdata';
 
-export type CoverageFormat = 'overview';
+export type CoverageFormat = 'overview' | 'articles';
 
 export interface CoverageRow {
   /** Číslo dílu zákazníka, jak je v souboru. */
@@ -43,7 +43,17 @@ export interface Sheet {
 
 export type CoverageResult = { ok: true; value: CoverageReport } | { ok: false; error: 'unknownFormat' };
 
+/** Datum v záhlaví nebo buňce: Excel datum, „2026.10.13“, „13.10.2026“ nebo „2026-10-13“. */
+function dayOf(cell: Cell | undefined): DayNumber | null {
+  const m = typeof cell === 'string' ? /^(\d{4})\.(\d{1,2})\.(\d{1,2})$/.exec(cell.trim()) : null;
+  if (m) return dayFromParts(Number(m[1]), Number(m[2]), Number(m[3]));
+  return cellDay(cell);
+}
+
 function dateTimeText(cell: Cell | undefined): string {
+  // Text „2026.10.20 18:12“ (jak ho posílá zákazník) → „2026-10-20T18:12“.
+  const m = typeof cell === 'string' ? /^(\d{4})\.(\d{2})\.(\d{2})\s+(\d{1,2}):(\d{2})/.exec(cell.trim()) : null;
+  if (m) return `${m[1]}-${m[2]}-${m[3]}T${m[4]!.padStart(2, '0')}:${m[5]}`;
   // Excel ukládá čas jako zlomek dne, proto se zaokrouhlí na celé minuty (08:55:59,99 → 08:56).
   if (cell instanceof Date && !Number.isNaN(cell.getTime())) return new Date(Math.round(cell.getTime() / 60_000) * 60_000).toISOString().slice(0, 16);
   return cellText(cell);
@@ -127,10 +137,66 @@ function parseOverview(sheet: Sheet): CoverageReport | null {
   return { format: 'overview', sheet: sheet.name, days: blocks.map((b) => b.day), rows, issueCount, issues };
 }
 
+/**
+ * Formát „articles“: jedno záhlaví, pevné sloupce a za nimi dny (datum jako text „2026.10.13“).
+ * Hodnota dne je konečný stav včetně transitu („Stock in transit“ a „Further stock in transit“),
+ * proto se transit odečte. Pod daty bývá pomocný blok s kumulovanou poptávkou bez čísla dílu;
+ * řádky bez čísla dílu zákazníka se přeskočí.
+ */
+function parseArticles(sheet: Sheet): CoverageReport | null {
+  const headerIndex = sheet.data.slice(0, 6).findIndex((row) => {
+    const names = row.map((c) => normalizeHeader(cellText(c)));
+    return names.includes('customer item') && names.includes('stock in transit') && names.includes('stock');
+  });
+  if (headerIndex === -1) return null;
+  const header = sheet.data[headerIndex]!.map((c) => cellText(c));
+  const col = {
+    customer: findColumn(header, ['Customer Item']),
+    item: findColumn(header, ['Item number']),
+    description: findColumn(header, ['Item description']),
+    stock: findColumn(header, ['Stock']),
+    transit: findColumn(header, ['Stock in transit']),
+    further: findColumn(header, ['Further stock in transit']),
+    uncoveredAt: findColumn(header, ['First uncovered IB-Plan', 'First uncovered']),
+    uncoveredNo: findColumn(header, ['First uncovered Prod No']),
+  };
+  const body = sheet.data.slice(headerIndex + 1).filter((row) => cellText(row[col.customer]) !== '');
+  // Dny: sloupce s datem v záhlaví, které mají aspoň jednu hodnotu (prázdné sloupce se starým datem se vynechají).
+  const dayColumns = sheet.data[headerIndex]!.flatMap((cell, c) => {
+    const day = dayOf(cell);
+    return day !== null && body.some((row) => cellNumber(row[c]) !== null) ? [{ day, c }] : [];
+  }).sort((a, b) => a.day - b.day);
+  if (dayColumns.length === 0) return null;
+
+  const rows: CoverageRow[] = body.map((row) => {
+    const customerNumber = cellText(row[col.customer]);
+    const transit = (cellNumber(row[col.transit]) ?? 0) + (col.further === -1 ? 0 : (cellNumber(row[col.further]) ?? 0));
+    const balance: number[] = [];
+    let last = (cellNumber(row[col.stock]) ?? 0) + transit;
+    for (const { c } of dayColumns) {
+      // Prázdný den uprostřed horizontu převezme předchozí stav.
+      last = cellNumber(row[c]) ?? last;
+      balance.push(last - transit);
+    }
+    return {
+      customerNumber,
+      customerKey: customerKey(customerNumber),
+      supplierItem: col.item === -1 ? '' : cellText(row[col.item]),
+      description: col.description === -1 ? '' : cellText(row[col.description]),
+      customerStock: cellNumber(row[col.stock]) ?? 0,
+      balance,
+      transit: dayColumns.map(() => transit),
+      firstUncovered: col.uncoveredNo === -1 ? '' : cellText(row[col.uncoveredNo]),
+      uncoveredAt: col.uncoveredAt === -1 ? '' : dateTimeText(row[col.uncoveredAt]),
+    };
+  });
+  return { format: 'articles', sheet: sheet.name, days: dayColumns.map((d) => d.day), rows, issueCount: 0, issues: [] };
+}
+
 /** Najde v sešitu list ve známém formátu a převede ho. */
 export function parseCoverageWorkbook(sheets: readonly Sheet[]): CoverageResult {
   for (const sheet of sheets) {
-    const report = parseOverview(sheet);
+    const report = parseOverview(sheet) ?? parseArticles(sheet);
     if (report) return { ok: true, value: report };
   }
   return { ok: false, error: 'unknownFormat' };

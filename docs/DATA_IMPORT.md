@@ -93,11 +93,14 @@ na názvu souboru nezáleží. Díly se párují s mapováním podle čísla zá
 | Formát | Jak ho aplikace pozná | Co se z něj použije |
 |---|---|---|
 | Coverage Report Overview | list se záhlavím „Disposable Stock“ a „Stock End of the Day“, nad každým blokem dne datum | sklad „Stock in … 07:00“ minus „Open Orders“, poptávka (Demand) a transit (In Transit) po dnech |
+| Articles | jedno záhlaví se sloupci „Customer Item“, „Stock“, „Stock in transit“ a dny („2026.10.13“) | stav dne **včetně transitu**; odečte se „Stock in transit“ + „Further stock in transit“. Díl se spáruje i podle „Item number“ (naše číslo dílu) |
 
 - **Pokrytí na konci dne** = sklad u zákazníka − poptávka od prvního dne do daného dne;
   s volbou „Přičíst transit“ + transit, který do daného dne dorazí. Konečný stav dne ze souboru
   se nepoužívá, protože je to vzorec s přepínačem transitu.
 - Dny, které soubor nemá (víkend), převezmou poslední známý stav; dny za horizontem souboru jsou prázdné.
+- Sloupce s datem bez jediné hodnoty (např. staré dny v šabloně zákazníka) se vynechají.
+- Pomocné řádky bez čísla dílu zákazníka (např. blok kumulované poptávky pod daty) se přeskočí.
 - Další formáty zákazníka, náš sklad a dodatečný transit (naše expedice) se doplní postupně.
 
 ## Testovací data

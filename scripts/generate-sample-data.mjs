@@ -106,4 +106,44 @@ items.filter((it) => it.project === 'P100' || it.project === 'P200').forEach((it
 mkdirSync('sample-data/Coverage/Lokalita A/P100', { recursive: true });
 await writeXlsxFile(covRows, { sheet: 'Coverage Report Overview' }).toFile('sample-data/Coverage/Lokalita A/P100/Coverage_Report_P100.xlsx');
 
-console.log(`Vytvořeno: 3 exporty, ${items.length} dílů, mapování pro ${items.length - 1} dílů, coverage pro ${covRows.length - 2} dílů.`);
+// Coverage ve formátu „articles“: dny jako text „2026.10.13“, stav dne včetně transitu.
+const artDays = Array.from({ length: 14 }, (_, k) => new Date(Date.UTC(2026, 9, 13 + k)));
+const ymd = (date) => `${date.getUTCFullYear()}.${pad(date.getUTCMonth() + 1)}.${pad(date.getUTCDate())}`;
+const artRows = [
+  [
+    ...['Site', 'Client', 'Supplier', 'Customer Item', 'Item number', 'Item description', 'Stock', 'First uncovered IB-Plan', 'First uncovered Prod No', 'Further stock in transit', 'Stock in transit', 'Delivery notes in transit'].map(bold),
+    ...artDays.map((date) => bold(ymd(date))),
+  ],
+];
+items.filter((it) => it.project === 'P300' || it.project === 'P400').forEach((it, i) => {
+  const idx = i + 8;
+  const stock = Math.round(it.base * (2 + rnd() * 6));
+  const transit = rnd() < 0.4 ? Math.round(it.base * 0.8) : 0;
+  let balance = stock + transit;
+  let firstUncovered = null;
+  const days = artDays.map((date) => {
+    const weekend = date.getUTCDay() === 0 || date.getUTCDay() === 6;
+    balance -= weekend ? 0 : Math.round(it.base * (0.6 + rnd() * 0.8));
+    if (balance < 0 && !firstUncovered) firstUncovered = `${ymd(date)} ${pad(6 + Math.floor(rnd() * 12))}:${pad(Math.floor(rnd() * 60))}`;
+    return { value: balance, type: Number };
+  });
+  artRows.push([
+    { value: 'S1', type: String },
+    { value: 'Dodavatel', type: String },
+    { value: '100200', type: String },
+    { value: customerNumber(idx).replace('  0000', '      '), type: String },
+    { value: it.item, type: String },
+    { value: it.description, type: String },
+    { value: stock, type: Number },
+    firstUncovered ? { value: firstUncovered, type: String } : null,
+    firstUncovered ? { value: 5700000 + idx * 41, type: Number } : null,
+    null,
+    { value: transit, type: Number },
+    null,
+    ...days,
+  ]);
+});
+mkdirSync('sample-data/Coverage/Lokalita B/P300', { recursive: true });
+await writeXlsxFile(artRows, { sheet: 'articles' }).toFile('sample-data/Coverage/Lokalita B/P300/Coverage_Report_P300.xlsx');
+
+console.log(`Vytvořeno: 3 exporty, ${items.length} dílů, mapování pro ${items.length - 1} dílů, coverage pro ${covRows.length - 2 + artRows.length - 1} dílů ve 2 formátech.`);

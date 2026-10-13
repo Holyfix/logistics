@@ -44,6 +44,39 @@ describe('parseCoverageWorkbook', () => {
     });
   });
 
+  it('formát articles: stav dne obsahuje transit, odečte se; pomocné řádky a prázdné dny se vynechají', () => {
+    const header = ['Site', 'Client', 'Supplier', 'Customer Item', 'Item number', 'Item description', 'Stock', 'First uncovered IB-Plan', 'First uncovered Prod No', 'Further stock in transit', 'Stock in transit', 'Delivery notes in transit', '2026.10.13', '2026.10.14', '2026.10.15', '2025.12.22'];
+    const r = parseCoverageWorkbook([
+      {
+        name: 'articles',
+        data: [
+          header,
+          // sklad 20, transit 5 + 1; stav včetně transitu 20, 14, 8 → bez transitu 14, 8, 2
+          ['S1', 'X', '1', 'A1234567890      0001', '900100', 'DOOR LHD', 20, '2026.10.14 06:05', 5700001, 1, 5, null, 20, 14, 8, null],
+          ['S1', 'X', '1', 'A1234567890      0002', '900101', 'DOOR RHD', 10, null, null, null, 0, null, 9, null, 3, null],
+          [null, null, null, null, null, null, null, null, null, null, null, null, 4, 9, 15, null],
+        ],
+      },
+    ]);
+    if (!r.ok) throw new Error();
+    expect(r.value.format).toBe('articles');
+    expect(r.value.days.map(dayToIso)).toEqual(['2026-10-13', '2026-10-14', '2026-10-15']);
+    expect(r.value.rows).toHaveLength(2);
+    expect(r.value.rows[0]).toEqual({
+      customerNumber: 'A1234567890      0001',
+      customerKey: 'A12345678900001',
+      supplierItem: '900100',
+      description: 'DOOR LHD',
+      customerStock: 20,
+      balance: [14, 8, 2],
+      transit: [6, 6, 6],
+      firstUncovered: '5700001',
+      uncoveredAt: '2026-10-14T06:05',
+    });
+    // prázdný den převezme předchozí stav
+    expect(r.value.rows[1]!.balance).toEqual([9, 9, 3]);
+  });
+
   it('neznámý formát', () => {
     expect(parseCoverageWorkbook([{ name: 'List1', data: [['A', 'B'], [1, 2]] }])).toEqual({ ok: false, error: 'unknownFormat' });
   });
