@@ -2,20 +2,18 @@
 
 import type { BomData } from '../bom';
 import type { CallOffExport } from '../calloffs/parse';
-import type { CoverageSource } from '../coverage/compute';
 import type { DayNumber } from '../dates';
 import type { MasterData } from '../masterdata';
 
 /** Horizont pokrytí komponent ve dnech (od dneška). */
 export const COMPONENT_DAYS = 14;
 
-/** Poptávka hotového dílu po dnech horizontu; `fixed[k]` = den je ze souboru zákazníka, jinak z odvolávek. */
+/** Poptávka hotového dílu po dnech horizontu (z odvolávek). */
 export interface ProductDemand {
   item: string;
   description: string;
   project: string;
   qty: number[];
-  fixed: boolean[];
 }
 
 export interface ComponentLine {
@@ -47,46 +45,6 @@ export interface ComponentTable {
   markedNotInBom: string[];
 }
 
-/** Denní spotřeba u zákazníka ze souboru pokrytí: pokles zůstatku bez transitu (příjem se nepočítá). */
-export function dailyDemand(customerStock: number, balance: readonly number[]): number[] {
-  let previous = customerStock;
-  return balance.map((value) => {
-    const demand = Math.max(0, previous - value);
-    previous = value;
-    return demand;
-  });
-}
-
-interface CustomerDemand {
-  first: DayNumber;
-  last: DayNumber;
-  byDay: Map<DayNumber, number>;
-}
-
-/** Poptávka ze souborů zákazníka po našich číslech dílů (spárované přes mapování). */
-function customerDemand(sources: readonly CoverageSource[], master: MasterData | undefined): Map<string, CustomerDemand> {
-  const result = new Map<string, CustomerDemand>();
-  for (const { report } of sources) {
-    const first = report.days[0];
-    const last = report.days.at(-1);
-    if (first === undefined || last === undefined) continue;
-    for (const row of report.rows) {
-      const m = master?.byCustomerKey.get(row.customerKey) ?? (row.supplierItem ? master?.items.get(row.supplierItem) : undefined);
-      const item = (m?.item ?? row.supplierItem).toUpperCase();
-      if (!item) continue;
-      const entry = result.get(item) ?? { first, last, byDay: new Map<DayNumber, number>() };
-      entry.first = Math.min(entry.first, first);
-      entry.last = Math.max(entry.last, last);
-      dailyDemand(row.customerStock, row.balance).forEach((q, k) => {
-        const day = report.days[k]!;
-        entry.byDay.set(day, (entry.byDay.get(day) ?? 0) + q);
-      });
-      result.set(item, entry);
-    }
-  }
-  return result;
-}
-
 /** Odvolávky po dnech pro díly (velkými písmeny). */
 function callOffDemand(exp: CallOffExport | undefined): Map<string, Map<DayNumber, number>> {
   const result = new Map<string, Map<DayNumber, number>>();
@@ -102,7 +60,6 @@ function callOffDemand(exp: CallOffExport | undefined): Map<string, Map<DayNumbe
 export interface ComponentInputs {
   bom: BomData;
   master: MasterData | undefined;
-  coverage: readonly CoverageSource[];
   /** Nejnovější export odvolávek. */
   callOffs: CallOffExport | undefined;
   /** Náš sklad po dílech (velkými písmeny); undefined, když soubor skladu není načtený. */
@@ -111,21 +68,19 @@ export interface ComponentInputs {
 }
 
 /**
- * Poptávka hotového dílu na den: ze souboru zákazníka, pokud ten den pokrývá (fix), jinak z odvolávek (forecast).
+ * Poptávka hotového dílu na den z nejnovějšího exportu odvolávek. Soubory pokrytí od zákazníka se nepoužívají:
+ * ukazují jen stav na konci dne a spotřebu prvního dne z nich nejde spolehlivě určit.
  * Spotřeba komponenty = poptávka hotových dílů × množství z kusovníku (hrubý rozpad, zásoba mezivýrob se neodečítá).
  */
-export function buildComponents({ bom, master, coverage, callOffs, stock, today }: ComponentInputs): ComponentTable {
+export function buildComponents({ bom, master, callOffs, stock, today }: ComponentInputs): ComponentTable {
   const days = Array.from({ length: COMPONENT_DAYS }, (_, k) => today + k);
-  const customer = customerDemand(coverage, master);
   const calls = callOffDemand(callOffs);
   const masterByItem = new Map([...(master?.items.values() ?? [])].map((m) => [m.item.toUpperCase(), m]));
 
   const products: ProductDemand[] = [...bom.parents.keys()].sort().map((item) => {
-    const c = customer.get(item);
-    const fixed = days.map((d) => c !== undefined && d >= c.first && d <= c.last);
-    const qty = days.map((d, k) => (fixed[k] ? (c!.byDay.get(d) ?? 0) : (calls.get(item)?.get(d) ?? 0)));
+    const qty = days.map((d) => calls.get(item)?.get(d) ?? 0);
     const m = masterByItem.get(item);
-    return { item, description: m?.description || bom.info.get(item)?.description || '', project: m?.project ?? '', qty, fixed };
+    return { item, description: m?.description || bom.info.get(item)?.description || '', project: m?.project ?? '', qty };
   });
 
   const byMapping = master?.hasComponentColumn ?? false;

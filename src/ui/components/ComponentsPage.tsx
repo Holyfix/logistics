@@ -69,7 +69,7 @@ export function ComponentsPage({ today = localToday() }: { today?: DayNumber } =
   const sourceLabel = (c: ComponentLine) => (c.source === 'P' ? tc.table.purchased : c.source ? tc.table.made : '—');
   const short = table.components.filter((c) => c.shortDay !== null).length;
   const soon = table.components.filter((c) => c.shortDay !== null && c.shortDay < SOON_DAYS).length;
-  const withCustomer = products.filter((p) => p.fixed.some(Boolean)).length;
+  const callOffs = state.data?.exports.at(-1);
   const noDemand = products.filter((p) => p.qty.every((q) => q === 0)).length;
   const boms = state.data?.boms.length ?? 0;
   const fileBase = `${tc.export.fileName}_${dayToIso(today)}`;
@@ -102,7 +102,8 @@ export function ComponentsPage({ today = localToday() }: { today?: DayNumber } =
       <div className="page-head-row">
         {head}
         <p className="muted source-info">
-          {tc.sources}: <strong>{boms}</strong> · <strong>{products.length}</strong> {tc.products}
+          {tc.sources}: <strong>{boms}</strong> · <strong>{products.length}</strong> {tc.products} · {tc.callOffs}{' '}
+          <strong>{callOffs ? `CW ${callOffs.week}/${callOffs.year}` : '—'}</strong>
         </p>
       </div>
 
@@ -128,7 +129,7 @@ export function ComponentsPage({ today = localToday() }: { today?: DayNumber } =
           <span className="kpi-label">{tc.kpi.demand}</span>
           <span className="kpi-value">{formatQuantity(products.length, locale)}</span>
           <span className="kpi-note">
-            {tc.kpi.demandNote}: {formatQuantity(withCustomer, locale)}, {tc.kpi.noDemand}: {formatQuantity(noDemand, locale)}
+            {tc.kpi.demandNote}, {tc.kpi.noDemand}: {formatQuantity(noDemand, locale)}
           </span>
         </div>
       </div>
@@ -270,7 +271,7 @@ export function ComponentsPage({ today = localToday() }: { today?: DayNumber } =
                   <td>{p.project || '—'}</td>
                   <td className="n">{formatQuantity(p.qty.reduce((a, b) => a + b, 0), locale)}</td>
                   {p.qty.map((q, k) => (
-                    <td key={k} className={`n${weekend(days[k]!)}${p.fixed[k] ? ' cell-fixed' : ' cell-forecast'}`}>
+                    <td key={k} className={`n${weekend(days[k]!)}`}>
                       {q === 0 ? <span className="muted">0</span> : formatQuantity(q, locale)}
                     </td>
                   ))}
@@ -279,14 +280,7 @@ export function ComponentsPage({ today = localToday() }: { today?: DayNumber } =
             </tbody>
           </table>
         </div>
-        <ul className="cov-legend">
-          <li>
-            <i className="swatch swatch-fixed" /> {tc.demand.fixed}
-          </li>
-          <li>
-            <i className="swatch" /> {tc.demand.forecast}
-          </li>
-        </ul>
+        {!callOffs && <p className="muted">{tc.demand.noCallOffs}</p>}
         <p className="muted">{tc.demand.note}</p>
       </div>
     </section>

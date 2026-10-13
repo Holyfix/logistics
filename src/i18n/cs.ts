@@ -350,6 +350,7 @@ export const cs = {
     noDataAction: 'Otevřít Data',
     sources: 'Kusovníky',
     products: 'hotových dílů',
+    callOffs: 'odvolávky',
     kpi: {
       short: 'V záporu do 14 dní',
       shortNote: 'komponent, které nevystačí do',
@@ -359,7 +360,7 @@ export const cs = {
       byMapping: 'podle sloupce Component Coverage v Item Mappingu',
       allPurchased: 'všechny nakupované (v Item Mappingu chybí sloupec Component Coverage)',
       demand: 'Hotových dílů',
-      demandNote: 'v kusovníku; se souborem zákazníka',
+      demandNote: 'v kusovníku',
       noDemand: 'bez poptávky',
     },
     filters: {
@@ -398,9 +399,8 @@ export const cs = {
       description: 'Popis',
       project: 'Projekt',
       total: '14 dní',
-      fixed: 'Ze souboru zákazníka (fix)',
-      forecast: 'Z odvolávek (forecast)',
-      note: 'Dny, které pokrývá soubor zákazníka, se berou z něj (denní spotřeba u zákazníka); ostatní dny z nejnovějšího exportu odvolávek.',
+      noCallOffs: 'Není načtený žádný export odvolávek, poptávka je 0.',
+      note: 'Poptávka hotových dílů je z nejnovějšího exportu odvolávek (požadované množství na den). Soubory pokrytí od zákazníka se pro komponenty nepoužívají, protože ukazují jen stav na konci dne.',
     },
     export: { fileName: 'komponenty', sheet: 'Komponenty', demandSheet: 'Poptávka' },
     hub: { label: 'v záporu do 14 dní', title: 'Komponenty, které podle kusovníku a poptávky nevystačí do 14 dní' },

@@ -27,6 +27,8 @@ const callOffs = {
   offsets: Int32Array.from([0, 3]),
   days: Int32Array.from([day(13), day(14), day(15)]),
   qty: Float64Array.from([5, 5, 10]),
+  week: 42,
+  year: 2026,
 } as unknown as CallOffExport;
 
 const state: DataState = {
@@ -75,11 +77,11 @@ describe('ComponentsPage', () => {
     expect(document.querySelectorAll('.kpi-value')[0]!.textContent).toBe('1');
   });
 
-  it('poptávka hotových dílů: z odvolávek bez souboru zákazníka (forecast)', () => {
+  it('poptávka hotových dílů z odvolávek', () => {
     renderWith(<ComponentsPage today={day(13)} />);
     const [fg] = rows(1);
     expect(cells(fg!).slice(0, 7)).toEqual(['FG-1', 'PANEL LHD', 'P1', '20', '5', '5', '10']);
-    expect(fg!.querySelectorAll('td')[4]!.className).toContain('cell-forecast');
+    expect(document.querySelector('.source-info')!.textContent).toContain('odvolávky CW 42/2026');
   });
 
   it('filtr jen v záporu a hledání', () => {
