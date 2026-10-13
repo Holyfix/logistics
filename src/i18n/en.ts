@@ -401,7 +401,7 @@ export const en: Messages = {
       note: 'Demand for finished parts comes from the latest call-off export (required quantity per day). Customer coverage files are not used for components because they only show the end-of-day balance.',
     },
     export: { fileName: 'components', sheet: 'Components', demandSheet: 'Demand' },
-    hub: { label: 'negative within 14 days', title: 'Components that will not last 14 days according to the BOM and demand' },
+    hub: { label: 'not covered for 2 days', title: 'Component types that will not last today and tomorrow according to the BOM and call-offs' },
   },
   calloffs: {
     noData: 'No call-off exports loaded yet.',

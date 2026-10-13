@@ -74,7 +74,9 @@ describe('ComponentsPage', () => {
     expect(cells(resin!).slice(4, 10)).toEqual(['100', '5', 'celý horizont', '98,75', '97,5', '95']);
     // mezivýroba bez označení se nezobrazí
     expect(screen.queryByText('SUB-1')).toBeNull();
-    expect(document.querySelectorAll('.kpi-value')[0]!.textContent).toBe('1');
+    // pořadí ukazatelů: v záporu do 2 dnů, v záporu do 14 dní, …
+    const kpis = [...document.querySelectorAll('.kpi')].map((k) => `${k.querySelector('.kpi-label')!.textContent}=${k.querySelector('.kpi-value')!.textContent}`);
+    expect(kpis.slice(0, 2)).toEqual(['V záporu do 2 dnů=0', 'V záporu do 14 dní=1']);
   });
 
   it('poptávka hotových dílů z odvolávek', () => {
@@ -99,6 +101,6 @@ describe('ComponentsPage', () => {
     cleanup();
     renderWith(<HubPage />);
     const metric = screen.getByRole('link', { name: /Komponenty/ }).querySelector('.metric');
-    expect(metric).not.toBeNull();
+    expect(metric!.textContent).toMatch(/^\d+ nepokryto na 2 dny$/);
   });
 });
