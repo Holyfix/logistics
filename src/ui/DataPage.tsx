@@ -40,11 +40,16 @@ export function DataPage() {
     [current, data],
   );
 
+  const coverageUnmapped = useMemo(
+    () => data?.coverage.reduce((n, c) => n + c.report.rows.filter((r) => !data.master?.data.byCustomerKey.has(r.customerKey)).length, 0) ?? 0,
+    [data],
+  );
+
   const downloadTemplate = () => {
     if (!current) return;
     const parts = current.items.map((item, i) => ({ item, description: current.descriptions[i]! }));
     const { header, rows } = masterDataTemplate(parts, data?.master?.data.items);
-    void downloadXlsx('kmenova-data.xlsx', 'Kmenová data', header, rows);
+    void downloadXlsx('Item_Mapping.xlsx', 'Mapping', header, rows);
   };
 
   return (
@@ -148,6 +153,12 @@ export function DataPage() {
                     <dd>{formatQuantity(missing, locale)}</dd>
                   </>
                 )}
+                {data.coverage.length > 0 && (
+                  <>
+                    <dt>{t.data.master.coverageMissing}</dt>
+                    <dd>{formatQuantity(coverageUnmapped, locale)}</dd>
+                  </>
+                )}
               </dl>
             ) : (
               <p>{t.data.master.none}</p>
@@ -165,13 +176,52 @@ export function DataPage() {
             )}
           </div>
 
+          <div className="panel">
+            <h2>{t.data.coverage.heading}</h2>
+            {data.coverage.length === 0 ? (
+              <p>{t.data.coverage.none}</p>
+            ) : (
+              <div className="table-scroll">
+                <table className="table">
+                  <thead>
+                    <tr>
+                      <th>{t.data.coverage.location}</th>
+                      <th>{t.data.coverage.project}</th>
+                      <th>{t.data.coverage.file}</th>
+                      <th>{t.data.coverage.format}</th>
+                      <th className="n">{t.data.coverage.rows}</th>
+                      <th>{t.data.coverage.days}</th>
+                      <th>{t.data.coverage.modified}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.coverage.map((c) => (
+                      <tr key={c.path}>
+                        <td>{c.location || '—'}</td>
+                        <td>{c.project || '—'}</td>
+                        <td>{c.fileName}</td>
+                        <td>{t.data.coverage.formats[c.report.format]}</td>
+                        <td className="n">{formatQuantity(c.report.rows.length, locale)}</td>
+                        <td>
+                          {formatDate(dayToIso(c.report.days[0]!), locale)} – {formatDate(dayToIso(c.report.days.at(-1)!), locale)}
+                        </td>
+                        <td>{new Date(c.lastModified).toLocaleString(locale === 'cs' ? 'cs-CZ' : 'en-GB', { dateStyle: 'short', timeStyle: 'short' })}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
           {data.failed.length > 0 && (
             <div className="panel">
               <h2>{t.data.failed.heading}</h2>
               <ul className="issues">
                 {data.failed.map((f) => (
                   <li key={f.path}>
-                    <strong>{f.path}</strong>: {t.data.failed[f.reason]} ({f.detail})
+                    <strong>{f.path}</strong>: {t.data.failed[f.reason]}
+                    {f.detail && ` (${f.detail})`}
                   </li>
                 ))}
               </ul>
@@ -185,6 +235,7 @@ export function DataPage() {
         <ul className="features">
           <li>{t.data.structure.calloffs}</li>
           <li>{t.data.structure.master}</li>
+          <li>{t.data.structure.coverage}</li>
         </ul>
       </div>
     </section>

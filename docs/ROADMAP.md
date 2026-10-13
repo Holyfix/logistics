@@ -51,7 +51,12 @@ funkce (plánování).
 - [x] Excel od začátku roku pro reporting: souhrn po týdnech (požadováno, odesláno, rozdíl, plnění) a listy po dílech, s výhledem do konce roku
 - [x] Porovnání exportů: dva libovolné exporty po týdnech a po dílech, matice vývoje (10 exportů × 10 týdnů), export Excel/CSV
 
-### Fáze 4: Coverage a Komponenty
+### Fáze 4: Coverage a Komponenty (probíhá)
+- [x] Mapování dílů ve formátu Item_Mapping (číslo zákazníka, varianta, typ, projekt) místo šablony kmenových dat
+- [x] Coverage: formát Coverage Report Overview, pokrytí po dnech, přičtení transitu, záporné kdykoli / ke dni, souhrn po variantách, export
+- [ ] Coverage: další formáty souborů zákazníka
+- [ ] Coverage: náš sklad (plná / neúplná balení) a dodatečný transit z naší expedice
+- [ ] Komponenty
 ### Fáze 5: Obaly
 ### Fáze 6: Dashboard
 ### Fáze 7: Plánování (plnění plánu a prostoje)
@@ -68,7 +73,7 @@ Obsah modulů je v [MODULES.md](MODULES.md).
 
 ## Otevřené otázky
 
-1. **Kmenová data:** tabulka dílů od uživatele (Item Number, Zákazník, Projekt, Strana).
+1. **Mapování dílů:** Item_Mapping (Item Number, Customer Number, Description, Variant, Type, Project); později balení pro sklad.
 2. **Další exporty z ERP:** zásoby, expedice, kusovník (pro fázi 4).
 3. **Obaly:** typy obalů, přiřazení dílů k obalům a počty kusů v obalu (odkud je vzít).
 4. **MES:** obsahují exporty prostojů jejich příčiny?

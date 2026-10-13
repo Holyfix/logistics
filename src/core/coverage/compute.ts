@@ -1,0 +1,147 @@
+// Pokrytí na jednotlivé dny ze souborů zákazníka, spojené s mapováním dílů.
+
+import type { DayNumber } from '../dates';
+import type { MasterData } from '../masterdata';
+import type { CoverageReport } from './parse';
+
+/** Načtený soubor pokrytí; závod a projekt jsou z cesty ve sdílené složce. */
+export interface CoverageSource {
+  path: string;
+  fileName: string;
+  location: string;
+  project: string;
+  lastModified: number;
+  report: CoverageReport;
+}
+
+export interface CoverageOptions {
+  /** Přičíst transit, který zákazník uvádí v souboru. */
+  transit: boolean;
+}
+
+export interface CoverageLine {
+  id: string;
+  location: string;
+  project: string;
+  /** Naše číslo dílu z mapování; prázdné, když díl v mapování chybí. */
+  item: string;
+  customerNumber: string;
+  description: string;
+  variant: string;
+  side: string;
+  customerStock: number;
+  /** Transit celkem za horizont souboru. */
+  transit: number;
+  firstUncovered: string;
+  uncoveredAt: string;
+  /** Pokrytí na konci dne; null, když soubor den neobsahuje (je mimo jeho horizont). */
+  values: (number | null)[];
+}
+
+export interface CoverageTable {
+  days: DayNumber[];
+  lines: CoverageLine[];
+}
+
+export type RowFilter = { kind: 'all' } | { kind: 'negativeAny' } | { kind: 'negativeOn'; day: DayNumber };
+
+export interface CoverageFilter {
+  location: string;
+  project: string;
+  variant: string;
+  query: string;
+  rows: RowFilter;
+}
+
+export const EMPTY_COVERAGE_FILTER: CoverageFilter = { location: '', project: '', variant: '', query: '', rows: { kind: 'all' } };
+
+/** Hodnota pro dny mezi dny souboru: platí poslední známý stav (např. víkend bez poptávky). */
+function valueOn(days: readonly DayNumber[], values: readonly number[], day: DayNumber): number | null {
+  let result: number | null = null;
+  for (let k = 0; k < days.length && days[k]! <= day; k++) result = values[k]!;
+  return result;
+}
+
+export function buildCoverage(sources: readonly CoverageSource[], master: MasterData | undefined, options: CoverageOptions): CoverageTable {
+  const days = [...new Set(sources.flatMap((s) => s.report.days))].sort((a, b) => a - b);
+  const lines: CoverageLine[] = [];
+  for (const source of sources) {
+    const { report } = source;
+    for (const row of report.rows) {
+      const m = master?.byCustomerKey.get(row.customerKey) ?? (row.supplierItem ? master?.items.get(row.supplierItem) : undefined);
+      const totals = row.balance.map((b, k) => b + (options.transit ? row.transit[k]! : 0));
+      lines.push({
+        id: `${source.path}|${row.customerKey}`,
+        location: source.location,
+        project: m?.project || source.project,
+        item: m?.item ?? '',
+        customerNumber: row.customerNumber,
+        description: m?.description || row.description,
+        variant: m?.variant ?? '',
+        side: m?.side ?? '',
+        customerStock: row.customerStock,
+        transit: row.transit.at(-1) ?? 0,
+        firstUncovered: row.firstUncovered,
+        uncoveredAt: row.uncoveredAt,
+        values: days.map((day) => (day > report.days.at(-1)! ? null : valueOn(report.days, totals, day))),
+      });
+    }
+  }
+  lines.sort((a, b) => a.location.localeCompare(b.location) || a.project.localeCompare(b.project) || (a.item || a.customerNumber).localeCompare(b.item || b.customerNumber, 'en', { numeric: true }));
+  return { days, lines };
+}
+
+function isNegative(value: number | null | undefined): boolean {
+  return value !== null && value !== undefined && value < 0;
+}
+
+export function filterCoverage(table: CoverageTable, filter: CoverageFilter): CoverageLine[] {
+  const query = filter.query.trim().toLowerCase();
+  const dayIndex = filter.rows.kind === 'negativeOn' ? table.days.indexOf(filter.rows.day) : -1;
+  return table.lines.filter((line) => {
+    if (filter.location && line.location !== filter.location) return false;
+    if (filter.project && line.project !== filter.project) return false;
+    if (filter.variant && line.variant !== filter.variant) return false;
+    if (query && !`${line.item} ${line.customerNumber} ${line.description}`.toLowerCase().includes(query)) return false;
+    if (filter.rows.kind === 'negativeAny') return line.values.some(isNegative);
+    if (filter.rows.kind === 'negativeOn') return isNegative(line.values[dayIndex]);
+    return true;
+  });
+}
+
+/** Hodnoty pro výběr ve filtrech. */
+export function coverageOptions(table: CoverageTable) {
+  const sorted = (values: string[]) => [...new Set(values.filter(Boolean))].sort((a, b) => a.localeCompare(b, 'cs'));
+  return {
+    locations: sorted(table.lines.map((l) => l.location)),
+    projects: sorted(table.lines.map((l) => l.project)),
+    variants: sorted(table.lines.map((l) => l.variant)),
+    unmapped: table.lines.filter((l) => !l.item).length,
+  };
+}
+
+export interface VariantSummary {
+  variant: string;
+  values: number[];
+}
+
+/** Součet pokrytí po variantách (dny mimo horizont souboru se nepočítají). */
+export function summarizeByVariant(days: readonly DayNumber[], lines: readonly CoverageLine[]): VariantSummary[] {
+  const groups = new Map<string, number[]>();
+  for (const line of lines) {
+    const values = groups.get(line.variant) ?? days.map(() => 0);
+    line.values.forEach((v, k) => {
+      values[k]! += v ?? 0;
+    });
+    groups.set(line.variant, values);
+  }
+  // Díly bez varianty (bez mapování) jsou na konci.
+  return [...groups.entries()]
+    .map(([variant, values]) => ({ variant, values }))
+    .sort((a, b) => Number(!a.variant) - Number(!b.variant) || a.variant.localeCompare(b.variant, 'cs'));
+}
+
+/** Díly v záporu během prvních `days` dnů (pro rozcestník). */
+export function negativeSoon(table: CoverageTable, days: number): number {
+  return table.lines.filter((line) => line.values.slice(0, days).some(isNegative)).length;
+}

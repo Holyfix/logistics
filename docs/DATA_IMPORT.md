@@ -9,15 +9,17 @@ Soubory se rozpoznají podle názvu (nezáleží na velikosti písmen ani diakri
 | Soubor | Jak ho aplikace pozná | Formát |
 |---|---|---|
 | Export odvolávek | název obsahuje „Odvolávky“ / „call-off“, nebo leží ve složce `odvolavky` / `call-offs` | CSV (doporučeno) nebo XLSX |
-| Kmenová data dílů | název obsahuje „kmenová“ / „master“ | XLSX nebo CSV |
+| Mapování dílů (kmenová data) | název obsahuje „mapping“ / „kmenová“ / „master“ | XLSX nebo CSV |
+| Pokrytí od zákazníka (Coverage) | leží ve složce `Coverage` (i v podsložkách) | XLSX / XLSM |
 
 Doporučená struktura (složka se v aplikaci vybírá celá, podsložky se prohledají):
 
 ```
 Logistics/
-├── kmenova-data.xlsx     kmenová data dílů
+├── Item_Mapping.xlsx     mapování dílů (kmenová data)
 ├── Call-offs/            týdenní exporty odvolávek (název souboru s týdnem, např. CW42)
-├── Zásoby/               později: Coverage, Komponenty, Zásoby
+├── Coverage/<závod>/<projekt>/   soubory pokrytí od zákazníka
+├── Zásoby/               později: náš sklad pro Coverage, Komponenty, Zásoby
 ├── Kusovník/             později: Komponenty
 ├── Objednávky/           později: Příjem (otevřené nákupní objednávky)
 ├── Výroba/               později: Plánování (plnění plánu a prostoje)
@@ -57,22 +59,44 @@ Týdenní export požadavků na expedici z ERP, horizont podle dat od zákazník
   čísla `1 905,0` / `1905.0`.
 - Excel (XLSX) se čte zhruba 30× pomaleji než CSV, proto je CSV doporučené.
 
-## Kmenová data dílů
+## Mapování dílů (kmenová data)
 
-Tabulku udržuje uživatel. Jeden řádek = jeden díl.
+Tabulku udržuje uživatel. Jeden řádek = jeden díl. V Excelu na prvním listu, záhlaví v prvním řádku.
 
 | Sloupec | Alternativní názvy | Povinný |
 |---|---|---|
 | Item Number | Díl, Číslo dílu | ano |
-| Item Description | Popis | ne |
+| Customer Number | Číslo zákazníka | pro Coverage |
+| Description | Item Description, Popis | ne |
+| Variant | Varianta (např. `LHD`, `LHD HUD`, `RHD`) | ne |
+| Type | Typ | ne |
+| Project | Projekt | ne |
 | Zákazník | Customer | ne |
-| Projekt | Project | ne |
-| Strana | Side, Řízení (hodnoty `LHD`, `RHD`) | ne |
+| Strana | Side, Řízení; jinak se odvodí ze začátku varianty | ne |
 
-- Šablonu se všemi díly z aktuálního exportu stáhnete v modulu Data.
+- Šablonu se všemi díly z aktuálního exportu odvolávek stáhnete v modulu Data.
 - Díly bez kmenových dat lze v Call-offs vyfiltrovat volbou „Bez kmenových dat“.
+- **Číslo zákazníka** se pro párování se soubory zákazníka sjednotí: velká písmena, bez mezer;
+  dlouhá čísla začínající „A“ (15 a více znaků) se zkrátí na prvních 11 a posledních 4 znaků.
+  Tím se shodnou zápisy `A1234567890  00009051`, `A1234567890      9051` i `A1234567890-9051`.
+
+## Pokrytí od zákazníka (Coverage)
+
+Soubory se ukládají do `Coverage/<závod>/<projekt>/`. Závod a projekt se berou z názvů složek,
+z každé složky se použije naposledy změněný soubor. Formát se pozná podle obsahu listu,
+na názvu souboru nezáleží. Díly se párují s mapováním podle čísla zákazníka.
+
+| Formát | Jak ho aplikace pozná | Co se z něj použije |
+|---|---|---|
+| Coverage Report Overview | list se záhlavím „Disposable Stock“ a „Stock End of the Day“, nad každým blokem dne datum | sklad „Stock in … 07:00“ minus „Open Orders“, poptávka (Demand) a transit (In Transit) po dnech |
+
+- **Pokrytí na konci dne** = sklad u zákazníka − poptávka od prvního dne do daného dne;
+  s volbou „Přičíst transit“ + transit, který do daného dne dorazí. Konečný stav dne ze souboru
+  se nepoužívá, protože je to vzorec s přepínačem transitu.
+- Dny, které soubor nemá (víkend), převezmou poslední známý stav; dny za horizontem souboru jsou prázdné.
+- Další formáty zákazníka, náš sklad a dodatečný transit (naše expedice) se doplní postupně.
 
 ## Testovací data
 
-`sample-data/` obsahuje smyšlené exporty a kmenová data ve stejném formátu
+`sample-data/` obsahuje smyšlené exporty, mapování a soubor coverage ve stejném formátu
 (`node scripts/generate-sample-data.mjs`). Skutečné exporty do repozitáře nepatří.
