@@ -84,12 +84,12 @@ describe('ComponentsPage', () => {
   it('potřeba výroby hotových dílů (bez souboru sekvencéra z odvolávek)', () => {
     renderWith(<ComponentsPage today={day(13)} />);
     const [fg] = rows(1);
-    expect(cells(fg!).slice(0, 8)).toEqual(['FG-1', 'PANEL LHD', 'P1', '20', '20', '5', '5', '10']);
+    expect(cells(fg!).slice(0, 7)).toEqual(['FG-1', 'PANEL LHD', 'P1', '20', '5', '5', '10']);
     // bez souboru sekvencéra jsou všechny dny z odvolávek (podbarvené)
     expect(fg!.querySelectorAll('td.cell-forecast')).toHaveLength(14);
     // součet dnů jako poslední řádek
     const total = screen.getAllByRole('table')[1]!.querySelector('tfoot tr')!;
-    expect(cells(total).slice(0, 8)).toEqual(['Celkem', '', '', '20', '20', '5', '5', '10']);
+    expect(cells(total).slice(0, 7)).toEqual(['Celkem', '', '', '20', '5', '5', '10']);
     expect(document.querySelector('.source-info')!.textContent).toContain('odvolávky CW 42/2026');
   });
 
@@ -98,7 +98,7 @@ describe('ComponentsPage', () => {
     if (!withFg.ok) throw new Error();
     renderWith(<ComponentsPage today={day(13)} />, { ...state, data: { ...state.data!, stock: { path: 'Stock_1.csv', lastModified: 0, data: withFg.value } } });
     // 5 ks FG-1 pokryje první den → výroba 0, 5, 10 → spona 30, 20, 0
-    expect(cells(rows(1)[0]!).slice(5, 8)).toEqual(['0', '5', '10']);
+    expect(cells(rows(1)[0]!).slice(3, 7)).toEqual(['15', '0', '5', '10']);
     expect(cells(rows(0).find((r) => cells(r)[0] === 'CLIP-1')!).slice(7, 10)).toEqual(['30', '20', '0']);
     fireEvent.click(screen.getByLabelText('Odečíst náš sklad hotových dílů a mezivýroby'));
     expect(cells(rows(0).find((r) => cells(r)[0] === 'CLIP-1')!).slice(7, 10)).toEqual(['20', '10', '-10']);
