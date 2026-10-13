@@ -413,7 +413,7 @@ export const en: Messages = {
     },
     legend: {
       negative: 'Component negative',
-      customer: 'Customer covered until (last covered day)',
+      customer: 'Customer covered until: last day call-offs are covered using stock and transit at the sequencer, our finished parts and intermediates (may be on a negative cell)',
       weekend: 'Weekend',
     },
     export: { fileName: 'components', sheet: 'Components', demandSheet: 'Demand' },

@@ -415,7 +415,7 @@ export const cs = {
     },
     legend: {
       negative: 'Komponenta v záporu',
-      customer: 'Zákazník pokryt do (poslední pokrytý den)',
+      customer: 'Zákazník pokryt do: poslední den, kdy jsou odvolávky pokryté se skladem a transitem u sekvencéru, našimi hotovými díly a mezivýrobou (může být i na záporné buňce)',
       weekend: 'Víkend',
     },
     export: { fileName: 'komponenty', sheet: 'Komponenty', demandSheet: 'Poptávka' },
