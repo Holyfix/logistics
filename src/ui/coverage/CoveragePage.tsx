@@ -10,6 +10,7 @@ import {
 } from '../../core/coverage/compute';
 import { dayFromParts, dayToIso, parseDay, weekday, type DayNumber } from '../../core/dates';
 import { formatDayShort, formatQuantity } from '../../core/format';
+import { excludedLocationsIn, STOCK_ZONES, stockByItem } from '../../core/stock';
 import { useI18n } from '../../i18n/I18nProvider';
 import { ExportButtons, type ExportTable } from '../calloffs/ExportButtons';
 import { useData } from '../data/DataProvider';
@@ -37,13 +38,18 @@ export function CoveragePage({ today = localToday() }: { today?: DayNumber } = {
   const { state } = useData();
   const sources = state.data?.coverage ?? NO_SOURCES;
   const master = state.data?.master?.data;
+  const stockData = state.data?.stock?.data;
+  const stock = useMemo(() => (stockData ? stockByItem(stockData) : undefined), [stockData]);
+  const excludedLocations = useMemo(() => (stockData ? excludedLocationsIn(stockData) : []), [stockData]);
 
   const [transit, setTransit] = useState(true);
+  const [ourStock, setOurStock] = useState(false);
   const [filter, setFilter] = useState<Omit<CoverageFilter, 'rows'>>(EMPTY_COVERAGE_FILTER);
   const [rowsMode, setRowsMode] = useState<RowsMode>('all');
   const [day, setDay] = useState<DayNumber | null>(null);
 
-  const table = useMemo(() => buildCoverage(sources, master, { transit }), [sources, master, transit]);
+  const withStock = ourStock && stock !== undefined;
+  const table = useMemo(() => buildCoverage(sources, master, { transit, ourStock: withStock }, stock), [sources, master, transit, withStock, stock]);
   const options = useMemo(() => coverageOptions(table), [table]);
   const selectedDay = day !== null && table.days.includes(day) ? day : (table.days[0] ?? 0);
   const lines = useMemo(
@@ -103,9 +109,9 @@ export function CoveragePage({ today = localToday() }: { today?: DayNumber } = {
   const soon = shortage(lines, SHORTAGE_DAYS);
   const anyNegative = lines.filter((l) => l.values.some(isNegative)).length;
   const lastDay = table.days.at(-1);
-  const transitNote = transit ? tc.kpi.withTransit : tc.kpi.withoutTransit;
+  const transitNote = `${transit ? tc.kpi.withTransit : tc.kpi.withoutTransit}${withStock ? `, ${tc.kpi.withStock}` : ''}`;
 
-  const fileBase = `${tc.export.fileName}_${dayToIso(table.days[0] ?? 0)}${transit ? '_transit' : ''}`;
+  const fileBase = `${tc.export.fileName}_${dayToIso(table.days[0] ?? 0)}${transit ? '_transit' : ''}${withStock ? '_sklad' : ''}`;
   const buildLinesExport = (): ExportTable => ({
     fileName: fileBase,
     sheetName: tc.export.sheet,
@@ -118,6 +124,7 @@ export function CoveragePage({ today = localToday() }: { today?: DayNumber } = {
       tc.table.variant,
       tc.table.customerStock,
       tc.table.transit,
+      ...(stock ? [tc.table.ourStock] : []),
       tc.table.firstUncovered,
       ...table.days.map(dayToIso),
     ],
@@ -130,6 +137,7 @@ export function CoveragePage({ today = localToday() }: { today?: DayNumber } = {
       l.variant,
       l.customerStock,
       l.transit,
+      ...(stock ? [l.ourStock] : []),
       [l.uncoveredAt.replace('T', ' '), l.firstUncovered].filter(Boolean).join(' · '),
       ...l.values,
     ]),
@@ -220,6 +228,12 @@ export function CoveragePage({ today = localToday() }: { today?: DayNumber } = {
           <input type="checkbox" checked={transit} onChange={(e) => setTransit(e.target.checked)} />
           {tc.options.transit}
         </label>
+        {stock && (
+          <label className="check-field">
+            <input type="checkbox" checked={ourStock} onChange={(e) => setOurStock(e.target.checked)} />
+            {tc.options.ourStock}
+          </label>
+        )}
         <label className="field">
           <span>{tc.options.rows}</span>
           <select value={rowsMode} onChange={(e) => setRowsMode(e.target.value as RowsMode)}>
@@ -293,6 +307,7 @@ export function CoveragePage({ today = localToday() }: { today?: DayNumber } = {
                   <th>{tc.table.variant}</th>
                   <th className="n">{tc.table.customerStock}</th>
                   <th className="n">{tc.table.transit}</th>
+                  {stock && <th className="n">{tc.table.ourStock}</th>}
                   <th>{tc.table.firstUncovered}</th>
                   {table.days.map(dayHead)}
                 </tr>
@@ -311,6 +326,9 @@ export function CoveragePage({ today = localToday() }: { today?: DayNumber } = {
                     <td>{l.variant ? <span className="chip">{l.variant}</span> : '—'}</td>
                     <td className="n">{formatQuantity(l.customerStock, locale)}</td>
                     <td className="n">{l.transit ? formatQuantity(l.transit, locale) : <span className="muted">0</span>}</td>
+                    {stock && (
+                      <td className="n">{l.ourStock === null ? <span className="muted">—</span> : l.ourStock ? formatQuantity(l.ourStock, locale) : <span className="muted">0</span>}</td>
+                    )}
                     <td>
                       {l.uncoveredAt ? (
                         <>
@@ -342,7 +360,13 @@ export function CoveragePage({ today = localToday() }: { today?: DayNumber } = {
             <i className="swatch swatch-boundary" /> {tc.legend.boundary}
           </li>
         </ul>
-        <p className="muted">{tc.table.note}</p>
+        <p className="muted">
+          {tc.table.note}
+          {stock &&
+            ` ${tc.table.ourStockNote
+              .replace('{zones}', STOCK_ZONES.join(', '))
+              .replace('{excluded}', excludedLocations.length > 0 ? excludedLocations.join(', ') : tc.table.ourStockNoExclusions)}`}
+        </p>
       </div>
     </section>
   );

@@ -156,6 +156,18 @@ describe('buildCoverage', () => {
     ]);
   });
 
+  it('náš sklad: sloupec vždy, ke dnům jen s volbou; díl bez mapování nemá sklad', () => {
+    const stock = new Map([['900100', 25]]);
+    const off = buildCoverage([source], master.value, { transit: false }, stock);
+    expect(off.lines.map((l) => l.ourStock)).toEqual([25, null]);
+    expect(off.lines[0]!.values).toEqual([10, 0, -9]);
+    const on = buildCoverage([source], master.value, { transit: true, ourStock: true }, stock);
+    expect(on.lines[0]!.values).toEqual([40, 30, 21]);
+    expect(on.lines[1]!.values).toEqual([45, 40, 35]);
+    // bez souboru skladu není co přičíst
+    expect(buildCoverage([source], master.value, { transit: false, ourStock: true }).lines[0]).toMatchObject({ ourStock: null, values: [10, 0, -9] });
+  });
+
   it('transit podle přepínače', () => {
     const t = buildCoverage([source], master.value, { transit: true });
     expect(t.lines[0]!.values).toEqual([15, 5, -4]);

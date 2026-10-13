@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { dayToIso } from '../core/dates';
 import { formatDate, formatQuantity } from '../core/format';
 import { masterDataTemplate } from '../core/masterdata';
+import { excludedLocationsIn, STOCK_ZONES, stockByItem, stockItemCount } from '../core/stock';
 import type { DataIssue } from '../core/table';
 import { useI18n } from '../i18n/I18nProvider';
 import { downloadXlsx } from '../platform/download';
@@ -44,6 +45,17 @@ export function DataPage() {
     () => data?.coverage.reduce((n, c) => n + c.report.rows.filter((r) => !data.master?.data.byCustomerKey.has(r.customerKey)).length, 0) ?? 0,
     [data],
   );
+
+  const stockFacts = useMemo(() => {
+    if (!data?.stock) return null;
+    const byItem = stockByItem(data.stock.data);
+    return {
+      excluded: excludedLocationsIn(data.stock.data),
+      items: stockItemCount(data.stock.data),
+      withStock: byItem.size,
+      pieces: [...byItem.values()].reduce((a, b) => a + b, 0),
+    };
+  }, [data]);
 
   const downloadTemplate = () => {
     if (!current) return;
@@ -214,6 +226,36 @@ export function DataPage() {
             )}
           </div>
 
+          <div className="panel">
+            <h2>{t.data.stock.heading}</h2>
+            {data.stock && stockFacts ? (
+              <dl className="facts">
+                <dt>{t.data.stock.file}</dt>
+                <dd>{data.stock.path}</dd>
+                <dt>{t.data.stock.modified}</dt>
+                <dd>{new Date(data.stock.lastModified).toLocaleString(locale === 'cs' ? 'cs-CZ' : 'en-GB', { dateStyle: 'short', timeStyle: 'short' })}</dd>
+                <dt>{t.data.stock.rows}</dt>
+                <dd>{formatQuantity(data.stock.data.rows.length, locale)}</dd>
+                <dt>{t.data.stock.items}</dt>
+                <dd>{formatQuantity(stockFacts.items, locale)}</dd>
+                <dt>{t.data.stock.zoneItems}</dt>
+                <dd>
+                  {formatQuantity(stockFacts.withStock, locale)} ({formatQuantity(stockFacts.pieces, locale)} {t.calloffs.table.unit})
+                </dd>
+                <dt>{t.data.stock.qtyColumn}</dt>
+                <dd>{data.stock.data.qtyColumn}</dd>
+                <dt>{t.data.stock.zones}</dt>
+                <dd>{STOCK_ZONES.join(', ')}</dd>
+                <dt>{t.data.stock.excluded}</dt>
+                <dd>{stockFacts.excluded.length > 0 ? stockFacts.excluded.join(', ') : <span className="muted">{t.data.stock.noExcluded}</span>}</dd>
+              </dl>
+            ) : (
+              <p>{t.data.stock.none}</p>
+            )}
+            {data.stock && data.stock.data.issueCount > 0 && <IssueList issues={data.stock.data.issues} count={data.stock.data.issueCount} />}
+            <p className="muted">{t.data.stock.rule}</p>
+          </div>
+
           {data.failed.length > 0 && (
             <div className="panel">
               <h2>{t.data.failed.heading}</h2>
@@ -236,6 +278,7 @@ export function DataPage() {
           <li>{t.data.structure.calloffs}</li>
           <li>{t.data.structure.master}</li>
           <li>{t.data.structure.coverage}</li>
+          <li>{t.data.structure.stock}</li>
         </ul>
       </div>
     </section>

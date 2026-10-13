@@ -191,6 +191,7 @@ export const en: Messages = {
       calloffs: 'Call-off exports (CSV or Excel): the name contains “Odvolávky” and the week, e.g. Odvolávky_CW42.csv, or the file is in a folder named “odvolavky”.',
       master: 'Part mapping (Excel or CSV): the name contains “mapping”, “kmenová” or “master”, e.g. Item_Mapping.xlsx. The table is on the first sheet with headers in the first row.',
       coverage: 'Customer coverage (Excel): folder Coverage/<destination>/<project>/, e.g. Coverage/Site A/P100/report.xlsx. The newest file for each destination and project is used; the format is recognised from the content.',
+      stock: 'Our stock (CSV or Excel): the name starts with “Stock” or “Sklad”, e.g. Stock_13.10.2026.csv, or it is in the “Stock” folder. The newest file is used. Required columns: Item Number, quantity per location (Qty On Hand - Inv Detail), Location and Zone ID.',
     },
     calloffs: {
       heading: 'Call-off exports',
@@ -212,6 +213,20 @@ export const en: Messages = {
       coverageMissing: 'Coverage rows without mapping',
       template: 'Download mapping template',
       templateNote: 'The template lists all parts from the current export, with known values filled in.',
+    },
+    stock: {
+      heading: 'Our stock (Stock)',
+      none: 'No stock file in the folder yet. Save the stock export as Stock_<date>.csv or into the Stock folder.',
+      file: 'File',
+      modified: 'Modified',
+      rows: 'Rows (locations)',
+      items: 'Parts',
+      zoneItems: 'Parts with stock for coverage',
+      zones: 'Zones counted',
+      excluded: 'Excluded locations',
+      noExcluded: 'none in this file',
+      rule: 'Our stock counts positive quantities on locations (Qty On Hand - Inv Detail) in the listed zones, full and partial packages together. Negative locations and external locations where parts are already assembled in the customer product are not counted.',
+      qtyColumn: 'Quantity from column',
     },
     failed: {
       heading: 'Files that could not be used',
@@ -263,6 +278,7 @@ export const en: Messages = {
     options: {
       label: 'Calculation and view',
       transit: 'Add transit',
+      ourStock: 'Add our stock',
       rows: 'Show',
       all: 'All parts',
       negativeAny: 'Negative at any time',
@@ -280,6 +296,7 @@ export const en: Messages = {
       unmappedNote: 'customer parts missing from the mapping',
       withTransit: 'with transit',
       withoutTransit: 'without transit',
+      withStock: 'with our stock',
     },
     summary: {
       heading: 'Summary by variant',
@@ -297,10 +314,13 @@ export const en: Messages = {
       variant: 'Variant',
       customerStock: 'Customer stock',
       transit: 'Transit',
+      ourStock: 'Our stock',
       firstUncovered: 'First uncovered',
       empty: 'No part matches the filters.',
       unmapped: 'not in the mapping',
       fileCustomerNumber: 'In the customer file',
+      ourStockNote: 'Our stock = sum of positive quantities of the part on locations in zones {zones} from the stock file (full and partial packages together), without external locations with parts already assembled at the customer ({excluded}). With “Add our stock” it is added to every day.',
+      ourStockNoExclusions: 'none',
       note: 'Coverage = balance at the customer without transit at the end of the day, optionally + transit. Negative values are red. Customer numbers use one format without padding zeros (hover to see the number as written in the customer file). Parts without mapping are shown by customer number.',
     },
     legend: {

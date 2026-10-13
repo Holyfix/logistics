@@ -17,6 +17,8 @@ export interface CoverageSource {
 export interface CoverageOptions {
   /** Přičíst transit, který zákazník uvádí v souboru. */
   transit: boolean;
+  /** Přičíst náš sklad (stejné množství ke všem dnům). */
+  ourStock?: boolean;
 }
 
 export interface CoverageLine {
@@ -35,6 +37,8 @@ export interface CoverageLine {
   customerStock: number;
   /** Transit celkem za horizont souboru. */
   transit: number;
+  /** Náš sklad dílu; null, když sklad není načtený nebo díl není v mapování. */
+  ourStock: number | null;
   firstUncovered: string;
   uncoveredAt: string;
   /** Pokrytí na konci dne; null, když soubor den neobsahuje (je mimo jeho horizont). */
@@ -65,14 +69,25 @@ function valueOn(days: readonly DayNumber[], values: readonly number[], day: Day
   return result;
 }
 
-export function buildCoverage(sources: readonly CoverageSource[], master: MasterData | undefined, options: CoverageOptions): CoverageTable {
+/**
+ * Pokrytí po dílech a dnech. `stock` je náš sklad po dílech (viz stockByItem); s volbou `ourStock`
+ * se přičte ke všem dnům v horizontu souboru.
+ */
+export function buildCoverage(
+  sources: readonly CoverageSource[],
+  master: MasterData | undefined,
+  options: CoverageOptions,
+  stock?: ReadonlyMap<string, number>,
+): CoverageTable {
   const days = [...new Set(sources.flatMap((s) => s.report.days))].sort((a, b) => a - b);
   const lines: CoverageLine[] = [];
   for (const source of sources) {
     const { report } = source;
     for (const [index, row] of report.rows.entries()) {
       const m = master?.byCustomerKey.get(row.customerKey) ?? (row.supplierItem ? master?.items.get(row.supplierItem) : undefined);
-      const totals = row.balance.map((b, k) => b + (options.transit ? row.transit[k]! : 0));
+      const ourStock = stock && m ? (stock.get(m.item.toUpperCase()) ?? 0) : null;
+      const added = options.ourStock ? (ourStock ?? 0) : 0;
+      const totals = row.balance.map((b, k) => b + (options.transit ? row.transit[k]! : 0) + added);
       lines.push({
         // Pořadí řádku zaručí jednoznačný klíč i pro řádky bez čísla zákazníka.
         id: `${source.path}|${index}|${row.customerKey}`,
@@ -86,6 +101,7 @@ export function buildCoverage(sources: readonly CoverageSource[], master: Master
         side: m?.side ?? '',
         customerStock: row.customerStock,
         transit: row.transit.at(-1) ?? 0,
+        ourStock,
         firstUncovered: row.firstUncovered,
         uncoveredAt: row.uncoveredAt,
         values: days.map((day) => (day > report.days.at(-1)! ? null : valueOn(report.days, totals, day))),
