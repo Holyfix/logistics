@@ -54,7 +54,8 @@ funkce (plánování).
 ### Fáze 4: Coverage a Komponenty (probíhá)
 - [x] Mapování dílů ve formátu Item_Mapping (číslo zákazníka, varianta, typ, projekt) místo šablony kmenových dat
 - [x] Coverage: formát Coverage Report Overview, pokrytí po dnech, přičtení transitu, záporné kdykoli / ke dni, souhrn po variantách, export
-- [ ] Coverage: další formáty souborů zákazníka
+- [x] Coverage: formát Articles (stav včetně transitu, transit se odečte)
+- [x] Coverage: formát Bestand (stav bez transitu, jen řádky klienta ze souboru)
 - [ ] Coverage: náš sklad (plná / neúplná balení) a dodatečný transit z naší expedice
 - [ ] Komponenty
 ### Fáze 5: Obaly
