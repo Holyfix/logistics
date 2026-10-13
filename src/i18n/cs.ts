@@ -29,6 +29,12 @@ export const cs = {
     },
     phase: 'Fáze',
     later: 'Později',
+    metrics: {
+      changes: { one: 'změna', few: 'změny', other: 'změn' },
+      changesTitle: 'Významné změny odvolávek v příštích 12 týdnech (všechny díly)',
+      against: 'proti exportu',
+      currentExport: 'aktuální export',
+    },
   },
   module: {
     featuresTitle: 'Co bude modul umět',

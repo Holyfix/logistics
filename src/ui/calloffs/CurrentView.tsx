@@ -1,6 +1,15 @@
 import { useMemo, useState } from 'react';
 import type { CallOffExport } from '../../core/calloffs/parse';
-import { buildCurrentRows, buildPeriods, changeOf, type Granularity, type Period, type PeriodCount } from '../../core/calloffs/views';
+import {
+  buildCurrentRows,
+  buildPeriods,
+  changeOf,
+  countSignificantChanges,
+  DEFAULT_WEEKS,
+  type Granularity,
+  type Period,
+  type PeriodCount,
+} from '../../core/calloffs/views';
 import { dayToIso, weekday } from '../../core/dates';
 import { formatDayShort, formatQuantity, type Locale } from '../../core/format';
 import type { MasterItem } from '../../core/masterdata';
@@ -24,7 +33,7 @@ interface Props {
 export function CurrentView({ current, previous, items, master }: Props) {
   const { t, locale } = useI18n();
   const [granularity, setGranularity] = useState<Granularity>('week');
-  const [range, setRange] = useState<Record<Granularity, PeriodCount>>({ week: 12, day: 15 });
+  const [range, setRange] = useState<Record<Granularity, PeriodCount>>({ week: DEFAULT_WEEKS, day: 15 });
   const count = range[granularity];
 
   const periods = useMemo(() => buildPeriods(current, granularity, count), [current, granularity, count]);
@@ -33,7 +42,7 @@ export function CurrentView({ current, previous, items, master }: Props) {
   const totals = periods.map((_, k) => rows.reduce((sum, r) => sum + r.values[k]!, 0));
   const total = totals.reduce((a, b) => a + b, 0);
   const backlog = rows.reduce((sum, r) => sum + r.backlog, 0);
-  const significant = rows.reduce((n, r) => n + r.values.filter((v, k) => changeOf(v, r.previous[k]!)?.significant).length, 0);
+  const significant = countSignificantChanges(rows);
 
   const periodTitle = (p: Period) => {
     if (granularity === 'week') return p.label;
