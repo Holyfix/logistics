@@ -20,7 +20,7 @@ Pořadí skupin na rozcestníku (karty se čtou shora dolů po sloupcích):
 | Materiál a sklad | **Komponenty** | Máme materiál na výrobu? | Fáze 4 (probíhá) |
 | Materiál a sklad | **Zásoby** | Nemáme zásob moc nebo málo? | Fáze 9 |
 | Materiál a sklad | **Obaly** | Na kolik dílů a dní vystačí obaly? | Fáze 5 |
-| Výroba | **Plánování** (plnění plánu a prostoje) | Vyrobili jsme, co jsme měli? Proč ne? | Fáze 7 |
+| Výroba | **Plánování** | Co a kdy vyrobit na linkách, aby byl zákazník pokrytý? | Fáze 7 (probíhá), montáž hotová |
 | Dodavatelé | **Příjem** | Co má dnes a zítra přijet a co je po termínu? | Fáze 9 |
 | Dodavatelé | **Dodavatelé** (OTD inbound) | Dodávají nám dodavatelé včas? | Později |
 | Řízení | **Akční plán** | Kdo co řeší a do kdy? | Později, upřesní se |
@@ -82,11 +82,14 @@ Filtry: zákazník, projekt, strana (LHD/RHD) z kmenových dat, hledání dílu.
 - Díly nad maximem a pod minimem, ležáky bez pohybu
 - Zdroj: export zásob a pohybů z ERP
 
-### Plánování (plnění plánu a prostoje)
-- Plán vs. skutečnost po dnech, směnách a linkách
-- Prostoje podle příčin (Pareto), zvlášť prostoje kvůli chybějícímu materiálu
-- Zdroj: exporty z MES (upřesní se, zda obsahují příčiny prostojů)
-- Aktivní plánování s Ganttovým diagramem zatím není v plánu (vyžadovalo by server)
+### Plánování
+- Karty: **Přehled** · **ASSEMBLY** · **FOA** · **SLH** · **IMM** · **Kapacity**
+- Přehled: pro každou linku a projekt potřeba, plán a vytížení na 7 dní, nepokryté díly, zákazník pokryt do, stav uložení
+- ASSEMBLY (montáž): plán po směnách (díly × směny) pro každý projekt, návrh plánu podle požadavků z coverage,
+  ruční úpravy, kapacita směn, pořadí stran (LHD a RHD nikdy zároveň), stav po směnách a pokrytí zákazníka
+- Kapacity: kusů za směnu a směny po–pá pro linku a projekt, začátek směn, doprava podle destinace (pokrytí u zákazníka, transit, příjezd)
+- Plán se ukládá jako Excel do složky `Plan` (soubor na linku a projekt), dá se sdílet a aplikace ho zase načte
+- Později: FOA, SLH a IMM navázané na plán montáže přes kusovník, plán vs. skutečnost a prostoje (z MES)
 
 ### Obaly
 - **Zápis:** každé ráno se zapíše počet obalů podle inventury (po typech obalů)

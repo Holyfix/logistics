@@ -16,6 +16,7 @@ export const MASTER_COLUMNS = {
   safetyTime: ['Safety Time', 'Pojistná doba'],
   orderMultiple: ['Order Multiple', 'Balení', 'Kusů v balení'],
   componentCoverage: ['Component Coverage', 'Coverage Component', 'Coverage komponent', 'Komponenta'],
+  line: ['Line', 'Linka', 'Výrobní linka', 'Production Line'],
 } as const;
 
 /** Hodnoty, které ve sloupci Component Coverage znamenají „sledovat“. */
@@ -42,6 +43,8 @@ export interface MasterItem {
   orderMultiple: number | null;
   /** Komponenta se zobrazuje v modulu Komponenty (sloupec Component Coverage). */
   componentCoverage: boolean;
+  /** Výrobní linka, na které se díl vyrábí (ASSEMBLY, FOA, SLH, IMM), velkými písmeny; prázdné = neuvedeno. */
+  line: string;
 }
 
 export interface MasterData {
@@ -50,6 +53,8 @@ export interface MasterData {
   byCustomerKey: Map<string, MasterItem>;
   /** Mapování má sloupec Component Coverage (jinak se v Komponentách zobrazí všechny nakupované komponenty). */
   hasComponentColumn: boolean;
+  /** Mapování má sloupec Line (jinak se do plánu montáže berou všechny hotové díly s projektem a stranou). */
+  hasLineColumn: boolean;
   issueCount: number;
   issues: DataIssue[];
 }
@@ -79,6 +84,30 @@ function sideOf(side: string, variant: string): string {
   if (explicit) return explicit;
   const first = variant.trim().split(/\s+/)[0]?.toUpperCase() ?? '';
   return (SIDES as readonly string[]).includes(first) ? first : '';
+}
+
+/** Linky výroby; ve sloupci Line se přijímají i běžné zkratky a české názvy. */
+export const LINES = ['ASSEMBLY', 'FOA', 'SLH', 'IMM'] as const;
+export type LineId = (typeof LINES)[number];
+
+const LINE_ALIASES: Record<string, LineId> = {
+  ASSEMBLY: 'ASSEMBLY',
+  ASSY: 'ASSEMBLY',
+  MONTAZ: 'ASSEMBLY',
+  FOA: 'FOA',
+  FOAM: 'FOA',
+  FOAMING: 'FOA',
+  SLH: 'SLH',
+  SLUSH: 'SLH',
+  IMM: 'IMM',
+  VSTRIKOVANI: 'IMM',
+  VSTRIKOLISOVNA: 'IMM',
+};
+
+/** Linka z textu ve sloupci Line: známá zkratka nebo název se převede na kód linky, jiný text zůstane velkými písmeny. */
+export function lineOf(value: string): string {
+  const key = value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toUpperCase();
+  return LINE_ALIASES[key.split(/\s+/)[0] ?? ''] ?? key;
 }
 
 export function parseMasterData(table: DataTable): MasterResult {
@@ -123,6 +152,7 @@ export function parseMasterData(table: DataTable): MasterResult {
       safetyTime: number(col.safetyTime),
       orderMultiple: number(col.orderMultiple),
       componentCoverage: YES.has(text(row, col.componentCoverage).toLowerCase()),
+      line: lineOf(text(row, col.line)),
     };
     items.set(item, entry);
     if (entry.customerKey) {
@@ -135,7 +165,7 @@ export function parseMasterData(table: DataTable): MasterResult {
     }
   });
 
-  return { ok: true, value: { items, byCustomerKey, hasComponentColumn: col.componentCoverage !== -1, issueCount, issues } };
+  return { ok: true, value: { items, byCustomerKey, hasComponentColumn: col.componentCoverage !== -1, hasLineColumn: col.line !== -1, issueCount, issues } };
 }
 
 /** Šablona mapování dílů: všechny známé díly, u existujících předvyplněné hodnoty. */
@@ -143,11 +173,11 @@ export function masterDataTemplate(
   parts: readonly { item: string; description: string }[],
   existing: Map<string, MasterItem> | undefined,
 ): { header: string[]; rows: string[][] } {
-  const header = ['Item Number', 'Customer Number', 'Description', 'Variant', 'Type', 'Project', 'Safety Stock', 'Safety Time', 'Order Multiple', 'Component Coverage'];
+  const header = ['Item Number', 'Customer Number', 'Description', 'Variant', 'Type', 'Project', 'Safety Stock', 'Safety Time', 'Order Multiple', 'Component Coverage', 'Line'];
   const rows = parts.map(({ item, description }) => {
     const m = existing?.get(item);
     const n = (v: number | null | undefined) => (v === null || v === undefined ? '' : String(v));
-    return [item, m?.customerNumber ?? '', m?.description || description, m?.variant ?? '', m?.type ?? '', m?.project ?? '', n(m?.safetyStock), n(m?.safetyTime), n(m?.orderMultiple), m?.componentCoverage ? 'Ano' : ''];
+    return [item, m?.customerNumber ?? '', m?.description || description, m?.variant ?? '', m?.type ?? '', m?.project ?? '', n(m?.safetyStock), n(m?.safetyTime), n(m?.orderMultiple), m?.componentCoverage ? 'Ano' : '', m?.line ?? ''];
   });
   return { header, rows };
 }

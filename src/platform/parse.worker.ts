@@ -7,11 +7,13 @@ import { parseCsv } from '../core/csv';
 import { parseMasterData, type MasterResult } from '../core/masterdata';
 import { parseBom, type BomResult } from '../core/bom';
 import { parseStock, type StockResult } from '../core/stock';
+import { parsePlanWorkbook, type PlanResult } from '../core/planning/plan';
+import { parseSettings, type PlanSettings } from '../core/planning/settings';
 import { decodeText } from '../core/text';
 import type { SourceFormat } from '../core/sources';
 import type { Cell, DataTable } from '../core/table';
 
-export type ParseRequest = { id: number; kind: 'calloffs' | 'masterdata' | 'coverage' | 'stock' | 'bom'; format: SourceFormat; name: string; buffer: ArrayBuffer };
+export type ParseRequest = { id: number; kind: 'calloffs' | 'masterdata' | 'coverage' | 'stock' | 'bom' | 'plan' | 'planSettings'; format: SourceFormat; name: string; buffer: ArrayBuffer };
 
 export type ParseResponse =
   | { id: number; kind: 'calloffs'; result: ParseResult<CallOffExport> }
@@ -19,6 +21,8 @@ export type ParseResponse =
   | { id: number; kind: 'coverage'; result: CoverageResult }
   | { id: number; kind: 'stock'; result: StockResult }
   | { id: number; kind: 'bom'; result: BomResult }
+  | { id: number; kind: 'plan'; result: PlanResult }
+  | { id: number; kind: 'planSettings'; result: PlanSettings }
   | { id: number; kind: 'error'; message: string };
 
 function toTable(data: Cell[][]): DataTable {
@@ -39,6 +43,13 @@ self.onmessage = async (event: MessageEvent<ParseRequest>) => {
       const sheets = await readXlsxFile(buffer);
       const result = parseCoverageWorkbook(sheets.map((s) => ({ name: s.sheet, data: s.data as Cell[][] })));
       (self as unknown as Worker).postMessage({ id, kind, result } satisfies ParseResponse);
+      return;
+    }
+    if (kind === 'plan' || kind === 'planSettings') {
+      // Plán linky a nastavení kapacit: sešity s několika listy, které vytváří aplikace.
+      const sheets = (await readXlsxFile(buffer)).map((s) => ({ name: s.sheet, data: s.data as Cell[][] }));
+      const response: ParseResponse = kind === 'plan' ? { id, kind, result: parsePlanWorkbook(sheets, name) } : { id, kind, result: parseSettings(sheets) };
+      (self as unknown as Worker).postMessage(response);
       return;
     }
     if (kind === 'bom') {

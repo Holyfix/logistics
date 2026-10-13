@@ -45,6 +45,8 @@ const state: DataState = {
     coverage: [],
     stock: { path: 'Stock_1.csv', lastModified: 0, data: stock.value },
     boms: [{ path: 'BOM/MBOM_P1.xlsx', lastModified: 0, data: bom.value }],
+    plans: [],
+    planSettings: null,
     failed: [],
     loadedAt: 0,
   },

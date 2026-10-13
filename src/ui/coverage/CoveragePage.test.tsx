@@ -34,7 +34,7 @@ const state: DataState = {
   folderName: 'data',
   progress: null,
   error: '',
-  data: { folderName: 'data', exports: [], master: { path: 'Item_Mapping.csv', data: master.value }, coverage: [source], stock: null, boms: [], failed: [], loadedAt: 0 },
+  data: { folderName: 'data', exports: [], master: { path: 'Item_Mapping.csv', data: master.value }, coverage: [source], stock: null, boms: [], plans: [], planSettings: null, failed: [], loadedAt: 0 },
 };
 
 function renderWith(node: React.ReactNode, initial: DataState = state) {

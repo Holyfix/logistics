@@ -5,9 +5,13 @@ import {
   permissionOf,
   pickDirectory,
   requestPermission,
+  requestWrite,
   storedDirectory,
+  writeFile,
   type FolderSource,
+  type SaveResult,
 } from '../../platform/folder';
+import { downloadBlob } from '../../platform/download';
 import { loadFolder, type LoadedData, type LoadProgress } from '../../platform/loader';
 
 export type DataStatus = 'checking' | 'noFolder' | 'needsPermission' | 'loading' | 'ready' | 'error';
@@ -26,6 +30,13 @@ interface DataContextValue {
   chooseFiles: (files: FileList) => Promise<void>;
   grantPermission: () => Promise<void>;
   reload: () => Promise<void>;
+  /**
+   * Uloží soubor do vybrané složky (cesta relativně ke složce). Bez přístupu ke složce (jiný prohlížeč) se soubor
+   * stáhne. `expected` = čas změny souboru při načtení (null = nový soubor), `force` = přepsat i změněný soubor.
+   */
+  saveFile: (path: string, build: () => Promise<Blob>, expected: number | null, force?: boolean) => Promise<SaveResult>;
+  /** Změní načtená data bez nového načtení složky (např. po uložení plánu). */
+  updateData: (update: (data: LoadedData) => LoadedData) => void;
   rememberFolder: boolean;
 }
 
@@ -94,9 +105,24 @@ export function DataProvider({ children, initial }: { children: ReactNode; initi
     if (source.current) await load(source.current);
   }, [load]);
 
+  const saveFile = useCallback(async (path: string, build: () => Promise<Blob>, expected: number | null, force = false): Promise<SaveResult> => {
+    const current = source.current;
+    if (current?.kind !== 'handle') {
+      downloadBlob(path.split('/').pop()!, await build());
+      return { status: 'downloaded' };
+    }
+    // Oprávnění se musí vyžádat hned po kliknutí, dřív než se soubor sestaví.
+    if (!(await requestWrite(current.handle))) return { status: 'denied' };
+    return writeFile(current.handle, path, await build(), expected, force);
+  }, []);
+
+  const updateData = useCallback((update: (data: LoadedData) => LoadedData) => {
+    setState((s) => (s.data ? { ...s, data: update(s.data) } : s));
+  }, []);
+
   const value = useMemo(
-    () => ({ state, chooseFolder, chooseFiles, grantPermission, reload, rememberFolder }),
-    [state, chooseFolder, chooseFiles, grantPermission, reload, rememberFolder],
+    () => ({ state, chooseFolder, chooseFiles, grantPermission, reload, saveFile, updateData, rememberFolder }),
+    [state, chooseFolder, chooseFiles, grantPermission, reload, saveFile, updateData, rememberFolder],
   );
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
 }

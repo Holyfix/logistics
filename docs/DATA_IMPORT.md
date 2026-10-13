@@ -13,6 +13,7 @@ Soubory se rozpoznají podle názvu (nezáleží na velikosti písmen ani diakri
 | Pokrytí od zákazníka (Coverage) | leží ve složce `Coverage` (i v podsložkách) | XLSX / XLSM |
 | Náš sklad (Stock) | název začíná „Stock“ / „Sklad“, nebo leží ve složce `Stock` / `Sklad` | CSV nebo XLSX |
 | Kusovník (BOM) | název začíná „MBOM“ / „BOM“ / „Kusovník“, nebo leží ve složce `BOM` / `Kusovník` | XLSX nebo CSV |
+| Plánování: kapacity a plány linek | leží ve složce `Plan` (nebo `Plán`); `Kapacity.xlsx` = kapacity, ostatní = plány | XLSX (zapisuje aplikace) |
 
 Doporučená struktura (složka se v aplikaci vybírá celá, podsložky se prohledají):
 
@@ -24,7 +25,7 @@ Logistics/
 ├── Stock_13.10.2026.csv  náš sklad (celý sklad po lokacích; Coverage, později Komponenty, Zásoby)
 ├── BOM/                  kusovníky z ERP (MBOM_<výrobek>.xlsx) pro modul Komponenty
 ├── Objednávky/           později: Příjem (otevřené nákupní objednávky)
-├── Výroba/               později: Plánování (plnění plánu a prostoje)
+├── Plan/                 Plánování: Kapacity.xlsx a plány linek (ASSEMBLY_<projekt>.xlsx), zapisuje aplikace
 └── Obaly/                později: Obaly
 ```
 
@@ -78,6 +79,7 @@ Tabulku udržuje uživatel. Jeden řádek = jeden díl. V Excelu na prvním list
 | Safety Stock, Safety Time | Pojistná zásoba, Pojistná doba | ne |
 | Order Multiple | Balení, Kusů v balení | ne |
 | Component Coverage | Coverage Component, Komponenta | ne; „Ano“ (nebo Y, X, 1) = komponenta se sleduje v modulu Komponenty |
+| Line | Linka, Výrobní linka | ne; linka, na které se díl vyrábí: `ASSEMBLY`, `FOA`, `SLH`, `IMM` (přijme i Montáž, Assy, Foaming, Slush, Vstřikování) |
 
 Další sloupce (např. Yield Percent, Cost Total) aplikace ignoruje.
 
@@ -169,7 +171,32 @@ když je hotový díl ve víc souborech, použije se nejnovější soubor.
   potřebu za 7 dní a jako poslední řádek součet; řídí se filtry nad pokrytím komponent.
 - Bez otevřených nákupních objednávek a bez doby výroby.
 
+## Plánování (složka Plan)
+
+Na rozdíl od ostatních dat soubory plánování **vytváří aplikace** tlačítkem Uložit v modulu Plánování.
+Zapisují se do složky `Plan` ve vybrané sdílené složce (při prvním uložení prohlížeč požádá o povolení zápisu).
+V prohlížeči bez přístupu ke složce se soubor stáhne a uloží se ručně.
+
+| Soubor | Obsah |
+|---|---|
+| `Plan/Kapacity.xlsx` | list **Linky** (Linka, Projekt, Ks za směnu, Směny po–pá, např. `R O N`), list **Destinace** (Destinace, Pokrytí u zákazníka (dny), Transit (h), Příjezd; prázdná destinace = ostatní), list **Směny** (Ranní směna od) |
+| `Plan/<linka>_<projekt>.xlsx`, např. `ASSEMBLY_P100.xlsx` | list **Plán** (Linka, Projekt, Datum, Směna, Pořadí, Strana, Díl, Číslo zákazníka, Popis, Množství; jeden řádek = díl na směně v pořadí výroby), list **Přehled** (díly × směny, jen pro čtení), list **Kapacita směn** (ručně zadané kapacity směn) |
+
+- Jeden soubor na linku a projekt: každou linku plánuje jeden člověk, takže se zápisy nepotkají.
+  Když soubor mezitím změnil někdo jiný, aplikace se před přepsáním zeptá.
+- **Díly montáže:** podle sloupce Line = `ASSEMBLY` v mapování. Bez sloupce díly ze souborů coverage
+  a díly z mapování s projektem a stranou. Projekt z mapování, jinak ze složky souboru coverage.
+- **Potřeba:** stejná jako v Komponentách (chybějící množství u sekvencéra podle jeho souboru, dál odvolávky).
+  **Termín výroby** = odjezd auta: příjezd k zákazníkovi v den (den potřeby − pokrytí + 1) v čase příjezdu,
+  minus transit. Příklad: potřeba 15. 10., pokrytí 2 dny, transit 24 h, příjezd 6:00 → příjezd 14. 10. 6:00 →
+  vyrobit a odeslat do 13. 10. 6:00.
+- **Směny:** R, O, N po 8 hodinách od začátku ranní směny; kapacita linky platí v pracovní dny pro vybrané směny,
+  víkendy, svátky a přesčasy se zadávají v plánu (řádek Kapacita směny).
+- **Návrh plánu:** potřeba s jedním termínem se rozloží rovnoměrně do směn mezi předchozím a tímto termínem,
+  co se nevejde, jde do dřívějších směn, co se nestihne, co nejdřív po termínu. Díly jdou na směně po stranách
+  (LHD a RHD v blocích, nikdy zároveň) a nedělí se na dávky menší než půl směny. Směny, které už začaly, se nemění.
+
 ## Testovací data
 
-`sample-data/` obsahuje smyšlené exporty, mapování, soubory coverage, sklad a kusovník ve stejném formátu
+`sample-data/` obsahuje smyšlené exporty, mapování, soubory coverage, sklad, kusovník a kapacity plánování ve stejném formátu
 (`node scripts/generate-sample-data.mjs`). Skutečné exporty do repozitáře nepatří.

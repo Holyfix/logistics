@@ -44,7 +44,7 @@ funkce (plánování).
 - [x] Mezipaměť v prohlížeči, zpracují se jen nové soubory
 - [x] Modul Data: stav exportů, chyby v datech, šablona kmenových dat
 - [x] Kmenová data dílů (zákazník, projekt, strana LHD/RHD) z Excelu nebo CSV
-- [ ] Zápis záznamů do sdílené složky (ADR 0003): odloženo, až bude potřeba (Obaly)
+- [x] Zápis do sdílené složky (ADR 0003): plány a kapacity v modulu Plánování; záznamy pro Obaly později
 
 ### Fáze 3: Call-offs (hotovo)
 - [x] Aktuální odvolávky po týdnech a dnech, změny proti předchozímu exportu, export Excel/CSV
@@ -62,7 +62,13 @@ funkce (plánování).
 - [ ] Komponenty: otevřené nákupní objednávky
 ### Fáze 5: Obaly
 ### Fáze 6: Dashboard
-### Fáze 7: Plánování (plnění plánu a prostoje)
+### Fáze 7: Plánování (probíhá)
+- [x] Modul s kartami Přehled, ASSEMBLY, FOA, SLH, IMM, Kapacity; linka dílu ve sloupci Line v mapování
+- [x] Kapacity linek, směny a doprava k zákazníkovi (Plan/Kapacity.xlsx)
+- [x] Plán montáže po směnách: termín výroby podle pokrytí a transitu, návrh plánu, pořadí stran, uložení do Excelu
+- [ ] FOA, SLH: potřeba z plánu montáže přes kusovník
+- [ ] IMM: formy, kavity, přestavby
+- [ ] Plán vs. skutečnost a prostoje (exporty z MES)
 ### Fáze 8: KPI
 ### Fáze 9: Příjem a Zásoby
 
@@ -72,7 +78,7 @@ Obsah modulů je v [MODULES.md](MODULES.md).
 - Expedice a dodávky (OTD outbound), Dodavatelé (OTD inbound). Dnes se sledují v jiné aplikaci.
 - Akční plán (upřesní se)
 - Mimořádné přepravy, Reporty
-- E-mailová upozornění, aktivní plánování s Ganttovým diagramem (vyžadují server)
+- E-mailová upozornění, společná editace plánu v reálném čase (vyžadují server)
 
 ## Otevřené otázky
 
