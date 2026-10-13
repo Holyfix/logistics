@@ -12,7 +12,7 @@ export function localToday(): DayNumber {
 }
 
 /** Pokrytí komponent z načtených dat; null, když není načtený žádný kusovník. */
-export function useComponents(today: DayNumber): ComponentTable | null {
+export function useComponents(today: DayNumber, netOwnStock = true): ComponentTable | null {
   const { state } = useData();
   const data = state.data;
   return useMemo(() => {
@@ -24,6 +24,7 @@ export function useComponents(today: DayNumber): ComponentTable | null {
       callOffs: data.exports.at(-1),
       stock: data.stock ? stockByItem(data.stock.data) : undefined,
       today,
+      netOwnStock,
     });
-  }, [data, today]);
+  }, [data, today, netOwnStock]);
 }

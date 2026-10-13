@@ -1,4 +1,5 @@
-// Pokrytí komponent přes kusovník: poptávka hotových dílů × kusovník, odečtená od našeho skladu.
+// Pokrytí komponent pro zákazníka: chybějící množství u zákazníka (sklad + transit u sekvencéra, dál odvolávky),
+// které nepokryje náš sklad hotových dílů a mezivýroby, × kusovník, odečtené od našeho skladu komponent.
 
 import type { BomData, BomNode } from '../bom';
 import type { CallOffExport } from '../calloffs/parse';
@@ -12,20 +13,23 @@ export const COMPONENT_DAYS = 14;
 /** Komponenty v záporu „brzy“: dnes nebo zítra (modul i rozcestník). */
 export const COMPONENT_SOON_DAYS = 2;
 
-/** Poptávka hotového dílu po dnech horizontu (z odvolávek). */
+/** Hotový díl po dnech horizontu. */
 export interface ProductDemand {
   item: string;
   description: string;
   project: string;
-  qty: number[];
+  /** Odvolávky zákazníka (pro srovnání). */
+  callOffs: number[];
   /**
-   * Požadavek na nás pro „Zákazník pokryt do“: ve dnech souboru sekvencéra chybějící množství podle jeho souboru
-   * (stav se skladem a transitem), za koncem souboru odvolávky po spotřebování zbytku skladu u sekvencéru.
-   * Bez souboru sekvencéra stejné jako odvolávky.
+   * Potřeba zákazníka na nás: ve dnech souboru sekvencéra přírůstek chybějícího množství podle jeho souboru
+   * (sklad + transit − plán zákazníka), za koncem souboru odvolávky po spotřebování zbytku u sekvencéra.
+   * Bez souboru sekvencéra odvolávky.
    */
-  netQty: number[];
+  need: number[];
   /** Den je ze souboru sekvencéra (fixní plán), jinak z odvolávek. */
   fixed: boolean[];
+  /** Potřeba výroby: potřeba zákazníka, kterou nepokryje náš sklad hotového dílu (bez odečtu skladu = potřeba). */
+  production: number[];
 }
 
 export interface ComponentLine {
@@ -36,23 +40,16 @@ export interface ComponentLine {
   source: string;
   /** Náš sklad; null, když soubor skladu není načtený. */
   stock: number | null;
-  /** Spotřeba po dnech horizontu. */
+  /** Potřeba komponenty po dnech: potřeba výroby hotových dílů × kusovník (po odečtu mezivýroby). */
   usage: number[];
-  /** Stav na konci dne: sklad − kumulovaná spotřeba (bez skladu od 0). */
+  /** Stav na konci dne: sklad − kumulovaná potřeba (bez skladu od 0). Záporné = kolik chybí na pokrytí zákazníka. */
   balance: number[];
   /** Index prvního dne v záporu; null, když vystačí na celý horizont. */
   shortDay: number | null;
-  /** Průměrná spotřeba za den výroby (pracovní dny po–pá v horizontu). */
+  /** Průměrná spotřeba za den výroby podle odvolávek (pracovní dny po–pá v horizontu). */
   avgDaily: number;
-  /** Na kolik dní výroby stačí samotná komponenta (sklad ÷ průměrná spotřeba); null bez spotřeby. */
+  /** Zásoba komponenty ve dnech výroby (sklad ÷ průměrná spotřeba); null bez spotřeby. */
   productionDays: number | null;
-  /**
-   * Index prvního dne, kdy kvůli komponentě nejsou pokryté odvolávky, když se nejdřív spotřebují hotové díly
-   * a mezivýroba na skladě (výpočet jako MRP). null = pokryto na celý horizont nebo nejde určit (díl se vyrábí).
-   */
-  customerShortDay: number | null;
-  /** Pokrytí zákazníka jde u dílu určit (nakupuje se nebo pod ním v kusovníku nic není). */
-  customerKnown: boolean;
   /** Hotové díly, ve kterých je komponenta. */
   products: string[];
   projects: string[];
@@ -81,34 +78,47 @@ function callOffDemand(exp: CallOffExport | undefined): Map<string, Map<DayNumbe
 }
 
 /**
- * Čistý rozpad jako v MRP, den po dni: poptávka hotového dílu se nejdřív kryje ze skladu hotových dílů, zbytek se
- * rozpadne na komponenty; vyráběné díly (mezivýroba) se kryjí ze svého skladu a teprve zbytek jde o úroveň níž.
- * Vrátí první den, kdy nakupovanému dílu (nebo dílu bez dalšího rozpadu) chybí zásoba. Bez průběžné doby výroby.
+ * Rozpad potřeby zákazníka den po dni jako v MRP (bez doby výroby): potřeba hotového dílu se nejdřív kryje z našeho
+ * skladu hotových dílů, zbytek je potřeba výroby; ta se rozpadne podle kusovníku, vyráběné díly (mezivýroba) se kryjí
+ * ze svého skladu a teprve zbytek jde o úroveň níž. Nakupované díly se nerozpadají. Bez odečtu skladu (`netOwnStock`)
+ * se sklad hotových dílů a mezivýroby nepoužije. Vrátí potřebu výroby hotových dílů a potřebu sledovaných dílů po dnech.
  */
-function customerShortDays(bom: BomData, products: readonly ProductDemand[], stock: ReadonlyMap<string, number> | undefined): Map<string, number> {
-  const left = new Map(stock ?? []);
-  const first = new Map<string, number>();
-  const consume = (item: string, qty: number, children: readonly BomNode[], day: number) => {
-    const have = Math.max(0, left.get(item) ?? 0);
-    const used = Math.min(have, qty);
-    left.set(item, (left.get(item) ?? 0) - used);
-    const rest = qty - used;
-    if (rest <= 1e-9) return;
-    if (children.length > 0 && bom.info.get(item)?.source !== 'P') {
-      for (const child of children) consume(child.item, rest * child.qty, child.children, day);
-    } else {
-      left.set(item, (left.get(item) ?? 0) - rest);
-      if (!first.has(item)) first.set(item, day);
-    }
+function explode(
+  bom: BomData,
+  products: readonly ProductDemand[],
+  stock: ReadonlyMap<string, number> | undefined,
+  netOwnStock: boolean,
+  tracked: ReadonlySet<string>,
+): Map<string, number[]> {
+  const days = products[0]?.need.length ?? 0;
+  const left = new Map(netOwnStock ? (stock ?? []) : []);
+  const usage = new Map<string, number[]>();
+  const record = (item: string, qty: number, day: number) => {
+    let u = usage.get(item);
+    if (!u) usage.set(item, (u = Array.from({ length: days }, () => 0)));
+    u[day]! += qty;
   };
-  const days = products[0]?.qty.length ?? 0;
+  const fromStock = (item: string, qty: number) => {
+    const used = Math.min(Math.max(0, left.get(item) ?? 0), qty);
+    if (used > 0) left.set(item, left.get(item)! - used);
+    return qty - used;
+  };
+  const consume = (item: string, qty: number, children: readonly BomNode[], day: number) => {
+    if (tracked.has(item)) record(item, qty, day);
+    if (children.length === 0 || bom.info.get(item)?.source === 'P') return;
+    const rest = fromStock(item, qty);
+    if (rest > 1e-9) for (const child of children) consume(child.item, rest * child.qty, child.children, day);
+  };
   for (let day = 0; day < days; day++) {
     for (const product of products) {
-      const q = product.netQty[day]!;
-      if (q > 0) consume(product.item, q, bom.trees.get(product.item) ?? [], day);
+      const q = product.need[day]!;
+      if (q <= 0) continue;
+      const rest = fromStock(product.item, q);
+      product.production[day] = rest;
+      if (rest > 1e-9) for (const child of bom.trees.get(product.item) ?? []) consume(child.item, rest * child.qty, child.children, day);
     }
   }
-  return first;
+  return usage;
 }
 
 /** Stav u sekvencéru se skladem a transitem po dnech jeho souboru, po našich číslech hotových dílů (přes mapování). */
@@ -155,71 +165,77 @@ function sequencerPlans(sources: readonly CoverageSource[], master: MasterData |
  * Chybějící množství ze dnů před dneškem patří do dneška. Za koncem souboru se odvolávky kryjí nejdřív zbytkem
  * u sekvencéru (stav posledního dne + to, co jsme měli dodat), zbytek je požadavek na nás.
  */
-function netRequirement(qty: readonly number[], days: readonly DayNumber[], plan: SequencerPlan | undefined): { netQty: number[]; fixed: boolean[] } {
-  if (!plan) return { netQty: [...qty], fixed: qty.map(() => false) };
+function customerNeed(qty: readonly number[], days: readonly DayNumber[], plan: SequencerPlan | undefined): { need: number[]; fixed: boolean[] } {
+  if (!plan) return { need: [...qty], fixed: qty.map(() => false) };
   let required = 0;
   for (const d of plan.fileDays) if (d < days[0]!) required = Math.max(required, -plan.balance(d));
   let counted = 0;
   let leftover: number | null = null;
-  const netQty: number[] = [];
+  const need: number[] = [];
   const fixed: boolean[] = [];
   days.forEach((d, k) => {
     if (d <= plan.last) {
       required = Math.max(required, -plan.balance(d));
-      netQty.push(required - counted);
+      need.push(required - counted);
       counted = required;
       fixed.push(true);
     } else {
       leftover ??= Math.max(0, plan.balance(plan.last) + required);
       const fromSequencer = Math.min(leftover, qty[k]!);
       leftover -= fromSequencer;
-      netQty.push(qty[k]! - fromSequencer);
+      need.push(qty[k]! - fromSequencer);
       fixed.push(false);
     }
   });
-  return { netQty, fixed };
+  return { need, fixed };
 }
 
 export interface ComponentInputs {
   bom: BomData;
   master: MasterData | undefined;
-  /** Soubory pokrytí od sekvencéru: fixní požadavek (chybějící množství) pro „Zákazník pokryt do“. */
+  /** Soubory pokrytí od sekvencéra: sklad + transit a plán zákazníka (chybějící množství je potřeba na nás). */
   coverage?: readonly CoverageSource[];
   /** Nejnovější export odvolávek. */
   callOffs: CallOffExport | undefined;
   /** Náš sklad po dílech (velkými písmeny); undefined, když soubor skladu není načtený. */
   stock: ReadonlyMap<string, number> | undefined;
   today: DayNumber;
+  /** Odečíst náš sklad hotových dílů a mezivýroby (výchozí ano). */
+  netOwnStock?: boolean;
 }
 
 /**
- * Poptávka hotového dílu na den z nejnovějšího exportu odvolávek. Soubory pokrytí od zákazníka se nepoužívají:
- * ukazují jen stav na konci dne a spotřebu prvního dne z nich nejde spolehlivě určit.
- * Spotřeba komponenty = poptávka hotových dílů × množství z kusovníku (hrubý rozpad, zásoba mezivýrob se neodečítá).
+ * Pokrytí komponent pro zákazníka. Potřeba hotového dílu na den = chybějící množství u zákazníka podle souboru
+ * sekvencéra (sklad + transit − plán zákazníka), za koncem souboru a u dílů bez souboru odvolávky. Odečte se náš sklad
+ * hotových dílů a mezivýroby, zbytek × kusovník je potřeba komponenty; stav = náš sklad komponenty − kumulovaná potřeba.
  */
-export function buildComponents({ bom, master, coverage = [], callOffs, stock, today }: ComponentInputs): ComponentTable {
+export function buildComponents({ bom, master, coverage = [], callOffs, stock, today, netOwnStock = true }: ComponentInputs): ComponentTable {
   const days = Array.from({ length: COMPONENT_DAYS }, (_, k) => today + k);
   const calls = callOffDemand(callOffs);
   const plans = sequencerPlans(coverage, master);
   const masterByItem = new Map([...(master?.items.values() ?? [])].map((m) => [m.item.toUpperCase(), m]));
 
   const products: ProductDemand[] = [...bom.parents.keys()].sort().map((item) => {
-    const qty = days.map((d) => calls.get(item)?.get(d) ?? 0);
+    const callOffQty = days.map((d) => calls.get(item)?.get(d) ?? 0);
     const m = masterByItem.get(item);
     return {
       item,
       description: m?.description || bom.info.get(item)?.description || '',
       project: m?.project ?? '',
-      qty,
-      ...netRequirement(qty, days, plans.get(item)),
+      callOffs: callOffQty,
+      ...customerNeed(callOffQty, days, plans.get(item)),
+      production: days.map(() => 0),
     };
   });
 
   const byMapping = master?.hasComponentColumn ?? false;
   const wanted = (item: string) => (byMapping ? masterByItem.get(item)?.componentCoverage === true : bom.info.get(item)?.source === 'P');
 
+  // Dny výroby: pracovní dny po–pá v horizontu (o víkendu odvolávky nebývají).
+  const workDays = days.filter((d) => weekday(d) <= 5).length || 1;
   const lines = new Map<string, ComponentLine>();
   for (const product of products) {
+    const callOffTotal = product.callOffs.reduce((a, b) => a + b, 0);
     for (const component of bom.parents.get(product.item) ?? []) {
       if (!wanted(component.item)) continue;
       let line = lines.get(component.item);
@@ -236,39 +252,25 @@ export function buildComponents({ bom, master, coverage = [], callOffs, stock, t
           shortDay: null,
           avgDaily: 0,
           productionDays: null,
-          customerShortDay: null,
-          customerKnown: false,
           products: [],
           projects: [],
         };
         lines.set(component.item, line);
       }
-      product.qty.forEach((q, k) => (line.usage[k]! += q * component.qty));
+      line.avgDaily += (callOffTotal * component.qty) / workDays;
       line.products.push(product.item);
       if (product.project && !line.projects.includes(product.project)) line.projects.push(product.project);
     }
   }
 
-  // Dny výroby: pracovní dny po–pá v horizontu (o víkendu odvolávky nebývají).
-  const workDays = days.filter((d) => weekday(d) <= 5).length || 1;
-  const netShort = customerShortDays(bom, products, stock);
-  const madeWithParts = new Set<string>();
-  const walk = (nodes: readonly BomNode[]) => {
-    for (const n of nodes) {
-      if (n.children.length > 0) madeWithParts.add(n.item);
-      walk(n.children);
-    }
-  };
-  for (const tree of bom.trees.values()) walk(tree);
+  const usage = explode(bom, products, stock, netOwnStock, new Set(lines.keys()));
   for (const line of lines.values()) {
+    line.usage = usage.get(line.item) ?? days.map(() => 0);
     let left = line.stock ?? 0;
     line.balance = line.usage.map((u) => (left -= u));
     const k = line.balance.findIndex((v) => v < -1e-9);
     line.shortDay = k === -1 ? null : k;
-    line.avgDaily = line.usage.reduce((a, b) => a + b, 0) / workDays;
     line.productionDays = line.avgDaily > 0 ? Math.max(0, line.stock ?? 0) / line.avgDaily : null;
-    line.customerKnown = line.source === 'P' || !madeWithParts.has(line.item);
-    line.customerShortDay = line.customerKnown ? (netShort.get(line.item) ?? null) : null;
     line.projects.sort();
   }
 

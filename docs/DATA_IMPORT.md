@@ -148,28 +148,25 @@ když je hotový díl ve víc souborech, použije se nejnovější soubor.
   Rozpad je hrubý: zásoba mezivýrob se neodečítá. „Start Eff“ se nepoužívá.
 - **Které komponenty se zobrazí:** ty, které mají v Item Mappingu ve sloupci „Component Coverage“ hodnotu „Ano“.
   Když sloupec v mappingu není, zobrazí se všechny nakupované komponenty (P). Mezivýroby tak lze vynechat.
-- **Horizont** je 14 dní od dneška.
-- **Poptávka hotového dílu na den** je z nejnovějšího exportu odvolávek (požadované množství na den, od dneška).
-  Soubory pokrytí od zákazníka se pro komponenty nepoužívají: ukazují jen stav na konci dne, takže spotřebu
-  prvního dne z nich nejde spolehlivě určit. Nedodáno po termínu (backlog) se nepřičítá.
-- **Spotřeba komponenty** = poptávka hotových dílů × množství z kusovníku; **stav** = náš sklad (stejné lokace jako v Coverage)
-  − kumulovaná spotřeba. Komponenta je v záporu ode dne, kdy stav klesne pod nulu.
-- **Spotřeba 7 dní** = spotřeba komponenty za prvních 7 dní horizontu.
-- **Vystačí** = na kolik dní výroby stačí samotná komponenta (sklad ÷ průměrná spotřeba za pracovní den po–pá
-  v horizontu) a od kterého dne chybí.
-  Hotové díly ani mezivýroba se tu neodečítají: je to údaj pro řízení komponent.
-- **Zákazník pokryt do** (informace) = poslední pracovní den, kdy zákazníka pokryjeme. Požadavek na nás po dnech:
-  - ve dnech, které pokrývá soubor sekvencéra (Coverage), je to **chybějící množství podle jeho souboru**
-    (stav = sklad + transit − kumulovaná spotřeba podle plánu zákazníka; záporný stav = kolik od nás musí přijít).
-    Když se stav později zlepší (dorazí transit), požadavek se nesnižuje; chybějící množství ze dnů před dneškem patří do dneška;
-  - za koncem souboru odvolávky, které nejdřív pokryje zbytek u sekvencéru (stav posledního dne + to, co jsme měli dodat);
+- **Horizont** je 14 dní od dneška. Pokrytí komponent se počítá **pro zákazníka**: kolik komponenty potřebujeme,
+  aby zákazník nenarazil.
+- **Potřeba zákazníka na nás** (po hotových dílech a dnech):
+  - ve dnech, které pokrývá soubor sekvencéra (Coverage), je to **chybějící množství podle jeho souboru**: stav =
+    sklad + transit − kumulovaná spotřeba podle plánu zákazníka; dokud je stav ≥ 0, zákazník je pokrytý, záporný stav
+    je kumulovaně to, co od nás musí přijít. Potřeba dne je přírůstek chybějícího množství; když se stav později zlepší
+    (dorazí transit), potřeba se nesnižuje. Chybějící množství ze dnů před dneškem patří do dneška;
+  - za koncem souboru odvolávky, které nejdřív pokryje zbytek u sekvencéra (stav posledního dne + to, co jsme měli dodat);
   - u hotového dílu bez souboru sekvencéra odvolávky.
-
-  Požadavek se jako v MRP den po dni kryje z našich hotových dílů, pak z mezivýroby (úroveň po úrovni) a teprve potom
-  z komponenty. Bez doby výroby a bez otevřených objednávek. U vyráběného dílu, pod kterým jsou v kusovníku další díly,
-  se neurčuje („—“).
-- Den „Zákazník pokryt do“ je ve stavu po dnech označený rámečkem.
-- Tabulka **Poptávka hotových dílů** má jako poslední řádek součet jednotlivých dnů (podle filtru).
+- **Potřeba výroby** = potřeba zákazníka, kterou nepokryje náš sklad hotových dílů. Rozpadne se podle kusovníku;
+  mezivýroba se nejdřív kryje ze svého skladu a teprve zbytek jde o úroveň níž (jako MRP, den po dni, bez doby výroby).
+  Přepínačem „Odečíst náš sklad hotových dílů a mezivýroby“ jde odečet vypnout.
+- **Stav komponenty** po dnech = náš sklad komponenty − kumulovaná potřeba; záporné číslo = kolik kusů komponenty chybí,
+  aby byl zákazník ten den pokrytý. **Pokryto do** = poslední pracovní den se stavem ≥ 0.
+- **Potřeba 7 dní** = potřeba komponenty za prvních 7 dní. **Zásoba (dní výroby)** = sklad komponenty ÷ průměrná
+  denní spotřeba podle odvolávek (pracovní dny po–pá): jak dlouho komponenta vydrží, jakmile se začne vyrábět.
+- Tabulka **Potřeba výroby hotových dílů** ukazuje potřebu výroby po dnech (dny ze souboru sekvencéra jsou podbarvené),
+  pro srovnání odvolávky za 14 dní a jako poslední řádek součet; řídí se filtry nad pokrytím komponent.
+- Bez otevřených nákupních objednávek a bez doby výroby.
 
 ## Testovací data
 

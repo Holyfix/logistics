@@ -68,17 +68,12 @@ describe('ComponentsPage', () => {
   it('pokrytí označených komponent ze skladu a odvolávek přes kusovník', () => {
     renderWith(<ComponentsPage today={day(13)} />);
     const [clip, resin] = rows(0);
-    // spona: sklad 30, spotřeba 10, 10, 20 → 20, 10, −10
-    // spotřeba za 7 dní 40, za 10 dní výroby (po–pá) Ø 4 → sklad 30 vystačí na 7,5 dne výroby; zákazník pokryt do středy
-    expect(cells(clip!).slice(0, 8)).toEqual(['CLIP-1', 'CLIP', 'EA', 'nákup', '30', '40', '7,5 dne výrobychybí od Čt 15. 10.', 'St 14. 10.']);
-    expect(cells(clip!).slice(8, 11)).toEqual(['20', '10', '-10']);
-    expect(clip!.querySelectorAll('td')[10]!.className).toContain('cell-negative');
-    // den „Zákazník pokryt do“ je v řádku označený
-    expect(clip!.querySelectorAll('td')[9]!.className).toContain('cell-customer');
-    expect(clip!.querySelectorAll('td.cell-customer')).toHaveLength(1);
+    // spona: sklad 30, potřeba 10, 10, 20 → 20, 10, −10; pokryto do středy; zásoba 30 ÷ (40 za 10 dní výroby) = 7,5
+    expect(cells(clip!).slice(0, 7)).toEqual(['CLIP-1', 'CLIP', 'EA', 'nákup', '30', '40', 'St 14. 10.zásoba 7,5 dne výroby']);
+    expect(cells(clip!).slice(7, 10)).toEqual(['20', '10', '-10']);
+    expect(clip!.querySelectorAll('td')[9]!.className).toContain('cell-negative');
     // pryskyřice v kg na desetinná místa
-    expect(cells(resin!).slice(4, 11)).toEqual(['100', '5', '200,0 dne výrobycelý horizont', 'celý horizont', '98,75', '97,5', '95']);
-    expect(resin!.querySelectorAll('td.cell-customer')).toHaveLength(0);
+    expect(cells(resin!).slice(4, 10)).toEqual(['100', '5', 'celý horizontzásoba 200,0 dne výroby', '98,75', '97,5', '95']);
     // mezivýroba bez označení se nezobrazí
     expect(screen.queryByText('SUB-1')).toBeNull();
     // pořadí ukazatelů: v záporu do 2 dnů, v záporu do 14 dní, …
@@ -86,14 +81,26 @@ describe('ComponentsPage', () => {
     expect(kpis.slice(0, 2)).toEqual(['V záporu do 2 dnů=0', 'V záporu do 14 dní=1']);
   });
 
-  it('poptávka hotových dílů z odvolávek', () => {
+  it('potřeba výroby hotových dílů (bez souboru sekvencéra z odvolávek)', () => {
     renderWith(<ComponentsPage today={day(13)} />);
     const [fg] = rows(1);
-    expect(cells(fg!).slice(0, 7)).toEqual(['FG-1', 'PANEL LHD', 'P1', '20', '5', '5', '10']);
+    expect(cells(fg!).slice(0, 8)).toEqual(['FG-1', 'PANEL LHD', 'P1', '20', '20', '5', '5', '10']);
+    expect(fg!.querySelectorAll('td.cell-fixed')).toHaveLength(0);
     // součet dnů jako poslední řádek
     const total = screen.getAllByRole('table')[1]!.querySelector('tfoot tr')!;
-    expect(cells(total).slice(0, 7)).toEqual(['Celkem', '', '', '20', '5', '5', '10']);
+    expect(cells(total).slice(0, 8)).toEqual(['Celkem', '', '', '20', '20', '5', '5', '10']);
     expect(document.querySelector('.source-info')!.textContent).toContain('odvolávky CW 42/2026');
+  });
+
+  it('náš sklad hotových dílů se odečte; přepínačem jde vypnout', () => {
+    const withFg = parseStock(parseCsv('Item Number;Location;Zone ID;Qty On Hand - Inv Detail\nCLIP-1;A-01;PURCH;30\nRESIN;B-01;PURCH;100\nFG-1;F-01;SALE;5'));
+    if (!withFg.ok) throw new Error();
+    renderWith(<ComponentsPage today={day(13)} />, { ...state, data: { ...state.data!, stock: { path: 'Stock_1.csv', lastModified: 0, data: withFg.value } } });
+    // 5 ks FG-1 pokryje první den → výroba 0, 5, 10 → spona 30, 20, 0
+    expect(cells(rows(1)[0]!).slice(5, 8)).toEqual(['0', '5', '10']);
+    expect(cells(rows(0).find((r) => cells(r)[0] === 'CLIP-1')!).slice(7, 10)).toEqual(['30', '20', '0']);
+    fireEvent.click(screen.getByLabelText('Odečíst náš sklad hotových dílů a mezivýroby'));
+    expect(cells(rows(0).find((r) => cells(r)[0] === 'CLIP-1')!).slice(7, 10)).toEqual(['20', '10', '-10']);
   });
 
   it('poptávka hotových dílů se řídí filtrem komponent', () => {
