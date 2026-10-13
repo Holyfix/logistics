@@ -5,20 +5,18 @@ import { parseCallOffExport, type CallOffExport, type ParseResult } from '../cor
 import { parseCoverageWorkbook, type CoverageResult } from '../core/coverage/parse';
 import { parseCsv } from '../core/csv';
 import { parseMasterData, type MasterResult } from '../core/masterdata';
-import { parseSettings, type Settings } from '../core/settings';
 import { parseStock, type StockResult } from '../core/stock';
 import { decodeText } from '../core/text';
 import type { SourceFormat } from '../core/sources';
 import type { Cell, DataTable } from '../core/table';
 
-export type ParseRequest = { id: number; kind: 'calloffs' | 'masterdata' | 'coverage' | 'stock' | 'settings'; format: SourceFormat; name: string; buffer: ArrayBuffer };
+export type ParseRequest = { id: number; kind: 'calloffs' | 'masterdata' | 'coverage' | 'stock'; format: SourceFormat; name: string; buffer: ArrayBuffer };
 
 export type ParseResponse =
   | { id: number; kind: 'calloffs'; result: ParseResult<CallOffExport> }
   | { id: number; kind: 'masterdata'; result: MasterResult }
   | { id: number; kind: 'coverage'; result: CoverageResult }
   | { id: number; kind: 'stock'; result: StockResult }
-  | { id: number; kind: 'settings'; result: Settings }
   | { id: number; kind: 'error'; message: string };
 
 function toTable(data: Cell[][]): DataTable {
@@ -60,8 +58,6 @@ self.onmessage = async (event: MessageEvent<ParseRequest>) => {
         ? [result.value.offsets.buffer, result.value.days.buffer, result.value.qty.buffer, result.value.backlog.buffer, result.value.cumShipped.buffer]
         : [];
       (self as unknown as Worker).postMessage({ id, kind, result } satisfies ParseResponse, transfer);
-    } else if (kind === 'settings') {
-      (self as unknown as Worker).postMessage({ id, kind, result: parseSettings(table) } satisfies ParseResponse);
     } else {
       (self as unknown as Worker).postMessage({ id, kind, result: parseMasterData(table) } satisfies ParseResponse);
     }

@@ -6,7 +6,6 @@ import { dayFromParts } from '../../core/dates';
 import { parseCoverageWorkbook } from '../../core/coverage/parse';
 import { parseCsv } from '../../core/csv';
 import { parseMasterData } from '../../core/masterdata';
-import { parseSettings } from '../../core/settings';
 import { parseStock } from '../../core/stock';
 import type { Cell } from '../../core/table';
 import { I18nProvider } from '../../i18n/I18nProvider';
@@ -35,7 +34,7 @@ const state: DataState = {
   folderName: 'data',
   progress: null,
   error: '',
-  data: { folderName: 'data', exports: [], master: { path: 'Item_Mapping.csv', data: master.value }, coverage: [source], stock: null, settings: null, failed: [], loadedAt: 0 },
+  data: { folderName: 'data', exports: [], master: { path: 'Item_Mapping.csv', data: master.value }, coverage: [source], stock: null, failed: [], loadedAt: 0 },
 };
 
 function renderWith(node: React.ReactNode, initial: DataState = state) {
@@ -137,11 +136,10 @@ describe('CoveragePage', () => {
     expect(screen.queryByLabelText('Přičíst náš sklad')).toBeNull();
     expect(screen.queryByText('Náš sklad')).toBeNull();
     cleanup();
-    // karanténa (LAB) a lokace vyloučená v nastavení se nepočítají
-    const stock = parseStock(parseCsv('Item Number;Location;Zone ID;Qty On Hand - Inv Detail\n900100;A-01;SALE;12\n900100;B-01;PURCH;3\n900100;HOLD;LAB;50\n900100;ext-01;SALE;7'));
+    // karanténa (LAB) a záporná lokace se nepočítají
+    const stock = parseStock(parseCsv('Item Number;Location;Zone ID;Qty On Hand - Inv Detail\n900100;A-01;SALE;12\n900100;B-01;PURCH;3\n900100;HOLD;LAB;50\n900100;L-01;WRKC;-4'));
     if (!stock.ok) throw new Error();
-    const settings = { path: 'Settings.csv', data: parseSettings(parseCsv('Stock excluded locations;EXT-01')) };
-    renderWith(<CoveragePage />, { ...state, data: { ...state.data!, settings, stock: { path: 'Stock_1.csv', lastModified: 0, data: stock.value } } });
+    renderWith(<CoveragePage />, { ...state, data: { ...state.data!, stock: { path: 'Stock_1.csv', lastModified: 0, data: stock.value } } });
     const heads = [...lineTable().querySelectorAll('thead th')].map((h) => h.textContent);
     expect(heads.slice(6, 10)).toEqual(['Sklad zákazníka', 'Transit', 'Náš sklad', 'První nepokryté']);
     const [mapped, unmapped] = bodyRows();
@@ -151,7 +149,7 @@ describe('CoveragePage', () => {
     fireEvent.click(screen.getByLabelText('Přičíst náš sklad'));
     expect(cells(bodyRows()[0]!).slice(-2)).toEqual(['24', '18']);
     expect(document.querySelector('.kpi-note')!.textContent).toBe('dílů v záporu: 0, s transitem, s naším skladem');
-    expect(screen.getByText(/bez vyloučených lokací: EXT-01\./)).toBeTruthy();
+    expect(screen.getByText(/v zónách INCOME, MEZ, PRE, PURCH, SALE, WRKC .* \(žádné\)\./)).toBeTruthy();
   });
 
   it('bez souborů odkáže na Data', () => {

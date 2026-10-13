@@ -56,7 +56,7 @@ funkce (plánování).
 - [x] Coverage: formát Coverage Report Overview, pokrytí po dnech, přičtení transitu, záporné kdykoli / ke dni, souhrn po variantách, export
 - [x] Coverage: formát Articles (stav včetně transitu, transit se odečte)
 - [x] Coverage: formát Bestand (stav bez transitu, jen řádky klienta ze souboru)
-- [x] Coverage: náš sklad ze souboru Stock (zóny příjmu, skladů a výroby, vyloučené lokace v Settings.csv, jedno číslo bez rozdělení balení)
+- [x] Coverage: náš sklad ze souboru Stock (zóny příjmu, skladů a výroby, bez externí lokace se zamontovanými díly, jedno číslo bez rozdělení balení)
 - [ ] Coverage: dodatečný transit z naší expedice
 - [ ] Komponenty
 ### Fáze 5: Obaly

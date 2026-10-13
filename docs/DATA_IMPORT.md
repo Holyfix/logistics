@@ -12,7 +12,6 @@ Soubory se rozpoznají podle názvu (nezáleží na velikosti písmen ani diakri
 | Mapování dílů (kmenová data) | název obsahuje „mapping“ / „kmenová“ / „master“ | XLSX nebo CSV |
 | Pokrytí od zákazníka (Coverage) | leží ve složce `Coverage` (i v podsložkách) | XLSX / XLSM |
 | Náš sklad (Stock) | název začíná „Stock“ / „Sklad“, nebo leží ve složce `Stock` / `Sklad` | CSV nebo XLSX |
-| Nastavení | název začíná „Settings“ / „Nastavení“ | CSV nebo XLSX |
 
 Doporučená struktura (složka se v aplikaci vybírá celá, podsložky se prohledají):
 
@@ -22,7 +21,6 @@ Logistics/
 ├── Call-offs/            týdenní exporty odvolávek (název souboru s týdnem, např. CW42)
 ├── Coverage/<destinace>/<projekt>/   soubory pokrytí od zákazníka
 ├── Stock_13.10.2026.csv  náš sklad (celý sklad po lokacích; Coverage, později Komponenty, Zásoby)
-├── Settings.csv          nastavení (např. lokace, které se nepočítají do skladu)
 ├── Kusovník/             později: Komponenty
 ├── Objednávky/           později: Příjem (otevřené nákupní objednávky)
 ├── Výroba/               později: Plánování (plnění plánu a prostoje)
@@ -119,34 +117,18 @@ Soubor obsahuje celý sklad, takže ho mohou použít i další moduly (Komponen
 | Item Number | Díl, Číslo dílu, Item | ano |
 | Qty On Hand - Inv Detail | Qty Available (má přednost), Qty On Hand, Quantity, Množství | ano |
 | Zone ID | Zone, Zóna | pro Coverage |
-| Location | Lokace | pro vyloučené lokace |
+| Location | Lokace | pro vyloučení externích lokací |
 | Status, Area ID, Warehouse ID, Description | | ne |
 
 - Čísla v českém formátu (`"1 236,0"`) i anglickém se přečtou; řádek s neplatným množstvím se vypíše v modulu Data.
 - **Pro Coverage** se sečtou kladná množství dílu na lokacích v zónách **INCOME, MEZ, PRE, PURCH, SALE a WRKC**;
   plná i neúplná balení dohromady (bez rozdělení podle Order Multiple). Ostatní zóny (např. karanténa, inventurní rozdíly)
-  a záporné lokace se nepočítají. Lokace uvedené v nastavení jako vyloučené se nepočítají (např. externí lokace,
-  kde jsou díly už zamontované ve výrobku odběratele).
+  a záporné lokace se nepočítají.
+- **Externí lokace**, kde jsou díly už zamontované ve výrobku odběratele, se nepočítají. Pravidlo je pevně
+  v aplikaci (`src/core/stock.ts`); název lokace je firemní, proto je v kódu jen jako otisk (hash) a skutečný
+  název ukáže modul Data v panelu „Náš sklad“ (řádek „Vyloučené lokace“). Další lokaci lze přidat jen úpravou aplikace.
 - Díl se se skladem páruje přes mapování (Item Number), díl bez mapování sklad nemá.
 - U Excelu se čte list „Data“, jinak první list.
-
-## Nastavení (Settings.csv)
-
-Hodnoty, které patří firmě a nemají být v kódu aplikace. V prvním sloupci název, ve druhém hodnoty oddělené čárkou
-(nebo v dalších sloupcích). Řádek záhlaví je nepovinný. Použije se nejnovější soubor.
-
-```
-Setting;Value
-Stock excluded locations;EXT-01, EXT-02
-Stock zones;INCOME, MEZ, PRE, PURCH, SALE, WRKC
-```
-
-| Název | Další povolené názvy | Význam |
-|---|---|---|
-| Stock excluded locations | Sklad vyloučené lokace | lokace, které se nepočítají do našeho skladu (bez ohledu na velikost písmen) |
-| Stock zones | Sklad zóny | zóny, které se počítají; bez řádku platí výchozí INCOME, MEZ, PRE, PURCH, SALE, WRKC |
-
-Použité zóny a vyloučené lokace ukazuje modul Data v panelu „Náš sklad“.
 
 ## Testovací data
 

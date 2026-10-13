@@ -15,16 +15,29 @@ export const STOCK_COLUMNS = {
   status: ['Status', 'Inventory Status'],
 } as const;
 
-/** Zóny, které se počítají do našeho skladu (příjem, sklady, výroba); jiné lze nastavit v Settings.csv. */
-export const DEFAULT_STOCK_ZONES = ['INCOME', 'MEZ', 'PRE', 'PURCH', 'SALE', 'WRKC'] as const;
+/** Zóny, které se počítají do našeho skladu: příjem, sklady a výroba. */
+export const STOCK_ZONES: readonly string[] = ['INCOME', 'MEZ', 'PRE', 'PURCH', 'SALE', 'WRKC'];
 
-export interface StockRule {
-  zones: readonly string[];
-  /** Lokace, které se nepočítají (porovnává se bez ohledu na velikost písmen). */
-  excludedLocations: readonly string[];
+/** Otisk názvu lokace (FNV-1a, 32 bitů) z velkých písmen bez mezer na okrajích. */
+export function locationHash(location: string): number {
+  let hash = 0x811c9dc5;
+  for (const ch of location.trim().toUpperCase()) {
+    hash ^= ch.charCodeAt(0);
+    hash = Math.imul(hash, 0x01000193) >>> 0;
+  }
+  return hash >>> 0;
 }
 
-export const DEFAULT_STOCK_RULE: StockRule = { zones: DEFAULT_STOCK_ZONES, excludedLocations: [] };
+/**
+ * Lokace, které se do našeho skladu nepočítají: externí lokace, kde jsou díly už zamontované
+ * ve výrobku odběratele. Názvy jsou firemní, proto jsou ve veřejném kódu jen jako otisk (locationHash);
+ * skutečný název ukáže modul Data podle načteného souboru skladu.
+ */
+const EXCLUDED_LOCATIONS = new Set([0xe9f4bdc9]);
+
+export function isExcludedLocation(location: string): boolean {
+  return EXCLUDED_LOCATIONS.has(locationHash(location));
+}
 
 export interface StockRow {
   item: string;
@@ -90,23 +103,21 @@ export function parseStock(table: DataTable): StockResult {
 }
 
 /**
- * Zásoba po dílech: součet kladných množství na lokacích ve vybraných zónách, bez vyloučených lokací.
+ * Zásoba po dílech: součet kladných množství na lokacích v zónách STOCK_ZONES, bez vyloučených lokací.
  * Plná i neúplná balení se počítají dohromady; záporné a nulové lokace se nepočítají.
  */
-export function stockByItem(stock: StockData, rule: StockRule = DEFAULT_STOCK_RULE): Map<string, number> {
-  const zones = new Set(rule.zones.map((z) => z.toUpperCase()));
-  const excluded = new Set(rule.excludedLocations.map((l) => l.toUpperCase()));
+export function stockByItem(stock: StockData, excluded: (location: string) => boolean = isExcludedLocation): Map<string, number> {
   const result = new Map<string, number>();
   for (const row of stock.rows) {
-    if (row.qty <= 0 || !zones.has(row.zone) || excluded.has(row.location.toUpperCase())) continue;
+    if (row.qty <= 0 || !STOCK_ZONES.includes(row.zone) || excluded(row.location)) continue;
     result.set(row.item, (result.get(row.item) ?? 0) + row.qty);
   }
   return result;
 }
 
-/** Pravidlo pro náš sklad podle nastavení ve sdílené složce. */
-export function stockRule(settings: { stockZones: string[] | null; stockExcludedLocations: string[] } | null | undefined): StockRule {
-  return { zones: settings?.stockZones ?? DEFAULT_STOCK_ZONES, excludedLocations: settings?.stockExcludedLocations ?? [] };
+/** Vyloučené lokace, které jsou v souboru skladu (názvy tak, jak jsou v souboru, velkými písmeny). */
+export function excludedLocationsIn(stock: StockData, excluded: (location: string) => boolean = isExcludedLocation): string[] {
+  return [...new Set(stock.rows.filter((r) => excluded(r.location)).map((r) => r.location.trim().toUpperCase()))].sort();
 }
 
 /** Počet různých dílů v souboru. */

@@ -194,7 +194,6 @@ export const cs = {
       master: 'Mapování dílů (Excel nebo CSV): název obsahuje „mapping“, „kmenová“ nebo „master“, např. Item_Mapping.xlsx. Tabulka na prvním listu, záhlaví v prvním řádku.',
       coverage: 'Pokrytí od zákazníka (Excel): složka Coverage/<destinace>/<projekt>/, např. Coverage/Lokalita A/P100/report.xlsx. Pro každou destinaci a projekt se použije nejnovější soubor, formát se pozná podle obsahu.',
       stock: 'Náš sklad (CSV nebo Excel): název začíná „Stock“ nebo „Sklad“, např. Stock_13.10.2026.csv, nebo leží ve složce „Stock“. Použije se nejnovější soubor. Potřebné sloupce: Item Number, množství na lokaci (Qty On Hand - Inv Detail), Location a Zone ID.',
-      settings: 'Nastavení (CSV nebo Excel): Settings.csv, v prvním sloupci název, v druhém hodnoty oddělené čárkou. „Stock excluded locations“ = lokace, které se nepočítají do skladu; „Stock zones“ = počítané zóny (výchozí INCOME, MEZ, PRE, PURCH, SALE, WRKC).',
     },
     calloffs: {
       heading: 'Exporty odvolávek',
@@ -227,8 +226,8 @@ export const cs = {
       zoneItems: 'Dílů se zásobou pro pokrytí',
       zones: 'Počítané zóny',
       excluded: 'Vyloučené lokace',
-      noExcluded: 'žádné (lze nastavit v Settings.csv)',
-      unknownSettings: 'Neznámá nastavení v souboru nastavení',
+      noExcluded: 'žádné v tomto souboru',
+      rule: 'Do našeho skladu se počítají kladná množství na lokacích (Qty On Hand - Inv Detail) v uvedených zónách, plná i neúplná balení dohromady. Nepočítají se záporné lokace a externí lokace, kde jsou díly už zamontované ve výrobku odběratele.',
       qtyColumn: 'Množství ze sloupce',
     },
     failed: {
@@ -322,7 +321,7 @@ export const cs = {
       empty: 'Filtru neodpovídá žádný díl.',
       unmapped: 'není v mapování',
       fileCustomerNumber: 'V souboru zákazníka',
-      ourStockNote: 'Náš sklad = součet kladných množství dílu na lokacích v zónách {zones} ze souboru skladu (plná i neúplná balení dohromady), bez vyloučených lokací: {excluded}. S volbou „Přičíst náš sklad“ se přičte ke všem dnům.',
+      ourStockNote: 'Náš sklad = součet kladných množství dílu na lokacích v zónách {zones} ze souboru skladu (plná i neúplná balení dohromady), bez externích lokací s díly už zamontovanými u odběratele ({excluded}). S volbou „Přičíst náš sklad“ se přičte ke všem dnům.',
       ourStockNoExclusions: 'žádné',
       note: 'Pokrytí = zůstatek u zákazníka bez transitu na konci dne, volitelně + transit. Záporné hodnoty jsou červeně. Číslo zákazníka je v jednotném zápisu bez doplňujících nul (zápis ze souboru zákazníka ukáže najetí myší). Díl bez mapování je uvedený číslem zákazníka.',
     },

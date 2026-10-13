@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { parseCsv } from './csv';
-import { DEFAULT_STOCK_ZONES, parseStock, stockByItem, stockItemCount, stockRule } from './stock';
+import { excludedLocationsIn, isExcludedLocation, locationHash, parseStock, stockByItem, stockItemCount } from './stock';
 
 // Smyšlený export skladu ve formátu z ERP: čárka jako oddělovač, čísla v českém formátu, dvakrát sloupec Description.
 const csv = [
@@ -42,18 +42,28 @@ describe('parseStock', () => {
 });
 
 describe('stockByItem', () => {
-  it('sečte kladná množství na lokacích ve výchozích zónách, plná i neúplná balení dohromady', () => {
+  it('sečte kladná množství na lokacích v zónách příjmu, skladů a výroby, plná i neúplná balení dohromady', () => {
     const r = parseStock(parseCsv(csv));
     if (!r.ok) throw new Error();
     // 1 200 + 24 (SALE) + 12 (PURCH) + 8 (WRKC); karanténa (LAB), záporná a nulová lokace se nepočítají
     expect(stockByItem(r.value)).toEqual(new Map([['900100', 1244]]));
-    expect(stockByItem(r.value, { zones: ['lab'], excludedLocations: [] })).toEqual(new Map([['900101', 5]]));
   });
 
-  it('vyloučené lokace z nastavení se nepočítají (bez ohledu na velikost písmen)', () => {
+  it('vyloučené lokace se nepočítají a modul Data je vypíše', () => {
     const r = parseStock(parseCsv(csv));
     if (!r.ok) throw new Error();
-    expect(stockByItem(r.value, stockRule({ stockZones: null, stockExcludedLocations: ['a-01'] }))).toEqual(new Map([['900100', 44]]));
-    expect(stockRule(null)).toEqual({ zones: DEFAULT_STOCK_ZONES, excludedLocations: [] });
+    const excluded = (location: string) => location.toUpperCase() === 'A-01';
+    expect(stockByItem(r.value, excluded)).toEqual(new Map([['900100', 44]]));
+    expect(excludedLocationsIn(r.value, excluded)).toEqual(['A-01']);
+    expect(excludedLocationsIn(r.value)).toEqual([]);
+  });
+});
+
+describe('isExcludedLocation', () => {
+  it('pozná lokaci podle otisku bez ohledu na velikost písmen a mezery', () => {
+    expect(locationHash(' ext-01 ')).toBe(locationHash('EXT-01'));
+    expect(locationHash('EXT-01')).toBe(0x1a321be0);
+    expect(isExcludedLocation('EXT-01')).toBe(false);
+    expect(isExcludedLocation('')).toBe(false);
   });
 });
