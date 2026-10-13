@@ -403,7 +403,7 @@ export const cs = {
       note: 'Poptávka hotových dílů je z nejnovějšího exportu odvolávek (požadované množství na den). Soubory pokrytí od zákazníka se pro komponenty nepoužívají, protože ukazují jen stav na konci dne.',
     },
     export: { fileName: 'komponenty', sheet: 'Komponenty', demandSheet: 'Poptávka' },
-    hub: { label: 'v záporu do 14 dní', title: 'Komponenty, které podle kusovníku a poptávky nevystačí do 14 dní' },
+    hub: { label: 'nepokryto na 2 dny', title: 'Druhy komponent, které podle kusovníku a odvolávek nevystačí na dnešek a zítřek' },
   },
   calloffs: {
     noData: 'Zatím nejsou načtené žádné exporty odvolávek.',

@@ -1,5 +1,6 @@
 import { useMemo, type ReactNode } from 'react';
 import { callOffSummary } from '../core/calloffs/views';
+import { COMPONENT_SOON_DAYS } from '../core/components/compute';
 import { buildCoverage, SHORTAGE_DAYS, shortage } from '../core/coverage/compute';
 import { formatQuantity } from '../core/format';
 import { useI18n } from '../i18n/I18nProvider';
@@ -103,8 +104,8 @@ function useMetrics(): Partial<Record<ModuleId, ReactNode>> {
     );
   }
   if (components) {
-    const short = components.components.filter((c) => c.shortDay !== null).length;
-    metrics.components = <Metric value={formatQuantity(short, locale)} label={t.components.hub.label} tone={short > 0 ? 'crit' : 'ok'} title={t.components.hub.title} />;
+    const soon = components.components.filter((c) => c.shortDay !== null && c.shortDay < COMPONENT_SOON_DAYS).length;
+    metrics.components = <Metric value={formatQuantity(soon, locale)} label={t.components.hub.label} tone={soon > 0 ? 'crit' : 'ok'} title={t.components.hub.title} />;
   }
   return metrics;
 }

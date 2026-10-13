@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import type { ComponentLine } from '../../core/components/compute';
+import { COMPONENT_SOON_DAYS, type ComponentLine } from '../../core/components/compute';
 import { dayToIso, weekday, type DayNumber } from '../../core/dates';
 import { formatAmount, formatDayShort, formatQuantity } from '../../core/format';
 import { useI18n } from '../../i18n/I18nProvider';
@@ -7,9 +7,6 @@ import { ExportButtons, type ExportTable } from '../calloffs/ExportButtons';
 import { useData } from '../data/DataProvider';
 import { Icon } from '../icons';
 import { localToday, useComponents } from './useComponents';
-
-/** Komponenty v záporu „brzy“: dnes nebo zítra. */
-const SOON_DAYS = 2;
 
 export function ComponentsPage({ today = localToday() }: { today?: DayNumber } = {}) {
   const { t, locale } = useI18n();
@@ -68,7 +65,7 @@ export function ComponentsPage({ today = localToday() }: { today?: DayNumber } =
   const amount = (v: number, um: string) => formatAmount(v, locale, um);
   const sourceLabel = (c: ComponentLine) => (c.source === 'P' ? tc.table.purchased : c.source ? tc.table.made : '—');
   const short = table.components.filter((c) => c.shortDay !== null).length;
-  const soon = table.components.filter((c) => c.shortDay !== null && c.shortDay < SOON_DAYS).length;
+  const soon = table.components.filter((c) => c.shortDay !== null && c.shortDay < COMPONENT_SOON_DAYS).length;
   const callOffs = state.data?.exports.at(-1);
   const noDemand = products.filter((p) => p.qty.every((q) => q === 0)).length;
   const boms = state.data?.boms.length ?? 0;
@@ -109,16 +106,16 @@ export function ComponentsPage({ today = localToday() }: { today?: DayNumber } =
 
       <div className="kpis">
         <div className="kpi">
+          <span className="kpi-label">{tc.kpi.soon}</span>
+          <span className="kpi-value">{formatQuantity(soon, locale)}</span>
+          <span className="kpi-note">{tc.kpi.soonNote}</span>
+        </div>
+        <div className="kpi">
           <span className="kpi-label">{tc.kpi.short}</span>
           <span className="kpi-value">{formatQuantity(short, locale)}</span>
           <span className="kpi-note">
             {tc.kpi.shortNote} {dayLabel(days.at(-1)!)}
           </span>
-        </div>
-        <div className="kpi">
-          <span className="kpi-label">{tc.kpi.soon}</span>
-          <span className="kpi-value">{formatQuantity(soon, locale)}</span>
-          <span className="kpi-note">{tc.kpi.soonNote}</span>
         </div>
         <div className="kpi">
           <span className="kpi-label">{tc.kpi.tracked}</span>

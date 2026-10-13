@@ -8,6 +8,9 @@ import type { MasterData } from '../masterdata';
 /** Horizont pokrytí komponent ve dnech (od dneška). */
 export const COMPONENT_DAYS = 14;
 
+/** Komponenty v záporu „brzy“: dnes nebo zítra (modul i rozcestník). */
+export const COMPONENT_SOON_DAYS = 2;
+
 /** Poptávka hotového dílu po dnech horizontu (z odvolávek). */
 export interface ProductDemand {
   item: string;
