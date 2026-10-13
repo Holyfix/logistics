@@ -28,10 +28,12 @@ export interface SequencerPlan {
   locations: string[];
   /** Projekty (složka souboru coverage), ve kterých díl je. */
   projects: string[];
+  /** Popis dílu ze souboru coverage. */
+  description: string;
 }
 
 export function sequencerPlans(sources: readonly CoverageSource[], master: MasterData | undefined): Map<string, SequencerPlan> {
-  const rows = new Map<string, { days: readonly DayNumber[]; values: number[]; initial: number; location: string; project: string }[]>();
+  const rows = new Map<string, { days: readonly DayNumber[]; values: number[]; initial: number; location: string; project: string; description: string }[]>();
   for (const { report, location, project } of sources) {
     if (report.days.length === 0) continue;
     for (const row of report.rows) {
@@ -40,7 +42,7 @@ export function sequencerPlans(sources: readonly CoverageSource[], master: Maste
       if (!item) continue;
       const values = row.balance.map((b, k) => b + row.transit[k]!);
       const list = rows.get(item) ?? [];
-      list.push({ days: report.days, values, initial: row.customerStock + (row.transit[0] ?? 0), location, project });
+      list.push({ days: report.days, values, initial: row.customerStock + (row.transit[0] ?? 0), location, project, description: row.description });
       rows.set(item, list);
     }
   }
@@ -57,6 +59,7 @@ export function sequencerPlans(sources: readonly CoverageSource[], master: Maste
       last: Math.max(...list.map((r) => r.days.at(-1)!)),
       locations: [...new Set(list.map((r) => r.location))],
       projects: [...new Set(list.map((r) => r.project).filter(Boolean))],
+      description: list.find((r) => r.description)?.description ?? '',
     });
   }
   return result;

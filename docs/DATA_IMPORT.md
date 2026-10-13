@@ -186,15 +186,20 @@ V prohlížeči bez přístupu ke složce se soubor stáhne a uloží se ručně
   Když soubor mezitím změnil někdo jiný, aplikace se před přepsáním zeptá.
 - **Díly montáže:** podle sloupce Line = `ASSEMBLY` v mapování. Bez sloupce díly ze souborů coverage
   a díly z mapování s projektem a stranou. Projekt z mapování, jinak ze složky souboru coverage.
-- **Potřeba:** stejná jako v Komponentách (chybějící množství u sekvencéra podle jeho souboru, dál odvolávky).
-  **Termín výroby** = odjezd auta: příjezd k zákazníkovi v den (den potřeby − pokrytí + 1) v čase příjezdu,
-  minus transit. Příklad: potřeba 15. 10., pokrytí 2 dny, transit 24 h, příjezd 6:00 → příjezd 14. 10. 6:00 →
-  vyrobit a odeslat do 13. 10. 6:00.
-- **Směny:** R, O, N po 8 hodinách od začátku ranní směny; kapacita linky platí v pracovní dny pro vybrané směny,
-  víkendy, svátky a přesčasy se zadávají v plánu (řádek Kapacita směny).
-- **Návrh plánu:** potřeba s jedním termínem se rozloží rovnoměrně do směn mezi předchozím a tímto termínem,
-  co se nevejde, jde do dřívějších směn, co se nestihne, co nejdřív po termínu. Díly jdou na směně po stranách
-  (LHD a RHD v blocích, nikdy zároveň) a nedělí se na dávky menší než půl směny. Směny, které už začaly, se nemění.
+- **Chybějící kusy:** jen ze souborů coverage (odvolávky se pro plán nepoužívají). Pokrytí = sklad a transit
+  u zákazníka (sekvencéra) + náš sklad hotových dílů; přírůstek chybějícího množství v den souboru je požadavek
+  na ten den, chybějící kusy z minulých dnů patří do dneška. Díly bez souboru coverage nemají požadavky.
+- **Termín výroby** = odjezd auta: příjezd k zákazníkovi v den (den − pokrytí + 1) v čase příjezdu, minus transit.
+  Příklad: chybí 15. 10., pokrytí 2 dny, transit 24 h, příjezd 6:00 → příjezd 14. 10. 6:00 → vyrobit a odeslat
+  do 13. 10. 6:00. Výroba po termínu se v plánu označí červeně (odeslání po termínu).
+- **Horizont plánu:** zbývající směny dneška a zítřek. Směny R, O, N po 8 hodinách od začátku ranní směny;
+  kapacita linky platí v pracovní dny pro vybrané směny, víkendy, svátky a přesčasy se zadávají v plánu.
+- **Návrh plánu:** směny, které už začaly, se nemění a jejich výroba se počítá jako hotová (spolu s naším skladem
+  pokryje nejdřívější chybějící kusy). Ostatní směny se plní od první: vždy díl s nejdřívějším nepokrytým dnem
+  (při shodě díl ze strany, která se právě vyrábí), po celých dnech, dokud je kapacita. Na směně se díly řadí
+  po stranách (LHD a RHD nikdy zároveň).
+- V plánu je u dílu: **Chybí ks** (v souborech coverage po odečtu našeho skladu), **Chybí od** (první den, kdy
+  zákazníkovi díly chybí) a **Pokryto s plánem do** (poslední pracovní den pokrytý i s plánem na dnes a zítra).
 
 ## Testovací data
 

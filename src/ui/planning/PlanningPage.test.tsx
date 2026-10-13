@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
-import type { CallOffExport } from '../../core/calloffs/parse';
+import type { CoverageSource } from '../../core/coverage/compute';
 import { parseCsv } from '../../core/csv';
 import { dayFromParts } from '../../core/dates';
 import { parseMasterData } from '../../core/masterdata';
@@ -14,15 +14,27 @@ const day = (n: number) => dayFromParts(2026, 10, n)!;
 const master = parseMasterData(parseCsv('Item Number;Customer Number;Project;Variant;Line\nFG-L;A1234567890  00001234;P1;LHD;ASSEMBLY\nFG-R;;P1;RHD;Montáž\nK1;;;;'));
 const stock = parseStock(parseCsv('Item Number;Location;Zone ID;Qty On Hand - Inv Detail\nFG-L;A-01;SALE;20'));
 if (!master.ok || !stock.ok) throw new Error();
-const callOffs = {
-  items: ['FG-L', 'FG-R'],
-  descriptions: ['', ''],
-  offsets: Int32Array.from([0, 1, 2]),
-  days: Int32Array.from([day(15), day(16)]),
-  qty: Float64Array.from([80, 30]),
-  week: 42,
-  year: 2026,
-} as unknown as CallOffExport;
+// Coverage od sekvencéra: FG-L chybí od čt 15. 10. 80 ks, FG-R od pá 16. 10. 30 ks.
+const covDays = [13, 14, 15, 16, 19].map(day);
+const row = (item: string, balance: number[]) => ({
+  customerNumber: '',
+  customerKey: '',
+  supplierItem: item,
+  description: '',
+  customerStock: 0,
+  balance,
+  transit: balance.map(() => 0),
+  firstUncovered: '',
+  uncoveredAt: '',
+});
+const coverage = {
+  path: 'Coverage/Lokalita A/P1/c.xlsx',
+  fileName: 'c.xlsx',
+  location: 'Lokalita A',
+  project: 'P1',
+  lastModified: 0,
+  report: { format: 'articles', sheet: 'articles', days: covDays, rows: [row('FG-L', [10, 0, -80, -80, -80]), row('FG-R', [50, 20, 0, -30, -30])], issueCount: 0, issues: [] },
+} as CoverageSource;
 
 const state: DataState = {
   status: 'ready',
@@ -31,9 +43,9 @@ const state: DataState = {
   error: '',
   data: {
     folderName: 'data',
-    exports: [callOffs],
+    exports: [],
     master: { path: 'Item_Mapping.csv', data: master.value },
-    coverage: [],
+    coverage: [coverage],
     stock: { path: 'Stock_1.csv', lastModified: 0, data: stock.value },
     boms: [],
     plans: [],
@@ -67,45 +79,50 @@ const kpi = (label: string) => screen.getByText(label).parentElement!.querySelec
 describe('PlanningPage', () => {
   afterEach(cleanup);
 
-  it('přehled linek: potřeba na 7 dní, nepokryté díly a pokrytí zákazníka', () => {
+  it('přehled linek: chybějící kusy podle coverage a pokrytí s plánem', () => {
     renderPage();
-    const row = screen.getByRole('button', { name: 'P1' }).closest('tr')!;
-    const texts = [...row.querySelectorAll('td')].map((td) => td.textContent);
-    // FG-L: 80 ks na čtvrtek (sklad 20), FG-R: 30 ks na pátek; bez plánu chybí oba, zákazník pokryt do středy.
-    expect(texts).toEqual(['ASSEMBLY', 'P1', '110', '0', '0 %', '2 / 2', 'St 14. 10.', 'Zatím neuloženo']);
+    const tr = screen.getByRole('button', { name: 'P1' }).closest('tr')!;
+    const texts = [...tr.querySelectorAll('td')].map((td) => td.textContent);
+    // FG-L chybí 80 − sklad 20 = 60 ks, FG-R 30 ks; bez plánu je zákazník pokrytý do středy.
+    expect(texts).toEqual(['ASSEMBLY', 'P1', '90', '0', '0 %', '2 / 2', 'St 14. 10.', 'Zatím neuloženo']);
     expect(within(screen.getByRole('table')).getByText('FOA').closest('tr')!.textContent).toContain('připravujeme');
   });
 
-  it('návrh plánu podle termínu výroby, ruční úprava a neuložené změny', () => {
+  it('plán na zbývající směny dneška a zítřek, návrh podle prvních chybějících dnů a ruční úprava', () => {
     renderPage();
     fireEvent.click(screen.getByRole('button', { name: 'P1' }));
     expect(screen.getByRole('tab', { name: 'ASSEMBLY' }).getAttribute('aria-selected')).toBe('true');
-    expect(kpi('Nepokryté díly')).toBe('2');
+    expect(kpi('Díly s chybějícími kusy')).toBe('2');
+    // Jen dnes a zítra: 6 směn.
+    expect(document.querySelectorAll('th.plan-shift').length).toBe(6);
+    const fgL = input('FG-L Po 12. 10. R').closest('tr')!;
+    expect([...fgL.querySelectorAll('td')].slice(1, 6).map((td) => td.textContent)).toEqual(['LHD', '20', '60', 'Čt 15. 10.', 'St 14. 10.']);
 
     fireEvent.click(screen.getByRole('button', { name: 'Navrhnout plán' }));
-    // FG-L: potřeba čt 15. 10. → odjezd út 13. 10. 6:00 → 60 ks (po odečtu skladu) najednou v pondělní ranní.
+    // Ranní směna: nejdřív FG-L (chybí od čtvrtka), pak FG-R (od pátku).
     expect(input('FG-L Po 12. 10. R').value).toBe('60');
-    // FG-R: potřeba pá 16. 10. → odjezd st 14. 10. 6:00 → úterní ranní.
-    expect(input('FG-R Út 13. 10. R').value).toBe('30');
-    expect(kpi('Nepokryté díly')).toBe('0');
+    expect(input('FG-R Po 12. 10. R').value).toBe('30');
+    expect(input('FG-L Út 13. 10. R').value).toBe('');
+    expect(kpi('Odeslání po termínu')).toBe('0');
+    expect(screen.getAllByText('celý soubor coverage').length).toBe(2);
     expect(screen.getAllByText('Neuložené změny').length).toBeGreaterThan(0);
     expect(screen.getByRole('tab', { name: 'ASSEMBLY •' })).toBeTruthy();
 
-    fireEvent.change(input('FG-R Út 13. 10. R'), { target: { value: '10' } });
-    expect(kpi('Nepokryté díly')).toBe('1');
-    const row = input('FG-R Út 13. 10. R').closest('tr')!;
-    expect(within(row).getByText('Čt 15. 10.')).toBeTruthy();
+    // Méně kusů FG-R: zákazník pokrytý do čtvrtka a odeslání do st 6:00 nestihne.
+    fireEvent.change(input('FG-R Po 12. 10. R'), { target: { value: '10' } });
+    expect(kpi('Odeslání po termínu')).toBe('1');
+    expect(within(input('FG-R Po 12. 10. R').closest('tr')!).getByText('Čt 15. 10.')).toBeTruthy();
   });
 
   it('ručně zadaná kapacita směny a kapacity linek', () => {
     renderPage();
     fireEvent.click(screen.getByRole('tab', { name: 'ASSEMBLY' }));
-    fireEvent.change(input('Kapacita směny So 17. 10. R'), { target: { value: '80' } });
-    expect(input('Kapacita směny So 17. 10. R').closest('td')!.className).toContain('cell-manual');
+    fireEvent.change(input('Kapacita směny Út 13. 10. R'), { target: { value: '80' } });
+    expect(input('Kapacita směny Út 13. 10. R').closest('td')!.className).toContain('cell-manual');
 
     fireEvent.click(screen.getByRole('tab', { name: /Kapacity/ }));
     fireEvent.change(input('Ks za směnu ASSEMBLY P1'), { target: { value: '120' } });
     expect(screen.getByRole('tab', { name: 'Kapacity •' })).toBeTruthy();
-    expect(screen.getByText('Ostatní (bez souboru coverage)')).toBeTruthy();
+    expect(screen.getByText('Lokalita A')).toBeTruthy();
   });
 });

@@ -14,9 +14,6 @@ import { usePlanningDrafts, type PlanningTab } from './PlanningProvider';
 import { formatModified } from './SaveStatus';
 import { localNow, usePlanning, type PlanningData } from './usePlanning';
 
-/** Za kolik prvních dnů se v přehledu počítá potřeba, plán a vytížení. */
-const OVERVIEW_DAYS = 7;
-
 const sum = (values: readonly number[]) => values.reduce((a, b) => a + b, 0);
 
 export function PlanningPage({ today = localToday(), now = localNow() }: { today?: DayNumber; now?: number } = {}) {
@@ -93,19 +90,17 @@ function Overview({ data, today }: { data: PlanningData; today: DayNumber }) {
 
   const rows = useMemo(() => {
     const slots = data.slots;
-    const week = slots.slice(0, OVERVIEW_DAYS * 3);
-    const weekEnd = week.at(-1)?.end ?? 0;
     return data.projects.map((p) => {
       const qty = (key: string, item: string) => p.plan.cells[cellKey(key, item)] ?? 0;
       const statuses = p.items.map((it) => evaluateItem(it, slots, (s) => qty(s.key, it.item), today));
-      const covered = statuses.map((s) => s.coveredUntil);
+      const covered = statuses.map((s) => s.coveredWithPlan);
       const worst: DayNumber | 'whole' | null = covered.includes(null) ? null : (covered.filter((c): c is DayNumber => typeof c === 'number').sort((a, b) => a - b)[0] ?? 'whole');
       return {
         p,
-        need: sum(p.items.flatMap((it) => it.requirements.filter((r) => r.deadline <= weekEnd).map((r) => r.qty))),
-        planned: sum(week.flatMap((s) => p.items.map((it) => qty(s.key, it.item)))),
-        capacity: sum(week.map((s) => slotCapacity(s, p.capacity, p.plan.capacity))),
-        late: statuses.filter((s) => s.firstLate).length,
+        missing: sum(statuses.map((s) => s.missing)),
+        planned: sum(statuses.map((s) => s.planned)),
+        capacity: sum(slots.map((s) => slotCapacity(s, p.capacity, p.plan.capacity))),
+        short: statuses.filter((s) => s.firstMissing !== null).length,
         worst,
       };
     });
@@ -129,16 +124,16 @@ function Overview({ data, today }: { data: PlanningData; today: DayNumber }) {
             <tr>
               <th>{to.line}</th>
               <th>{to.project}</th>
-              <th className="n">{to.need}</th>
+              <th className="n">{to.missing}</th>
               <th className="n">{to.planned}</th>
               <th className="n">{to.load}</th>
-              <th className="n">{to.late}</th>
+              <th className="n">{to.short}</th>
               <th>{to.until}</th>
               <th>{to.status}</th>
             </tr>
           </thead>
           <tbody>
-            {rows.map(({ p, need, planned, capacity, late, worst }) => (
+            {rows.map(({ p, missing, planned, capacity, short, worst }) => (
               <tr key={p.key}>
                 <td>
                   <strong>{p.line}</strong>
@@ -148,11 +143,11 @@ function Overview({ data, today }: { data: PlanningData; today: DayNumber }) {
                     <strong>{p.project || tp.noProject}</strong>
                   </button>
                 </td>
-                <td className="n">{formatQuantity(need, locale)}</td>
+                <td className="n">{formatQuantity(missing, locale)}</td>
                 <td className="n">{formatQuantity(planned, locale)}</td>
                 <td className={`n${planned > capacity ? ' cell-negative' : ''}`}>{capacity > 0 ? `${Math.round((planned / capacity) * 100)} %` : <span className="muted">{to.noCapacity}</span>}</td>
-                <td className={`n${late > 0 ? ' cell-negative' : ''}`}>
-                  {formatQuantity(late, locale)} / {formatQuantity(p.items.length, locale)}
+                <td className={`n${short > 0 ? ' cell-negative' : ''}`}>
+                  {formatQuantity(short, locale)} / {formatQuantity(p.items.length, locale)}
                 </td>
                 <td>
                   <strong className={worst === 'whole' ? undefined : 'cell-short'}>{worst === 'whole' ? tp.assembly.whole : worst === null ? tp.assembly.notCovered : dayLabel(worst)}</strong>

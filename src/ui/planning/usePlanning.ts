@@ -27,7 +27,7 @@ export interface PlanningData {
   settingsFile: { path: string; lastModified: number } | null;
   slots: ShiftSlot[];
   projects: ProjectPlan[];
-  /** Díly montáže podle sloupce Line v mapování (jinak díly s poptávkou zákazníka). */
+  /** Díly montáže podle sloupce Line v mapování (jinak díly ze souborů coverage a díly s projektem a stranou). */
   byLineColumn: boolean;
 }
 
