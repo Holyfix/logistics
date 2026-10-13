@@ -3,6 +3,7 @@
 import type { CallOffExport } from '../core/calloffs/parse';
 import type { CoverageSource } from '../core/coverage/compute';
 import type { MasterData } from '../core/masterdata';
+import type { StockData } from '../core/stock';
 import { classifyPath, coverageScope, formatOf } from '../core/sources';
 import { idbDelete, idbGet, idbKeys, idbSet, STORE_CALLOFFS } from './idb';
 import { listFiles, type FolderSource, type SourceFile } from './folder';
@@ -21,6 +22,8 @@ export interface LoadedData {
   master: { path: string; data: MasterData } | null;
   /** Soubory pokrytí od zákazníka: pro každou destinaci a projekt nejnovější. */
   coverage: CoverageSource[];
+  /** Náš sklad: nejnovější soubor skladu. */
+  stock: { path: string; lastModified: number; data: StockData } | null;
   failed: FailedFile[];
   loadedAt: number;
 }
@@ -65,10 +68,13 @@ export async function loadFolder(source: FolderSource, onProgress: (p: LoadProgr
   const masterFiles = files
     .filter((f) => classifyPath(f.path) === 'masterdata')
     .sort((a, b) => b.lastModified - a.lastModified);
+  const stockFiles = files.filter((f) => classifyPath(f.path) === 'stock').sort((a, b) => b.lastModified - a.lastModified);
 
   // Coverage: pro každou destinaci a projekt platí naposledy změněný soubor (i z hlubší podsložky).
   const coverageFiles = new Map<string, SourceFile>();
   const failed: FailedFile[] = [];
+  // Sklad: platí naposledy změněný soubor, starší se jen vypíšou.
+  for (const file of stockFiles.slice(1)) failed.push({ path: file.path, reason: 'superseded', detail: stockFiles[0]!.path });
   for (const file of files.filter((f) => classifyPath(f.path) === 'coverage').sort((a, b) => b.lastModified - a.lastModified)) {
     const { location, project } = coverageScope(file.path);
     const key = `${location}|${project}`;
@@ -78,7 +84,7 @@ export async function loadFolder(source: FolderSource, onProgress: (p: LoadProgr
   }
 
   const parsed: { file: SourceFile; exp: CallOffExport }[] = [];
-  const total = calloffFiles.length + (masterFiles.length > 0 ? 1 : 0) + coverageFiles.size;
+  const total = calloffFiles.length + (masterFiles.length > 0 ? 1 : 0) + coverageFiles.size + (stockFiles.length > 0 ? 1 : 0);
   let done = 0;
   onProgress({ done, total });
 
@@ -144,5 +150,16 @@ export async function loadFolder(source: FolderSource, onProgress: (p: LoadProgr
   }
   coverage.sort((a, b) => a.location.localeCompare(b.location) || a.project.localeCompare(b.project));
 
-  return { folderName: source.name, exports, master, coverage, failed, loadedAt: Date.now() };
+  let stock: LoadedData['stock'] = null;
+  const stockFile = stockFiles[0];
+  if (stockFile) {
+    const response = await parseInWorker({ kind: 'stock', format: formatOf(stockFile.path)!, name: stockFile.path, file: stockFile.file });
+    if (response.kind === 'stock' && response.result.ok) stock = { path: stockFile.path, lastModified: stockFile.lastModified, data: response.result.value };
+    else if (response.kind === 'stock' && !response.result.ok)
+      failed.push({ path: stockFile.path, reason: 'missingColumns', detail: response.result.columns.join(', ') });
+    else if (response.kind === 'error') failed.push({ path: stockFile.path, reason: 'unreadable', detail: response.message });
+    onProgress({ done: done + 1, total });
+  }
+
+  return { folderName: source.name, exports, master, coverage, stock, failed, loadedAt: Date.now() };
 }

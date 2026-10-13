@@ -14,6 +14,10 @@ describe('classifyPath', () => {
     ['Coverage/poznamky.csv', 'ignored'],
     ['odvolavky/~$Odvolávky_CW42.xlsx', 'ignored'],
     ['zasoby/CW42.csv', 'ignored'],
+    ['Stock_13.10.2026.csv', 'stock'],
+    ['Sklad/export.xlsx', 'stock'],
+    ['Logistics/stock/2026-10-13.csv', 'stock'],
+    ['Coverage/Lokalita A/P100/Stock.xlsx', 'coverage'],
     ['Odvolávky_CW42.pdf', 'ignored'],
   ])('%s → %s', (path, kind) => expect(classifyPath(path)).toBe(kind));
 });

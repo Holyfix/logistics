@@ -187,4 +187,19 @@ items.filter((it) => it.project === 'P200').forEach((it, i) => {
 mkdirSync('sample-data/Coverage/Lokalita C/P200', { recursive: true });
 await writeXlsxFile(bestandRows, { sheet: 'bestand' }).toFile('sample-data/Coverage/Lokalita C/P200/bestand_P200.xlsx');
 
-console.log(`Vytvořeno: 3 exporty, ${items.length} dílů, mapování pro ${items.length - 1} dílů, coverage ve 3 formátech.`);
+// Náš sklad ve formátu exportu zásob po lokacích: hotové díly v zónách SALE/PURCH, výroba a blokace jinde.
+const czQty = (n) => `"${n.toLocaleString('en-US').replace(/,/g, NBSP)},0"`;
+const stockLines = ['Site,Item Number,Description,Unit of Measure,Status,Qty On Hand - Inv Detail,Location,Zone ID,Area ID,Warehouse ID'];
+items
+  .filter((it) => it.project)
+  .forEach((it, idx) => {
+    const pack = [8, 12, 16, 24][idx % 4];
+    const full = Math.floor(rnd() * 4);
+    for (let k = 0; k < full; k++) stockLines.push(['1000', it.item, it.description, 'EA', 'OK', czQty(pack), `A-0${k + 1}`, 'SALE', 'WRH', 'WH1'].join(','));
+    if (idx % 3 === 0) stockLines.push(['1000', it.item, it.description, 'EA', 'PROD', czQty(Math.ceil(pack / 2)), 'B-01', 'PURCH', 'WRH', 'WH1'].join(','));
+    stockLines.push(['1000', it.item, it.description, 'EA', 'PROD', czQty(Math.round(rnd() * 30)), 'L-01', 'WRKC', 'PROD', 'WH1'].join(','));
+    if (idx % 5 === 0) stockLines.push(['1000', it.item, it.description, 'EA', 'HOLD', czQty(2), 'HOLD', 'LAB', 'PROD', 'WH1'].join(','));
+  });
+writeFileSync('sample-data/Stock_13.10.2026.csv', '\ufeff' + stockLines.join('\r\n') + '\r\n');
+
+console.log(`Vytvořeno: 3 exporty, ${items.length} dílů, mapování pro ${items.length - 1} dílů, coverage ve 3 formátech, sklad.`);

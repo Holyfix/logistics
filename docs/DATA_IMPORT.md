@@ -11,6 +11,7 @@ Soubory se rozpoznají podle názvu (nezáleží na velikosti písmen ani diakri
 | Export odvolávek | název obsahuje „Odvolávky“ / „call-off“, nebo leží ve složce `odvolavky` / `call-offs` | CSV (doporučeno) nebo XLSX |
 | Mapování dílů (kmenová data) | název obsahuje „mapping“ / „kmenová“ / „master“ | XLSX nebo CSV |
 | Pokrytí od zákazníka (Coverage) | leží ve složce `Coverage` (i v podsložkách) | XLSX / XLSM |
+| Náš sklad (Stock) | název začíná „Stock“ / „Sklad“, nebo leží ve složce `Stock` / `Sklad` | CSV nebo XLSX |
 
 Doporučená struktura (složka se v aplikaci vybírá celá, podsložky se prohledají):
 
@@ -19,7 +20,7 @@ Logistics/
 ├── Item_Mapping.xlsx     mapování dílů (kmenová data)
 ├── Call-offs/            týdenní exporty odvolávek (název souboru s týdnem, např. CW42)
 ├── Coverage/<destinace>/<projekt>/   soubory pokrytí od zákazníka
-├── Zásoby/               později: náš sklad pro Coverage, Komponenty, Zásoby
+├── Stock_13.10.2026.csv  náš sklad (celý sklad po lokacích; Coverage, později Komponenty, Zásoby)
 ├── Kusovník/             později: Komponenty
 ├── Objednávky/           později: Příjem (otevřené nákupní objednávky)
 ├── Výroba/               později: Plánování (plnění plánu a prostoje)
@@ -103,9 +104,28 @@ na názvu souboru nezáleží. Díly se párují s mapováním podle čísla zá
 - Sloupce s datem bez jediné hodnoty (např. staré dny v šabloně zákazníka) se vynechají.
 - Pomocné řádky bez čísla dílu zákazníka (např. blok kumulované poptávky pod daty) se přeskočí.
 - Stejný díl na víc řádcích jednoho souboru (druhý řádek bývá prázdný) se sečte do jednoho řádku.
-- Další formáty zákazníka, náš sklad a dodatečný transit (naše expedice) se doplní postupně.
+- **Náš sklad** (sloupec „Náš sklad“, volba „Přičíst náš sklad“): zásoba dílu ze souboru skladu, přičte se ke všem dnům.
+- Další formáty zákazníka a dodatečný transit (naše expedice) se doplní postupně.
+
+## Náš sklad (Stock)
+
+Export zásob po lokacích za celý sklad. Používá se nejnovější soubor (podle data změny), starší se vypíšou v modulu Data.
+Soubor obsahuje celý sklad, takže ho mohou použít i další moduly (Komponenty, Zásoby).
+
+| Sloupec | Další povolené názvy | Povinný |
+|---|---|---|
+| Item Number | Díl, Číslo dílu, Item | ano |
+| Qty Available | Qty On Hand - Inv Detail, Qty On Hand, Quantity, Množství (první nalezený) | ano |
+| Zone ID | Zone, Zóna | pro Coverage |
+| Location, Status, Area ID, Warehouse ID, Description | | ne |
+
+- Čísla v českém formátu (`"1 236,0"`) i anglickém se přečtou; řádek s neplatným množstvím se vypíše v modulu Data.
+- **Pro Coverage** se sečtou kladná množství dílu v zónách **SALE** a **PURCH**; plná i neúplná balení dohromady
+  (bez rozdělení podle Order Multiple). Výroba, karanténa a další zóny se nepočítají, záporné lokace také ne.
+- Díl se se skladem páruje přes mapování (Item Number), díl bez mapování sklad nemá.
+- U Excelu se čte list „Data“, jinak první list.
 
 ## Testovací data
 
-`sample-data/` obsahuje smyšlené exporty, mapování a soubor coverage ve stejném formátu
+`sample-data/` obsahuje smyšlené exporty, mapování, soubory coverage a sklad ve stejném formátu
 (`node scripts/generate-sample-data.mjs`). Skutečné exporty do repozitáře nepatří.
