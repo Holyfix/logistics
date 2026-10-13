@@ -21,6 +21,9 @@
   --changed: #fff4d6;
   --negative-bg: #fdecec;
 
+  /* Okraj stránky: stránka využije celou šířku okna, okraj roste s šířkou monitoru. */
+  --gutter: clamp(16px, 2.5vw, 48px);
+
   --font-display: 'Barlow Semi Condensed', 'Arial Narrow', system-ui, sans-serif;
   --font-body: 'Barlow', system-ui, -apple-system, 'Segoe UI', sans-serif;
 
@@ -104,7 +107,7 @@ button:focus-visible {
   flex-wrap: wrap;
   align-items: center;
   gap: 12px 28px;
-  padding-inline: max(16px, calc((100% - 1200px) / 2));
+  padding-inline: var(--gutter);
   padding-block: 12px;
   background: var(--surface);
   border-bottom: 1px solid var(--line);
@@ -177,9 +180,8 @@ button:focus-visible {
 .content {
   flex: 1;
   width: 100%;
-  max-width: 1232px;
   margin: 0 auto;
-  padding-inline: 16px;
+  padding-inline: var(--gutter);
   padding-block: 24px 48px;
   display: flex;
   flex-direction: column;
@@ -277,7 +279,7 @@ button:focus-visible {
   flex-wrap: wrap;
   justify-content: space-between;
   gap: 4px 24px;
-  padding-inline: max(16px, calc((100% - 1200px) / 2));
+  padding-inline: var(--gutter);
   padding-block: 14px;
   font-size: 13px;
   color: var(--muted);
@@ -292,7 +294,7 @@ button:focus-visible {
 }
 
 .hub {
-  columns: 3 320px;
+  columns: 4 320px;
   column-gap: 16px;
 }
 
@@ -700,7 +702,8 @@ button:focus-visible {
 
 /* Datová tabulka: pevné záhlaví a první sloupec, posun uvnitř panelu */
 .table-tall {
-  max-height: 70vh;
+  /* Tabulka s díly využije skoro celou výšku okna; záhlaví zůstává při posouvání nahoře. */
+  max-height: max(400px, calc(100vh - 120px));
   overflow: auto;
 }
 
