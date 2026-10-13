@@ -18,7 +18,7 @@ Doporučená struktura (složka se v aplikaci vybírá celá, podsložky se proh
 Logistics/
 ├── Item_Mapping.xlsx     mapování dílů (kmenová data)
 ├── Call-offs/            týdenní exporty odvolávek (název souboru s týdnem, např. CW42)
-├── Coverage/<závod>/<projekt>/   soubory pokrytí od zákazníka
+├── Coverage/<destinace>/<projekt>/   soubory pokrytí od zákazníka
 ├── Zásoby/               později: náš sklad pro Coverage, Komponenty, Zásoby
 ├── Kusovník/             později: Komponenty
 ├── Objednávky/           později: Příjem (otevřené nákupní objednávky)
@@ -86,8 +86,8 @@ Další sloupce (např. Yield Percent, Cost Total) aplikace ignoruje.
 
 ## Pokrytí od zákazníka (Coverage)
 
-Soubory se ukládají do `Coverage/<závod>/<projekt>/`. Závod a projekt se berou z názvů složek,
-z každé složky se použije naposledy změněný soubor. Formát se pozná podle obsahu listu,
+Soubory se ukládají do `Coverage/<destinace>/<projekt>/`. Destinace a projekt se berou z názvů složek,
+pro každou destinaci a projekt se použije naposledy změněný soubor (i z hlubší podsložky). Formát se pozná podle obsahu listu,
 na názvu souboru nezáleží. Díly se párují s mapováním podle čísla zákazníka.
 
 | Formát | Jak ho aplikace pozná | Co se z něj použije |

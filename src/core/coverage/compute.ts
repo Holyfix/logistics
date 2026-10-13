@@ -4,7 +4,7 @@ import type { DayNumber } from '../dates';
 import type { MasterData } from '../masterdata';
 import type { CoverageReport } from './parse';
 
-/** Načtený soubor pokrytí; závod a projekt jsou z cesty ve sdílené složce. */
+/** Načtený soubor pokrytí; destinace a projekt jsou z cesty ve sdílené složce. */
 export interface CoverageSource {
   path: string;
   fileName: string;
