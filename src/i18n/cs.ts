@@ -304,6 +304,12 @@ export const cs = {
       unmapped: 'není v mapování',
       note: 'Pokrytí = zůstatek u zákazníka bez transitu na konci dne, volitelně + transit. Záporné hodnoty jsou červeně. Díl bez mapování je uvedený číslem zákazníka.',
     },
+    legend: {
+      negative: 'Záporné pokrytí',
+      uncovered: 'Den prvního nepokrytí podle zákazníka, ale pokrytí je 0 nebo víc',
+      weekend: 'Víkend',
+      boundary: 'Hranice pokrytí 2 dny (dnes + 1)',
+    },
     export: { fileName: 'coverage', sheet: 'Coverage', summarySheet: 'Varianty' },
     hub: { label: 'do 2 dnů', title: 'Díly, které podle souborů zákazníka (s transitem) spadnou do záporu do 2 dnů' },
   },

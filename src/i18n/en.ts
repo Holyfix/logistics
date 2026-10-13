@@ -302,6 +302,12 @@ export const en: Messages = {
       unmapped: 'not in the mapping',
       note: 'Coverage = balance at the customer without transit at the end of the day, optionally + transit. Negative values are red. Parts without mapping are shown by customer number.',
     },
+    legend: {
+      negative: 'Negative coverage',
+      uncovered: 'First uncovered day according to the customer, but coverage is 0 or more',
+      weekend: 'Weekend',
+      boundary: '2-day coverage limit (today + 1)',
+    },
     export: { fileName: 'coverage', sheet: 'Coverage', summarySheet: 'Variants' },
     hub: { label: 'within 2 days', title: 'Parts that go negative within 2 days according to the customer files (with transit)' },
   },

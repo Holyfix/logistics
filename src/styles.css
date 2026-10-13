@@ -20,6 +20,8 @@
   --down: #b42d2d;
   --changed: #fff4d6;
   --negative-bg: #fdecec;
+  --weekend-bg: #eceff3;
+  --uncovered-bg: #ffe0b2;
 
   /* Okraj stránky: stránka využije celou šířku okna, okraj roste s šířkou monitoru. */
   --gutter: clamp(16px, 2.5vw, 48px);
@@ -49,6 +51,8 @@
     --down: #ef7070;
     --changed: #3a3115;
     --negative-bg: #3a1c1c;
+    --weekend-bg: #1f2a34;
+    --uncovered-bg: #4d3510;
     color-scheme: dark;
   }
 }
@@ -812,4 +816,66 @@ button:focus-visible {
 .filters-break {
   flex-basis: 100%;
   height: 0;
+}
+
+/* Coverage: víkend, hranice 2 dnů a den prvního nepokrytí podle zákazníka */
+.table-data .col-weekend {
+  background: var(--weekend-bg);
+}
+
+.table-data .col-boundary {
+  box-shadow: inset -3px 0 0 var(--accent);
+}
+
+.table-data th.col-boundary {
+  color: var(--accent);
+}
+
+.table-data td.cell-uncovered {
+  font-weight: 700;
+  background: var(--uncovered-bg);
+}
+
+.cov-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 20px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 13px;
+  color: var(--ink-2);
+}
+
+.cov-legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.swatch {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  border: 1px solid var(--line);
+}
+
+.swatch-negative {
+  background: var(--negative-bg);
+}
+
+.swatch-uncovered {
+  background: var(--uncovered-bg);
+}
+
+.swatch-weekend {
+  background: var(--weekend-bg);
+}
+
+.swatch-boundary {
+  width: 4px;
+  border: 0;
+  border-radius: 1px;
+  background: var(--accent);
 }

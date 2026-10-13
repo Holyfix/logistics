@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import type { CoverageSource } from '../../core/coverage/compute';
+import type { CoverageReport } from '../../core/coverage/parse';
+import { dayFromParts } from '../../core/dates';
 import { parseCoverageWorkbook } from '../../core/coverage/parse';
 import { parseCsv } from '../../core/csv';
 import { parseMasterData } from '../../core/masterdata';
@@ -100,6 +102,30 @@ describe('CoveragePage', () => {
     expect(bodyRows().map((r) => r.querySelectorAll('td')[3]!.textContent)).toEqual(['Lokalita B', 'Lokalita B']);
     fireEvent.change(screen.getByLabelText('Destinace'), { target: { value: 'Lokalita A' } });
     expect(bodyRows().map((r) => r.querySelectorAll('td')[3]!.textContent)).toEqual(['Lokalita A', 'Lokalita A']);
+  });
+
+  it('víkend, hranice 2 dnů a den prvního nepokrytí se stavem 0 nebo víc', () => {
+    const day = (n: number) => dayFromParts(2026, 10, n)!;
+    const report: CoverageReport = {
+      format: 'articles',
+      sheet: 'articles',
+      days: [day(13), day(14), day(17)],
+      rows: [
+        { customerNumber: 'C1', customerKey: 'C1', supplierItem: '', description: 'A', customerStock: 5, balance: [5, 0, -1], transit: [0, 0, 0], firstUncovered: '1', uncoveredAt: '2026-10-14T08:00' },
+        { customerNumber: 'C2', customerKey: 'C2', supplierItem: '', description: 'B', customerStock: 5, balance: [5, -2, -3], transit: [0, 0, 0], firstUncovered: '2', uncoveredAt: '2026-10-14T09:00' },
+      ],
+      issueCount: 0,
+      issues: [],
+    };
+    renderWith(<CoveragePage today={day(13)} />, { ...state, data: { ...state.data!, coverage: [{ ...source, report }] } });
+    const heads = [...lineTable().querySelectorAll('thead th')].slice(-3);
+    expect(heads.map((h) => h.className)).toEqual(['n', 'n col-boundary', 'n col-weekend']);
+    const [first, second] = bodyRows();
+    const dayCells = (row: HTMLElement) => [...row.querySelectorAll('td')].slice(-3).map((td) => td.className);
+    // 14. 10. je den prvního nepokrytí a stav je 0 → zvýraznit; u druhého dílu je záporný → červeně
+    expect(dayCells(first!)).toEqual(['n', 'n col-boundary cell-uncovered', 'n col-weekend cell-negative']);
+    expect(dayCells(second!)).toEqual(['n', 'n col-boundary cell-negative', 'n col-weekend cell-negative']);
+    expect(screen.getByText('Hranice pokrytí 2 dny (dnes + 1)')).toBeTruthy();
   });
 
   it('bez souborů odkáže na Data', () => {
