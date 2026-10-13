@@ -932,3 +932,89 @@ button:focus-visible {
   border-top: 2px solid var(--line);
   background: var(--surface-2);
 }
+
+/* Plánování: mřížka díly × směny s políčky pro množství */
+.plan-grid th.plan-shift {
+  min-width: 58px;
+  text-align: center;
+}
+
+.plan-grid .plan-day {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  text-align: left;
+}
+
+.plan-grid .plan-day-start {
+  box-shadow: inset 1px 0 0 var(--line);
+}
+
+.plan-grid td.plan-cell,
+.plan-grid tr.plan-summary td {
+  padding: 3px 4px;
+  text-align: center;
+}
+
+.plan-grid tr.plan-summary td {
+  background: var(--surface-2);
+}
+
+.plan-grid tr.plan-summary td.col-weekend {
+  background: var(--weekend-bg);
+}
+
+.plan-grid td.plan-sides {
+  font-size: 11px;
+  white-space: nowrap;
+  color: var(--ink-2);
+}
+
+.plan-input {
+  width: 52px;
+  font: inherit;
+  font-size: 13px;
+  text-align: right;
+  color: inherit;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 3px 5px;
+}
+
+.plan-input-wide {
+  width: 80px;
+}
+
+.plan-input:disabled {
+  color: var(--muted);
+  background: transparent;
+  border-color: transparent;
+}
+
+.table-data td.cell-past {
+  background: var(--surface-2);
+}
+
+.table-data td.cell-manual,
+.plan-grid tr.plan-summary td.cell-manual {
+  background: var(--changed);
+}
+
+.swatch-manual {
+  background: var(--changed);
+}
+
+.swatch-past {
+  background: var(--surface-2);
+}
+
+.save-status {
+  font-size: 13px;
+}
+
+.save-dirty {
+  color: var(--down);
+  font-weight: 600;
+}

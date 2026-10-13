@@ -50,6 +50,7 @@ describe('parseMasterData', () => {
       safetyTime: 0,
       orderMultiple: 16,
       componentCoverage: false,
+      line: '',
     });
     expect(r.value.hasComponentColumn).toBe(false);
     expect(r.value.items.get('900101-0001')).toMatchObject({ side: 'RHD', orderMultiple: null });
@@ -73,6 +74,13 @@ describe('parseMasterData', () => {
     expect([...r.value.items.values()].filter((m) => m.componentCoverage).map((m) => m.item)).toEqual(['K1', 'K2', 'K5']);
   });
 
+  it('sloupec Line převede názvy linek na kódy', () => {
+    const r = parseMasterData(parseCsv('Item Number;Linka\n1;Montáž\n2;assy\n3;Foaming\n4;slush\n5;Vstřikování\n6;IMM 2\n7;\n8;Lakovna'));
+    if (!r.ok) throw new Error();
+    expect(r.value.hasLineColumn).toBe(true);
+    expect([...r.value.items.values()].map((m) => m.line)).toEqual(['ASSEMBLY', 'ASSEMBLY', 'FOA', 'SLH', 'IMM', 'IMM', '', 'LAKOVNA']);
+  });
+
   it('vyžaduje sloupec s číslem dílu', () => {
     expect(parseMasterData(parseCsv('Projekt\nP100'))).toEqual({ ok: false, error: 'missingColumns', columns: ['Item Number'] });
   });
@@ -94,6 +102,7 @@ describe('masterDataTemplate', () => {
       safetyTime: null,
       orderMultiple: 16,
       componentCoverage: false,
+      line: 'ASSEMBLY',
     };
     const t = masterDataTemplate(
       [
@@ -102,10 +111,10 @@ describe('masterDataTemplate', () => {
       ],
       new Map([['1', known]]),
     );
-    expect(t.header).toEqual(['Item Number', 'Customer Number', 'Description', 'Variant', 'Type', 'Project', 'Safety Stock', 'Safety Time', 'Order Multiple', 'Component Coverage']);
+    expect(t.header).toEqual(['Item Number', 'Customer Number', 'Description', 'Variant', 'Type', 'Project', 'Safety Stock', 'Safety Time', 'Order Multiple', 'Component Coverage', 'Line']);
     expect(t.rows).toEqual([
-      ['1', 'C1', 'X', 'LHD', 'IP', 'P', '0', '', '16', ''],
-      ['2', '', 'Popis 2', '', '', '', '', '', '', ''],
+      ['1', 'C1', 'X', 'LHD', 'IP', 'P', '0', '', '16', '', 'ASSEMBLY'],
+      ['2', '', 'Popis 2', '', '', '', '', '', '', '', ''],
     ]);
   });
 });

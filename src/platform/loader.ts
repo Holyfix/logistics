@@ -5,6 +5,8 @@ import type { CoverageSource } from '../core/coverage/compute';
 import type { MasterData } from '../core/masterdata';
 import type { StockData } from '../core/stock';
 import type { BomData } from '../core/bom';
+import type { LinePlan } from '../core/planning/plan';
+import type { PlanSettings } from '../core/planning/settings';
 import { classifyPath, coverageScope, formatOf } from '../core/sources';
 import { idbDelete, idbGet, idbKeys, idbSet, STORE_CALLOFFS } from './idb';
 import { listFiles, type FolderSource, type SourceFile } from './folder';
@@ -27,8 +29,18 @@ export interface LoadedData {
   stock: { path: string; lastModified: number; data: StockData } | null;
   /** Kusovníky (všechny soubory, od nejnovějšího). */
   boms: { path: string; lastModified: number; data: BomData }[];
+  /** Plány linek ze složky Plan (jeden soubor na linku a projekt). */
+  plans: SavedPlan[];
+  /** Nastavení kapacit (Plan/Kapacity.xlsx). */
+  planSettings: { path: string; lastModified: number; settings: PlanSettings } | null;
   failed: FailedFile[];
   loadedAt: number;
+}
+
+export interface SavedPlan {
+  path: string;
+  lastModified: number;
+  plan: LinePlan;
 }
 
 export interface LoadProgress {
@@ -73,12 +85,15 @@ export async function loadFolder(source: FolderSource, onProgress: (p: LoadProgr
     .sort((a, b) => b.lastModified - a.lastModified);
   const stockFiles = files.filter((f) => classifyPath(f.path) === 'stock').sort((a, b) => b.lastModified - a.lastModified);
   const bomFiles = files.filter((f) => classifyPath(f.path) === 'bom').sort((a, b) => b.lastModified - a.lastModified);
+  const planFiles = files.filter((f) => classifyPath(f.path) === 'plan').sort((a, b) => b.lastModified - a.lastModified);
+  const settingsFiles = files.filter((f) => classifyPath(f.path) === 'planSettings').sort((a, b) => b.lastModified - a.lastModified);
 
   // Coverage: pro každou destinaci a projekt platí naposledy změněný soubor (i z hlubší podsložky).
   const coverageFiles = new Map<string, SourceFile>();
   const failed: FailedFile[] = [];
   // Sklad: platí naposledy změněný soubor, starší se jen vypíšou.
   for (const file of stockFiles.slice(1)) failed.push({ path: file.path, reason: 'superseded', detail: stockFiles[0]!.path });
+  for (const file of settingsFiles.slice(1)) failed.push({ path: file.path, reason: 'superseded', detail: settingsFiles[0]!.path });
   for (const file of files.filter((f) => classifyPath(f.path) === 'coverage').sort((a, b) => b.lastModified - a.lastModified)) {
     const { location, project } = coverageScope(file.path);
     const key = `${location}|${project}`;
@@ -88,7 +103,7 @@ export async function loadFolder(source: FolderSource, onProgress: (p: LoadProgr
   }
 
   const parsed: { file: SourceFile; exp: CallOffExport }[] = [];
-  const total = calloffFiles.length + (masterFiles.length > 0 ? 1 : 0) + coverageFiles.size + (stockFiles.length > 0 ? 1 : 0) + bomFiles.length;
+  const total = calloffFiles.length + (masterFiles.length > 0 ? 1 : 0) + coverageFiles.size + (stockFiles.length > 0 ? 1 : 0) + bomFiles.length + planFiles.length + (settingsFiles.length > 0 ? 1 : 0);
   let done = 0;
   onProgress({ done, total });
 
@@ -174,5 +189,28 @@ export async function loadFolder(source: FolderSource, onProgress: (p: LoadProgr
     onProgress({ done: ++done, total });
   }
 
-  return { folderName: source.name, exports, master, coverage, stock, boms, failed, loadedAt: Date.now() };
+  // Plány: pro každou linku a projekt platí naposledy změněný soubor.
+  const plans: SavedPlan[] = [];
+  for (const file of planFiles) {
+    const response = await parseInWorker({ kind: 'plan', format: 'xlsx', name: file.path, file: file.file });
+    if (response.kind === 'plan' && response.result.ok) {
+      const plan = response.result.value;
+      const newer = plans.find((p) => p.plan.line === plan.line && p.plan.project === plan.project);
+      if (newer) failed.push({ path: file.path, reason: 'superseded', detail: newer.path });
+      else plans.push({ path: file.path, lastModified: file.lastModified, plan });
+    } else if (response.kind === 'plan' && !response.result.ok) failed.push({ path: file.path, reason: 'missingColumns', detail: response.result.columns.join(', ') });
+    else if (response.kind === 'error') failed.push({ path: file.path, reason: 'unreadable', detail: response.message });
+    onProgress({ done: ++done, total });
+  }
+
+  let planSettings: LoadedData['planSettings'] = null;
+  const settingsFile = settingsFiles[0];
+  if (settingsFile) {
+    const response = await parseInWorker({ kind: 'planSettings', format: 'xlsx', name: settingsFile.path, file: settingsFile.file });
+    if (response.kind === 'planSettings') planSettings = { path: settingsFile.path, lastModified: settingsFile.lastModified, settings: response.result };
+    else if (response.kind === 'error') failed.push({ path: settingsFile.path, reason: 'unreadable', detail: response.message });
+    onProgress({ done: done + 1, total });
+  }
+
+  return { folderName: source.name, exports, master, coverage, stock, boms, plans, planSettings, failed, loadedAt: Date.now() };
 }

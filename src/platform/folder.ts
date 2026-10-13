@@ -77,3 +77,45 @@ export async function listFiles(source: FolderSource): Promise<SourceFile[]> {
   await walk(source.handle, '', 1);
   return result;
 }
+
+export type SaveResult =
+  | { status: 'saved'; path: string; lastModified: number }
+  | { status: 'conflict'; path: string; lastModified: number }
+  | { status: 'denied' }
+  | { status: 'downloaded' };
+
+/** Povolí zápis do složky (aplikace ji jinak jen čte). Musí být volané z kliknutí uživatele. */
+export async function requestWrite(handle: FileSystemDirectoryHandle): Promise<boolean> {
+  if ((await handle.queryPermission?.({ mode: 'readwrite' })) === 'granted') return true;
+  return ((await handle.requestPermission?.({ mode: 'readwrite' })) ?? 'granted') === 'granted';
+}
+
+/**
+ * Zapíše soubor na cestu relativně ke složce (chybějící podsložky vytvoří). `expected` je čas změny souboru,
+ * jak byl načtený (null = soubor nebyl); když ho mezitím změnil někdo jiný, vrátí `conflict` a nic nezapíše,
+ * pokud není `force`.
+ */
+export async function writeFile(
+  root: FileSystemDirectoryHandle,
+  path: string,
+  blob: Blob,
+  expected: number | null,
+  force = false,
+): Promise<SaveResult> {
+  const parts = path.split('/');
+  const name = parts.pop()!;
+  let dir = root;
+  for (const part of parts) dir = await dir.getDirectoryHandle(part, { create: true });
+  let existing: number | null;
+  try {
+    existing = (await (await dir.getFileHandle(name)).getFile()).lastModified;
+  } catch {
+    existing = null;
+  }
+  if (!force && existing !== null && (expected === null || existing > expected)) return { status: 'conflict', path, lastModified: existing };
+  const file = await dir.getFileHandle(name, { create: true });
+  const writable = await file.createWritable();
+  await writable.write(blob);
+  await writable.close();
+  return { status: 'saved', path, lastModified: (await file.getFile()).lastModified };
+}

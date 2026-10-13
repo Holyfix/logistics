@@ -33,10 +33,10 @@ export interface XlsxSheet {
   stickyColumns?: number;
 }
 
-/** Excel se vytváří až při stažení, knihovna se načte jen tehdy. */
-export async function downloadXlsxSheets(fileName: string, sheets: XlsxSheet[]): Promise<void> {
+/** Sešit Excelu z listů. Knihovna se načte až při prvním použití. */
+export async function xlsxBlob(sheets: XlsxSheet[]): Promise<Blob> {
   const { default: writeXlsxFile } = await import('write-excel-file/browser');
-  const blob = await writeXlsxFile(
+  return writeXlsxFile(
     sheets.map((sheet) => ({
       sheet: sheet.name.slice(0, 31),
       stickyRowsCount: 1,
@@ -48,7 +48,11 @@ export async function downloadXlsxSheets(fileName: string, sheets: XlsxSheet[]):
       ],
     })),
   ).toBlob();
-  downloadBlob(fileName, blob);
+}
+
+/** Excel se vytváří až při stažení, knihovna se načte jen tehdy. */
+export async function downloadXlsxSheets(fileName: string, sheets: XlsxSheet[]): Promise<void> {
+  downloadBlob(fileName, await xlsxBlob(sheets));
 }
 
 export function downloadXlsx(fileName: string, sheetName: string, header: string[], rows: XlsxValue[][]): Promise<void> {

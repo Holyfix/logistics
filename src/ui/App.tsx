@@ -8,6 +8,8 @@ import { CoveragePage } from './coverage/CoveragePage';
 import { DataPage } from './DataPage';
 import { HubPage } from './HubPage';
 import { ModulePage } from './ModulePage';
+import { PlanningPage } from './planning/PlanningPage';
+import { PlanningProvider } from './planning/PlanningProvider';
 import { findModule, type ModuleDef } from './modules';
 
 export const APP_NAME = 'Logistics';
@@ -63,20 +65,23 @@ export function App() {
         </div>
       </header>
 
-      <main className="content">
-        {!supported && (
-          <div className="banner" role="status">
-            <strong>{t.support.title}</strong>
-            <span>{t.support.body}</span>
-          </div>
-        )}
-        {!current && <HubPage />}
-        {current?.id === 'data' && <DataPage />}
-        {current?.id === 'calloffs' && <CallOffsPage />}
-        {current?.id === 'coverage' && <CoveragePage />}
-        {current?.id === 'components' && <ComponentsPage />}
-        {current && !['data', 'calloffs', 'coverage', 'components'].includes(current.id) && <ModulePage module={current} />}
-      </main>
+      <PlanningProvider>
+        <main className="content">
+          {!supported && (
+            <div className="banner" role="status">
+              <strong>{t.support.title}</strong>
+              <span>{t.support.body}</span>
+            </div>
+          )}
+          {!current && <HubPage />}
+          {current?.id === 'data' && <DataPage />}
+          {current?.id === 'calloffs' && <CallOffsPage />}
+          {current?.id === 'coverage' && <CoveragePage />}
+          {current?.id === 'components' && <ComponentsPage />}
+          {current?.id === 'production' && <PlanningPage />}
+          {current && !['data', 'calloffs', 'coverage', 'components', 'production'].includes(current.id) && <ModulePage module={current} />}
+        </main>
+      </PlanningProvider>
 
       <footer className="footer">
         <span>{t.footer.privacy}</span>

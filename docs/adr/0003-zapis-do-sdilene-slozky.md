@@ -1,6 +1,6 @@
 # ADR 0003: Zápis záznamů do sdílené složky
 
-- **Stav:** navrženo (k potvrzení)
+- **Stav:** přijato pro plánování (2026-10-13), pro Obaly a Akční plán navrženo
 - **Datum:** 2026-10-12
 
 ## Kontext
@@ -32,3 +32,14 @@ Varianta 1:
 - 👎 Kolegové uvidí změnu až po synchronizaci OneDrive (obvykle do minuty).
 - 👎 Autor záznamu není ověřený (jméno, ne přihlášení).
 - 👎 Vhodné pro desítky záznamů denně, ne pro tisíce.
+
+## Plánování (2026-10-13)
+
+Modul Plánování zapisuje přes File System Access API do složky `Plan`:
+- Plán linky je **jeden Excel na linku a projekt** (např. `Plan/ASSEMBLY_P100.xlsx`), aby se dal sdílet
+  a otevřít bez aplikace. Každou linku plánuje jeden člověk, takže dva lidé nezapisují do stejného souboru.
+- Kapacity jsou v `Plan/Kapacity.xlsx` a platí pro všechny plánovače.
+- Před zápisem aplikace porovná čas změny souboru s načteným; když ho mezitím změnil někdo jiný, zeptá se,
+  jestli ho přepsat.
+- Oprávnění k zápisu si prohlížeč vyžádá při prvním uložení. Bez File System Access API (jiný prohlížeč než Edge
+  a Chrome) se soubor stáhne a uloží se ručně.

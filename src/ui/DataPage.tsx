@@ -295,6 +295,47 @@ export function DataPage() {
             )}
           </div>
 
+          <div className="panel">
+            <h2>{t.data.planning.heading}</h2>
+            {data.plans.length === 0 && !data.planSettings ? (
+              <p>{t.data.planning.none}</p>
+            ) : (
+              <div className="table-scroll">
+                <table className="table">
+                  <thead>
+                    <tr>
+                      <th>{t.data.planning.file}</th>
+                      <th>{t.data.planning.content}</th>
+                      <th>{t.data.bom.modified}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.planSettings && (
+                      <tr>
+                        <td>{data.planSettings.path}</td>
+                        <td>
+                          {t.data.planning.settings}: {formatQuantity(data.planSettings.settings.lines.length, locale)} {t.data.planning.lines},{' '}
+                          {formatQuantity(data.planSettings.settings.destinations.length, locale)} {t.data.planning.destinations}
+                        </td>
+                        <td>{new Date(data.planSettings.lastModified).toLocaleString(locale === 'cs' ? 'cs-CZ' : 'en-GB', { dateStyle: 'short', timeStyle: 'short' })}</td>
+                      </tr>
+                    )}
+                    {data.plans.map((p) => (
+                      <tr key={p.path}>
+                        <td>{p.path}</td>
+                        <td>
+                          {p.plan.line} {p.plan.project}: {formatQuantity(Object.keys(p.plan.cells).length, locale)} {t.data.planning.cells}
+                        </td>
+                        <td>{new Date(p.lastModified).toLocaleString(locale === 'cs' ? 'cs-CZ' : 'en-GB', { dateStyle: 'short', timeStyle: 'short' })}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            {data.master && <p className="muted">{data.master.data.hasLineColumn ? t.data.planning.lineColumn : t.data.planning.noLineColumn}</p>}
+          </div>
+
           {data.failed.length > 0 && (
             <div className="panel">
               <h2>{t.data.failed.heading}</h2>
@@ -319,6 +360,7 @@ export function DataPage() {
           <li>{t.data.structure.coverage}</li>
           <li>{t.data.structure.stock}</li>
           <li>{t.data.structure.bom}</li>
+          <li>{t.data.structure.planning}</li>
         </ul>
       </div>
     </section>

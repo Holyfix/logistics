@@ -64,12 +64,12 @@ const COMPONENTS = [
   { item: 'K-2002', description: 'FOAM PAD', um: 'EA', source: 'P', qty: 2, track: true, sub: true },
 ];
 const master = [
-  'Item Number;Customer Number;Description;Variant;Type;Project;Safety Stock;Safety Time;Order Multiple;Component Coverage',
+  'Item Number;Customer Number;Description;Variant;Type;Project;Safety Stock;Safety Time;Order Multiple;Component Coverage;Line',
   ...items
     .filter((it) => it.project)
-    .map((it, idx) => [it.item, customerNumber(idx), it.description, it.side + (idx % 4 === 1 ? ' HUD' : ''), it.description.split(' ')[1], it.project, 0, 0, [8, 12, 16, 24][idx % 4], ''].join(';')),
-  ...COMPONENTS.map((c) => [c.item, '', c.description, '', 'COMPONENT', '', 0, 0, '', c.track ? 'Ano' : ''].join(';')),
-  'S-0100;;CARRIER SUB-ASSY;;SUB;;0;0;;',
+    .map((it, idx) => [it.item, customerNumber(idx), it.description, it.side + (idx % 4 === 1 ? ' HUD' : ''), it.description.split(' ')[1], it.project, 0, 0, [8, 12, 16, 24][idx % 4], '', 'ASSEMBLY'].join(';')),
+  ...COMPONENTS.map((c) => [c.item, '', c.description, '', 'COMPONENT', '', 0, 0, '', c.track ? 'Ano' : '', ''].join(';')),
+  'S-0100;;CARRIER SUB-ASSY;;SUB;;0;0;;;FOA',
 ];
 writeFileSync('sample-data/Item_Mapping.csv', '\ufeff' + master.join('\r\n') + '\r\n');
 
@@ -228,5 +228,27 @@ for (const it of items.filter((i) => i.project === 'P100' || i.project === 'P300
 }
 mkdirSync('sample-data/BOM', { recursive: true });
 await writeXlsxFile(bomRows, { sheet: 'Sheet1' }).toFile('sample-data/BOM/MBOM_ASSY_PANEL.xlsx');
+
+// Nastavení plánování: kapacita montáže po projektech (s rezervou nad průměrnou denní potřebou) a doprava podle destinace.
+const head = (values) => values.map(bold);
+const capacityRows = PROJECTS.map(([project]) => {
+  const daily = items.filter((it) => it.project === project).reduce((sum, it) => sum + it.base, 0);
+  return [text('ASSEMBLY'), text(project), { value: Math.ceil((daily * 1.15) / 3 / 10) * 10, type: Number }, text(project === 'P400' ? 'R O' : 'R O N')];
+});
+mkdirSync('sample-data/Plan', { recursive: true });
+await writeXlsxFile([
+  { sheet: 'Linky', data: [head(['Linka', 'Projekt', 'Ks za směnu', 'Směny po–pá']), ...capacityRows] },
+  {
+    sheet: 'Destinace',
+    data: [
+      head(['Destinace', 'Pokrytí u zákazníka (dny)', 'Transit (h)', 'Příjezd']),
+      [text('Lokalita A'), { value: 2, type: Number }, { value: 24, type: Number }, text('06:00')],
+      [text('Lokalita B'), { value: 2, type: Number }, { value: 24, type: Number }, text('06:00')],
+      [text('Lokalita C'), { value: 2, type: Number }, { value: 48, type: Number }, text('06:00')],
+      [null, { value: 2, type: Number }, { value: 24, type: Number }, text('06:00')],
+    ],
+  },
+  { sheet: 'Směny', data: [head(['Ranní směna od']), [text('06:00')]] },
+]).toFile('sample-data/Plan/Kapacity.xlsx');
 
 console.log(`Vytvořeno: 3 exporty, ${items.length} dílů, mapování pro ${items.length - 1} dílů, coverage ve 3 formátech, sklad, kusovník.`);
