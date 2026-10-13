@@ -19,7 +19,7 @@ export interface LoadedData {
   /** Exporty odvolávek seřazené od nejstaršího. */
   exports: CallOffExport[];
   master: { path: string; data: MasterData } | null;
-  /** Soubory pokrytí od zákazníka: z každé složky závodu a projektu nejnovější. */
+  /** Soubory pokrytí od zákazníka: pro každou destinaci a projekt nejnovější. */
   coverage: CoverageSource[];
   failed: FailedFile[];
   loadedAt: number;
@@ -66,14 +66,15 @@ export async function loadFolder(source: FolderSource, onProgress: (p: LoadProgr
     .filter((f) => classifyPath(f.path) === 'masterdata')
     .sort((a, b) => b.lastModified - a.lastModified);
 
-  // Coverage: v každé složce (závod/projekt) platí naposledy změněný soubor.
+  // Coverage: pro každou destinaci a projekt platí naposledy změněný soubor (i z hlubší podsložky).
   const coverageFiles = new Map<string, SourceFile>();
   const failed: FailedFile[] = [];
   for (const file of files.filter((f) => classifyPath(f.path) === 'coverage').sort((a, b) => b.lastModified - a.lastModified)) {
-    const folder = file.path.split('/').slice(0, -1).join('/');
-    const newer = coverageFiles.get(folder);
+    const { location, project } = coverageScope(file.path);
+    const key = `${location}|${project}`;
+    const newer = coverageFiles.get(key);
     if (newer) failed.push({ path: file.path, reason: 'superseded', detail: newer.path });
-    else coverageFiles.set(folder, file);
+    else coverageFiles.set(key, file);
   }
 
   const parsed: { file: SourceFile; exp: CallOffExport }[] = [];

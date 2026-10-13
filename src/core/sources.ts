@@ -20,7 +20,7 @@ export function formatOf(path: string): SourceFormat | null {
 
 /**
  * Kmenová data (mapování dílů): soubor s „kmenov“, „master“ nebo „mapping“ v názvu.
- * Coverage: Excel ve složce „coverage“ (i v podsložkách závodu a projektu).
+ * Coverage: Excel ve složce „coverage“ (i v podsložkách destinace a projektu).
  * Odvolávky: soubor ve složce „odvolavky“ / „call-offs“, nebo s „odvolavk“ / „call-off“ v názvu.
  * Dočasné soubory Excelu (~$…) se ignorují.
  */
@@ -37,7 +37,7 @@ export function classifyPath(path: string): SourceKind {
 }
 
 /**
- * Závod a projekt z cesty souboru coverage: Coverage/<závod>/<projekt>/soubor.xlsx.
+ * Destinace a projekt z cesty souboru coverage: Coverage/<destinace>/<projekt>/soubor.xlsx.
  * Chybějící úroveň zůstane prázdná. Názvy se berou ze složek, aplikace je nemá napevno.
  */
 export function coverageScope(path: string): { location: string; project: string } {

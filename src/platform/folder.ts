@@ -15,7 +15,11 @@ export type FolderSource =
   | { kind: 'files'; name: string; files: SourceFile[] };
 
 const HANDLE_KEY = 'folder';
-const MAX_DEPTH = 3;
+/**
+ * Kolik úrovní složek se prohledá (kořen = 1). Coverage má soubory ve 4. úrovni
+ * (Coverage/<destinace>/<projekt>/soubor); rezerva pro případ, že je vybraná nadřazená složka.
+ */
+export const MAX_DEPTH = 6;
 
 export function canPickDirectory(): boolean {
   return typeof window.showDirectoryPicker === 'function';
