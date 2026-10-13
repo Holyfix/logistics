@@ -148,6 +148,14 @@ describe('buildCoverage', () => {
     expect(t.lines[1]).toMatchObject({ item: '', project: 'P100', description: 'ASSY DOOR RHD', values: [45, 40, 35] });
   });
 
+  it('číslo zákazníka v jednotném zápisu bez doplňujících nul, zápis ze souboru zůstane', () => {
+    const t = buildCoverage([source], master.value, { transit: false });
+    expect(t.lines.map((l) => [l.customerNumber, l.fileCustomerNumber])).toEqual([
+      ['A1234567890 0001', 'A1234567890      0001'],
+      ['A1234567890 0002', 'A1234567890      0002'],
+    ]);
+  });
+
   it('transit podle přepínače', () => {
     const t = buildCoverage([source], master.value, { transit: true });
     expect(t.lines[0]!.values).toEqual([15, 5, -4]);
@@ -170,7 +178,11 @@ describe('buildCoverage', () => {
     expect(ids({ rows: { kind: 'negativeOn', day: t.days[1]! } })).toEqual([]);
     expect(ids({ rows: { kind: 'negativeOn', day: t.days[2]! } })).toEqual(['900100']);
     expect(ids({ variant: 'LHD HUD' })).toEqual(['900100']);
-    expect(ids({ query: 'rhd' })).toEqual(['A1234567890      0002']);
+    expect(ids({ query: 'rhd' })).toEqual(['A1234567890 0002']);
+    // hledá se v jednotném zápisu, bez mezer i podle zápisu ze souboru
+    expect(ids({ query: 'a1234567890 0001' })).toEqual(['900100']);
+    expect(ids({ query: 'A12345678900001' })).toEqual(['900100']);
+    expect(ids({ query: '      0001' })).toEqual(['900100']);
     expect(coverageOptions(t)).toEqual({ locations: ['Lokalita A'], projects: ['P1', 'P100'], variants: ['LHD HUD'], unmapped: 1 });
   });
 

@@ -302,7 +302,8 @@ export const cs = {
       firstUncovered: 'První nepokryté',
       empty: 'Filtru neodpovídá žádný díl.',
       unmapped: 'není v mapování',
-      note: 'Pokrytí = zůstatek u zákazníka bez transitu na konci dne, volitelně + transit. Záporné hodnoty jsou červeně. Díl bez mapování je uvedený číslem zákazníka.',
+      fileCustomerNumber: 'V souboru zákazníka',
+      note: 'Pokrytí = zůstatek u zákazníka bez transitu na konci dne, volitelně + transit. Záporné hodnoty jsou červeně. Číslo zákazníka je v jednotném zápisu bez doplňujících nul (zápis ze souboru zákazníka ukáže najetí myší). Díl bez mapování je uvedený číslem zákazníka.',
     },
     legend: {
       negative: 'Záporné pokrytí',

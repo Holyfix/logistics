@@ -304,7 +304,7 @@ export function CoveragePage({ today = localToday() }: { today?: DayNumber } = {
                       <strong>{l.item || '—'}</strong>
                       {!l.item && <small className="muted cell-note">{tc.table.unmapped}</small>}
                     </td>
-                    <td>{l.customerNumber}</td>
+                    <td title={l.fileCustomerNumber !== l.customerNumber ? `${tc.table.fileCustomerNumber}: ${l.fileCustomerNumber}` : undefined}>{l.customerNumber}</td>
                     <td className="desc">{l.description}</td>
                     <td>{l.location || '—'}</td>
                     <td>{l.project || '—'}</td>

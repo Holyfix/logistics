@@ -300,7 +300,8 @@ export const en: Messages = {
       firstUncovered: 'First uncovered',
       empty: 'No part matches the filters.',
       unmapped: 'not in the mapping',
-      note: 'Coverage = balance at the customer without transit at the end of the day, optionally + transit. Negative values are red. Parts without mapping are shown by customer number.',
+      fileCustomerNumber: 'In the customer file',
+      note: 'Coverage = balance at the customer without transit at the end of the day, optionally + transit. Negative values are red. Customer numbers use one format without padding zeros (hover to see the number as written in the customer file). Parts without mapping are shown by customer number.',
     },
     legend: {
       negative: 'Negative coverage',

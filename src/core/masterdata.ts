@@ -59,6 +59,13 @@ export function customerKey(value: string): string {
   return compact;
 }
 
+/** Jednotný zápis čísla zákazníka pro zobrazení: „A1234567890 1234“ (bez doplňujících nul barvy). */
+export function customerDisplay(value: string): string {
+  const compact = value.replace(/\s+/g, '').toUpperCase();
+  if (compact.length >= 15 && compact.startsWith('A')) return `${compact.slice(0, 11)} ${compact.slice(-4)}`;
+  return value.trim().replace(/\s+/g, ' ');
+}
+
 function sideOf(side: string, variant: string): string {
   const explicit = side.toUpperCase();
   if (explicit) return explicit;

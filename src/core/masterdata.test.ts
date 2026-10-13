@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { parseCsv } from './csv';
-import { customerKey, masterDataTemplate, parseMasterData, type MasterItem } from './masterdata';
+import { customerDisplay, customerKey, masterDataTemplate, parseMasterData, type MasterItem } from './masterdata';
 
 describe('customerKey', () => {
   it('sjednotí zápis čísla zákazníka', () => {
@@ -10,6 +10,15 @@ describe('customerKey', () => {
     expect(customerKey(' a1234567890-9051 ')).toBe('A12345678909051');
     expect(customerKey('12345 678')).toBe('12345678');
     expect(customerKey('')).toBe('');
+  });
+});
+
+describe('customerDisplay', () => {
+  it('jednotný zápis bez doplňujících nul barvy', () => {
+    expect(customerDisplay('A1234567890  00009L22')).toBe('A1234567890 9L22');
+    expect(customerDisplay('A1234567890 9L22')).toBe('A1234567890 9L22');
+    expect(customerDisplay('a1234567890      9051 ')).toBe('A1234567890 9051');
+    expect(customerDisplay(' 12345  678 ')).toBe('12345 678');
   });
 });
 
