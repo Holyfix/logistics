@@ -351,9 +351,9 @@ export const en: Messages = {
     callOffs: 'call-offs',
     kpi: {
       short: 'Negative within 14 days',
-      shortNote: 'components that will not last until',
+      shortNote: 'different parts (components) that will not last until',
       soon: 'Negative within 2 days',
-      soonNote: 'components negative today or tomorrow',
+      soonNote: 'different parts (components) negative today or tomorrow',
       tracked: 'Components tracked',
       byMapping: 'by the Component Coverage column in Item Mapping',
       allPurchased: 'all purchased (Item Mapping has no Component Coverage column)',
@@ -404,7 +404,10 @@ export const en: Messages = {
       note: 'Demand for finished parts comes from the latest call-off export (required quantity per day). Customer coverage files are not used for components because they only show the end-of-day balance. The table follows the component filters: a project shows its finished parts, a component (search, click on the component number or “Negative only”) shows finished parts that have it in their BOM.',
     },
     export: { fileName: 'components', sheet: 'Components', demandSheet: 'Demand' },
-    hub: { label: 'not covered for 2 days', title: 'Component types that will not last today and tomorrow according to the BOM and call-offs' },
+    hub: {
+      label: { one: 'part not covered for 2 days', few: 'different parts not covered for 2 days', other: 'different parts not covered for 2 days' },
+      title: 'Number of different components (part types) that will not last today and tomorrow according to the BOM and call-offs',
+    },
   },
   calloffs: {
     noData: 'No call-off exports loaded yet.',

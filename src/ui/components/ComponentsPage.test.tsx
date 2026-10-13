@@ -124,6 +124,6 @@ describe('ComponentsPage', () => {
     cleanup();
     renderWith(<HubPage />);
     const metric = screen.getByRole('link', { name: /Komponenty/ }).querySelector('.metric');
-    expect(metric!.textContent).toMatch(/^\d+ nepokryto na 2 dny$/);
+    expect(metric!.textContent).toMatch(/^(1 díl nepokrytý|[2-4] různé díly nepokryté|\d+ různých dílů nepokrytých) na 2 dny$/);
   });
 });

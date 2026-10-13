@@ -353,9 +353,9 @@ export const cs = {
     callOffs: 'odvolávky',
     kpi: {
       short: 'V záporu do 14 dní',
-      shortNote: 'komponent, které nevystačí do',
+      shortNote: 'různých dílů (komponent), které nevystačí do',
       soon: 'V záporu do 2 dnů',
-      soonNote: 'komponent v záporu dnes nebo zítra',
+      soonNote: 'různých dílů (komponent) v záporu dnes nebo zítra',
       tracked: 'Sledováno komponent',
       byMapping: 'podle sloupce Component Coverage v Item Mappingu',
       allPurchased: 'všechny nakupované (v Item Mappingu chybí sloupec Component Coverage)',
@@ -406,7 +406,10 @@ export const cs = {
       note: 'Poptávka hotových dílů je z nejnovějšího exportu odvolávek (požadované množství na den). Soubory pokrytí od zákazníka se pro komponenty nepoužívají, protože ukazují jen stav na konci dne. Tabulka se řídí filtry nad pokrytím komponent: projekt ukáže hotové díly projektu, komponenta (hledání, kliknutí na číslo komponenty nebo „Jen v záporu“) hotové díly, které ji mají v kusovníku.',
     },
     export: { fileName: 'komponenty', sheet: 'Komponenty', demandSheet: 'Poptávka' },
-    hub: { label: 'nepokryto na 2 dny', title: 'Druhy komponent, které podle kusovníku a odvolávek nevystačí na dnešek a zítřek' },
+    hub: {
+      label: { one: 'díl nepokrytý na 2 dny', few: 'různé díly nepokryté na 2 dny', other: 'různých dílů nepokrytých na 2 dny' },
+      title: 'Počet různých komponent (druhů dílů), které podle kusovníku a odvolávek nevystačí na dnešek a zítřek',
+    },
   },
   calloffs: {
     noData: 'Zatím nejsou načtené žádné exporty odvolávek.',
