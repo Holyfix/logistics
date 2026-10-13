@@ -6,6 +6,7 @@ import { assemblyItems, evaluateItem, proposePlan, slotCapacity, slotSides, type
 import { cellKey, emptyPlan, parsePlanWorkbook, planFileName, planSheets, shiftSlots, sideOrder, slotKey } from './plan';
 import { DEFAULT_SETTINGS, destinationOf, lineCapacity, parseSettings, parseShifts, parseTime, settingsSheets, type PlanSettings } from './settings';
 import type { Cell } from '../table';
+import type { CoverageSource } from '../coverage/compute';
 
 const MON = dayFromParts(2026, 10, 12)!;
 const TUE = MON + 1;
@@ -99,6 +100,54 @@ describe('směny a soubor plánu', () => {
   });
 });
 
+/** Soubor coverage s jedním dílem: stav (sklad + transit − plán zákazníka) na konci dnů. */
+function coverageFile(item: string, location: string, project: string, days: number[], balance: number[]): CoverageSource {
+  return {
+    path: `Coverage/${location}/${project}/c.xlsx`,
+    fileName: 'c.xlsx',
+    location,
+    project,
+    lastModified: 0,
+    report: {
+      format: 'articles',
+      sheet: 'articles',
+      days,
+      rows: [{ customerNumber: '', customerKey: '', supplierItem: item, description: 'PANEL RHD', customerStock: 0, balance, transit: days.map(() => 0), firstUncovered: '', uncoveredAt: '' }],
+      issueCount: 0,
+      issues: [],
+    },
+  } as CoverageSource;
+}
+
+describe('požadavky montáže z coverage', () => {
+  it('chybějící kusy ze souboru coverage s termínem výroby; odvolávky se nepoužijí', () => {
+    const master = parseMasterData(parseCsv('Item Number;Project;Variant;Line\nA;;LHD;Assembly\nB;P;RHD;FOA\nC;P;LHD;ASSEMBLY'));
+    if (!master.ok) throw new Error();
+    // Stav u sekvencéra: čt 15. 10. −40, pá 16. 10. −30 (zlepšení), po 19. 10. −70.
+    const cov = coverageFile('A', 'Lokalita A', 'P1', [MON + 3, MON + 4, MON + 7], [-40, -30, -70]);
+    const callOffs = { items: ['C'], descriptions: [''], offsets: new Uint32Array([0, 1]), days: new Int32Array([MON + 3]), qty: new Float64Array([99]) } as unknown as Parameters<typeof assemblyItems>[0]['callOffs'];
+    const items = assemblyItems({ master: master.value, coverage: [cov], callOffs, stock: new Map([['A', 5]]), today: MON, settings: DEFAULT_SETTINGS });
+    expect(items.map((i) => [i.item, i.project])).toEqual([
+      ['A', 'P1'],
+      ['C', 'P'],
+    ]);
+    // Potřeba 15. 10. → příjezd 14. 10. 6:00 → odjezd 13. 10. 6:00.
+    expect(items[0]).toMatchObject({ stock: 5, requirements: [{ day: MON + 3, deadline: at(TUE, 6), qty: 40 }, { day: MON + 7, deadline: at(MON + 5, 6), qty: 30 }] });
+    expect(items[1]!.requirements).toEqual([]);
+  });
+
+  it('bez sloupce Line díly ze souborů coverage a díly z mapování s projektem a stranou', () => {
+    const master = parseMasterData(parseCsv('Item Number;Project;Variant\nA;P;LHD\nK;;'));
+    if (!master.ok) throw new Error();
+    const cov = coverageFile('Z', 'L', 'P2', [MON + 3], [-10]);
+    const items = assemblyItems({ master: master.value, coverage: [cov], callOffs: undefined, stock: undefined, today: MON, settings: DEFAULT_SETTINGS });
+    expect(items.map((i) => [i.item, i.side, i.project])).toEqual([
+      ['A', 'LHD', 'P'],
+      ['Z', 'RHD', 'P2'],
+    ]);
+  });
+});
+
 const item = (id: string, side: string, stock: number, reqs: [number, number][]): PlanItem => ({
   item: id,
   customerNumber: '',
@@ -107,55 +156,24 @@ const item = (id: string, side: string, stock: number, reqs: [number, number][])
   project: 'P',
   location: '',
   stock,
-  requirements: reqs.map(([deadline, qty]) => ({ day: Math.floor(deadline / 1440) + 2, deadline, qty, fixed: true })),
-});
-
-describe('požadavky montáže', () => {
-  it('termín výroby: potřeba 15. 10. → příjezd 14. 10. 6:00 → odjezd 13. 10. 6:00', () => {
-    const master = parseMasterData(parseCsv('Item Number;Project;Variant;Line\nA;P;LHD;Assembly\nB;P;RHD;FOA'));
-    if (!master.ok) throw new Error();
-    const exp = {
-      items: ['A'],
-      descriptions: ['PANEL LHD'],
-      offsets: new Uint32Array([0, 1]),
-      days: new Int32Array([MON + 3]),
-      qty: new Float64Array([40]),
-    } as unknown as Parameters<typeof assemblyItems>[0]['callOffs'];
-    const items = assemblyItems({ master: master.value, callOffs: exp, stock: new Map([['A', 5]]), today: MON, settings: DEFAULT_SETTINGS });
-    expect(items.map((i) => i.item)).toEqual(['A']);
-    expect(items[0]).toMatchObject({ stock: 5, requirements: [{ day: MON + 3, deadline: at(MON + 1, 6), qty: 40, fixed: false }] });
-  });
-});
-
-describe('díly montáže bez sloupce Line', () => {
-  it('díly z mapování s projektem a stranou; díly jen z odvolávek ne', () => {
-    const master = parseMasterData(parseCsv('Item Number;Project;Variant\nA;P;LHD\nK;;'));
-    if (!master.ok) throw new Error();
-    const exp = {
-      items: ['Z'],
-      descriptions: ['DOOR PANEL RHD'],
-      offsets: new Uint32Array([0, 1]),
-      days: new Int32Array([MON + 3]),
-      qty: new Float64Array([10]),
-    } as unknown as Parameters<typeof assemblyItems>[0]['callOffs'];
-    const items = assemblyItems({ master: master.value, callOffs: exp, stock: undefined, today: MON, settings: DEFAULT_SETTINGS });
-    expect(items.map((i) => [i.item, i.side, i.project])).toEqual([['A', 'LHD', 'P']]);
-  });
+  // Den potřeby = 2 dny po termínu výroby.
+  requirements: reqs.map(([deadline, qty]) => ({ day: Math.floor(deadline / 1440) + 2, deadline, qty })),
 });
 
 describe('vyhodnocení plánu', () => {
   const slots = shiftSlots(MON, 2, 360);
-  it('stav po směnách a pokrytí zákazníka', () => {
-    // Termín v úterý 6:00 (konec pondělní noční), 30 ks; sklad 10.
-    const it = item('A', 'LHD', 10, [[at(TUE, 6), 30]]);
+  it('chybí od, pokryto s plánem do a odeslání po termínu', () => {
+    // Termíny út 6:00 (30 ks, potřeba čt) a st 6:00 (20 ks, potřeba pá); sklad 10.
+    const it = item('A', 'LHD', 10, [
+      [at(TUE, 6), 30],
+      [at(MON + 2, 6), 20],
+    ]);
     const short = evaluateItem(it, slots, (s) => (s.key === slotKey(MON, 'R') ? 10 : 0), MON);
     expect(short.balance.slice(0, 3)).toEqual([20, 20, -10]);
     expect(short.due[2]).toBe(30);
-    expect(short.firstLate?.qty).toBe(30);
-    expect(short.coveredUntil).toBe(TUE + 1);
-    const ok = evaluateItem(it, slots, (s) => (s.key === slotKey(MON, 'N') ? 20 : 0), MON);
-    expect(ok.coveredUntil).toBe('whole');
-    expect(ok).toMatchObject({ planned: 20, required: 30 });
+    expect(short).toMatchObject({ missing: 40, firstMissing: TUE + 2, coveredWithPlan: TUE + 1, late: true, planned: 10 });
+    const ok = evaluateItem(it, slots, (s) => (s.key === slotKey(MON, 'N') ? 40 : 0), MON);
+    expect(ok).toMatchObject({ coveredWithPlan: 'whole', late: false, planned: 40 });
   });
 
   it('strany na směnách navazují', () => {
@@ -167,49 +185,50 @@ describe('vyhodnocení plánu', () => {
 });
 
 describe('návrh plánu', () => {
-  const slots = shiftSlots(MON, 3, 360);
+  const slots = shiftSlots(MON, 2, 360);
   const cap = () => 100;
+  const qty = (cells: Record<string, number>, day: number, code: 'R' | 'O' | 'N', id: string) => cells[cellKey(slotKey(day, code), id)] ?? 0;
 
-  it('rozloží velkou potřebu rovnoměrně do směn před termínem, po stranách', () => {
-    // Termín středa 6:00: okno pondělí R … úterý N (6 směn) → 300 ks LHD + 300 ks RHD = 100 ks na směnu.
-    const a = item('A', 'LHD', 0, [[at(MON + 2, 6), 300]]);
-    const b = item('B', 'RHD', 0, [[at(MON + 2, 6), 300]]);
-    const { cells, unplaced } = proposePlan([a, b], slots, cap, {}, at(MON, 0));
-    expect(unplaced).toBe(0);
-    const qty = (day: number, code: 'R' | 'O' | 'N', id: string) => cells[cellKey(slotKey(day, code), id)] ?? 0;
-    expect([qty(MON, 'R', 'A'), qty(MON, 'O', 'A'), qty(MON, 'N', 'A'), qty(TUE, 'R', 'A')]).toEqual([100, 100, 100, 0]);
-    expect([qty(TUE, 'R', 'B'), qty(TUE, 'O', 'B'), qty(TUE, 'N', 'B')]).toEqual([100, 100, 100]);
+  it('kryje první chybějící dny všech dílů, po celých dnech, dokud je kapacita', () => {
+    // A chybí út 60 a st 60, B chybí út 50 a čt 80. Kapacita 100 na směnu.
+    const a = item('A', 'LHD', 0, [
+      [at(MON, 6), 60],
+      [at(TUE, 6), 60],
+    ]);
+    const b = item('B', 'RHD', 0, [
+      [at(MON, 6), 50],
+      [at(TUE + 1, 6), 80],
+    ]);
+    const { cells, remaining } = proposePlan([a, b], slots, cap, {}, at(MON, 0));
+    // R: A 60 (den 1) + B 40; O: B 10 (den 1) + A 60 (den 2) + B 30; N: B 50.
+    expect([qty(cells, MON, 'R', 'A'), qty(cells, MON, 'R', 'B')]).toEqual([60, 40]);
+    expect([qty(cells, MON, 'O', 'A'), qty(cells, MON, 'O', 'B')]).toEqual([60, 40]);
+    expect([qty(cells, MON, 'N', 'A'), qty(cells, MON, 'N', 'B')]).toEqual([0, 50]);
+    expect(remaining).toBe(0);
   });
 
-  it('malou potřebu nedělí na dávky menší než půl směny', () => {
-    // 60 + 60 ks v okně 6 směn: rovnoměrně by to bylo 20 ks na směnu, díl se ale udělá najednou.
-    const a = item('A', 'LHD', 0, [[at(MON + 2, 6), 60]]);
-    const b = item('B', 'RHD', 0, [[at(MON + 2, 6), 60]]);
-    const { cells } = proposePlan([a, b], slots, cap, {}, at(MON, 0));
-    expect(cells).toEqual({ [cellKey(slotKey(MON, 'R'), 'A')]: 60, [cellKey(slotKey(TUE, 'R'), 'B')]: 60 });
-  });
-
-  it('odečte sklad, nechá rozběhnuté směny a co se nevejde, dá do dřívějších směn', () => {
+  it('odečte náš sklad a výrobu rozběhnutých směn, zbytek nepokrytých kusů vrátí', () => {
     const a = item('A', 'LHD', 50, [
-      [at(TUE, 6), 100],
-      [at(MON + 2, 6), 350],
+      [at(MON, 6), 100],
+      [at(TUE, 6), 400],
+      [at(TUE + 1, 6), 500],
     ]);
     const current = { [cellKey(slotKey(MON, 'R'), 'A')]: 30 };
-    const { cells, unplaced } = proposePlan([a], slots, cap, current, at(MON, 10));
-    const qty = (day: number, code: 'R' | 'O' | 'N') => cells[cellKey(slotKey(day, code), 'A')] ?? 0;
-    // Pondělí R zůstane 30; čistý požadavek do úterý 6:00 = 100 − 50 − 30 = 20.
-    // 20 ks je méně než půl směny, udělají se najednou v odpolední. Do středy 6:00 350 ks: úterý R, O, N po 100,
-    // zbytek 50 do pondělní noční (nejbližší volná směna před termínem).
-    expect(qty(MON, 'R')).toBe(30);
-    expect([qty(MON, 'O'), qty(MON, 'N')]).toEqual([20, 50]);
-    expect([qty(TUE, 'R'), qty(TUE, 'O'), qty(TUE, 'N')]).toEqual([100, 100, 100]);
-    expect(unplaced).toBe(0);
+    // Pondělí 10:00: ranní běží a zůstane; sklad 50 + 30 pokryje 80 z prvních 100.
+    const { cells, remaining } = proposePlan([a], slots, cap, current, at(MON, 10));
+    expect(qty(cells, MON, 'R', 'A')).toBe(30);
+    expect([qty(cells, MON, 'O', 'A'), qty(cells, MON, 'N', 'A'), qty(cells, TUE, 'R', 'A'), qty(cells, TUE, 'N', 'A')]).toEqual([100, 100, 100, 100]);
+    // 920 chybějících − 5 směn × 100 = 420.
+    expect(remaining).toBe(420);
   });
 
-  it('zpožděné požadavky co nejdřív, chybějící kapacitu vrátí jako nenaplánováno', () => {
-    const a = item('A', 'LHD', 0, [[at(MON, 0), 150]]);
-    const { cells, unplaced } = proposePlan([a], slots.slice(0, 1), cap, {}, at(MON, 0));
-    expect(cells[cellKey(slotKey(MON, 'R'), 'A')]).toBe(100);
-    expect(unplaced).toBe(50);
+  it('při stejném dni pokračuje stranou, která se právě vyrábí', () => {
+    const a = item('A', 'LHD', 0, [[at(MON, 6), 50]]);
+    const b = item('B', 'RHD', 0, [[at(MON, 6), 50], [at(TUE, 6), 50]]);
+    const c = item('C', 'LHD', 0, [[at(TUE, 6), 50]]);
+    const { cells } = proposePlan([a, b, c], slots.slice(0, 2), cap, {}, at(MON, 0));
+    // R: A, B (den 1); O: B pokračuje (RHD), pak C.
+    expect([qty(cells, MON, 'R', 'A'), qty(cells, MON, 'R', 'B')]).toEqual([50, 50]);
+    expect([qty(cells, MON, 'O', 'B'), qty(cells, MON, 'O', 'C')]).toEqual([50, 50]);
   });
 });
