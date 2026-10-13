@@ -29,6 +29,14 @@ export function ComponentsPage({ today = localToday() }: { today?: DayNumber } =
     );
   }, [table, project, query, onlyShort]);
 
+  // Poptávka hotových dílů podle filtru komponent: projekt omezí hotové díly na projekt; hledání nebo „jen v záporu“
+  // na hotové díly, které vybrané komponenty mají v kusovníku.
+  const byComponent = query.trim() !== '' || onlyShort;
+  const shownProducts = useMemo(() => {
+    const used = byComponent ? new Set(lines.flatMap((c) => c.products)) : null;
+    return (table?.products ?? []).filter((p) => (!project || p.project === project) && (!used || used.has(p.item)));
+  }, [table, lines, project, byComponent]);
+
   const head = (
     <div className="page-head module-head">
       <span className="module-icon">
@@ -91,7 +99,7 @@ export function ComponentsPage({ today = localToday() }: { today?: DayNumber } =
     fileName: `${fileBase}_${tc.export.demandSheet.toLowerCase()}`,
     sheetName: tc.export.demandSheet,
     header: [tc.demand.item, tc.demand.description, tc.demand.project, tc.demand.total, ...days.map(dayToIso)],
-    rows: products.map((p) => [p.item, p.description, p.project, p.qty.reduce((a, b) => a + b, 0), ...p.qty]),
+    rows: shownProducts.map((p) => [p.item, p.description, p.project, p.qty.reduce((a, b) => a + b, 0), ...p.qty]),
   });
 
   return (
@@ -198,7 +206,9 @@ export function ComponentsPage({ today = localToday() }: { today?: DayNumber } =
                 {lines.map((c) => (
                   <tr key={c.item}>
                     <td className="sticky-col">
-                      <strong>{c.item}</strong>
+                      <button type="button" className="link-button cell-link" title={tc.table.select} onClick={() => setQuery(c.item)}>
+                        <strong>{c.item}</strong>
+                      </button>
                     </td>
                     <td className="desc" title={`${tc.table.products}: ${c.products.join(', ')}`}>
                       {c.description}
@@ -238,7 +248,10 @@ export function ComponentsPage({ today = localToday() }: { today?: DayNumber } =
       <div className="panel">
         <div className="panel-head">
           <h2>{tc.demand.heading}</h2>
-          <span className="muted">{tc.demand.sub}</span>
+          <span className="muted">
+            {tc.demand.sub}
+            {shownProducts.length !== products.length && ` · ${tc.demand.shown} ${formatQuantity(shownProducts.length, locale)} / ${formatQuantity(products.length, locale)}`}
+          </span>
           <span className="panel-actions">
             <ExportButtons build={buildDemandExport} />
           </span>
@@ -259,7 +272,7 @@ export function ComponentsPage({ today = localToday() }: { today?: DayNumber } =
               </tr>
             </thead>
             <tbody>
-              {products.map((p) => (
+              {shownProducts.map((p) => (
                 <tr key={p.item}>
                   <td className="sticky-col">
                     <strong>{p.item}</strong>
@@ -278,6 +291,7 @@ export function ComponentsPage({ today = localToday() }: { today?: DayNumber } =
           </table>
         </div>
         {!callOffs && <p className="muted">{tc.demand.noCallOffs}</p>}
+        {shownProducts.length === 0 && <p>{tc.demand.empty}</p>}
         <p className="muted">{tc.demand.note}</p>
       </div>
     </section>

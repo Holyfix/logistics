@@ -887,3 +887,16 @@ button:focus-visible {
   border-radius: 1px;
   background: var(--accent);
 }
+
+/* Číslo v tabulce jako odkaz, který nastaví filtr (např. komponenta → hotové díly). */
+.link-button.cell-link {
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+}
+
+.link-button.cell-link:hover {
+  color: var(--accent);
+  text-decoration: underline;
+}

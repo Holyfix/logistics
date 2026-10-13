@@ -18,8 +18,10 @@ const bom = parseBom([
   ['1', 'SUB-1', 'INTERMEDIATE', 1, 'EA', 'L'],
   ['.2', 'CLIP-1', 'CLIP', 2, 'EA', 'P'],
   ['.2', 'RESIN', 'RESIN', 0.25, 'KG', 'P'],
+  ['Parent', 'FG-2', 'PANEL RHD', null, 'EA', 'L'],
+  ['1', 'RESIN', 'RESIN', 0.5, 'KG', 'P'],
 ]);
-const master = parseMasterData(parseCsv('Item Number;Project;Component Coverage\nFG-1;P1;\nCLIP-1;;Ano\nRESIN;;Ano\nSUB-1;;'));
+const master = parseMasterData(parseCsv('Item Number;Project;Component Coverage\nFG-1;P1;\nFG-2;P2;\nCLIP-1;;Ano\nRESIN;;Ano\nSUB-1;;'));
 const stock = parseStock(parseCsv('Item Number;Location;Zone ID;Qty On Hand - Inv Detail\nCLIP-1;A-01;PURCH;30\nRESIN;B-01;PURCH;100'));
 if (!bom.ok || !master.ok || !stock.ok) throw new Error();
 const callOffs = {
@@ -84,6 +86,27 @@ describe('ComponentsPage', () => {
     const [fg] = rows(1);
     expect(cells(fg!).slice(0, 7)).toEqual(['FG-1', 'PANEL LHD', 'P1', '20', '5', '5', '10']);
     expect(document.querySelector('.source-info')!.textContent).toContain('odvolávky CW 42/2026');
+  });
+
+  it('poptávka hotových dílů se řídí filtrem komponent', () => {
+    renderWith(<ComponentsPage today={day(13)} />);
+    const shown = () => rows(1).map((r) => cells(r)[0]);
+    expect(shown()).toEqual(['FG-1', 'FG-2']);
+    fireEvent.change(screen.getByLabelText('Projekt'), { target: { value: 'P2' } });
+    expect(shown()).toEqual(['FG-2']);
+    fireEvent.change(screen.getByLabelText('Projekt'), { target: { value: '' } });
+    // komponenta vybraná hledáním: jen hotové díly, které ji mají v kusovníku
+    fireEvent.change(screen.getByLabelText('Komponenta nebo popis'), { target: { value: 'clip' } });
+    expect(shown()).toEqual(['FG-1']);
+    expect(screen.getByText(/zobrazeno 1 \/ 2/)).toBeTruthy();
+    // kliknutí na číslo komponenty ji vybere
+    fireEvent.change(screen.getByLabelText('Komponenta nebo popis'), { target: { value: '' } });
+    fireEvent.click(screen.getByRole('button', { name: 'RESIN' }));
+    expect((screen.getByLabelText('Komponenta nebo popis') as HTMLInputElement).value).toBe('RESIN');
+    expect(shown()).toEqual(['FG-1', 'FG-2']);
+    // projekt a komponenta dohromady
+    fireEvent.change(screen.getByLabelText('Projekt'), { target: { value: 'P1' } });
+    expect(shown()).toEqual(['FG-1']);
   });
 
   it('filtr jen v záporu a hledání', () => {
