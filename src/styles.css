@@ -343,6 +343,43 @@ button:focus-visible {
   color: var(--muted);
 }
 
+.metric {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--ink-2);
+  white-space: nowrap;
+}
+
+.metric b {
+  font: 700 17px/1 var(--font-display);
+  color: var(--ink);
+}
+
+/* Stav: kruh = kritické, kosočtverec = pozor, čtverec = v pořádku. */
+.dot {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--crit);
+}
+
+.dot-warn {
+  width: 8px;
+  height: 8px;
+  border-radius: 1px;
+  transform: rotate(45deg);
+  background: var(--warn);
+}
+
+.dot-ok {
+  border-radius: 2px;
+  background: var(--good);
+}
+
 .hub-item-later .hub-item-name {
   color: var(--ink-2);
 }

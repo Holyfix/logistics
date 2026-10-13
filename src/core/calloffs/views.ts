@@ -119,3 +119,31 @@ export function changeOf(value: number, previous: number | null, thresholdPercen
   const percent = previous === 0 ? null : (diff / previous) * 100;
   return { diff, percent, significant: percent === null || Math.abs(percent) >= thresholdPercent };
 }
+
+/** Počet významných změn (díl × období) proti staršímu exportu. */
+export function countSignificantChanges(rows: readonly CurrentRow[]): number {
+  return rows.reduce((n, r) => n + r.values.filter((v, k) => changeOf(v, r.previous[k]!)?.significant).length, 0);
+}
+
+/** Výchozí pohled modulu: kolik týdnů ukazuje tabulka aktuálních odvolávek a z kolika se počítají změny. */
+export const DEFAULT_WEEKS = 12;
+
+export interface CallOffSummary {
+  week: number;
+  year: number;
+  /** Starší export, proti kterému se změny počítají; null, pokud není načtený. */
+  previous: { week: number; year: number } | null;
+  /** Významné změny v příštích DEFAULT_WEEKS týdnech, všechny díly; null bez staršího exportu. */
+  changes: number | null;
+}
+
+/** Souhrn pro rozcestník; odpovídá ukazateli „Významné změny“ v modulu bez filtrů. */
+export function callOffSummary(current: CallOffExport, previous: CallOffExport | undefined): CallOffSummary {
+  const rows = previous ? buildCurrentRows(current, previous, current.items, buildPeriods(current, 'week', DEFAULT_WEEKS)) : [];
+  return {
+    week: current.week,
+    year: current.year,
+    previous: previous ? { week: previous.week, year: previous.year } : null,
+    changes: previous ? countSignificantChanges(rows) : null,
+  };
+}

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { parseCsv } from '../csv';
 import { dayToIso } from '../dates';
 import { parseCallOffExport, type CallOffExport } from './parse';
-import { buildCurrentRows, buildPeriods, changeOf } from './views';
+import { buildCurrentRows, buildPeriods, callOffSummary, changeOf } from './views';
 
 function exportOf(name: string, rows: [string, string, number][]): CallOffExport {
   const text = ['Item Number,Date,Discrete Qty', ...rows.map(([i, d, q]) => `${i},${d},${q}`)].join('\n');
@@ -70,5 +70,16 @@ describe('changeOf', () => {
     expect(changeOf(5, 0)).toEqual({ diff: 5, percent: null, significant: true });
     expect(changeOf(100, 100)).toBeNull();
     expect(changeOf(100, null)).toBeNull();
+  });
+});
+
+describe('callOffSummary', () => {
+  it('počet významných změn proti staršímu exportu', () => {
+    // A v CW 42: 257 proti 200 (+28 %), B v CW 42: nový požadavek 3.
+    expect(callOffSummary(cur, prev)).toEqual({ week: 42, year: 2026, previous: { week: 41, year: 2026 }, changes: 2 });
+  });
+
+  it('bez staršího exportu změny nepočítá', () => {
+    expect(callOffSummary(cur, undefined)).toMatchObject({ week: 42, previous: null, changes: null });
   });
 });

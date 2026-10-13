@@ -31,6 +31,12 @@ export const en: Messages = {
     },
     phase: 'Phase',
     later: 'Later',
+    metrics: {
+      changes: { one: 'change', few: 'changes', other: 'changes' },
+      changesTitle: 'Significant call-off changes in the next 12 weeks (all parts)',
+      against: 'against export',
+      currentExport: 'current export',
+    },
   },
   module: {
     featuresTitle: 'What the module will do',
