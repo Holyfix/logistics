@@ -54,8 +54,9 @@ describe('CoveragePage', () => {
     renderWith(<CoveragePage />);
     const [mapped, unmapped] = bodyRows();
     expect(cells(mapped!).slice(-2)).toEqual(['9', '3']);
-    expect(cells(unmapped!)[0]).toContain('A1234567890      0002');
-    expect(cells(unmapped!)[0]).toContain('není v mapování');
+    expect(cells(unmapped!)[0]).toBe('—není v mapování');
+    expect(cells(unmapped!)[1]).toBe('A1234567890      0002');
+    expect(cells(mapped!).slice(0, 2)).toEqual(['900100', 'A1234567890      0001']);
     fireEvent.click(screen.getByLabelText('Přičíst transit'));
     expect(cells(bodyRows()[0]!).slice(-2)).toEqual(['4', '-2']);
     expect(bodyRows()[0]!.querySelector('.cell-negative')).not.toBeNull();
@@ -85,9 +86,9 @@ describe('CoveragePage', () => {
     expect(bodyRows()).toHaveLength(4);
     fireEvent.change(screen.getByLabelText('Destinace'), { target: { value: 'Lokalita B' } });
     expect(bodyRows()).toHaveLength(2);
-    expect(bodyRows().map((r) => r.querySelectorAll('td')[2]!.textContent)).toEqual(['Lokalita B', 'Lokalita B']);
+    expect(bodyRows().map((r) => r.querySelectorAll('td')[3]!.textContent)).toEqual(['Lokalita B', 'Lokalita B']);
     fireEvent.change(screen.getByLabelText('Destinace'), { target: { value: 'Lokalita A' } });
-    expect(bodyRows().map((r) => r.querySelectorAll('td')[2]!.textContent)).toEqual(['Lokalita A', 'Lokalita A']);
+    expect(bodyRows().map((r) => r.querySelectorAll('td')[3]!.textContent)).toEqual(['Lokalita A', 'Lokalita A']);
   });
 
   it('bez souborů odkáže na Data', () => {
