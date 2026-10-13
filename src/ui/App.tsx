@@ -3,6 +3,7 @@ import { useI18n } from '../i18n/I18nProvider';
 import type { Locale } from '../core/format';
 import { detectSupport, isFullySupported } from '../platform/support';
 import { CallOffsPage } from './calloffs/CallOffsPage';
+import { CoveragePage } from './coverage/CoveragePage';
 import { DataPage } from './DataPage';
 import { HubPage } from './HubPage';
 import { ModulePage } from './ModulePage';
@@ -71,7 +72,8 @@ export function App() {
         {!current && <HubPage />}
         {current?.id === 'data' && <DataPage />}
         {current?.id === 'calloffs' && <CallOffsPage />}
-        {current && current.id !== 'data' && current.id !== 'calloffs' && <ModulePage module={current} />}
+        {current?.id === 'coverage' && <CoveragePage />}
+        {current && !['data', 'calloffs', 'coverage'].includes(current.id) && <ModulePage module={current} />}
       </main>
 
       <footer className="footer">

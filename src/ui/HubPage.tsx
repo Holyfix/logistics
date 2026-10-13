@@ -1,5 +1,6 @@
 import { useMemo, type ReactNode } from 'react';
 import { callOffSummary } from '../core/calloffs/views';
+import { buildCoverage, negativeSoon } from '../core/coverage/compute';
 import { formatQuantity } from '../core/format';
 import { useI18n } from '../i18n/I18nProvider';
 import { useData } from './data/DataProvider';
@@ -35,28 +36,36 @@ function useMetrics(): Partial<Record<ModuleId, ReactNode>> {
   const { t, locale } = useI18n();
   const { state } = useData();
   const exports = state.data?.exports;
+  const coverage = state.data?.coverage;
+  const master = state.data?.master?.data;
   const summary = useMemo(() => {
     const current = exports?.at(-1);
     return current ? callOffSummary(current, exports!.at(-2)) : null;
   }, [exports]);
+  // Rozcestník počítá pokrytí s transitem, stejně jako výchozí pohled modulu.
+  const negative = useMemo(() => (coverage?.length ? negativeSoon(buildCoverage(coverage, master, { transit: true }), 2) : null), [coverage, master]);
 
-  if (!summary) return {};
+  const metrics: Partial<Record<ModuleId, ReactNode>> = {};
   const tm = t.hub.metrics;
-  if (summary.changes === null || !summary.previous) {
-    return { calloffs: <Metric value={`CW ${summary.week}`} label={tm.currentExport} /> };
-  }
-  const form = new Intl.PluralRules(locale).select(summary.changes);
-  const label = form === 'one' ? tm.changes.one : form === 'few' ? tm.changes.few : tm.changes.other;
-  return {
-    calloffs: (
+  if (summary?.changes === null || (summary && !summary.previous)) {
+    metrics.calloffs = <Metric value={`CW ${summary.week}`} label={tm.currentExport} />;
+  } else if (summary?.previous) {
+    const changes = summary.changes!;
+    const form = new Intl.PluralRules(locale).select(changes);
+    const label = form === 'one' ? tm.changes.one : form === 'few' ? tm.changes.few : tm.changes.other;
+    metrics.calloffs = (
       <Metric
-        value={formatQuantity(summary.changes, locale)}
+        value={formatQuantity(changes, locale)}
         label={label}
-        tone={summary.changes > 0 ? 'warn' : 'ok'}
+        tone={changes > 0 ? 'warn' : 'ok'}
         title={`${tm.changesTitle}: CW ${summary.week}/${summary.year} ${tm.against} CW ${summary.previous.week}/${summary.previous.year}`}
       />
-    ),
-  };
+    );
+  }
+  if (negative !== null) {
+    metrics.coverage = <Metric value={formatQuantity(negative, locale)} label={t.coverage.hub.label} tone={negative > 0 ? 'crit' : 'ok'} title={t.coverage.hub.title} />;
+  }
+  return metrics;
 }
 
 /** Rozcestník: každá skupina je karta, moduly jsou v ní řádky. Karty se skládají do sloupců. */

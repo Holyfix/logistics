@@ -1,6 +1,7 @@
 // Vytvoří smyšlená ukázková data ve formátu exportu odvolávek a kmenových dat.
 // Použití: node scripts/generate-sample-data.mjs
 import { mkdirSync, writeFileSync } from 'node:fs';
+import writeXlsxFile from 'write-excel-file/node';
 
 const NBSP = ' ';
 let seed = 42;
@@ -52,6 +53,57 @@ for (const week of [40, 41, 42]) {
   writeFileSync(`sample-data/odvolavky/Odvolavky_CW${week}.csv`, '﻿' + lines.join('\r\n') + '\r\n');
 }
 
-const master = ['Item Number;Item Description;Zákazník;Projekt;Strana', ...items.filter((it) => it.project).map((it) => [it.item, it.description, it.customer, it.project, it.side].join(';'))];
-writeFileSync('sample-data/kmenova-data.csv', '﻿' + master.join('\r\n') + '\r\n');
-console.log(`Vytvořeno: 3 exporty, ${items.length} dílů, kmenová data pro ${items.length - 1} dílů.`);
+// Mapování dílů ve formátu Item_Mapping: číslo zákazníka je smyšlené (A + 10 číslic, mezery, varianta).
+const customerNumber = (idx) => `A90000000${String(10 + (idx % 4)).padStart(2, '0')}  0000${String(1000 + idx)}`;
+const master = [
+  'Item Number;Customer Number;Description;Variant;Type;Project;Safety Stock;Safety Time;Order Multiple',
+  ...items
+    .filter((it) => it.project)
+    .map((it, idx) => [it.item, customerNumber(idx), it.description, it.side + (idx % 4 === 1 ? ' HUD' : ''), it.description.split(' ')[1], it.project, 0, 0, [8, 12, 16, 24][idx % 4]].join(';')),
+];
+writeFileSync('sample-data/Item_Mapping.csv', '\ufeff' + master.join('\r\n') + '\r\n');
+
+// Coverage ve formátu „Coverage Report Overview“: dva řádky záhlaví, pro každý den blok čtyř sloupců.
+// Konečný stav dne je v souboru vzorec; aplikace ho počítá ze skladu a poptávky, proto stačí uložená čísla.
+const covDays = [12, 13, 14, 15, 16, 19, 20, 21, 22, 23].map((day) => new Date(Date.UTC(2026, 9, day)));
+const fixed = ['Customer Item Number', 'Customer Item Number 2', 'Supplier', 'Item number', 'Item description', 'First\nuncovered\nIB-Plan', 'First uncovered Prod No', 'Further stock in transit', 'Delivery\nnotes\nin transit', 'QHold', 'Open Orders', 'Stock in Lokalita A 07:00'];
+const bold = (value) => ({ value, fontWeight: 'bold' });
+const covRows = [
+  [...fixed.map(() => null), ...covDays.flatMap((date) => [{ value: date, type: Date, format: 'dd.mm.yyyy' }, null, null, null])],
+  [...fixed.map(bold), ...covDays.flatMap(() => ['Disposable Stock', 'Demand', 'In\nTransit', 'Stock End of the Day'].map(bold))],
+];
+items.filter((it) => it.project === 'P100' || it.project === 'P200').forEach((it, idx) => {
+  const cn = customerNumber(idx);
+  const stock = Math.round(it.base * (1.5 + rnd() * 7));
+  const openOrders = rnd() < 0.2 ? 2 : 0;
+  let balance = stock - openOrders;
+  const transit = rnd() < 0.5 ? Math.round(it.base * 0.6) : 0;
+  const cells = [];
+  let firstUncovered = null;
+  covDays.forEach((date, k) => {
+    const demand = Math.round(it.base * (0.6 + rnd() * 0.8));
+    const disposable = balance;
+    balance -= demand;
+    if (balance + transit < 0 && !firstUncovered) firstUncovered = new Date(date.getTime() + (6 + Math.floor(rnd() * 12)) * 3_600_000);
+    cells.push({ value: disposable, type: Number }, { value: demand, type: Number }, k === 0 && transit ? { value: transit, type: Number } : null, { value: balance, type: Number });
+  });
+  covRows.push([
+    { value: cn.replace('  0000', '      '), type: String },
+    { value: cn.replace('  0000', '-'), type: String },
+    null,
+    null,
+    { value: it.description, type: String },
+    firstUncovered ? { value: firstUncovered, type: Date, format: 'dd.mm.yyyy hh:mm' } : null,
+    firstUncovered ? { value: `08${String(70000 + idx * 37)}`, type: String } : null,
+    null,
+    transit ? { value: String(26000000 + idx), type: String } : null,
+    { value: 0, type: Number },
+    { value: openOrders, type: Number },
+    { value: stock, type: Number },
+    ...cells,
+  ]);
+});
+mkdirSync('sample-data/Coverage/Lokalita A/P100', { recursive: true });
+await writeXlsxFile(covRows, { sheet: 'Coverage Report Overview' }).toFile('sample-data/Coverage/Lokalita A/P100/Coverage_Report_P100.xlsx');
+
+console.log(`Vytvořeno: 3 exporty, ${items.length} dílů, mapování pro ${items.length - 1} dílů, coverage pro ${covRows.length - 2} dílů.`);

@@ -14,7 +14,7 @@ Pořadí skupin na rozcestníku (karty se čtou shora dolů po sloupcích):
 | Přehledy | **Dashboard** | Co je dnes potřeba řešit? | Fáze 6 |
 | Přehledy | **KPI** | Jak se nám daří v čase? | Fáze 8 |
 | Zákazníci | **Call-offs** | Co zákazníci chtějí a jak se to mění? | Fáze 3, aktuální odvolávky hotové |
-| Zákazníci | **Coverage** | Vystačí hotové výrobky na odvolávky? | Fáze 4 |
+| Zákazníci | **Coverage** | Vystačí díly u zákazníka? Pokrytí na jednotlivé dny | Fáze 4 (probíhá) |
 | Zákazníci | **Expedice a dodávky** (OTD outbound) | Dodáváme zákazníkům včas? | Později |
 | Zákazníci | **Mimořádné přepravy** | Kolik stojí mimořádné přepravy a proč vznikají? | Později |
 | Materiál a sklad | **Komponenty** | Máme materiál na výrobu? | Fáze 4 |
@@ -58,8 +58,11 @@ Filtry: zákazník, projekt, strana (LHD/RHD) z kmenových dat, hledání dílu.
   (řádky = exporty, sloupce = týdny dodání)
 
 ### Coverage
-- Výhled zásob hotových výrobků na 14 dní, pokrytí ve dnech, semafor
-- Datum, kdy díl dojde
+- ✅ Pokrytí u zákazníka po dnech ze souborů zákazníka (každý zákazník jiný formát, sjednotí se)
+- ✅ Přičtení transitu, filtry záporné kdykoli / ke zvolenému dni, závod, projekt, varianta, hledání
+- ✅ Souhrn po variantách, export do Excelu a CSV, na rozcestníku díly v záporu do 2 dnů
+- ⏳ Náš sklad (plná / neúplná balení) a dodatečný transit z naší expedice
+- ⏳ Další formáty souborů zákazníka
 
 ### Mimořádné přepravy
 - Zápis mimořádné přepravy přímo v aplikaci (do sdílené složky)

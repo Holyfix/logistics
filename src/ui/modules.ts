@@ -54,7 +54,7 @@ export const MODULES: ModuleDef[] = [
   { id: 'dashboard', group: 'overview', icon: 'dashboard', status: { kind: 'planned', phase: 6 } },
   { id: 'kpi', group: 'overview', icon: 'kpi', status: { kind: 'planned', phase: 8 } },
   { id: 'calloffs', group: 'customers', icon: 'calloffs', status: { kind: 'available' } },
-  { id: 'coverage', group: 'customers', icon: 'coverage', status: { kind: 'planned', phase: 4 } },
+  { id: 'coverage', group: 'customers', icon: 'coverage', status: { kind: 'available' } },
   { id: 'shipments', group: 'customers', icon: 'shipments', status: { kind: 'later' } },
   { id: 'express', group: 'customers', icon: 'express', status: { kind: 'later' } },
   { id: 'components', group: 'material', icon: 'components', status: { kind: 'planned', phase: 4 } },

@@ -1,15 +1,16 @@
 // Načtení všech dat ze složky: rozpoznání souborů, mezipaměť v prohlížeči, zpracování na pozadí.
 
 import type { CallOffExport } from '../core/calloffs/parse';
+import type { CoverageSource } from '../core/coverage/compute';
 import type { MasterData } from '../core/masterdata';
-import { classifyPath, formatOf } from '../core/sources';
+import { classifyPath, coverageScope, formatOf } from '../core/sources';
 import { idbDelete, idbGet, idbKeys, idbSet, STORE_CALLOFFS } from './idb';
 import { listFiles, type FolderSource, type SourceFile } from './folder';
 import type { ParseRequest, ParseResponse } from './parse.worker';
 
 export interface FailedFile {
   path: string;
-  reason: 'missingColumns' | 'unreadable' | 'duplicateWeek';
+  reason: 'missingColumns' | 'unreadable' | 'duplicateWeek' | 'unknownFormat' | 'superseded';
   detail: string;
 }
 
@@ -18,6 +19,8 @@ export interface LoadedData {
   /** Exporty odvolávek seřazené od nejstaršího. */
   exports: CallOffExport[];
   master: { path: string; data: MasterData } | null;
+  /** Soubory pokrytí od zákazníka: z každé složky závodu a projektu nejnovější. */
+  coverage: CoverageSource[];
   failed: FailedFile[];
   loadedAt: number;
 }
@@ -63,9 +66,18 @@ export async function loadFolder(source: FolderSource, onProgress: (p: LoadProgr
     .filter((f) => classifyPath(f.path) === 'masterdata')
     .sort((a, b) => b.lastModified - a.lastModified);
 
+  // Coverage: v každé složce (závod/projekt) platí naposledy změněný soubor.
+  const coverageFiles = new Map<string, SourceFile>();
   const failed: FailedFile[] = [];
+  for (const file of files.filter((f) => classifyPath(f.path) === 'coverage').sort((a, b) => b.lastModified - a.lastModified)) {
+    const folder = file.path.split('/').slice(0, -1).join('/');
+    const newer = coverageFiles.get(folder);
+    if (newer) failed.push({ path: file.path, reason: 'superseded', detail: newer.path });
+    else coverageFiles.set(folder, file);
+  }
+
   const parsed: { file: SourceFile; exp: CallOffExport }[] = [];
-  const total = calloffFiles.length + (masterFiles.length > 0 ? 1 : 0);
+  const total = calloffFiles.length + (masterFiles.length > 0 ? 1 : 0) + coverageFiles.size;
   let done = 0;
   onProgress({ done, total });
 
@@ -113,8 +125,23 @@ export async function loadFolder(source: FolderSource, onProgress: (p: LoadProgr
     else if (response.kind === 'masterdata' && !response.result.ok)
       failed.push({ path: masterFile.path, reason: 'missingColumns', detail: response.result.columns.join(', ') });
     else if (response.kind === 'error') failed.push({ path: masterFile.path, reason: 'unreadable', detail: response.message });
-    onProgress({ done: done + 1, total });
+    onProgress({ done: ++done, total });
   }
 
-  return { folderName: source.name, exports, master, failed, loadedAt: Date.now() };
+  const coverage: CoverageSource[] = [];
+  for (const file of coverageFiles.values()) {
+    const name = file.path.split('/').pop()!;
+    const response = await parseInWorker({ kind: 'coverage', format: 'xlsx', name, file: file.file });
+    if (response.kind === 'coverage' && response.result.ok) {
+      coverage.push({ path: file.path, fileName: name, ...coverageScope(file.path), lastModified: file.lastModified, report: response.result.value });
+    } else if (response.kind === 'coverage') {
+      failed.push({ path: file.path, reason: 'unknownFormat', detail: '' });
+    } else if (response.kind === 'error') {
+      failed.push({ path: file.path, reason: 'unreadable', detail: response.message });
+    }
+    onProgress({ done: ++done, total });
+  }
+  coverage.sort((a, b) => a.location.localeCompare(b.location) || a.project.localeCompare(b.project));
+
+  return { folderName: source.name, exports, master, coverage, failed, loadedAt: Date.now() };
 }

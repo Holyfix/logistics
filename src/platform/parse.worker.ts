@@ -1,18 +1,20 @@
 // Zpracování souborů na pozadí, aby aplikace během načítání nezamrzla.
 
-import { readSheet } from 'read-excel-file/universal';
+import readXlsxFile, { readSheet } from 'read-excel-file/universal';
 import { parseCallOffExport, type CallOffExport, type ParseResult } from '../core/calloffs/parse';
+import { parseCoverageWorkbook, type CoverageResult } from '../core/coverage/parse';
 import { parseCsv } from '../core/csv';
 import { parseMasterData, type MasterResult } from '../core/masterdata';
 import { decodeText } from '../core/text';
 import type { SourceFormat } from '../core/sources';
 import type { Cell, DataTable } from '../core/table';
 
-export type ParseRequest = { id: number; kind: 'calloffs' | 'masterdata'; format: SourceFormat; name: string; buffer: ArrayBuffer };
+export type ParseRequest = { id: number; kind: 'calloffs' | 'masterdata' | 'coverage'; format: SourceFormat; name: string; buffer: ArrayBuffer };
 
 export type ParseResponse =
   | { id: number; kind: 'calloffs'; result: ParseResult<CallOffExport> }
   | { id: number; kind: 'masterdata'; result: MasterResult }
+  | { id: number; kind: 'coverage'; result: CoverageResult }
   | { id: number; kind: 'error'; message: string };
 
 async function readTable(format: SourceFormat, buffer: ArrayBuffer): Promise<DataTable> {
@@ -25,6 +27,13 @@ async function readTable(format: SourceFormat, buffer: ArrayBuffer): Promise<Dat
 self.onmessage = async (event: MessageEvent<ParseRequest>) => {
   const { id, kind, format, name, buffer } = event.data;
   try {
+    if (kind === 'coverage') {
+      // Soubory pokrytí mají víc listů; formát se pozná podle obsahu listu.
+      const sheets = await readXlsxFile(buffer);
+      const result = parseCoverageWorkbook(sheets.map((s) => ({ name: s.sheet, data: s.data as Cell[][] })));
+      (self as unknown as Worker).postMessage({ id, kind, result } satisfies ParseResponse);
+      return;
+    }
     const table = await readTable(format, buffer);
     if (kind === 'calloffs') {
       const result = parseCallOffExport(table, name);

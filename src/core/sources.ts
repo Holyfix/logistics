@@ -1,6 +1,6 @@
 // Rozpoznání souborů ve sdílené složce podle cesty a názvu.
 
-export type SourceKind = 'calloffs' | 'masterdata' | 'ignored';
+export type SourceKind = 'calloffs' | 'masterdata' | 'coverage' | 'ignored';
 export type SourceFormat = 'csv' | 'xlsx';
 
 function normalize(s: string): string {
@@ -13,12 +13,14 @@ function normalize(s: string): string {
 export function formatOf(path: string): SourceFormat | null {
   const lower = path.toLowerCase();
   if (lower.endsWith('.csv')) return 'csv';
-  if (lower.endsWith('.xlsx')) return 'xlsx';
+  // .xlsm je sešit s makry; data se čtou stejně jako z .xlsx (makra se nespouští).
+  if (lower.endsWith('.xlsx') || lower.endsWith('.xlsm')) return 'xlsx';
   return null;
 }
 
 /**
- * Kmenová data: soubor s „kmenov“ nebo „master“ v názvu.
+ * Kmenová data (mapování dílů): soubor s „kmenov“, „master“ nebo „mapping“ v názvu.
+ * Coverage: Excel ve složce „coverage“ (i v podsložkách závodu a projektu).
  * Odvolávky: soubor ve složce „odvolavky“ / „call-offs“, nebo s „odvolavk“ / „call-off“ v názvu.
  * Dočasné soubory Excelu (~$…) se ignorují.
  */
@@ -27,8 +29,20 @@ export function classifyPath(path: string): SourceKind {
   const parts = normalize(path).split('/');
   const name = parts[parts.length - 1]!;
   if (name.startsWith('~$')) return 'ignored';
-  if (/kmenov|master/.test(name)) return 'masterdata';
+  if (/kmenov|master|mapping/.test(name)) return 'masterdata';
   const folders = parts.slice(0, -1);
+  if (folders.includes('coverage')) return formatOf(path) === 'xlsx' ? 'coverage' : 'ignored';
   if (folders.some((f) => /^(odvolavky|call-?offs?)$/.test(f)) || /odvolavk|call-?off/.test(name)) return 'calloffs';
   return 'ignored';
+}
+
+/**
+ * Závod a projekt z cesty souboru coverage: Coverage/<závod>/<projekt>/soubor.xlsx.
+ * Chybějící úroveň zůstane prázdná. Názvy se berou ze složek, aplikace je nemá napevno.
+ */
+export function coverageScope(path: string): { location: string; project: string } {
+  const parts = path.split('/');
+  const index = parts.findIndex((p) => normalize(p) === 'coverage');
+  const folders = index === -1 ? [] : parts.slice(index + 1, -1);
+  return { location: folders[0] ?? '', project: folders[1] ?? '' };
 }
