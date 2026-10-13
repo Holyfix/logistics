@@ -149,9 +149,9 @@ když je hotový díl ve víc souborech, použije se nejnovější soubor.
 - **Které komponenty se zobrazí:** ty, které mají v Item Mappingu ve sloupci „Component Coverage“ hodnotu „Ano“.
   Když sloupec v mappingu není, zobrazí se všechny nakupované komponenty (P). Mezivýroby tak lze vynechat.
 - **Horizont** je 14 dní od dneška.
-- **Poptávka hotového dílu na den:** dny, které pokrývá soubor zákazníka (Coverage), se berou z něj jako fix
-  (denní spotřeba u zákazníka = pokles zůstatku bez transitu); ostatní dny z nejnovějšího exportu odvolávek (forecast).
-  Hotový díl se se souborem zákazníka páruje přes mapování (Customer Number).
+- **Poptávka hotového dílu na den** je z nejnovějšího exportu odvolávek (požadované množství na den, od dneška).
+  Soubory pokrytí od zákazníka se pro komponenty nepoužívají: ukazují jen stav na konci dne, takže spotřebu
+  prvního dne z nich nejde spolehlivě určit. Nedodáno po termínu (backlog) se nepřičítá.
 - **Spotřeba komponenty** = poptávka hotových dílů × množství z kusovníku; **stav** = náš sklad (stejné lokace jako v Coverage)
   − kumulovaná spotřeba. Komponenta je v záporu ode dne, kdy stav klesne pod nulu.
 

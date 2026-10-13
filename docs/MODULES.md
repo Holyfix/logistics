@@ -71,7 +71,7 @@ Filtry: zákazník, projekt, strana (LHD/RHD) z kmenových dat, hledání dílu.
 
 ### Komponenty
 - ✅ Rozpad poptávky přes víceúrovňový kusovník (hrubý rozpad), komponenty vybrané v Item Mappingu
-- ✅ Poptávka: soubor zákazníka jako fix, zbytek 14 dní z odvolávek; pokrytí ze skladu po dnech, na rozcestníku komponenty v záporu
+- ✅ Poptávka z odvolávek na 14 dní; pokrytí ze skladu po dnech, na rozcestníku komponenty v záporu
 - ⏳ Otevřené nákupní objednávky (pokud jsou v exportu)
 - Shortage list pro ranní poradu
 

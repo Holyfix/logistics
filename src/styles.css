@@ -887,12 +887,3 @@ button:focus-visible {
   border-radius: 1px;
   background: var(--accent);
 }
-
-/* Komponenty: poptávka ze souboru zákazníka (fix) je podbarvená, z odvolávek (forecast) bez podkladu. */
-.table-data td.cell-fixed {
-  background: var(--accent-soft);
-}
-
-.swatch-fixed {
-  background: var(--accent-soft);
-}

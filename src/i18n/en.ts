@@ -348,6 +348,7 @@ export const en: Messages = {
     noDataAction: 'Open Data',
     sources: 'BOMs',
     products: 'finished parts',
+    callOffs: 'call-offs',
     kpi: {
       short: 'Negative within 14 days',
       shortNote: 'components that will not last until',
@@ -357,7 +358,7 @@ export const en: Messages = {
       byMapping: 'by the Component Coverage column in Item Mapping',
       allPurchased: 'all purchased (Item Mapping has no Component Coverage column)',
       demand: 'Finished parts',
-      demandNote: 'in BOMs; with customer file',
+      demandNote: 'in BOMs',
       noDemand: 'without demand',
     },
     filters: {
@@ -396,9 +397,8 @@ export const en: Messages = {
       description: 'Description',
       project: 'Project',
       total: '14 days',
-      fixed: 'From customer file (firm)',
-      forecast: 'From call-offs (forecast)',
-      note: 'Days covered by the customer file are taken from it (daily consumption at the customer); other days from the latest call-off export.',
+      noCallOffs: 'No call-off export loaded, demand is 0.',
+      note: 'Demand for finished parts comes from the latest call-off export (required quantity per day). Customer coverage files are not used for components because they only show the end-of-day balance.',
     },
     export: { fileName: 'components', sheet: 'Components', demandSheet: 'Demand' },
     hub: { label: 'negative within 14 days', title: 'Components that will not last 14 days according to the BOM and demand' },
