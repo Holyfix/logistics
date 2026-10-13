@@ -110,6 +110,24 @@ describe('parseCoverageWorkbook', () => {
     expect(r.value.rows[1]!.balance).toEqual([3, 3, 3]);
   });
 
+  it('stejný díl víckrát v souboru se sečte', () => {
+    const header = ['Customer Item', 'Item number', 'Item description', 'Stock', 'First uncovered IB-Plan', 'First uncovered Prod No', 'Stock in transit', '2026.10.13', '2026.10.14'];
+    const r = parseCoverageWorkbook([
+      {
+        name: 'articles',
+        data: [
+          header,
+          ['A1234567890      0001', '900100', 'DOOR LHD', 7, '2026.10.20 08:37', 6300001, 0, 4, 2],
+          ['A1234567890      0002', '900101', 'DOOR RHD', 5, null, null, 0, 5, 5],
+          ['A1234567890      0001', '900100', 'DOOR LHD JINÝ POPIS', 1, null, null, 2, 3, 3],
+        ],
+      },
+    ]);
+    if (!r.ok) throw new Error();
+    expect(r.value.rows).toHaveLength(2);
+    expect(r.value.rows[0]).toMatchObject({ description: 'DOOR LHD', customerStock: 8, balance: [5, 3], transit: [2, 2], uncoveredAt: '2026-10-20T08:37' });
+  });
+
   it('neznámý formát', () => {
     expect(parseCoverageWorkbook([{ name: 'List1', data: [['A', 'B'], [1, 2]] }])).toEqual({ ok: false, error: 'unknownFormat' });
   });
@@ -140,7 +158,7 @@ describe('buildCoverage', () => {
     const shorter: CoverageSource = { ...source, path: 'b', report: { ...parsed.value, days: [dayFromParts(2026, 10, 12)!], rows: [{ ...parsed.value.rows[1]!, balance: [7], transit: [0] }] } };
     const t = buildCoverage([source, shorter], undefined, { transit: false });
     expect(t.days.map(dayToIso)).toEqual(['2026-10-12', '2026-10-13', '2026-10-14', '2026-10-16']);
-    expect(t.lines.find((l) => l.id === 'b|A12345678900002')!.values).toEqual([7, null, null, null]);
+    expect(t.lines.find((l) => l.id === 'b|0|A12345678900002')!.values).toEqual([7, null, null, null]);
     expect(t.lines[0]!.values).toEqual([null, 10, 0, -9]);
   });
 

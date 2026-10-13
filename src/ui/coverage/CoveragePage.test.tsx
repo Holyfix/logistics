@@ -79,6 +79,17 @@ describe('CoveragePage', () => {
     expect(cells(within(summary).getByText('Bez varianty').closest('tr')!)).toEqual(['Bez varianty', '45', '40']);
   });
 
+  it('filtr destinace ukáže jen díly z vybrané destinace', () => {
+    const other: CoverageSource = { ...source, path: 'Coverage/Lokalita B/P200/r.xlsx', location: 'Lokalita B', project: 'P200' };
+    renderWith(<CoveragePage />, { ...state, data: { ...state.data!, coverage: [source, other] } });
+    expect(bodyRows()).toHaveLength(4);
+    fireEvent.change(screen.getByLabelText('Destinace'), { target: { value: 'Lokalita B' } });
+    expect(bodyRows()).toHaveLength(2);
+    expect(bodyRows().map((r) => r.querySelectorAll('td')[2]!.textContent)).toEqual(['Lokalita B', 'Lokalita B']);
+    fireEvent.change(screen.getByLabelText('Destinace'), { target: { value: 'Lokalita A' } });
+    expect(bodyRows().map((r) => r.querySelectorAll('td')[2]!.textContent)).toEqual(['Lokalita A', 'Lokalita A']);
+  });
+
   it('bez souborů odkáže na Data', () => {
     renderWith(<CoveragePage />, { ...state, data: { ...state.data!, coverage: [] } });
     expect(screen.getByRole('link', { name: 'Otevřít Data' }).getAttribute('href')).toBe('#data');
