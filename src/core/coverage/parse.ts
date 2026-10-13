@@ -6,7 +6,7 @@ import { cellDay, cellNumber, cellText, MAX_ISSUES, type Cell, type DataIssue } 
 import { dayFromParts, type DayNumber } from '../dates';
 import { customerKey } from '../masterdata';
 
-export type CoverageFormat = 'overview' | 'articles';
+export type CoverageFormat = 'overview' | 'articles' | 'bestand';
 
 export interface CoverageRow {
   /** Číslo dílu zákazníka, jak je v souboru. */
@@ -161,23 +161,13 @@ function parseArticles(sheet: Sheet): CoverageReport | null {
     uncoveredNo: findColumn(header, ['First uncovered Prod No']),
   };
   const body = sheet.data.slice(headerIndex + 1).filter((row) => cellText(row[col.customer]) !== '');
-  // Dny: sloupce s datem v záhlaví, které mají aspoň jednu hodnotu (prázdné sloupce se starým datem se vynechají).
-  const dayColumns = sheet.data[headerIndex]!.flatMap((cell, c) => {
-    const day = dayOf(cell);
-    return day !== null && body.some((row) => cellNumber(row[c]) !== null) ? [{ day, c }] : [];
-  }).sort((a, b) => a.day - b.day);
+  const dayColumns = dayColumnsOf(sheet.data[headerIndex]!, body);
   if (dayColumns.length === 0) return null;
 
   const rows: CoverageRow[] = body.map((row) => {
     const customerNumber = cellText(row[col.customer]);
     const transit = (cellNumber(row[col.transit]) ?? 0) + (col.further === -1 ? 0 : (cellNumber(row[col.further]) ?? 0));
-    const balance: number[] = [];
-    let last = (cellNumber(row[col.stock]) ?? 0) + transit;
-    for (const { c } of dayColumns) {
-      // Prázdný den uprostřed horizontu převezme předchozí stav.
-      last = cellNumber(row[c]) ?? last;
-      balance.push(last - transit);
-    }
+    const balance = dayValues(row, dayColumns, (cellNumber(row[col.stock]) ?? 0) + transit).map((v) => v - transit);
     return {
       customerNumber,
       customerKey: customerKey(customerNumber),
@@ -193,10 +183,83 @@ function parseArticles(sheet: Sheet): CoverageReport | null {
   return { format: 'articles', sheet: sheet.name, days: dayColumns.map((d) => d.day), rows, issueCount: 0, issues: [] };
 }
 
+/**
+ * Formát „bestand“: nad záhlavím údaje o souboru (KLIENT, čas), záhlaví s německými názvy sloupců
+ * (ARTIKEL = naše číslo dílu, SACHNUMMER = číslo zákazníka, Bestand, Avisiert = transit, Gesperrt)
+ * a dny jako datumy. Stav dne transit neobsahuje. V souboru bývají i řádky jiných klientů;
+ * použijí se jen řádky klienta uvedeného nahoře v souboru (název není v aplikaci napevno).
+ */
+function parseBestand(sheet: Sheet): CoverageReport | null {
+  const headerIndex = sheet.data.slice(0, 10).findIndex((row) => {
+    const names = row.map((c) => normalizeHeader(cellText(c)));
+    return names.includes('artikel') && names.includes('sachnummer') && names.includes('bestand');
+  });
+  if (headerIndex === -1) return null;
+  const header = sheet.data[headerIndex]!.map((c) => cellText(c));
+  const col = {
+    client: findColumn(header, ['KUNDE']),
+    item: findColumn(header, ['ARTIKEL']),
+    customer: findColumn(header, ['SACHNUMMER']),
+    description: findColumn(header, ['BEZEICHNUNG']),
+    stock: findColumn(header, ['Bestand']),
+    transit: findColumn(header, ['Avisiert']),
+    uncoveredNo: findColumn(header, ['Erste Fehlende']),
+    uncoveredAt: findColumn(header, ['PlanZeit']),
+  };
+  // „KLIENT:“ v hlavičce souboru, hodnota je v další neprázdné buňce řádku.
+  let client = '';
+  for (const row of sheet.data.slice(0, headerIndex)) {
+    const index = row.findIndex((c) => normalizeHeader(cellText(c)) === 'klient');
+    const value = index === -1 ? undefined : row.slice(index + 1).find((c) => cellText(c) !== '');
+    if (value !== undefined) client = cellText(value).toUpperCase();
+  }
+  const body = sheet.data
+    .slice(headerIndex + 1)
+    .filter((row) => cellText(row[col.customer]) !== '')
+    .filter((row) => !client || col.client === -1 || cellText(row[col.client]).toUpperCase() === client);
+  const dayColumns = dayColumnsOf(sheet.data[headerIndex]!, body);
+  if (dayColumns.length === 0) return null;
+
+  const rows: CoverageRow[] = body.map((row) => {
+    const customerNumber = cellText(row[col.customer]);
+    const transit = col.transit === -1 ? 0 : (cellNumber(row[col.transit]) ?? 0);
+    const stock = cellNumber(row[col.stock]) ?? 0;
+    return {
+      customerNumber,
+      customerKey: customerKey(customerNumber),
+      supplierItem: col.item === -1 ? '' : cellText(row[col.item]),
+      description: col.description === -1 ? '' : cellText(row[col.description]),
+      customerStock: stock,
+      balance: dayValues(row, dayColumns, stock),
+      transit: dayColumns.map(() => transit),
+      firstUncovered: col.uncoveredNo === -1 ? '' : cellText(row[col.uncoveredNo]),
+      uncoveredAt: col.uncoveredAt === -1 ? '' : dateTimeText(row[col.uncoveredAt]),
+    };
+  });
+
+  return { format: 'bestand', sheet: sheet.name, days: dayColumns.map((d) => d.day), rows, issueCount: 0, issues: [] };
+}
+
+/** Sloupce dnů: datum v záhlaví a aspoň jedna hodnota (prázdné sloupce se starým datem se vynechají). */
+function dayColumnsOf(header: readonly Cell[], body: readonly Cell[][]): { day: DayNumber; c: number }[] {
+  return header
+    .flatMap((cell, c) => {
+      const day = dayOf(cell);
+      return day !== null && body.some((row) => cellNumber(row[c]) !== null) ? [{ day, c }] : [];
+    })
+    .sort((a, b) => a.day - b.day);
+}
+
+/** Hodnoty po dnech; prázdný den převezme předchozí stav (na začátku `start`). */
+function dayValues(row: readonly Cell[], columns: readonly { c: number }[], start: number): number[] {
+  let last = start;
+  return columns.map(({ c }) => (last = cellNumber(row[c]) ?? last));
+}
+
 /** Najde v sešitu list ve známém formátu a převede ho. */
 export function parseCoverageWorkbook(sheets: readonly Sheet[]): CoverageResult {
   for (const sheet of sheets) {
-    const report = parseOverview(sheet) ?? parseArticles(sheet);
+    const report = parseOverview(sheet) ?? parseArticles(sheet) ?? parseBestand(sheet);
     if (report) return { ok: true, value: report };
   }
   return { ok: false, error: 'unknownFormat' };

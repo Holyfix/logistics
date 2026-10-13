@@ -77,6 +77,39 @@ describe('parseCoverageWorkbook', () => {
     expect(r.value.rows[1]!.balance).toEqual([9, 9, 3]);
   });
 
+  it('formát bestand: stav bez transitu, jen řádky klienta z hlavičky souboru', () => {
+    const r = parseCoverageWorkbook([
+      {
+        name: 'bestand',
+        data: [
+          [null, 'KLIENT:', 'Klient A'],
+          [null, 'Čas:', '2026-10-13 06:54:44'],
+          [],
+          ['KUNDE', 'ARTIKEL', 'SACHNUMMER', 'BEZEICHNUNG', 'Bestand', 'False', 'Avisiert', 'Gesperrt', 'Erste Fehlende', 'PlanZeit', d(13), d(14), d(15)],
+          ['KLIENT A', '900100', 'A1234567890  00000001', 'DOOR LHD', 30, 0, 12, 1, 4700001, new Date(Date.UTC(2026, 9, 14, 8, 28)), 20, 5, -10],
+          ['Klient B', '800100', 'A9999999999  00000001', 'CIZÍ DÍL', 5, 0, 0, 0, null, null, 5, 5, 5],
+          ['Klient A', '900101', 'A1234567890  00000002', 'DOOR RHD', 3, 0, 0, 0, null, null, 3, null, 3],
+        ],
+      },
+    ]);
+    if (!r.ok) throw new Error();
+    expect(r.value.format).toBe('bestand');
+    expect(r.value.days.map(dayToIso)).toEqual(['2026-10-13', '2026-10-14', '2026-10-15']);
+    expect(r.value.rows.map((row) => row.supplierItem)).toEqual(['900100', '900101']);
+    expect(r.value.rows[0]).toEqual({
+      customerNumber: 'A1234567890  00000001',
+      customerKey: 'A12345678900001',
+      supplierItem: '900100',
+      description: 'DOOR LHD',
+      customerStock: 30,
+      balance: [20, 5, -10],
+      transit: [12, 12, 12],
+      firstUncovered: '4700001',
+      uncoveredAt: '2026-10-14T08:28',
+    });
+    expect(r.value.rows[1]!.balance).toEqual([3, 3, 3]);
+  });
+
   it('neznámý formát', () => {
     expect(parseCoverageWorkbook([{ name: 'List1', data: [['A', 'B'], [1, 2]] }])).toEqual({ ok: false, error: 'unknownFormat' });
   });

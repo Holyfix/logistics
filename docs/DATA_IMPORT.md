@@ -94,6 +94,7 @@ na názvu souboru nezáleží. Díly se párují s mapováním podle čísla zá
 |---|---|---|
 | Coverage Report Overview | list se záhlavím „Disposable Stock“ a „Stock End of the Day“, nad každým blokem dne datum | sklad „Stock in … 07:00“ minus „Open Orders“, poptávka (Demand) a transit (In Transit) po dnech |
 | Articles | jedno záhlaví se sloupci „Customer Item“, „Stock“, „Stock in transit“ a dny („2026.10.13“) | stav dne **včetně transitu**; odečte se „Stock in transit“ + „Further stock in transit“. Díl se spáruje i podle „Item number“ (naše číslo dílu) |
+| Bestand | záhlaví (do 10. řádku) se sloupci „ARTIKEL“, „SACHNUMMER“, „Bestand“ a dny jako datumy | stav dne **bez transitu**, transit = „Avisiert“; „Gesperrt“ se neodečítá. Použijí se jen řádky klienta z buňky „KLIENT:“ nad záhlavím |
 
 - **Pokrytí na konci dne** = sklad u zákazníka − poptávka od prvního dne do daného dne;
   s volbou „Přičíst transit“ + transit, který do daného dne dorazí. Konečný stav dne ze souboru

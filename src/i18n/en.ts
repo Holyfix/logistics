@@ -231,7 +231,7 @@ export const en: Messages = {
       rows: 'Parts',
       days: 'Days',
       modified: 'Modified',
-      formats: { overview: 'Coverage Report Overview', articles: 'Articles (balance incl. transit)' },
+      formats: { overview: 'Coverage Report Overview', articles: 'Articles (balance incl. transit)', bestand: 'Bestand (balance without transit)' },
     },
     issue: {
       row: 'row',

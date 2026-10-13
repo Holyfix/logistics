@@ -233,7 +233,7 @@ export const cs = {
       rows: 'Dílů',
       days: 'Dny',
       modified: 'Změněno',
-      formats: { overview: 'Coverage Report Overview', articles: 'Articles (stav včetně transitu)' },
+      formats: { overview: 'Coverage Report Overview', articles: 'Articles (stav včetně transitu)', bestand: 'Bestand (stav bez transitu)' },
     },
     issue: {
       row: 'řádek',

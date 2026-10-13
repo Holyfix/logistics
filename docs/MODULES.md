@@ -62,7 +62,7 @@ Filtry: zákazník, projekt, strana (LHD/RHD) z kmenových dat, hledání dílu.
 - ✅ Přičtení transitu, filtry záporné kdykoli / ke zvolenému dni, závod, projekt, varianta, hledání
 - ✅ Souhrn po variantách, export do Excelu a CSV, na rozcestníku díly v záporu do 2 dnů
 - ⏳ Náš sklad (plná / neúplná balení) a dodatečný transit z naší expedice
-- ⏳ Další formáty souborů zákazníka
+- ✅ Tři formáty souborů zákazníka (Coverage Report Overview, Articles, Bestand); transit se sjednotí
 
 ### Mimořádné přepravy
 - Zápis mimořádné přepravy přímo v aplikaci (do sdílené složky)
