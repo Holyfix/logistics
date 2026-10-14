@@ -72,13 +72,13 @@ describe('ComponentsPage', () => {
     renderWith(<ComponentsPage today={day(13)} />);
     const [clip, resin] = rows(0);
     // spona: sklad 30, potřeba 10, 10, 20 → 20, 10, −10; pokryto do středy; zásoba 30 ÷ (40 za 5 dní výroby v prvních 7 dnech) = 3,75
-    // bez souboru coverage je chybějící množství u zákazníka z odvolávek → Zákazník pokryt do jako odvolávky (rámeček)
-    expect(cells(clip!).slice(0, 8)).toEqual(['CLIP-1', 'CLIP', 'EA', 'nákup', '30', '40', 'St 14. 10.zásoba 3,8 dne výroby', 'St 14. 10.bez výroby: chybí už dnes']);
+    // bez souboru coverage sklad a transit u zákazníka neznáme → Zákazník pokryt do „—“
+    expect(cells(clip!).slice(0, 8)).toEqual(['CLIP-1', 'CLIP', 'EA', 'nákup', '30', '40', 'St 14. 10.zásoba 3,8 dne výroby', '—']);
     expect(cells(clip!).slice(8, 11)).toEqual(['20', '10', '-10']);
     expect(clip!.querySelectorAll('td')[10]!.className).toContain('cell-negative');
-    expect(clip!.querySelectorAll('td')[9]!.className).toContain('cell-customer');
+    expect(clip!.querySelectorAll('td.cell-customer')).toHaveLength(0);
     // pryskyřice v kg na desetinná místa
-    expect(cells(resin!).slice(4, 11)).toEqual(['100', '5', 'Po 26. 10. a délezásoba 100,0 dne výroby', 'Po 26. 10. a délebez výroby: chybí už dnes', '98,75', '97,5', '95']);
+    expect(cells(resin!).slice(4, 11)).toEqual(['100', '5', 'Po 26. 10. a délezásoba 100,0 dne výroby', '—', '98,75', '97,5', '95']);
     // mezivýroba bez označení se nezobrazí
     expect(screen.queryByText('SUB-1')).toBeNull();
     // pořadí ukazatelů: v záporu do 2 dnů, v záporu do 14 dní, …
@@ -109,7 +109,7 @@ describe('ComponentsPage', () => {
     expect(cells(rows(1)[0]!).slice(3, 7)).toEqual(['20', '5', '5', '10']);
   });
 
-  it('rámeček: zákazník pokrytý svým skladem a transitem, pak naší výrobou z komponenty', () => {
+  it('rámeček: zákazník pokrytý hotovými díly (jeho sklad + transit), se zaškrtnutím i naším skladem', () => {
     // FG-1 u zákazníka: út 13. 10. 15, st 14. 10. 5, čt 15. 10. −5 → chybí ve čtvrtek 5 ks, za koncem souboru nic
     const coverage = {
       path: 'Coverage/L/P1/c.xlsx',
@@ -128,15 +128,10 @@ describe('ComponentsPage', () => {
     } as CoverageSource;
     renderWith(<ComponentsPage today={day(13)} />, { ...state, data: { ...state.data!, coverage: [coverage] } });
     const clip = rows(0).find((r) => cells(r)[0] === 'CLIP-1')!;
-    // bez výroby (jen sklad a transit zákazníka): chybí ve čtvrtek → pokryto do středy; s výrobou: spona 30 ks, 2 ks na FG-1 → čt 10 ks → celý horizont
-    expect(cells(clip)[7]).toBe('Po 26. 10. a délebez výroby: St 14. 10.');
-    expect(clip.querySelectorAll('td.cell-customer')).toHaveLength(0);
-    // bez souboru coverage (jen odvolávky 5, 5, 10 → 10, 10, 20) by spona chyběla ve čtvrtek: rámeček na středě
-    cleanup();
-    renderWith(<ComponentsPage today={day(13)} />);
-    const plain = rows(0).find((r) => cells(r)[0] === 'CLIP-1')!;
-    expect(cells(plain)[7]).toBe('St 14. 10.bez výroby: chybí už dnes');
-    expect(plain.querySelectorAll('td')[9]!.className).toContain('cell-customer');
+    // u zákazníka chybí ve čtvrtek → pokryto do středy (rámeček)
+    expect(cells(clip)[7]).toBe('St 14. 10.');
+    expect(clip.querySelectorAll('td')[9]!.className).toContain('cell-customer');
+    expect(clip.querySelectorAll('td.cell-customer')).toHaveLength(1);
   });
 
   it('poptávka hotových dílů se řídí filtrem komponent', () => {

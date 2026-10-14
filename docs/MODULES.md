@@ -73,7 +73,7 @@ Filtry: zákazník, projekt, strana (LHD/RHD) z kmenových dat, hledání dílu.
 - ✅ Rozpad přes víceúrovňový kusovník, komponenty vybrané v Item Mappingu
 - ✅ Horizont 14 dní; potřeba výroby hotových dílů po dnech, na rozcestníku počet druhů komponent nepokrytých na 2 dny
 - ✅ Pokrytí komponent podle odvolávek a našeho skladu komponent (volitelně po odečtu našeho skladu hotových dílů a mezivýroby); „Pokryto do“ (první chybějící komponenta), potřeba 7 dní, zásoba ve dnech výroby
-- ✅ „Zákazník pokryt do“ (rámeček): do kdy pokryjeme zákazníka podle coverage (jeho sklad + transit) výrobou z komponenty, se zaškrtnutím i naším skladem hotových dílů a mezivýroby; pod datem pokrytí bez výroby
+- ✅ „Zákazník pokryt do“ (rámeček): poslední den, kdy je zákazník pokrytý hotovými díly (jeho sklad + transit podle coverage, se zaškrtnutím i náš sklad hotových dílů); každý hotový díl zvlášť
 - ✅ Poptávka hotových dílů se řídí filtrem komponent (projekt, vybraná komponenta → hotové díly, které ji mají v kusovníku)
 - ⏳ Otevřené nákupní objednávky (pokud jsou v exportu)
 - Shortage list pro ranní poradu
