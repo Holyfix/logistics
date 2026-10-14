@@ -8,6 +8,7 @@ import { parseMasterData } from '../../core/masterdata';
 import { parseStock } from '../../core/stock';
 import { I18nProvider } from '../../i18n/I18nProvider';
 import { DataProvider, type DataState } from '../data/DataProvider';
+import { OilProvider } from '../oil/OilProvider';
 import { DashboardPage } from './DashboardPage';
 
 const day = (n: number) => dayFromParts(2026, 10, n)!;
@@ -57,7 +58,18 @@ const state: DataState = {
     boms: [],
     plans: [],
     planSettings: null,
-    oil: null,
+    oil: {
+      path: 'OIL/OIL.xlsx',
+      lastModified: now,
+      list: {
+        items: [
+          { id: 1, problem: 'Později', action: '', owner: 'Logistika', opened: day(1), due: day(30), progress: 0, cancelled: false, closed: null, comments: [], shifts: [] },
+          { id: 2, problem: 'Po termínu', action: '', owner: 'Nákup', opened: day(1), due: day(12), progress: 25, cancelled: false, closed: null, comments: [], shifts: [{ at: '', author: '', from: day(9), to: day(12), reason: 'x' }] },
+          { id: 3, problem: 'Tento týden', action: '', owner: 'Kvalita', opened: day(1), due: day(16), progress: 50, cancelled: false, closed: null, comments: [], shifts: [] },
+          { id: 4, problem: 'Hotovo', action: '', owner: '', opened: day(1), due: day(2), progress: 100, cancelled: false, closed: day(2), comments: [], shifts: [] },
+        ],
+      },
+    },
     failed: [],
     loadedAt: 1,
   },
@@ -73,7 +85,9 @@ describe('DashboardPage', () => {
     render(
       <I18nProvider>
         <DataProvider initial={state}>
-          <DashboardPage today={day(14)} now={now} />
+          <OilProvider>
+            <DashboardPage today={day(14)} now={now} />
+          </OilProvider>
         </DataProvider>
       </I18nProvider>,
     );
@@ -88,6 +102,12 @@ describe('DashboardPage', () => {
       [' FG-L', 'P1Lokalita A', 'zítra', '50 ks'],
       [' FG-Rčeká na transit', 'P1Lokalita A', 'zítra', '30 ks'],
     ]);
+    expect(kpi('OIL').querySelector('.kpi-value')!.textContent).toBe('1 ');
+    expect(kpi('OIL').textContent).toContain('termín do 7 dní 1 · otevřených 3');
+    const oil = screen.getByRole('heading', { name: 'OIL: nejbližší termíny' }).closest('.panel') as HTMLElement;
+    expect([...oil.querySelectorAll('tbody tr')].map((tr) => tr.querySelectorAll('td')[1]!.textContent)).toEqual(['Po termínu', 'Tento týden', 'Později']);
+    expect(within(oil).getByText('posunuto 1×')).toBeTruthy();
+
     const changes = screen.getByRole('heading', { name: 'Změny v odvolávkách' }).closest('.panel') as HTMLElement;
     expect(within(changes).getByText('+100')).toBeTruthy();
 

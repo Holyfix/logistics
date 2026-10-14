@@ -17,7 +17,6 @@ import {
   type OilItem,
   type OilList,
   type OilStatus,
-  type Progress,
 } from '../../core/oil';
 import { useI18n } from '../../i18n/I18nProvider';
 import { xlsxBlob } from '../../platform/download';
@@ -26,6 +25,7 @@ import { useData } from '../data/DataProvider';
 import { Icon } from '../icons';
 import { SaveStatus, useSaveFlow } from '../planning/SaveStatus';
 import { useOilDraft } from './OilProvider';
+import { ProgressBall } from './ProgressBall';
 
 const OIL_FILE = 'OIL/OIL.xlsx';
 const NAME_KEY = 'logistics-user-name';
@@ -46,22 +46,6 @@ function saveName(name: string) {
   } catch {
     // Bez úložiště se jméno jen nezapamatuje.
   }
-}
-
-/** Kolečko plnění (Harvey ball): výseč podle procent, barva podle stavu. */
-function ProgressBall({ progress, status }: { progress: Progress; status: OilStatus }) {
-  const r = 9;
-  const c = 11;
-  const f = progress / 100;
-  const angle = 2 * Math.PI * f;
-  const x = c + r * Math.sin(angle);
-  const y = c - r * Math.cos(angle);
-  return (
-    <svg className={`oil-ball oil-ball-${status}`} width="22" height="22" viewBox="0 0 22 22" aria-hidden="true">
-      <circle cx={c} cy={c} r={r} className="oil-ball-ring" />
-      {f >= 1 ? <circle cx={c} cy={c} r={r} className="oil-ball-fill" /> : f > 0 && <path d={`M${c} ${c} L${c} ${c - r} A${r} ${r} 0 ${f > 0.5 ? 1 : 0} 1 ${x} ${y} Z`} className="oil-ball-fill" />}
-    </svg>
-  );
 }
 
 /** Pořadí: po termínu, rozpracované a nezahájené podle termínu (bez termínu na konci), pak hotové a zrušené. */

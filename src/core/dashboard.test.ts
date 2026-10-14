@@ -3,7 +3,8 @@ import { parseCsv } from './csv';
 import { parseCallOffExport, type CallOffExport } from './calloffs/parse';
 import type { ComponentLine, ComponentTable } from './components/compute';
 import type { CoverageLine, CoverageTable } from './coverage/compute';
-import { callOffDigest, componentAlerts, customerAlerts, dataFreshness } from './dashboard';
+import { callOffDigest, componentAlerts, customerAlerts, dataFreshness, oilAlerts } from './dashboard';
+import { addItem, emptyOil, updateItem } from './oil';
 import { dayFromParts } from './dates';
 
 const day = (n: number) => dayFromParts(2026, 10, n)!;
@@ -82,6 +83,26 @@ describe('změny v odvolávkách', () => {
       ['B', 'info', -25, 1],
     ]);
     expect(callOffDigest(cur, undefined)).toMatchObject({ previous: null, changes: 0, alerts: [] });
+  });
+});
+
+describe('OIL na dashboardu', () => {
+  it('po termínu hoří, termín do 7 dní pozor, později nebo bez termínu informace; hotové a zrušené ne', () => {
+    let list = emptyOil();
+    for (let k = 0; k < 6; k++) list = addItem(list, day(1)).list;
+    const set = (id: number, change: object) => (list = updateItem(list, id, (i) => ({ ...i, ...change })));
+    set(1, { due: day(25) });
+    set(2, { due: day(13) });
+    set(3, { due: day(20) });
+    set(4, { due: day(14), progress: 100 });
+    set(5, { due: day(10), cancelled: true });
+    set(6, { due: null });
+    expect(oilAlerts(list, TODAY).map((a) => [a.item.id, a.severity])).toEqual([
+      [2, 'crit'],
+      [3, 'warn'],
+      [1, 'info'],
+      [6, 'info'],
+    ]);
   });
 });
 

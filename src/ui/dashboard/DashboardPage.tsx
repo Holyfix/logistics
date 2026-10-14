@@ -5,6 +5,8 @@ import {
   componentAlerts,
   customerAlerts,
   dataFreshness,
+  oilAlerts,
+  type OilAlert,
   type CallOffAlert,
   type ComponentAlert,
   type CustomerAlert,
@@ -17,6 +19,8 @@ import { useI18n } from '../../i18n/I18nProvider';
 import { localToday, useComponents } from '../components/useComponents';
 import { useData } from '../data/DataProvider';
 import { Icon } from '../icons';
+import { useOilDraft } from '../oil/OilProvider';
+import { ProgressBall } from '../oil/ProgressBall';
 
 /** Kolik řádků ukazují seznamy, než se rozbalí. */
 const LIST_ROWS = 8;
@@ -41,6 +45,9 @@ export function DashboardPage({ today = localToday(), now = Date.now() }: { toda
     const current = data?.exports.at(-1);
     return current ? callOffDigest(current, data!.exports.at(-2)) : null;
   }, [data]);
+  const { draft: oilDraft } = useOilDraft();
+  const oilList = oilDraft ?? data?.oil?.list ?? null;
+  const oil = useMemo(() => (oilList ? oilAlerts(oilList, today) : null), [oilList, today]);
   const freshness = useMemo(
     () =>
       data
@@ -130,6 +137,13 @@ export function DashboardPage({ today = localToday(), now = Date.now() }: { toda
             : `${calloffs.previous ? `${td.calloffs.tile} · CW ${calloffs.week} ${td.calloffs.against} CW ${calloffs.previous.week}` : td.calloffs.noPrevious} · ${td.calloffs.backlog} ${pcs(calloffs.backlogPieces)}`}
         </span>
       </a>
+      <a className="kpi kpi-link" href="#oil">
+        <span className="kpi-label">{t.modules.oil.title}</span>
+        <span className="kpi-value">
+          {oil ? formatQuantity(count(oil, 'crit'), locale) : '—'} <Dot tone={!oil ? 'warn' : count(oil, 'crit') ? 'crit' : count(oil, 'warn') ? 'warn' : 'ok'} />
+        </span>
+        <span className="kpi-note">{oil ? `${td.oil.tile} · ${td.oil.tileWarn} ${formatQuantity(count(oil, 'warn'), locale)} · ${td.oil.tileOpen} ${formatQuantity(oil.length, locale)}` : td.oil.none}</span>
+      </a>
       <a className="kpi kpi-link" href="#data">
         <span className="kpi-label">{td.data.heading}</span>
         <span className="kpi-value">
@@ -149,6 +163,7 @@ export function DashboardPage({ today = localToday(), now = Date.now() }: { toda
       <div className="dash-grid">
           <CustomerPanel alerts={customer} dayLabel={dayLabel} pcs={pcs} />
           <ComponentPanel alerts={componentList} dayLabel={dayLabel} coveredUntil={coveredUntil} pcs={pcs} />
+          <OilPanel alerts={oil} dayLabel={dayLabel} />
           <CallOffPanel digest={calloffs} pcs={pcs} />
           <div className="panel">
             <div className="panel-head">
@@ -373,6 +388,71 @@ function CallOffPanel({ digest, pcs }: { digest: ReturnType<typeof callOffDigest
         </>
       )}
       <MoreButton total={alerts.length} shown={LIST_ROWS} all={all} toggle={toggle} />
+    </div>
+  );
+}
+
+function OilPanel({ alerts, dayLabel }: { alerts: OilAlert[] | null; dayLabel: (d: DayNumber) => string }) {
+  const { t, locale } = useI18n();
+  const tc = t.dashboard.oil;
+  const to = t.oil;
+  const { all, toggle } = useShowAll();
+  const rows = all ? (alerts ?? []) : (alerts ?? []).slice(0, LIST_ROWS);
+  return (
+    <div className="panel">
+      <div className="panel-head">
+        <h2>{tc.heading}</h2>
+        <span className="muted">{tc.sub}</span>
+        <a className="panel-actions link-button" href="#oil">
+          {t.dashboard.open} →
+        </a>
+      </div>
+      {!alerts ? (
+        <p className="muted">{tc.none}</p>
+      ) : alerts.length === 0 ? (
+        <p className="muted">{t.dashboard.none}</p>
+      ) : (
+        <div className="table-scroll">
+          <table className="table table-data">
+            <thead>
+              <tr>
+                <th className="n">{to.table.id}</th>
+                <th>{to.table.problem}</th>
+                <th>{to.table.owner}</th>
+                <th>{to.table.due}</th>
+                <th>{to.table.progress}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map(({ item, status, severity }) => (
+                <tr key={item.id}>
+                  <td className="n">
+                    <Dot tone={severity} /> <strong>{item.id}</strong>
+                  </td>
+                  <td className="oil-text">
+                    <strong>{item.problem || to.noProblem}</strong>
+                    {item.action && <small className="muted cell-note">{item.action}</small>}
+                  </td>
+                  <td>{item.owner || '—'}</td>
+                  <td className="cell-until">
+                    {item.due === null ? <span className="muted">{to.noDue}</span> : <span className={status === 'overdue' ? 'cell-short' : undefined}>{dayLabel(item.due)}</span>}
+                    {item.shifts.length > 0 && (
+                      <small className="cell-note oil-shifted">
+                        {to.shifted} {formatQuantity(item.shifts.length, locale)}
+                        {to.times}
+                      </small>
+                    )}
+                  </td>
+                  <td className="cell-until">
+                    <ProgressBall progress={item.progress} status={status} /> {item.progress} %
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      <MoreButton total={alerts?.length ?? 0} shown={LIST_ROWS} all={all} toggle={toggle} />
     </div>
   );
 }

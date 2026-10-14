@@ -62,7 +62,7 @@ funkce (plánování).
 - [ ] Komponenty: otevřené nákupní objednávky
 ### Fáze 5: Obaly
 ### Fáze 6: Dashboard
-- [x] Kritické díly u zákazníka, kritické komponenty, změny v odvolávkách, čerstvost dat; dlaždice a seznamy
+- [x] Kritické díly u zákazníka, kritické komponenty, OIL (nejbližší termíny), změny v odvolávkách, čerstvost dat; dlaždice a seznamy
 - [ ] Plnění plánu a prostoje, obaly (až budou moduly)
 ### OIL (Open Issue List)
 - [x] Body, plnění po krocích, barvy podle stavu, posuny termínu s důvodem a historií, komentáře, OIL/OIL.xlsx

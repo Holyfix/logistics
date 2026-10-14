@@ -42,6 +42,8 @@ a Dodavatelé odložené. Modul Kapacity (odvolávky vs. kapacita linek) byl zva
   pro informaci = později v horizontu; u každé „zákazník pokryt do“
 - ✅ **Změny v odvolávkách** (příštích 12 týdnů proti předchozímu exportu): pozor = nedodáno po termínu nebo změna
   o 50 % a víc, pro informaci = ostatní významné změny (od 20 %)
+- ✅ **OIL: nejbližší termíny:** otevřené body, hoří = po termínu, pozor = termín do 7 dní, pro informaci = později
+  nebo bez termínu; plnění, odpovědný a počet posunů
 - ✅ **Čerstvost dat:** sklad a coverage starší než 24 hodin, odvolávky z minulého týdne nebo chybějící soubor
 - ⏳ Plnění plánu a prostoje za včerejšek, na kolik dní vystačí obaly (až budou moduly)
 

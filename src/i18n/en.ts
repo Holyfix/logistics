@@ -52,6 +52,7 @@ export const en: Messages = {
         'Critical parts at the customer (coverage from today, with and without transit)',
         'Critical components by call-offs and our stock',
         'Call-off changes against the previous export and overdue quantities',
+        'OIL: overdue items and nearest due dates',
         'Freshness of loaded data',
         'Tiles with key figures and lists linking to the module',
       ],
@@ -477,6 +478,14 @@ export const en: Messages = {
       percent: 'Change',
       weeks: 'Weeks changed',
       backlogCol: 'Overdue',
+    },
+    oil: {
+      heading: 'OIL: nearest due dates',
+      sub: 'open items, overdue first',
+      tile: 'items overdue',
+      tileWarn: 'due within 7 days',
+      tileOpen: 'open',
+      none: 'No OIL has been created yet.',
     },
     data: {
       heading: 'Data freshness',

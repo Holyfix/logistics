@@ -1,10 +1,11 @@
-// Dashboard: co je dnes potřeba řešit, z dat ostatních modulů (Coverage, Komponenty, Odvolávky) a čerstvost dat.
+// Dashboard: co je dnes potřeba řešit, z dat ostatních modulů (Coverage, Komponenty, Odvolávky, OIL) a čerstvost dat.
 
 import type { CallOffExport } from './calloffs/parse';
 import { buildCurrentRows, buildPeriods, changeOf, DEFAULT_WEEKS } from './calloffs/views';
 import { COMPONENT_SOON_DAYS, type ComponentTable } from './components/compute';
 import { SHORTAGE_DAYS, type CoverageTable } from './coverage/compute';
 import type { DayNumber } from './dates';
+import { statusOf, type OilItem, type OilList, type OilStatus } from './oil';
 
 /** crit = hoří (dnes nebo zítra), warn = pozor, info = pro informaci. */
 export type Severity = 'crit' | 'warn' | 'info';
@@ -208,4 +209,28 @@ export function dataFreshness({ callOffs, coverage, stock, boms, master, today, 
   list.push(bom ? { kind: 'bom', label: fileName(bom.path), modified: bom.lastModified, stale: false, missing: false } : { kind: 'bom', label: '', modified: null, stale: false, missing: true });
   list.push(master ? { kind: 'master', label: fileName(master.path), modified: null, stale: false, missing: false } : { kind: 'master', label: '', modified: null, stale: true, missing: true });
   return list;
+}
+
+/** Do kolika dní od dneška se termín bodu OIL hlásí jako „pozor“. */
+export const OIL_SOON_DAYS = 7;
+
+export interface OilAlert {
+  item: OilItem;
+  status: OilStatus;
+  severity: Severity;
+}
+
+/**
+ * Otevřené body OIL podle nejbližšího termínu: hoří = po termínu, pozor = termín do 7 dní (včetně dneška),
+ * pro informaci = později nebo bez termínu. Hotové a zrušené body se nehlásí.
+ */
+export function oilAlerts(list: OilList, today: DayNumber): OilAlert[] {
+  return list.items
+    .flatMap((item): OilAlert[] => {
+      const status = statusOf(item, today);
+      if (status === 'done' || status === 'cancelled') return [];
+      const severity: Severity = status === 'overdue' ? 'crit' : item.due !== null && item.due < today + OIL_SOON_DAYS ? 'warn' : 'info';
+      return [{ item, status, severity }];
+    })
+    .sort((a, b) => bySeverity(a, b) || (a.item.due ?? Infinity) - (b.item.due ?? Infinity) || a.item.id - b.item.id);
 }

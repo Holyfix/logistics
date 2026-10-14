@@ -50,6 +50,7 @@ export const cs = {
         'Kritické díly u zákazníka (coverage od dneška, s transitem i bez)',
         'Kritické komponenty podle odvolávek a našeho skladu',
         'Změny v odvolávkách proti předchozímu exportu a nedodáno po termínu',
+        'OIL: body po termínu a s nejbližším termínem',
         'Čerstvost načtených dat',
         'Dlaždice s hlavními čísly a seznamy s odkazem do modulu',
       ],
@@ -479,6 +480,14 @@ export const cs = {
       percent: 'Změna',
       weeks: 'Týdnů se změnou',
       backlogCol: 'Nedodáno',
+    },
+    oil: {
+      heading: 'OIL: nejbližší termíny',
+      sub: 'otevřené body, nejdřív po termínu',
+      tile: 'bodů po termínu',
+      tileWarn: 'termín do 7 dní',
+      tileOpen: 'otevřených',
+      none: 'OIL zatím není založený.',
     },
     data: {
       heading: 'Čerstvost dat',
