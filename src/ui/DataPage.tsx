@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { dayToIso } from '../core/dates';
 import { formatDate, formatQuantity } from '../core/format';
+import type { BomData } from '../core/bom';
 import { masterDataTemplate } from '../core/masterdata';
 import { excludedLocationsIn, STOCK_ZONES, stockByItem, stockItemCount } from '../core/stock';
 import type { DataIssue } from '../core/table';
@@ -40,6 +41,20 @@ export function DataPage() {
     () => (current && data?.master ? current.items.filter((item) => !data.master!.data.items.has(item)).length : (current?.items.length ?? 0)),
     [current, data],
   );
+
+  // Projekty hotových dílů v kusovníku podle mapování, např. „X540 (40), bez projektu (16)“.
+  const projectOf = useMemo(() => new Map([...(data?.master?.data.items.values() ?? [])].map((m) => [m.item.toUpperCase(), m.project])), [data]);
+  const bomProjects = (bom: BomData) => {
+    const counts = new Map<string, number>();
+    for (const parent of bom.parents.keys()) {
+      const project = projectOf.get(parent) || bom.info.get(parent)?.project || '';
+      counts.set(project, (counts.get(project) ?? 0) + 1);
+    }
+    return [...counts]
+      .sort(([a], [b]) => (a ? (b ? a.localeCompare(b, 'cs') : -1) : 1))
+      .map(([project, n]) => `${project || t.data.bom.noProject} (${formatQuantity(n, locale)})`)
+      .join(', ');
+  };
 
   const coverageUnmapped = useMemo(
     () => data?.coverage.reduce((n, c) => n + c.report.rows.filter((r) => !data.master?.data.byCustomerKey.has(r.customerKey)).length, 0) ?? 0,
@@ -268,6 +283,7 @@ export function DataPage() {
                       <th>{t.data.bom.file}</th>
                       <th className="n">{t.data.bom.products}</th>
                       <th className="n">{t.data.bom.components}</th>
+                      <th>{t.data.bom.projects}</th>
                       <th>{t.data.bom.modified}</th>
                       <th>{t.data.calloffs.issues}</th>
                     </tr>
@@ -278,6 +294,7 @@ export function DataPage() {
                         <td>{b.path}</td>
                         <td className="n">{formatQuantity(b.data.parents.size, locale)}</td>
                         <td className="n">{formatQuantity(new Set([...b.data.parents.values()].flat().map((c) => c.item)).size, locale)}</td>
+                        <td className="wrap">{bomProjects(b.data)}</td>
                         <td>{new Date(b.lastModified).toLocaleString(locale === 'cs' ? 'cs-CZ' : 'en-GB', { dateStyle: 'short', timeStyle: 'short' })}</td>
                         <td className="wrap">{b.data.issueCount === 0 ? <span className="muted">{t.data.calloffs.noIssues}</span> : <IssueList issues={b.data.issues} count={b.data.issueCount} />}</td>
                       </tr>

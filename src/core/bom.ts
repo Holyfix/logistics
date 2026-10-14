@@ -9,7 +9,8 @@ export const BOM_COLUMNS = {
   description: ['Description', 'Popis'],
   qty: ['Quantity Per', 'Qty Per', 'Množství'],
   um: ['UM', 'Unit of Measure', 'MJ'],
-  source: ['Purchase/Manufacture', 'Pur/Mfg', 'P/M'],
+  source: ['Purchase/Manufacture', 'Pur/Mfg', 'P/M', 'P = Purchased / L = Line manufactured', 'Purchased/Manufactured'],
+  project: ['Project', 'Projekt'],
 } as const;
 
 /** Komponenta s množstvím na 1 ks hotového dílu (přes všechny úrovně). */
@@ -34,6 +35,8 @@ export interface BomItemInfo {
   um: string;
   /** P = nakupovaný, L/M = vyráběný (podle sloupce Purchase/Manufacture). */
   source: string;
+  /** Projekt ze sloupce Project v kusovníku (pokud ho export obsahuje). */
+  project: string;
 }
 
 export interface BomData {
@@ -51,12 +54,12 @@ export type BomResult = { ok: true; value: BomData } | { ok: false; error: 'miss
 
 const PARENT = 'parent';
 
-/** Úroveň z textu „1“, „.2“, „..3“ … nebo „Parent“ (0). */
+/** Úroveň z textu „1“, „.2“, „..3“ … nebo „Parent“ / „0“ (hotový díl). */
 function levelOf(cell: Cell | undefined): number | null {
   const text = cellText(cell).toLowerCase();
   if (text === PARENT) return 0;
   const n = Number(text.replace(/^\.+/, ''));
-  return Number.isInteger(n) && n > 0 ? n : null;
+  return Number.isInteger(n) && n >= 0 ? n : null;
 }
 
 /**
@@ -74,6 +77,8 @@ export function parseBom(data: readonly Cell[][]): BomResult {
     keyof typeof BOM_COLUMNS,
     number
   >;
+  // Druh dílu může mít v záhlaví i vysvětlivku, např. „P = Purchased / L = Line manufactured“.
+  if (col.source === -1) col.source = header.findIndex((h) => /purchas/i.test(h));
   if (col.qty === -1) return { ok: false, error: 'missingColumns', columns: [BOM_COLUMNS.qty[0]] };
 
   const parents = new Map<string, BomComponent[]>();
@@ -108,7 +113,8 @@ export function parseBom(data: readonly Cell[][]): BomResult {
       issue({ row: rowNo, column: BOM_COLUMNS.level[0], value: text(row, col.level), message: 'invalidNumber' });
       continue;
     }
-    if (!info.has(item)) info.set(item, { description: text(row, col.description), um: text(row, col.um).toUpperCase(), source: text(row, col.source).toUpperCase() });
+    if (!info.has(item))
+      info.set(item, { description: text(row, col.description), um: text(row, col.um).toUpperCase(), source: text(row, col.source).toUpperCase(), project: text(row, col.project) });
     if (level === 0) {
       finish(parent, current);
       parent = item;

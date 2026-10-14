@@ -87,6 +87,7 @@ export function ComponentsPage({ today = localToday() }: { today?: DayNumber } =
   const callOffs = state.data?.exports.at(-1);
   const withFile = products.filter((p) => p.fixed.some(Boolean)).length;
   const toProduce = products.filter((p) => p.production.some((q) => q > 0)).length;
+  const withoutProject = products.filter((p) => !p.project).map((p) => p.item);
   const boms = state.data?.boms.length ?? 0;
   const fileBase = `${tc.export.fileName}_${dayToIso(today)}`;
   const productionTotals = days.map((_, k) => sum(shownProducts.map((p) => p.production[k]!)));
@@ -215,6 +216,13 @@ export function ComponentsPage({ today = localToday() }: { today?: DayNumber } =
           {tc.filters.netOwnStock}
         </label>
       </div>
+
+      {withoutProject.length > 0 && (
+        <p className="muted">
+          {tc.withoutProject}: {formatQuantity(withoutProject.length, locale)} ({withoutProject.slice(0, 5).join(', ')}
+          {withoutProject.length > 5 ? ', …' : ''})
+        </p>
+      )}
 
       <div className="panel">
         <div className="panel-head">

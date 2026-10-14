@@ -239,6 +239,8 @@ export const en: Messages = {
       products: 'Finished parts',
       components: 'Components',
       modified: 'Modified',
+      projects: 'Finished part projects (per Item Mapping, else the BOM)',
+      noProject: 'no project',
       marked: 'Components marked in Item Mapping (Component Coverage)',
       noColumn: 'Item Mapping has no Component Coverage column, so the Components module shows all purchased components.',
     },
@@ -359,6 +361,7 @@ export const en: Messages = {
     hub: { withoutTransit: 'without transit', withTransit: 'with transit', parts: 'parts', title: 'Pieces missing in the first 2 days according to customer files' },
   },
   components: {
+    withoutProject: 'Finished parts from the BOM without a project in Item Mapping (not in the Project filter)',
     noBom: 'No bill of materials loaded yet. Save the BOM export (e.g. MBOM_<product>.xlsx) into the BOM folder of the shared folder.',
     noDataAction: 'Open Data',
     sources: 'BOMs',

@@ -241,6 +241,8 @@ export const cs = {
       products: 'Hotových dílů',
       components: 'Komponent',
       modified: 'Změněno',
+      projects: 'Projekty hotových dílů (podle Item Mappingu, jinak kusovníku)',
+      noProject: 'bez projektu',
       marked: 'Komponenty označené v Item Mappingu (Component Coverage)',
       noColumn: 'Item Mapping nemá sloupec Component Coverage, v modulu Komponenty se proto zobrazí všechny nakupované komponenty.',
     },
@@ -361,6 +363,7 @@ export const cs = {
     hub: { withoutTransit: 'bez transitu', withTransit: 's transitem', parts: 'dílů', title: 'Chybějící kusy v prvních 2 dnech podle souborů zákazníka' },
   },
   components: {
+    withoutProject: 'Hotové díly z kusovníku bez projektu v Item Mappingu (ve filtru Projekt nejsou)',
     noBom: 'Zatím není načtený žádný kusovník. Uložte export kusovníku (např. MBOM_<výrobek>.xlsx) do složky BOM ve sdílené složce.',
     noDataAction: 'Otevřít Data',
     sources: 'Kusovníky',
