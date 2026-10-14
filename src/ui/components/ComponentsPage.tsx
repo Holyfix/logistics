@@ -89,7 +89,7 @@ export function ComponentsPage({ today = localToday() }: { today?: DayNumber } =
   const withoutProject = products.filter((p) => !p.project).map((p) => p.item);
   const boms = state.data?.boms.length ?? 0;
   const fileBase = `${tc.export.fileName}_${dayToIso(today)}`;
-  const productionTotals = days.map((_, k) => sum(shownProducts.map((p) => p.production[k]!)));
+  const callOffTotals = days.map((_, k) => sum(shownProducts.map((p) => p.callOffs[k]!)));
   const need7 = (c: ComponentLine) => sum(c.usage.slice(0, NEED_DAYS));
   const reserve = (c: ComponentLine) => (c.productionDays === null ? tc.table.noUsage : `${tc.table.reserve} ${formatOneDecimal(c.productionDays, locale)} ${tc.table.productionDays}`);
   /** Poslední pracovní den před dnem `short` (index); null, když chybí už dnes. */
@@ -98,7 +98,8 @@ export function ComponentsPage({ today = localToday() }: { today?: DayNumber } =
     return null;
   };
   const untilText = (short: number | null) => {
-    if (short === null) return tc.table.whole;
+    // Vystačí na celý horizont: poslední pracovní den horizontu „a déle“.
+    if (short === null) return `${dayLabel(lastDayBefore(null) ?? days.at(-1)!)} ${tc.table.orLater}`;
     const until = lastDayBefore(short);
     return until === null ? tc.table.notCovered : dayLabel(until);
   };
@@ -142,8 +143,8 @@ export function ComponentsPage({ today = localToday() }: { today?: DayNumber } =
     sheetName: tc.export.demandSheet,
     header: [tc.demand.item, tc.demand.description, tc.demand.project, tc.demand.total, ...days.map(dayToIso)],
     rows: [
-      ...shownProducts.map((p) => [p.item, p.description, p.project, sum(p.production.slice(0, NEED_DAYS)), ...p.production]),
-      [tc.demand.sum, '', '', sum(productionTotals.slice(0, NEED_DAYS)), ...productionTotals],
+      ...shownProducts.map((p) => [p.item, p.description, p.project, sum(p.callOffs.slice(0, NEED_DAYS)), ...p.callOffs]),
+      [tc.demand.sum, '', '', sum(callOffTotals.slice(0, NEED_DAYS)), ...callOffTotals],
     ],
   });
 
@@ -353,8 +354,8 @@ export function ComponentsPage({ today = localToday() }: { today?: DayNumber } =
                   </td>
                   <td className="desc">{p.description}</td>
                   <td>{p.project || '—'}</td>
-                  <td className="n">{formatQuantity(sum(p.production.slice(0, NEED_DAYS)), locale)}</td>
-                  {p.production.map((q, k) => (
+                  <td className="n">{formatQuantity(sum(p.callOffs.slice(0, NEED_DAYS)), locale)}</td>
+                  {p.callOffs.map((q, k) => (
                     <td key={k} className={`n${weekend(days[k]!)}`}>
                       {q === 0 ? <span className="muted">0</span> : formatQuantity(q, locale)}
                     </td>
@@ -370,8 +371,8 @@ export function ComponentsPage({ today = localToday() }: { today?: DayNumber } =
                   </td>
                   <td />
                   <td />
-                  <td className="n">{formatQuantity(sum(productionTotals.slice(0, NEED_DAYS)), locale)}</td>
-                  {productionTotals.map((q, k) => (
+                  <td className="n">{formatQuantity(sum(callOffTotals.slice(0, NEED_DAYS)), locale)}</td>
+                  {callOffTotals.map((q, k) => (
                     <td key={k} className={`n${weekend(days[k]!)}`}>
                       {formatQuantity(q, locale)}
                     </td>
@@ -383,7 +384,7 @@ export function ComponentsPage({ today = localToday() }: { today?: DayNumber } =
         </div>
         {!callOffs && <p className="muted">{tc.demand.noCallOffs}</p>}
         {shownProducts.length === 0 && <p>{tc.demand.empty}</p>}
-        <p className="muted">{netOwnStock ? tc.demand.note : tc.demand.noteGross}</p>
+        <p className="muted">{tc.demand.note}</p>
       </div>
     </section>
   );

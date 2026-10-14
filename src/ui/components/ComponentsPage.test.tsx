@@ -79,7 +79,7 @@ describe('ComponentsPage', () => {
     expect(clip!.querySelectorAll('td')[9]!.className).toContain('cell-customer');
     expect(clip!.querySelectorAll('td.cell-customer')).toHaveLength(1);
     // pryskyřice v kg na desetinná místa
-    expect(cells(resin!).slice(4, 11)).toEqual(['100', '5', 'celý horizontzásoba 100,0 dne výroby', 'celý horizont', '98,75', '97,5', '95']);
+    expect(cells(resin!).slice(4, 11)).toEqual(['100', '5', 'Po 26. 10. a délezásoba 100,0 dne výroby', 'Po 26. 10. a déle', '98,75', '97,5', '95']);
     expect(resin!.querySelectorAll('td.cell-customer')).toHaveLength(0);
     // mezivýroba bez označení se nezobrazí
     expect(screen.queryByText('SUB-1')).toBeNull();
@@ -102,8 +102,8 @@ describe('ComponentsPage', () => {
     const withFg = parseStock(parseCsv('Item Number;Location;Zone ID;Qty On Hand - Inv Detail\nCLIP-1;A-01;PURCH;30\nRESIN;B-01;PURCH;100\nFG-1;F-01;SALE;5'));
     if (!withFg.ok) throw new Error();
     renderWith(<ComponentsPage today={day(13)} />, { ...state, data: { ...state.data!, stock: { path: 'Stock_1.csv', lastModified: 0, data: withFg.value } } });
-    // 5 ks FG-1 pokryje první den → výroba 0, 5, 10 → spona 30, 20, 0
-    expect(cells(rows(1)[0]!).slice(3, 7)).toEqual(['15', '0', '5', '10']);
+    // 5 ks FG-1 pokryje první den → výroba 0, 5, 10 → spona 30, 20, 0; tabulka odvolávek ukazuje čistý požadavek
+    expect(cells(rows(1)[0]!).slice(3, 7)).toEqual(['20', '5', '5', '10']);
     expect(cells(rows(0).find((r) => cells(r)[0] === 'CLIP-1')!).slice(8, 11)).toEqual(['30', '20', '0']);
     fireEvent.click(screen.getByLabelText('Odečíst náš sklad hotových dílů a mezivýroby'));
     expect(cells(rows(0).find((r) => cells(r)[0] === 'CLIP-1')!).slice(8, 11)).toEqual(['20', '10', '-10']);
