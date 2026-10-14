@@ -51,7 +51,7 @@ export const GROUPS: ModuleGroup[] = [
 ];
 
 export const MODULES: ModuleDef[] = [
-  { id: 'dashboard', group: 'overview', icon: 'dashboard', status: { kind: 'planned', phase: 6 } },
+  { id: 'dashboard', group: 'overview', icon: 'dashboard', status: { kind: 'available' } },
   { id: 'kpi', group: 'overview', icon: 'kpi', status: { kind: 'planned', phase: 8 } },
   { id: 'calloffs', group: 'customers', icon: 'calloffs', status: { kind: 'available' } },
   { id: 'coverage', group: 'customers', icon: 'coverage', status: { kind: 'available' } },

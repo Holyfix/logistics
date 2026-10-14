@@ -62,6 +62,8 @@ funkce (plánování).
 - [ ] Komponenty: otevřené nákupní objednávky
 ### Fáze 5: Obaly
 ### Fáze 6: Dashboard
+- [x] Kritické díly u zákazníka, kritické komponenty, změny v odvolávkách, čerstvost dat; dlaždice a seznamy nebo úkoly na dnes
+- [ ] Plnění plánu a prostoje, obaly (až budou moduly)
 ### Fáze 7: Plánování (probíhá)
 - [x] Modul s kartami Přehled, ASSEMBLY, FOA, SLH, IMM, Kapacity; linka dílu ve sloupci Line v mapování
 - [x] Kapacity linek, směny a doprava k zákazníkovi (Plan/Kapacity.xlsx)

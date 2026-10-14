@@ -11,7 +11,7 @@ Pořadí skupin na rozcestníku (karty se čtou shora dolů po sloupcích):
 
 | Skupina | Modul | Otázka, na kterou odpovídá | Stav |
 |---|---|---|---|
-| Přehledy | **Dashboard** | Co je dnes potřeba řešit? | Fáze 6 |
+| Přehledy | **Dashboard** | Co je dnes potřeba řešit? | Fáze 6, první verze hotová |
 | Přehledy | **KPI** | Jak se nám daří v čase? | Fáze 8 |
 | Zákazníci | **Call-offs** | Co zákazníci chtějí a jak se to mění? | Fáze 3, aktuální odvolávky hotové |
 | Zákazníci | **Coverage** | Vystačí díly u zákazníka? Pokrytí na jednotlivé dny | Fáze 4 (probíhá) |
@@ -34,11 +34,16 @@ a Dodavatelé odložené. Modul Kapacity (odvolávky vs. kapacita linek) byl zva
 ## Funkce modulů
 
 ### Dashboard
-- Kritické díly a komponenty
-- Významné změny v odvolávkách za posledních 24 hodin
-- Plnění plánu a prostoje za včerejšek
-- Na kolik dní vystačí obaly
-- Čerstvost načtených dat
+- Dvě podoby (volba se pamatuje v prohlížeči): **Dlaždice a seznamy** (čísla za modul, pod nimi seznamy s odkazem
+  do modulu) a **Úkoly na dnes** (jeden seznam ze všech modulů: Hoří, Pozor, Pro informaci)
+- ✅ **Kritické díly u zákazníka** (coverage od dneška): hoří = chybí i s transitem dnes nebo zítra, pozor = dnes
+  nebo zítra chybí jen bez transitu (čeká na transit), pro informaci = chybí s transitem později
+- ✅ **Kritické komponenty** (podle odvolávek a našeho skladu): hoří = dojdou do 2 dnů, pozor = do 7 dnů,
+  pro informaci = později v horizontu; u každé „zákazník pokryt do“
+- ✅ **Změny v odvolávkách** (příštích 12 týdnů proti předchozímu exportu): pozor = nedodáno po termínu nebo změna
+  o 50 % a víc, pro informaci = ostatní významné změny (od 20 %)
+- ✅ **Čerstvost dat:** sklad a coverage starší než 24 hodin, odvolávky z minulého týdne nebo chybějící soubor
+- ⏳ Plnění plánu a prostoje za včerejšek, na kolik dní vystačí obaly (až budou moduly)
 
 ### KPI
 - Vývoj ukazatelů po týdnech a měsících, cílové hodnoty a trend

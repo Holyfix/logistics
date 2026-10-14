@@ -5,6 +5,7 @@ import { detectSupport, isFullySupported } from '../platform/support';
 import { CallOffsPage } from './calloffs/CallOffsPage';
 import { ComponentsPage } from './components/ComponentsPage';
 import { CoveragePage } from './coverage/CoveragePage';
+import { DashboardPage } from './dashboard/DashboardPage';
 import { DataPage } from './DataPage';
 import { HubPage } from './HubPage';
 import { ModulePage } from './ModulePage';
@@ -74,12 +75,13 @@ export function App() {
             </div>
           )}
           {!current && <HubPage />}
+          {current?.id === 'dashboard' && <DashboardPage />}
           {current?.id === 'data' && <DataPage />}
           {current?.id === 'calloffs' && <CallOffsPage />}
           {current?.id === 'coverage' && <CoveragePage />}
           {current?.id === 'components' && <ComponentsPage />}
           {current?.id === 'production' && <PlanningPage />}
-          {current && !['data', 'calloffs', 'coverage', 'components', 'production'].includes(current.id) && <ModulePage module={current} />}
+          {current && !['dashboard', 'data', 'calloffs', 'coverage', 'components', 'production'].includes(current.id) && <ModulePage module={current} />}
         </main>
       </PlanningProvider>
 

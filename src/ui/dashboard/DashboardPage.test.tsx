@@ -1,0 +1,106 @@
+import { afterEach, describe, expect, it } from 'vitest';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { parseCallOffExport, type CallOffExport } from '../../core/calloffs/parse';
+import type { CoverageSource } from '../../core/coverage/compute';
+import { parseCsv } from '../../core/csv';
+import { dayFromParts } from '../../core/dates';
+import { parseMasterData } from '../../core/masterdata';
+import { parseStock } from '../../core/stock';
+import { I18nProvider } from '../../i18n/I18nProvider';
+import { DataProvider, type DataState } from '../data/DataProvider';
+import { DashboardPage } from './DashboardPage';
+
+const day = (n: number) => dayFromParts(2026, 10, n)!;
+const master = parseMasterData(parseCsv('Item Number;Customer Number;Project\nFG-L;;P1\nFG-R;;P1'));
+const stock = parseStock(parseCsv('Item Number;Location;Zone ID;Qty On Hand - Inv Detail\nFG-L;A-01;SALE;20'));
+if (!master.ok || !stock.ok) throw new Error();
+
+function exportOf(name: string, rows: [string, string, number][]): CallOffExport {
+  const r = parseCallOffExport(parseCsv(['Item Number,Date,Discrete Qty', ...rows.map((r) => r.join(','))].join('\n')), name);
+  if (!r.ok) throw new Error();
+  return r.value;
+}
+
+const row = (item: string, balance: number[], transit: number) => ({
+  customerNumber: '',
+  customerKey: '',
+  supplierItem: item,
+  description: '',
+  customerStock: 0,
+  balance,
+  transit: balance.map(() => transit),
+  firstUncovered: '',
+  uncoveredAt: '',
+});
+// FG-L chybí zítra i s transitem; FG-R chybí zítra jen bez transitu.
+const now = Date.UTC(2026, 9, 14, 10);
+const coverage = {
+  path: 'Coverage/Lokalita A/P1/c.xlsx',
+  fileName: 'c.xlsx',
+  location: 'Lokalita A',
+  project: 'P1',
+  lastModified: now - 2 * 3_600_000,
+  report: { format: 'articles', sheet: 'articles', days: [14, 15, 16].map(day), rows: [row('FG-L', [10, -50, -50], 0), row('FG-R', [10, -30, -30], 40)], issueCount: 0, issues: [] },
+} as CoverageSource;
+
+const state: DataState = {
+  status: 'ready',
+  folderName: 'data',
+  progress: null,
+  error: '',
+  data: {
+    folderName: 'data',
+    exports: [exportOf('CW41.csv', [['FG-L', '12.10.2026', 100]]), exportOf('CW42.csv', [['FG-L', '12.10.2026', 200]])],
+    master: { path: 'Item_Mapping.csv', data: master.value },
+    coverage: [coverage],
+    stock: { path: 'Stock_1.csv', lastModified: now - 30 * 3_600_000, data: stock.value },
+    boms: [],
+    plans: [],
+    planSettings: null,
+    failed: [],
+    loadedAt: 1,
+  },
+};
+
+const kpi = (label: string) => screen.getAllByText(label).find((el) => el.classList.contains('kpi-label'))!.closest('.kpi')!;
+
+describe('DashboardPage', () => {
+  afterEach(() => {
+    cleanup();
+    localStorage.clear();
+  });
+
+  it('dlaždice a seznamy, přepnutí na úkoly na dnes', () => {
+    localStorage.setItem('logistics-locale', 'cs');
+    render(
+      <I18nProvider>
+        <DataProvider initial={state}>
+          <DashboardPage today={day(14)} now={now} />
+        </DataProvider>
+      </I18nProvider>,
+    );
+    expect(kpi('Coverage').querySelector('.kpi-value')!.textContent).toBe('1 ');
+    expect(kpi('Coverage').textContent).toContain('čeká na transit 1');
+    expect(kpi('Komponenty').textContent).toContain('Kusovník není načtený.');
+    expect(kpi('Čerstvost dat').textContent).toContain('Sklad');
+
+    const panel = screen.getByRole('heading', { name: 'Kritické díly u zákazníka' }).closest('.panel') as HTMLElement;
+    const rows = [...panel.querySelectorAll('tbody tr')].map((tr) => [...tr.querySelectorAll('td')].map((td) => td.textContent));
+    expect(rows).toEqual([
+      [' FG-L', 'P1Lokalita A', 'zítra', '50 ks'],
+      [' FG-Rčeká na transit', 'P1Lokalita A', 'zítra', '30 ks'],
+    ]);
+    const changes = screen.getByRole('heading', { name: 'Změny v odvolávkách' }).closest('.panel') as HTMLElement;
+    expect(within(changes).getByText('+100')).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Úkoly na dnes' }));
+    const crit = screen.getByRole('heading', { name: /Hoří/ }).closest('.panel') as HTMLElement;
+    expect(crit.querySelector('li')!.textContent).toContain('FG-L – u zákazníka chybí 50 ks od zítřka');
+    const warn = screen.getByRole('heading', { name: /Pozor/ }).closest('.panel') as HTMLElement;
+    const texts = [...warn.querySelectorAll('.task-title')].map((el) => el.textContent);
+    expect(texts).toContain('FG-R – bez transitu chybí 30 ks od zítřka, čeká na transit');
+    expect(texts).toContain('Sklad Stock_1.csv – soubor je starý, nahrajte nový export');
+    expect(texts).toContain('FG-L – odvolávky +100 ks (+100 %)');
+    expect(localStorage.getItem('logistics-dashboard-view')).toBe('tasks');
+  });
+});
