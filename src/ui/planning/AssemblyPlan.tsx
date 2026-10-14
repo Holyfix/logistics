@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, type KeyboardEvent } from 'react';
 import { dayToIso, parseDay, weekday, type DayNumber } from '../../core/dates';
 import { formatDayShort, formatQuantity } from '../../core/format';
 import {
@@ -30,6 +30,19 @@ function parseQty(value: string): number | null {
   if (text === '') return 0;
   const n = Number(text);
   return Number.isFinite(n) && n >= 0 ? n : null;
+}
+
+/** Enter potvrdí číslo a přejde na políčko pod ním ve stejné směně (Shift+Enter nad ním), jako v Excelu. */
+function enterToNext(e: KeyboardEvent<HTMLInputElement>) {
+  if (e.key !== 'Enter') return;
+  e.preventDefault();
+  const input = e.currentTarget;
+  const column = [...(input.closest('table')?.querySelectorAll<HTMLInputElement>('input[data-col]') ?? [])].filter((el) => el.dataset.col === input.dataset.col);
+  const next = column[column.indexOf(input) + (e.shiftKey ? -1 : 1)];
+  if (next) {
+    next.focus();
+    next.select();
+  } else input.blur();
 }
 
 /**
@@ -391,6 +404,8 @@ export function AssemblyPlan({ data, today, now }: { data: PlanningData; today: 
                       aria-label={`${tp.assembly.capacityRow} ${slotLabel(slot)}`}
                       value={capOf(slot) || ''}
                       placeholder="0"
+                      data-col={slot.key}
+                      onKeyDown={enterToNext}
                       onChange={(e) => setCapacity(slot, e.target.value)}
                     />
                   </td>
@@ -444,6 +459,8 @@ export function AssemblyPlan({ data, today, now }: { data: PlanningData; today: 
                           inputMode="numeric"
                           aria-label={`${it.item} ${slotLabel(slot)}`}
                           value={qty(slot, it.item) || ''}
+                          data-col={slot.key}
+                          onKeyDown={enterToNext}
                           onChange={(e) => setCell(slot, it.item, e.target.value)}
                         />
                       </td>
