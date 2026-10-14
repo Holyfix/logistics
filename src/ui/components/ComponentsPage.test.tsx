@@ -48,6 +48,7 @@ const state: DataState = {
     boms: [{ path: 'BOM/MBOM_P1.xlsx', lastModified: 0, data: bom.value }],
     plans: [],
     planSettings: null,
+    oil: null,
     failed: [],
     loadedAt: 0,
   },

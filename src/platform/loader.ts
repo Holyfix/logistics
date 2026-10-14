@@ -7,6 +7,7 @@ import type { StockData } from '../core/stock';
 import type { BomData } from '../core/bom';
 import type { LinePlan } from '../core/planning/plan';
 import type { PlanSettings } from '../core/planning/settings';
+import type { OilList } from '../core/oil';
 import { classifyPath, coverageScope, formatOf } from '../core/sources';
 import { idbDelete, idbGet, idbKeys, idbSet, STORE_CALLOFFS } from './idb';
 import { listFiles, type FolderSource, type SourceFile } from './folder';
@@ -33,6 +34,8 @@ export interface LoadedData {
   plans: SavedPlan[];
   /** Nastavení kapacit (Plan/Kapacity.xlsx). */
   planSettings: { path: string; lastModified: number; settings: PlanSettings } | null;
+  /** OIL (OIL/OIL.xlsx): nejnovější soubor. */
+  oil: { path: string; lastModified: number; list: OilList } | null;
   failed: FailedFile[];
   loadedAt: number;
 }
@@ -87,6 +90,7 @@ export async function loadFolder(source: FolderSource, onProgress: (p: LoadProgr
   const bomFiles = files.filter((f) => classifyPath(f.path) === 'bom').sort((a, b) => b.lastModified - a.lastModified);
   const planFiles = files.filter((f) => classifyPath(f.path) === 'plan').sort((a, b) => b.lastModified - a.lastModified);
   const settingsFiles = files.filter((f) => classifyPath(f.path) === 'planSettings').sort((a, b) => b.lastModified - a.lastModified);
+  const oilFiles = files.filter((f) => classifyPath(f.path) === 'oil').sort((a, b) => b.lastModified - a.lastModified);
 
   // Coverage: pro každou destinaci a projekt platí naposledy změněný soubor (i z hlubší podsložky).
   const coverageFiles = new Map<string, SourceFile>();
@@ -103,7 +107,7 @@ export async function loadFolder(source: FolderSource, onProgress: (p: LoadProgr
   }
 
   const parsed: { file: SourceFile; exp: CallOffExport }[] = [];
-  const total = calloffFiles.length + (masterFiles.length > 0 ? 1 : 0) + coverageFiles.size + (stockFiles.length > 0 ? 1 : 0) + bomFiles.length + planFiles.length + (settingsFiles.length > 0 ? 1 : 0);
+  const total = calloffFiles.length + (masterFiles.length > 0 ? 1 : 0) + coverageFiles.size + (stockFiles.length > 0 ? 1 : 0) + bomFiles.length + planFiles.length + (settingsFiles.length > 0 ? 1 : 0) + (oilFiles.length > 0 ? 1 : 0);
   let done = 0;
   onProgress({ done, total });
 
@@ -212,5 +216,15 @@ export async function loadFolder(source: FolderSource, onProgress: (p: LoadProgr
     onProgress({ done: done + 1, total });
   }
 
-  return { folderName: source.name, exports, master, coverage, stock, boms, plans, planSettings, failed, loadedAt: Date.now() };
+  let oil: LoadedData['oil'] = null;
+  const oilFile = oilFiles[0];
+  if (oilFile) {
+    const response = await parseInWorker({ kind: 'oil', format: 'xlsx', name: oilFile.path, file: oilFile.file });
+    if (response.kind === 'oil' && response.result.ok) oil = { path: oilFile.path, lastModified: oilFile.lastModified, list: response.result.value };
+    else if (response.kind === 'oil' && !response.result.ok) failed.push({ path: oilFile.path, reason: 'missingColumns', detail: response.result.columns.join(', ') });
+    else if (response.kind === 'error') failed.push({ path: oilFile.path, reason: 'unreadable', detail: response.message });
+    for (const older of oilFiles.slice(1)) failed.push({ path: older.path, reason: 'superseded', detail: oilFile.path });
+  }
+
+  return { folderName: source.name, exports, master, coverage, stock, boms, plans, planSettings, oil, failed, loadedAt: Date.now() };
 }

@@ -54,6 +54,7 @@ const state: DataState = {
       lastModified: 0,
       settings: { firstShiftStart: 360, lines: [{ line: 'ASSEMBLY', project: 'P1', perShift: 100, shifts: ['R', 'O', 'N'], pack: 12 }], destinations: [] },
     },
+    oil: null,
     failed: [],
     loadedAt: 1,
   },

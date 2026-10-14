@@ -15,7 +15,7 @@ export type ModuleId =
   | 'production'
   | 'inbound'
   | 'suppliers'
-  | 'actions'
+  | 'oil'
   | 'reports'
   | 'data'
   | 'settings';
@@ -51,7 +51,7 @@ export const GROUPS: ModuleGroup[] = [
 ];
 
 export const MODULES: ModuleDef[] = [
-  { id: 'dashboard', group: 'overview', icon: 'dashboard', status: { kind: 'planned', phase: 6 } },
+  { id: 'dashboard', group: 'overview', icon: 'dashboard', status: { kind: 'available' } },
   { id: 'kpi', group: 'overview', icon: 'kpi', status: { kind: 'planned', phase: 8 } },
   { id: 'calloffs', group: 'customers', icon: 'calloffs', status: { kind: 'available' } },
   { id: 'coverage', group: 'customers', icon: 'coverage', status: { kind: 'available' } },
@@ -63,7 +63,7 @@ export const MODULES: ModuleDef[] = [
   { id: 'production', group: 'production', icon: 'production', status: { kind: 'available' } },
   { id: 'inbound', group: 'suppliers', icon: 'inbound', status: { kind: 'planned', phase: 9 } },
   { id: 'suppliers', group: 'suppliers', icon: 'suppliers', status: { kind: 'later' } },
-  { id: 'actions', group: 'management', icon: 'actions', status: { kind: 'later' } },
+  { id: 'oil', group: 'management', icon: 'actions', status: { kind: 'available' } },
   { id: 'reports', group: 'management', icon: 'reports', status: { kind: 'later' } },
   { id: 'data', group: 'system', icon: 'data', status: { kind: 'available' } },
   { id: 'settings', group: 'system', icon: 'settings', status: { kind: 'planned', phase: 3 } },

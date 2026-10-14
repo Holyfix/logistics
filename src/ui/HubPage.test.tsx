@@ -22,7 +22,7 @@ function renderHub(exports: CallOffExport[] | null) {
     folderName: 'data',
     progress: null,
     error: '',
-    data: exports ? { folderName: 'data', exports, master: null, coverage: [], stock: null, boms: [], plans: [], planSettings: null, failed: [], loadedAt: 0 } : null,
+    data: exports ? { folderName: 'data', exports, master: null, coverage: [], stock: null, boms: [], plans: [], planSettings: null, oil: null, failed: [], loadedAt: 0 } : null,
   };
   return render(
     <I18nProvider>

@@ -1,6 +1,6 @@
 # ADR 0003: Zápis záznamů do sdílené složky
 
-- **Stav:** přijato pro plánování (2026-10-13), pro Obaly a Akční plán navrženo
+- **Stav:** přijato pro plánování (2026-10-13) a OIL (2026-10-14), pro Obaly navrženo
 - **Datum:** 2026-10-12
 
 ## Kontext

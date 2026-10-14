@@ -11,7 +11,7 @@ Pořadí skupin na rozcestníku (karty se čtou shora dolů po sloupcích):
 
 | Skupina | Modul | Otázka, na kterou odpovídá | Stav |
 |---|---|---|---|
-| Přehledy | **Dashboard** | Co je dnes potřeba řešit? | Fáze 6 |
+| Přehledy | **Dashboard** | Co je dnes potřeba řešit? | Fáze 6, první verze hotová |
 | Přehledy | **KPI** | Jak se nám daří v čase? | Fáze 8 |
 | Zákazníci | **Call-offs** | Co zákazníci chtějí a jak se to mění? | Fáze 3, aktuální odvolávky hotové |
 | Zákazníci | **Coverage** | Vystačí díly u zákazníka? Pokrytí na jednotlivé dny | Fáze 4 (probíhá) |
@@ -23,7 +23,7 @@ Pořadí skupin na rozcestníku (karty se čtou shora dolů po sloupcích):
 | Výroba | **Plánování** | Co a kdy vyrobit na linkách, aby byl zákazník pokrytý? | Fáze 7 (probíhá), montáž hotová |
 | Dodavatelé | **Příjem** | Co má dnes a zítra přijet a co je po termínu? | Fáze 9 |
 | Dodavatelé | **Dodavatelé** (OTD inbound) | Dodávají nám dodavatelé včas? | Později |
-| Řízení | **Akční plán** | Kdo co řeší a do kdy? | Později, upřesní se |
+| Řízení | **OIL** | Kdo co řeší a do kdy? | První verze hotová |
 | Řízení | **Reporty** | Týdenní souhrn pro vedení | Později |
 | Systém | **Data** | Jaká data jsou načtená a jsou v pořádku? | Hotové |
 | Systém | **Nastavení** | Prahy, horizont, jméno pro zápisy | Později |
@@ -34,11 +34,18 @@ a Dodavatelé odložené. Modul Kapacity (odvolávky vs. kapacita linek) byl zva
 ## Funkce modulů
 
 ### Dashboard
-- Kritické díly a komponenty
-- Významné změny v odvolávkách za posledních 24 hodin
-- Plnění plánu a prostoje za včerejšek
-- Na kolik dní vystačí obaly
-- Čerstvost načtených dat
+- **Dlaždice a seznamy:** hlavní číslo za každou oblast (proklik do modulu), pod nimi seznamy s odkazem do modulu;
+  stav hoří / pozor / pro informaci
+- ✅ **Kritické díly u zákazníka** (coverage od dneška): hoří = chybí i s transitem dnes nebo zítra, pozor = dnes
+  nebo zítra chybí jen bez transitu (čeká na transit), pro informaci = chybí s transitem později
+- ✅ **Kritické komponenty** (podle odvolávek a našeho skladu): hoří = dojdou do 2 dnů, pozor = do 7 dnů,
+  pro informaci = později v horizontu; u každé „zákazník pokryt do“
+- ✅ **Změny v odvolávkách** (příštích 12 týdnů proti předchozímu exportu): pozor = nedodáno po termínu nebo změna
+  o 50 % a víc, pro informaci = ostatní významné změny (od 20 %)
+- ✅ **OIL: nejbližší termíny:** otevřené body, hoří = po termínu, pozor = termín do 7 dní, pro informaci = později
+  nebo bez termínu; plnění, odpovědný a počet posunů
+- ✅ **Čerstvost dat:** sklad a coverage starší než 24 hodin, odvolávky z minulého týdne nebo chybějící soubor
+- ⏳ Plnění plánu a prostoje za včerejšek, na kolik dní vystačí obaly (až budou moduly)
 
 ### KPI
 - Vývoj ukazatelů po týdnech a měsících, cílové hodnoty a trend
@@ -112,11 +119,21 @@ Filtry: zákazník, projekt, strana (LHD/RHD) z kmenových dat, hledání dílu.
 ### Data
 - Výběr sdílené složky, stav načtených exportů, chyby v datech
 
+### OIL (Open Issue List)
+- ✅ Bod: číslo, problém, opatření, odpovědný, otevřeno, termín, uzavřeno
+- ✅ Plnění po krocích 0/25/50/75/100 % kliknutím na kolečko (Harvey ball), přesně v detailu bodu
+- ✅ Barva podle stavu: červená po termínu, žlutá rozpracováno, modrá nezahájeno, zelená hotovo, šedá zrušeno
+- ✅ Posun termínu s povinným důvodem: u bodu „posunuto N×“, původní termín a historie (kdo, kdy, z – na, proč)
+- ✅ Komentáře s datem a autorem
+- ✅ Filtry Otevřené / Po termínu / Hotové / Vše, odpovědný, hledání; ukazatele otevřené, po termínu, hotovo, posuny
+- ✅ Uložení do `OIL/OIL.xlsx` ve sdílené složce (listy OIL, Komentáře, Posuny termínu)
+- ⏳ Živá společná editace (po přechodu na Firebase)
+
 ### Nastavení
 - Prahy semaforu, horizont výhledu
-- Jméno uživatele pro zápisy (obaly, později akční plán)
+- Jméno uživatele pro zápisy (obaly; OIL ho už má ve svém modulu)
 
 ## Zápis dat
 
-Moduly Obaly a později Mimořádné přepravy a Akční plán do aplikace zapisují. Bez serveru se záznamy ukládají
+Plánování a OIL už do sdílené složky zapisují (`Plan/`, `OIL/OIL.xlsx`); Obaly a později Mimořádné přepravy přibudou. Bez serveru se záznamy ukládají
 jako malé samostatné soubory do sdílené složky (návrh v [ADR 0003](adr/0003-zapis-do-sdilene-slozky.md)).

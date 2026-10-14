@@ -5,9 +5,12 @@ import { detectSupport, isFullySupported } from '../platform/support';
 import { CallOffsPage } from './calloffs/CallOffsPage';
 import { ComponentsPage } from './components/ComponentsPage';
 import { CoveragePage } from './coverage/CoveragePage';
+import { DashboardPage } from './dashboard/DashboardPage';
 import { DataPage } from './DataPage';
 import { HubPage } from './HubPage';
 import { ModulePage } from './ModulePage';
+import { OilPage } from './oil/OilPage';
+import { OilProvider } from './oil/OilProvider';
 import { PlanningPage } from './planning/PlanningPage';
 import { PlanningProvider } from './planning/PlanningProvider';
 import { findModule, type ModuleDef } from './modules';
@@ -66,21 +69,25 @@ export function App() {
       </header>
 
       <PlanningProvider>
-        <main className="content">
-          {!supported && (
-            <div className="banner" role="status">
-              <strong>{t.support.title}</strong>
-              <span>{t.support.body}</span>
-            </div>
-          )}
-          {!current && <HubPage />}
-          {current?.id === 'data' && <DataPage />}
-          {current?.id === 'calloffs' && <CallOffsPage />}
-          {current?.id === 'coverage' && <CoveragePage />}
-          {current?.id === 'components' && <ComponentsPage />}
-          {current?.id === 'production' && <PlanningPage />}
-          {current && !['data', 'calloffs', 'coverage', 'components', 'production'].includes(current.id) && <ModulePage module={current} />}
-        </main>
+        <OilProvider>
+          <main className="content">
+            {!supported && (
+              <div className="banner" role="status">
+                <strong>{t.support.title}</strong>
+                <span>{t.support.body}</span>
+              </div>
+            )}
+            {!current && <HubPage />}
+            {current?.id === 'dashboard' && <DashboardPage />}
+            {current?.id === 'data' && <DataPage />}
+            {current?.id === 'oil' && <OilPage />}
+            {current?.id === 'calloffs' && <CallOffsPage />}
+            {current?.id === 'coverage' && <CoveragePage />}
+            {current?.id === 'components' && <ComponentsPage />}
+            {current?.id === 'production' && <PlanningPage />}
+            {current && !['dashboard', 'data', 'calloffs', 'coverage', 'components', 'production', 'oil'].includes(current.id) && <ModulePage module={current} />}
+          </main>
+        </OilProvider>
       </PlanningProvider>
 
       <footer className="footer">

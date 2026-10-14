@@ -314,7 +314,7 @@ export function DataPage() {
 
           <div className="panel">
             <h2>{t.data.planning.heading}</h2>
-            {data.plans.length === 0 && !data.planSettings ? (
+            {data.plans.length === 0 && !data.planSettings && !data.oil ? (
               <p>{t.data.planning.none}</p>
             ) : (
               <div className="table-scroll">
@@ -335,6 +335,15 @@ export function DataPage() {
                           {formatQuantity(data.planSettings.settings.destinations.length, locale)} {t.data.planning.destinations}
                         </td>
                         <td>{new Date(data.planSettings.lastModified).toLocaleString(locale === 'cs' ? 'cs-CZ' : 'en-GB', { dateStyle: 'short', timeStyle: 'short' })}</td>
+                      </tr>
+                    )}
+                    {data.oil && (
+                      <tr>
+                        <td>{data.oil.path}</td>
+                        <td>
+                          OIL: {formatQuantity(data.oil.list.items.length, locale)} {t.data.planning.oilItems}
+                        </td>
+                        <td>{new Date(data.oil.lastModified).toLocaleString(locale === 'cs' ? 'cs-CZ' : 'en-GB', { dateStyle: 'short', timeStyle: 'short' })}</td>
                       </tr>
                     )}
                     {data.plans.map((p) => (
