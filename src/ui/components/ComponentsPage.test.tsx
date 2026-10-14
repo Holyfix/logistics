@@ -79,7 +79,7 @@ describe('ComponentsPage', () => {
     expect(clip!.querySelectorAll('td')[9]!.className).toContain('cell-customer');
     expect(clip!.querySelectorAll('td.cell-customer')).toHaveLength(1);
     // pryskyřice v kg na desetinná místa
-    expect(cells(resin!).slice(4, 11)).toEqual(['100', '5', 'celý horizontzásoba 100,0 dne výroby', 'celý horizont', '98,75', '97,5', '95']);
+    expect(cells(resin!).slice(4, 11)).toEqual(['100', '5', 'Po 26. 10. a délezásoba 100,0 dne výroby', 'Po 26. 10. a déle', '98,75', '97,5', '95']);
     expect(resin!.querySelectorAll('td.cell-customer')).toHaveLength(0);
     // mezivýroba bez označení se nezobrazí
     expect(screen.queryByText('SUB-1')).toBeNull();

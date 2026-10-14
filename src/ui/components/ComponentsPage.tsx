@@ -98,7 +98,8 @@ export function ComponentsPage({ today = localToday() }: { today?: DayNumber } =
     return null;
   };
   const untilText = (short: number | null) => {
-    if (short === null) return tc.table.whole;
+    // Vystačí na celý horizont: poslední pracovní den horizontu „a déle“.
+    if (short === null) return `${dayLabel(lastDayBefore(null) ?? days.at(-1)!)} ${tc.table.orLater}`;
     const until = lastDayBefore(short);
     return until === null ? tc.table.notCovered : dayLabel(until);
   };
@@ -323,7 +324,7 @@ export function ComponentsPage({ today = localToday() }: { today?: DayNumber } =
         <div className="panel-head">
           <h2>{tc.demand.heading}</h2>
           <span className="muted">
-            {tc.demand.sub}
+            {netOwnStock ? tc.demand.subNet : tc.demand.sub}
             {shownProducts.length !== products.length && ` · ${tc.demand.shown} ${formatQuantity(shownProducts.length, locale)} / ${formatQuantity(products.length, locale)}`}
           </span>
           <span className="panel-actions">

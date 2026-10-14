@@ -160,6 +160,7 @@ v Komponentách se bere z Item Mappingu (sloupec Project u hotového dílu).
   Přepínačem „Odečíst náš sklad hotových dílů a mezivýroby“ jde odečet vypnout.
 - **Stav komponenty** po dnech = náš sklad komponenty − kumulovaná potřeba; záporné číslo = kolik kusů komponenty chybí
   na odvolávky. **Pokryto do** = poslední pracovní den se stavem ≥ 0; první červený den je den první chybějící komponenty.
+  Když komponenta vystačí na celých 14 dní, ukáže se poslední pracovní den horizontu s „a déle“ (např. „Po 26. 10. a déle“).
 - **Zákazník pokryt do** (srovnání s pokrytím hotového výrobku u zákazníka): stejný výpočet, jen potřeba hotového dílu
   je chybějící množství u zákazníka. Ve dnech souboru sekvencéra (Coverage) je to přírůstek záporného stavu
   (sklad + transit − plán zákazníka; pozdější transit už požadavek nesnižuje, chybějící množství z minulých dnů patří
@@ -167,9 +168,11 @@ v Komponentách se bere z Item Mappingu (sloupec Project u hotového dílu).
   Den je v řádku dnů **orámovaný**. Rámeček za prvním červeným dnem znamená, že zákazník má díly ještě ze svého
   skladu a transitu; rámeček před ním nebo na něm, že komponenta chybí dřív, než to ukazují odvolávky.
 - **Potřeba 7 dní** = potřeba komponenty za prvních 7 dní. **Zásoba (dní výroby)** = sklad komponenty ÷ průměrná
-  denní spotřeba podle odvolávek za prvních 7 dní (pracovní dny po–pá v nich).
-- Tabulka **Potřeba výroby hotových dílů** ukazuje potřebu výroby z odvolávek po dnech, potřebu za 7 dní a jako
-  poslední řádek součet; řídí se filtry nad pokrytím komponent.
+  denní spotřeba; spotřeba = odvolávky hotových dílů za prvních 7 dní × kusovník (bez odečtu našeho skladu hotových
+  dílů), vydělená počtem pracovních dní po–pá v těchto 7 dnech. Příklad: odvolávky za 7 dní × kusovník = 1 000 ks
+  komponenty, v 7 dnech je 5 pracovních dní → 200 ks za den; sklad 700 ks → zásoba 3,5 dne výroby.
+- Tabulka **Odvolávky hotových dílů** ukazuje odvolávky po dnech (s přepínačem po odečtu našeho skladu hotových dílů),
+  součet za 7 dní a jako poslední řádek součet dnů; řídí se filtry nad pokrytím komponent.
 - Bez otevřených nákupních objednávek a bez doby výroby.
 
 ## Plánování (složka Plan)
