@@ -403,8 +403,8 @@ export const en: Messages = {
       until: 'Covered until',
       reserveHead: 'Reserve (production days)',
       customer: 'Customer covered until',
-      customerTitle: 'Last day the customer is covered by its own stock and transit per the coverage file. For a component in several finished parts the earliest of them (below the date).',
-      noCoverage: 'The finished part with this component has no coverage file.',
+      customerTitle: 'How long we can cover the customer per coverage: its stock + transit, then our stock of finished parts, intermediates and production from our stock of this component. Below the date: with our finished part stock only (no further production).',
+      finishedOnly: 'finished parts:',
       reserve: 'reserve',
       productionDays: 'production days',
       noUsage: 'no usage',
@@ -431,7 +431,7 @@ export const en: Messages = {
     },
     legend: {
       negative: 'Component short (how many pieces)',
-      customer: 'Customer covered until (its stock + transit)',
+      customer: 'Customer covered until (coverage + our finished parts + production from the component)',
       weekend: 'Weekend',
     },
     explain: {
@@ -441,7 +441,7 @@ export const en: Messages = {
       until: 'Last working day with balance 0 or more. The next day is the first day the component is short. “… or later” = enough for all 14 days.',
       reserve: 'Reserve',
       reserveText: 'How many production days the component stock lasts: stock ÷ average usage per production day (call-offs over the first 7 days × BOM ÷ working days Mon–Fri in them).',
-      customer: 'Last day the customer has the finished part from its own stock and transit (coverage file); framed in the day row. Compare it with the first day the component is short.',
+      customer: 'How long we can cover the customer per coverage: missing pieces at the customer (its stock + transit, beyond the file call-offs) are covered first by our stock of finished parts, then intermediates and finally production from our stock of this component. The day is framed in the day row. Below the date “finished parts:” = with what is already produced only.',
       need: 'Component usage over the first 7 days by call-offs.',
     },
     export: { fileName: 'components', sheet: 'Components', demandSheet: 'Call-offs' },

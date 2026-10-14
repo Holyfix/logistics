@@ -161,11 +161,13 @@ v Komponentách se bere z Item Mappingu (sloupec Project u hotového dílu).
   bez doby výroby).
 - Záporné číslo = kolik kusů komponenty chybí. **Pokryto do** = poslední pracovní den se stavem ≥ 0; další den je
   první den, kdy komponenta chybí. Když vystačí na celých 14 dní, ukáže se poslední pracovní den horizontu s „a déle“.
-- **Zákazník pokryt do** = poslední den, kdy je zákazník pokrytý svým skladem a transitem podle souboru coverage
-  (den souboru před prvním záporným stavem se transitem; záporný stav už dnes = „nepokryto ani dnes“; bez záporného
-  stavu = poslední den souboru „a déle“). U komponenty ve více hotových dílech platí nejdřívější z nich (díl je
-  uvedený pod datem). Den je v řádku dnů **orámovaný**, aby šel porovnat s prvním dnem, kdy komponenta chybí.
-  Hotové díly bez souboru coverage mají „—“.
+- **Zákazník pokryt do** (rámeček v řádku dnů) = do kdy pokryjeme zákazníka podle coverage. Chybějící kusy
+  u zákazníka (ve dnech souboru coverage přírůstek záporného stavu jeho skladu + transitu; chybějící kusy z minulých
+  dnů patří do dneška; za koncem souboru odvolávky po spotřebování zbytku u zákazníka; bez souboru odvolávky) se
+  vždy nejdřív kryjí naším skladem hotových dílů, pak mezivýrobou a nakonec výrobou z našeho skladu komponenty
+  (jako MRP, den po dni, bez doby výroby). Datum = poslední pracovní den před dnem, kdy komponenta dojde.
+  Pod datem **„hotové díly:“** = do kdy zákazníka pokryje jen to, co už je vyrobené (náš sklad hotových dílů);
+  u komponenty ve více hotových dílech nejdřívější z nich. Rozdíl mezi oběma daty je to, co ještě pokryje výroba.
 - **Potřeba 7 dní** = potřeba komponenty za prvních 7 dní. **Zásoba (dní výroby)** = sklad komponenty ÷ průměrná
   denní spotřeba; spotřeba = odvolávky hotových dílů za prvních 7 dní × kusovník (bez odečtu našeho skladu hotových
   dílů), vydělená počtem pracovních dní po–pá v těchto 7 dnech. Příklad: odvolávky za 7 dní × kusovník = 1 000 ks

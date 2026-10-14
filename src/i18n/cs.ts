@@ -405,8 +405,8 @@ export const cs = {
       until: 'Pokryto do',
       reserveHead: 'Zásoba (dní výroby)',
       customer: 'Zákazník pokryt do',
-      customerTitle: 'Poslední den, kdy je zákazník pokrytý svým skladem a transitem podle souboru coverage. U komponenty ve více hotových dílech nejdřívější z nich (pod datem).',
-      noCoverage: 'Hotový díl s touto komponentou nemá soubor coverage.',
+      customerTitle: 'Do kdy pokryjeme zákazníka podle coverage: jeho sklad + transit, pak náš sklad hotových dílů, mezivýroba a výroba z našeho skladu této komponenty. Pod datem: jen se skladem hotových dílů (bez další výroby).',
+      finishedOnly: 'hotové díly:',
       reserve: 'zásoba',
       productionDays: 'dne výroby',
       noUsage: 'bez spotřeby',
@@ -433,7 +433,7 @@ export const cs = {
     },
     legend: {
       negative: 'Komponenta chybí (kolik kusů)',
-      customer: 'Zákazník pokryt do (jeho sklad + transit)',
+      customer: 'Zákazník pokryt do (coverage + náš sklad hotových dílů + výroba z komponenty)',
       weekend: 'Víkend',
     },
     explain: {
@@ -443,7 +443,7 @@ export const cs = {
       until: 'Poslední pracovní den, kdy je stav 0 nebo víc. Další den je první den, kdy komponenta chybí. „… a déle“ = vystačí na celých 14 dní.',
       reserve: 'Zásoba',
       reserveText: 'Na kolik dní výroby vystačí sklad komponenty: sklad ÷ průměrná spotřeba za den výroby (odvolávky za prvních 7 dní × kusovník ÷ pracovní dny po–pá v nich).',
-      customer: 'Poslední den, kdy má zákazník hotový díl ze svého skladu a transitu (soubor coverage); v řádku dnů je orámovaný. Porovnejte ho s prvním dnem, kdy komponenta chybí.',
+      customer: 'Do kdy pokryjeme zákazníka podle coverage: chybějící kusy u zákazníka (jeho sklad + transit, za koncem souboru odvolávky) kryje nejdřív náš sklad hotových dílů, pak mezivýroba a nakonec výroba z našeho skladu této komponenty. Den je v řádku dnů orámovaný. Pod datem „hotové díly:“ = jen s tím, co už je vyrobené.',
       need: 'Spotřeba komponenty za prvních 7 dní podle odvolávek.',
     },
     export: { fileName: 'komponenty', sheet: 'Komponenty', demandSheet: 'Odvolavky' },

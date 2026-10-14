@@ -104,14 +104,10 @@ export function ComponentsPage({ today = localToday() }: { today?: DayNumber } =
     return until === null ? tc.table.notCovered : dayLabel(until);
   };
   const coveredText = (c: ComponentLine) => untilText(c.shortDay);
-  const customerText = (c: ComponentLine) => {
-    const cover = c.customer;
-    if (cover.kind === 'none') return '—';
-    if (cover.kind === 'notToday') return tc.table.notCovered;
-    return cover.orLater ? `${dayLabel(cover.day)} ${tc.table.orLater}` : dayLabel(cover.day);
-  };
-  /** Den „Zákazník pokryt do“ v řádku dnů (rámeček); null, když je zákazník pokrytý do konce souboru nebo chybí už dnes. */
-  const customerDay = (c: ComponentLine) => (c.customer.kind === 'until' && !c.customer.orLater ? c.customer.day : null);
+  const customerText = (c: ComponentLine) => untilText(c.customerShortDay);
+  const finishedText = (c: ComponentLine) => `${tc.table.finishedOnly} ${untilText(c.finishedShortDay)}`;
+  /** Den „Zákazník pokryt do“ v řádku dnů (rámeček); null, když pokryje celý horizont nebo chybí už dnes. */
+  const customerDay = (c: ComponentLine) => (c.customerShortDay === null ? null : lastDayBefore(c.customerShortDay));
 
   const buildExport = (): ExportTable => ({
     fileName: fileBase,
@@ -285,9 +281,9 @@ export function ComponentsPage({ today = localToday() }: { today?: DayNumber } =
                       <strong className={c.shortDay === null ? undefined : 'cell-short'}>{coveredText(c)}</strong>
                       <small className="muted cell-note">{reserve(c)}</small>
                     </td>
-                    <td className="cell-until" title={c.customer.kind === 'none' ? tc.table.noCoverage : tc.table.customerTitle}>
-                      <strong className={c.customer.kind === 'notToday' ? 'cell-short' : c.customer.kind === 'none' ? 'muted' : undefined}>{customerText(c)}</strong>
-                      {c.customer.kind !== 'none' && c.products.length > 1 && <small className="muted cell-note">{c.customer.item}</small>}
+                    <td className="cell-until" title={tc.table.customerTitle}>
+                      <strong className={c.customerShortDay === null ? undefined : 'cell-short'}>{customerText(c)}</strong>
+                      <small className="muted cell-note">{finishedText(c)}</small>
                     </td>
                     {c.balance.map((v, k) => {
                       const framed = customerDay(c) === days[k];

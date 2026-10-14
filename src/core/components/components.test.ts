@@ -40,7 +40,7 @@ describe('buildComponents', () => {
     expect(t.days).toHaveLength(COMPONENT_DAYS);
     const [fg1, fg2] = t.products;
     expect(fg1!.callOffs.slice(0, 4)).toEqual([10, 0, 0, 7]);
-    expect(fg1!.customer).toEqual({ kind: 'none' });
+    expect(fg1!.customerNeed.slice(0, 4)).toEqual([10, 0, 0, 7]);
     expect(fg1!.project).toBe('P1');
     // FG-2: odvolávky 3 a 4, náš sklad 5 → výroba 0 a 2
     expect(fg2!.callOffs.slice(0, 3)).toEqual([3, 4, 0]);
@@ -149,29 +149,40 @@ describe('Zákazník pokryt do: sklad a transit u zákazníka podle souboru cove
   const build = (seq: CoverageSource) =>
     buildComponents({ bom: tree.value, master: m.value, coverage: [seq], callOffs: calls, stock: new Map([['A', 150], ['S', 100], ['K', 400]]), today: monday });
 
-  it('výchozí výpočet: jen odvolávky a náš sklad komponenty; zákazník pokrytý do konce souboru', () => {
-    // stav se transitem po 100, st 100 → nikdy záporný → pokrytý do konce souboru (st) „a déle“
+  it('výchozí výpočet: jen odvolávky a náš sklad komponenty', () => {
     const t = build(sequencer([monday, monday + 2], [100, 0], [0, 100], 200));
-    expect(t.products[0]!.customer).toEqual({ kind: 'until', day: monday + 2, orLater: true, item: 'A' });
     const k = t.components.find((c) => c.item === 'K')!;
     // bez odečtu skladu hotových dílů: K 400 − 200 denně → chybí ve středu
     expect(k.balance.slice(0, 3)).toEqual([200, 0, -200]);
     expect(k.shortDay).toBe(2);
-    expect(k.customer).toEqual(t.products[0]!.customer);
   });
 
-  it('zákazník pokryt do = poslední den souboru před prvním záporným stavem se skladem a transitem', () => {
-    // stav se transitem: po 50, út −30 → pokrytý do pondělí (pozdější transit to nemění)
+  it('Zákazník pokryt do: sklad + transit u zákazníka, pak náš sklad hotových dílů, mezivýroba a výroba z komponenty', () => {
+    // stav se transitem po 100, st 100 → za koncem souboru (čt) zbytek 100 u zákazníka, od pátku odvolávky na nás
+    const t = build(sequencer([monday, monday + 2], [100, 0], [0, 100], 200));
+    const a = t.products[0]!;
+    expect(a.customerNeed).toEqual([0, 0, 0, 0, 100, 0, 0, 100, 100, 100, 100, 100, 0, 0]);
+    // jen náš sklad A 150: pá 100, po 50 → chybí v pondělí (index 7)
+    expect(a.finishedShortDay).toBe(7);
+    const k = t.components.find((c) => c.item === 'K')!;
+    expect(k.finishedShortDay).toBe(7);
+    // dál S 100 (po, út), pak K: út 100, st 200 → 100, čt chybí → pokryto do st 21. 10.
+    expect(k.customerShortDay).toBe(10);
+  });
+
+  it('chybějící množství podle souboru; pozdější transit ho nesnižuje', () => {
+    // stav se transitem: po 50, út −30, st −80, čt −20 (dorazil transit) → požadavek 0, 30, 50, 0
     const t = build(sequencer([monday, monday + 1, monday + 2, monday + 3], [50, -30, -80, -120], [0, 0, 0, 100], 100));
-    expect(t.products[0]!.customer).toEqual({ kind: 'until', day: monday, orLater: false, item: 'A' });
+    // pá za koncem souboru: u zákazníka zbývá −20 + 80 dodaných = 60 ks, z odvolávky 100 zbude na nás 40
+    expect(t.products[0]!.customerNeed.slice(0, 5)).toEqual([0, 30, 50, 0, 40]);
   });
 
-  it('záporný stav už před dneškem: nepokryto ani dnes', () => {
+  it('chybějící množství ze dnů před dneškem patří do dneška', () => {
     const t = build(sequencer([monday - 1, monday, monday + 1], [-40, -60, -60], [0, 0, 0], 0));
-    expect(t.products[0]!.customer).toEqual({ kind: 'notToday', item: 'A' });
+    expect(t.products[0]!.customerNeed.slice(0, 3)).toEqual([60, 0, 100]);
   });
 
-  it('komponenta ve více hotových dílech: nejdřívější pokrytí zákazníka', () => {
+  it('komponenta ve více hotových dílech: hotové díly podle nejdřívějšího z nich', () => {
     const two = parseBom([
       ['Level', 'Component Item', 'Description', 'Quantity Per', 'UM', 'Purchase/Manufacture'],
       ['Parent', 'A', 'A', null, 'EA', 'L'],
@@ -183,11 +194,11 @@ describe('Zákazník pokryt do: sklad a transit u zákazníka podle souboru cove
     if (!two.ok || !mm.ok) throw new Error();
     const seq = sequencer([monday, monday + 1, monday + 2, monday + 3], [10, 10, 10, -5], [0, 0, 0, 0], 10);
     const rowB = { ...seq.report.rows[0]!, customerNumber: 'CB', customerKey: 'CB', balance: [5, -1, -1, -1] };
-    const t = buildComponents({ bom: two.value, master: mm.value, coverage: [{ ...seq, report: { ...seq.report, rows: [...seq.report.rows, rowB] } }], callOffs: calls, stock: new Map(), today: monday });
-    expect(t.products.map((p) => p.customer)).toEqual([
-      { kind: 'until', day: monday + 2, orLater: false, item: 'A' },
-      { kind: 'until', day: monday, orLater: false, item: 'B' },
-    ]);
-    expect(t.components[0]!.customer).toEqual({ kind: 'until', day: monday, orLater: false, item: 'B' });
+    const t = buildComponents({ bom: two.value, master: mm.value, coverage: [{ ...seq, report: { ...seq.report, rows: [...seq.report.rows, rowB] } }], callOffs: undefined, stock: new Map([['K', 3]]), today: monday });
+    expect(t.products.map((p) => p.finishedShortDay)).toEqual([3, 1]);
+    const k = t.components[0]!;
+    expect(k.finishedShortDay).toBe(1);
+    // K 3 ks: B út 1, A čt 5 → chybí ve čtvrtek
+    expect(k.customerShortDay).toBe(3);
   });
 });
