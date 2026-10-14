@@ -104,10 +104,9 @@ export function ComponentsPage({ today = localToday() }: { today?: DayNumber } =
     return until === null ? tc.table.notCovered : dayLabel(until);
   };
   const coveredText = (c: ComponentLine) => untilText(c.shortDay);
-  const customerText = (c: ComponentLine) => untilText(c.customerShortDay);
-  const finishedText = (c: ComponentLine) => `${tc.table.finishedOnly} ${untilText(c.finishedShortDay)}`;
+  const customerText = (c: ComponentLine) => (c.customerKnown ? untilText(c.customerShortDay) : '—');
   /** Den „Zákazník pokryt do“ v řádku dnů (rámeček); null, když pokryje celý horizont nebo chybí už dnes. */
-  const customerDay = (c: ComponentLine) => (c.customerShortDay === null ? null : lastDayBefore(c.customerShortDay));
+  const customerDay = (c: ComponentLine) => (!c.customerKnown || c.customerShortDay === null ? null : lastDayBefore(c.customerShortDay));
 
   const buildExport = (): ExportTable => ({
     fileName: fileBase,
@@ -281,9 +280,8 @@ export function ComponentsPage({ today = localToday() }: { today?: DayNumber } =
                       <strong className={c.shortDay === null ? undefined : 'cell-short'}>{coveredText(c)}</strong>
                       <small className="muted cell-note">{reserve(c)}</small>
                     </td>
-                    <td className="cell-until" title={tc.table.customerTitle}>
-                      <strong className={c.customerShortDay === null ? undefined : 'cell-short'}>{customerText(c)}</strong>
-                      <small className="muted cell-note">{finishedText(c)}</small>
+                    <td className="cell-until" title={!c.customerKnown ? tc.table.noCoverage : netOwnStock ? tc.table.customerTitleNet : tc.table.customerTitle}>
+                      <strong className={!c.customerKnown ? 'muted' : c.customerShortDay === null ? undefined : 'cell-short'}>{customerText(c)}</strong>
                     </td>
                     {c.balance.map((v, k) => {
                       const framed = customerDay(c) === days[k];
@@ -327,7 +325,7 @@ export function ComponentsPage({ today = localToday() }: { today?: DayNumber } =
           <dt>{tc.explain.reserve}</dt>
           <dd>{tc.explain.reserveText}</dd>
           <dt>{tc.table.customer}</dt>
-          <dd>{tc.explain.customer}</dd>
+          <dd>{netOwnStock ? tc.explain.customerNet : tc.explain.customer}</dd>
           <dt>{tc.table.need}</dt>
           <dd>{tc.explain.need}</dd>
         </dl>
