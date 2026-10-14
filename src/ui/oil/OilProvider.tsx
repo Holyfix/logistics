@@ -25,3 +25,8 @@ export function useOilDraft(): OilContextValue {
   if (!context) throw new Error('useOilDraft musí být uvnitř <OilProvider>');
   return context;
 }
+
+/** Neuložený OIL pro přehledy (rozcestník, Dashboard); mimo <OilProvider> null. */
+export function useOilDraftList(): OilList | null {
+  return useContext(OilContext)?.draft ?? null;
+}

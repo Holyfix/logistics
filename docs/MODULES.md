@@ -34,8 +34,9 @@ a Dodavatelé odložené. Modul Kapacity (odvolávky vs. kapacita linek) byl zva
 ## Funkce modulů
 
 ### Dashboard
-- **Dlaždice a seznamy:** hlavní číslo za každou oblast (proklik do modulu), pod nimi seznamy s odkazem do modulu;
-  stav hoří / pozor / pro informaci
+- **Karta za oblast** (Zákazník, Komponenty, OIL, Odvolávky, Data): barevný pruh podle nejhoršího stavu
+  (červená hoří, žlutá pozor, zelená v pořádku), hlavní číslo, malé čítače a 4 nejnaléhavější položky na řádek;
+  kliknutím do modulu. Nahoře souhrn: kolik oblastí hoří, pozor, v pořádku
 - ✅ **Kritické díly u zákazníka** (coverage od dneška): hoří = chybí i s transitem dnes nebo zítra, pozor = dnes
   nebo zítra chybí jen bez transitu (čeká na transit), pro informaci = chybí s transitem později
 - ✅ **Kritické komponenty** (podle odvolávek a našeho skladu): hoří = dojdou do 2 dnů, pozor = do 7 dnů,

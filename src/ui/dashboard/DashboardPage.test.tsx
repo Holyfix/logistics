@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { cleanup, render, screen, within } from '@testing-library/react';
+import { cleanup, render, screen } from '@testing-library/react';
 import { parseCallOffExport, type CallOffExport } from '../../core/calloffs/parse';
 import type { CoverageSource } from '../../core/coverage/compute';
 import { parseCsv } from '../../core/csv';
@@ -75,12 +75,14 @@ const state: DataState = {
   },
 };
 
-const kpi = (label: string) => screen.getAllByText(label).find((el) => el.classList.contains('kpi-label'))!.closest('.kpi')!;
+/** Karta oblasti podle názvu. */
+const card = (title: string) => screen.getAllByRole('link').find((a) => a.querySelector('.dash-card-title')?.textContent?.trim() === title)!;
+const lines = (title: string) => [...card(title).querySelectorAll('.dash-lines li')].map((li) => li.textContent);
 
 describe('DashboardPage', () => {
   afterEach(cleanup);
 
-  it('dlaždice a seznamy', () => {
+  it('karta za oblast: stav, hlavní číslo, nejnaléhavější položky', () => {
     localStorage.setItem('logistics-locale', 'cs');
     render(
       <I18nProvider>
@@ -91,25 +93,22 @@ describe('DashboardPage', () => {
         </DataProvider>
       </I18nProvider>,
     );
-    expect(kpi('Coverage').querySelector('.kpi-value')!.textContent).toBe('1 ');
-    expect(kpi('Coverage').textContent).toContain('čeká na transit 1');
-    expect(kpi('Komponenty').textContent).toContain('Kusovník není načtený.');
-    expect(kpi('Čerstvost dat').textContent).toContain('Sklad');
-
-    const panel = screen.getByRole('heading', { name: 'Kritické díly u zákazníka' }).closest('.panel') as HTMLElement;
-    const rows = [...panel.querySelectorAll('tbody tr')].map((tr) => [...tr.querySelectorAll('td')].map((td) => td.textContent));
-    expect(rows).toEqual([
-      [' FG-L', 'P1Lokalita A', 'zítra', '50 ks'],
-      [' FG-Rčeká na transit', 'P1Lokalita A', 'zítra', '30 ks'],
-    ]);
-    expect(kpi('OIL').querySelector('.kpi-value')!.textContent).toBe('1 ');
-    expect(kpi('OIL').textContent).toContain('termín do 7 dní 1 · otevřených 3');
-    const oil = screen.getByRole('heading', { name: 'OIL: nejbližší termíny' }).closest('.panel') as HTMLElement;
-    expect([...oil.querySelectorAll('tbody tr')].map((tr) => tr.querySelectorAll('td')[1]!.textContent)).toEqual(['Po termínu', 'Tento týden', 'Později']);
-    expect(within(oil).getByText('posunuto 1×')).toBeTruthy();
-
-    const changes = screen.getByRole('heading', { name: 'Změny v odvolávkách' }).closest('.panel') as HTMLElement;
-    expect(within(changes).getByText('+100')).toBeTruthy();
-
+    // Zákazník: FG-L chybí zítra i s transitem (hoří), FG-R jen bez transitu.
+    expect(card('Zákazník').className).toContain('dash-crit');
+    expect(card('Zákazník').querySelector('.dash-main')!.textContent).toBe('1 dílů chybí dnes nebo zítra');
+    expect(card('Zákazník').querySelector('.dash-counters')!.textContent).toBe('1 čeká na transit0 později');
+    expect(lines('Zákazník')).toEqual(['FG-L P1zítra · 50 ks', 'FG-R P1 · čeká na transitzítra · 30 ks']);
+    expect(card('Zákazník').getAttribute('href')).toBe('#coverage');
+    // Komponenty bez kusovníku.
+    expect(card('Komponenty').textContent).toContain('Kusovník není načtený.');
+    // OIL: po termínu, termín do 7 dní, později; hotové ne.
+    expect(card('OIL').className).toContain('dash-crit');
+    expect(card('OIL').querySelector('.dash-counters')!.textContent).toBe('1 termín do 7 dní3 otevřených');
+    expect(lines('OIL')).toEqual(['2 Po termínu · NákupPo 12. 10. · posun 1×', '3 Tento týden · KvalitaPá 16. 10.', '1 Později · LogistikaPá 30. 10.']);
+    // Odvolávky a data.
+    expect(lines('Odvolávky')[0]).toBe('FG-L +100 ks (+100 %)');
+    expect(card('Data').className).toContain('dash-warn');
+    expect(lines('Data')).toContain('Sklad Stock_1.csvstarý · 13. 10.');
+    expect(screen.getByText(/hoří/).closest('.dash-summary')!.textContent).toContain('2 hoří');
   });
 });

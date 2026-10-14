@@ -1089,37 +1089,151 @@ button:focus-visible {
   border-color: transparent;
 }
 
-/* Dashboard: dlaždice jako odkaz do modulu, panely ve dvou sloupcích. */
-.kpi-link {
-  color: inherit;
-  text-decoration: none;
-}
-
-.kpi-link:hover {
-  border-color: var(--accent);
-}
-
-.kpi-link .kpi-value {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
+/* Dashboard: karta za oblast se stavem (barevný pruh), hlavním číslem a nejnaléhavějšími položkami. */
 .dot-info {
   border-radius: 50%;
   background: transparent;
   box-shadow: inset 0 0 0 2px var(--accent);
 }
 
-.dash-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 520px), 1fr));
-  gap: 16px;
-  align-items: start;
+.dash-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  margin: 0;
+  font-size: 14px;
+  color: var(--ink-2);
 }
 
-.dash-grid > .panel {
+.dash-summary span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dash-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 290px), 1fr));
+  gap: 12px;
+}
+
+.dash-card {
+  --dash-color: var(--good);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
   min-width: 0;
+  padding: 12px 14px;
+  color: inherit;
+  text-decoration: none;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-left: 5px solid var(--dash-color);
+  border-radius: 8px;
+}
+
+.dash-card:hover {
+  border-color: var(--accent);
+  border-left-color: var(--dash-color);
+}
+
+.dash-crit {
+  --dash-color: var(--crit);
+}
+
+.dash-warn {
+  --dash-color: var(--warn);
+}
+
+.dash-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.dash-card-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font: 600 15px/1.2 var(--font-display);
+  letter-spacing: 0.02em;
+}
+
+.dash-card-title svg {
+  width: 18px;
+  height: 18px;
+  color: var(--ink-2);
+}
+
+.dash-main {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--ink-2);
+}
+
+.dash-main b {
+  font: 700 32px/1 var(--font-display);
+  color: var(--ink);
+}
+
+.dash-counters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+.dash-counters b {
+  color: var(--ink);
+}
+
+.dash-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin: 2px 0 0;
+  padding: 8px 0 0;
+  list-style: none;
+  border-top: 1px solid var(--grid);
+  font-size: 13px;
+}
+
+.dash-lines li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.dash-lines .dot {
+  flex: none;
+}
+
+.dash-line-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dash-line-value {
+  flex: none;
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.dash-more {
+  font-size: 12.5px;
+}
+
+.dash-empty {
+  font-size: 13px;
 }
 
 .inline-field input {
