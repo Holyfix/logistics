@@ -177,9 +177,9 @@ export interface AutoPlanResult {
 /**
  * Plán s dopočítanými automatickými směnami (`auto`, klíč směny → strana). Ruční směny zůstanou, jak jsou, a spolu
  * s naším skladem pokryjí nejdřívější chybějící kusy. Automatické směny se plní v pořadí `slots`: vždy díl zvolené
- * strany s nejdřívějším nepokrytým dnem (při shodě díl ze strany, která se právě vyrábí), po celých dnech a celých
- * baleních (`pack`; kusy navíc pokryjí další dny), dokud je kapacita. Chybějící kusy = přírůstek nejhlubšího
- * záporného stavu coverage po dnech.
+ * strany s nejdřívějším nepokrytým dnem (při shodě díl ze strany, kterou skončila předchozí směna, ruční
+ * i automatická; jinak LHD před RHD), po celých dnech a celých baleních (`pack`; kusy navíc pokryjí další dny),
+ * dokud je kapacita. Chybějící kusy = přírůstek nejhlubšího záporného stavu coverage po dnech.
  */
 export function autoPlan(
   items: readonly PlanItem[],
@@ -210,9 +210,19 @@ export function autoPlan(
     return queue;
   });
 
+  // Strana, kterou skončila předchozí směna (ruční i automatická): při shodě dne se pokračuje na ní.
   let side = '';
-  for (const slot of autoSlots) {
-    const mode = auto[slot.key]!;
+  const lastSide = (slot: ShiftSlot, previous: string) => {
+    const sides = new Set(items.filter((it) => (result[cellKey(slot.key, it.item)] ?? 0) > 0).map((it) => sideGroup(it.side)));
+    return sideOrder(sides, previous).at(-1) ?? previous;
+  };
+  for (const slot of slots) {
+    const mode = auto[slot.key];
+    if (!mode) {
+      side = lastSide(slot, side);
+      continue;
+    }
+    const previous = side;
     const fits = (it: PlanItem) => mode === 'BOTH' || sideGroup(it.side) === mode;
     let free = Math.max(0, capacity(slot));
     while (free > EPS) {
@@ -242,6 +252,7 @@ export function autoPlan(
       }
       side = sideGroup(items[best]!.side);
     }
+    side = lastSide(slot, previous);
   }
   for (const key of Object.keys(result)) result[key] = Math.round(result[key]! * 1000) / 1000;
   const remaining = queues.reduce((sum, q) => sum + q.reduce((a, b) => a + b.qty, 0), 0);

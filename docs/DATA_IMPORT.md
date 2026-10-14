@@ -208,10 +208,12 @@ V prohlížeči bez přístupu ke složce se soubor stáhne a uloží se ručně
   Automatické směny se plní v pořadí směn: vždy díl zvolené strany s nejdřívějším nepokrytým dnem (při shodě díl
   ze strany, která se právě vyrábí), po celých dnech, dokud je kapacita. Přepsáním čísla nebo volbou „ručně“ se
   směna změní na ruční a dopočítaná čísla zůstanou. Do souboru se ukládají i dopočítaná množství. Na směně se díly
-  řadí po stranách (LHD a RHD nikdy zároveň); pořadí „LHD → RHD“ = nejdřív LHD, pak přestavba na RHD.
+  řadí po stranách (LHD a RHD nikdy zároveň); pořadí „LHD → RHD“ = nejdřív LHD, pak přestavba na RHD. Směna začíná
+  stranou, kterou skončila předchozí směna (ruční i automatická), jinak LHD; podle toho se rozhoduje i shoda dne
+  u volby obě strany.
 - **Balení:** kusy se plánují po celých baleních: Order Multiple z mapování, jinak Ks v balení linky (výchozí 12).
   Automatický plán zaokrouhluje nahoru (kusy navíc pokryjí další dny) a do kapacity směny dá jen celá balení;
-  ručně zadané číslo se po opuštění políčka zaokrouhlí nahoru.
+  ručně jde zadat libovolné číslo.
 - **Vymazat směnu:** tlačítko ↺ nad směnou vymaže její kusy i automatický plán (kapacita směny zůstane).
   Plánovat jde každou směnu, i běžící nebo proběhlou (je jen podbarvená).
 
