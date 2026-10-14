@@ -134,6 +134,14 @@ describe('ComponentsPage', () => {
     expect(clip.querySelectorAll('td.cell-customer')).toHaveLength(1);
   });
 
+  it('pokryto do i přes víkend: poslední pokrytý den může být neděle', () => {
+    // FG-1: pá 16. 10. 10 ks, po 19. 10. 10 ks → spona 20 + 20; sklad 30 → pá 10, so 10, ne 10, po −10
+    const weekendCalls = { ...callOffs, offsets: Int32Array.from([0, 2]), days: Int32Array.from([day(16), day(19)]), qty: Float64Array.from([10, 10]) } as unknown as CallOffExport;
+    renderWith(<ComponentsPage today={day(16)} />, { ...state, data: { ...state.data!, exports: [weekendCalls] } });
+    const clip = rows(0).find((r) => cells(r)[0] === 'CLIP-1')!;
+    expect(cells(clip)[6]).toMatch(/^Ne 18\. 10\./);
+  });
+
   it('poptávka hotových dílů se řídí filtrem komponent', () => {
     renderWith(<ComponentsPage today={day(13)} />);
     const shown = () => rows(1).map((r) => cells(r)[0]);

@@ -441,7 +441,7 @@ export const cs = {
       balance: 'Čísla ve dnech',
       balanceGross: 'Náš sklad komponenty − kumulovaná spotřeba podle odvolávek (odvolávky hotových dílů × kusovník). Do skladu se počítají stejné lokace jako v Coverage.',
       balanceNet: 'Náš sklad komponenty − kumulovaná spotřeba podle odvolávek; odvolávky se nejdřív pokryjí naším skladem hotových dílů a mezivýrobou, komponenta se spotřebuje jen na zbytek.',
-      until: 'Poslední pracovní den, kdy je stav 0 nebo víc. Další den je první den, kdy komponenta chybí. „… a déle“ = vystačí na celých 14 dní.',
+      until: 'Poslední den (i víkend), kdy je stav 0 nebo víc. Další den je první den, kdy komponenta chybí. „… a déle“ = vystačí na celých 14 dní.',
       reserve: 'Zásoba',
       reserveText: 'Na kolik dní výroby vystačí sklad komponenty: sklad ÷ průměrná spotřeba za den výroby (odvolávky za prvních 7 dní × kusovník ÷ pracovní dny po–pá v nich).',
       customer: 'Poslední den, kdy je zákazník pokrytý hotovými díly s touto komponentou: jeho sklad + transit podle coverage (za koncem souboru odvolávky). Každý hotový díl zvlášť – den, kdy u jednoho dílu chybí byť 1 ks, už pokrytý není. Den je v řádku dnů orámovaný.',
