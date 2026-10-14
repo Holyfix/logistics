@@ -57,6 +57,7 @@ const state: DataState = {
     boms: [],
     plans: [],
     planSettings: null,
+    oil: null,
     failed: [],
     loadedAt: 1,
   },

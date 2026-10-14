@@ -9,11 +9,12 @@ import { mergeBoms, parseBom, type BomResult } from '../core/bom';
 import { parseStock, type StockResult } from '../core/stock';
 import { parsePlanWorkbook, type PlanResult } from '../core/planning/plan';
 import { parseSettings, type PlanSettings } from '../core/planning/settings';
+import { parseOilWorkbook, type OilResult } from '../core/oil';
 import { decodeText } from '../core/text';
 import type { SourceFormat } from '../core/sources';
 import type { Cell, DataTable } from '../core/table';
 
-export type ParseRequest = { id: number; kind: 'calloffs' | 'masterdata' | 'coverage' | 'stock' | 'bom' | 'plan' | 'planSettings'; format: SourceFormat; name: string; buffer: ArrayBuffer };
+export type ParseRequest = { id: number; kind: 'calloffs' | 'masterdata' | 'coverage' | 'stock' | 'bom' | 'plan' | 'planSettings' | 'oil'; format: SourceFormat; name: string; buffer: ArrayBuffer };
 
 export type ParseResponse =
   | { id: number; kind: 'calloffs'; result: ParseResult<CallOffExport> }
@@ -23,6 +24,7 @@ export type ParseResponse =
   | { id: number; kind: 'bom'; result: BomResult }
   | { id: number; kind: 'plan'; result: PlanResult }
   | { id: number; kind: 'planSettings'; result: PlanSettings }
+  | { id: number; kind: 'oil'; result: OilResult }
   | { id: number; kind: 'error'; message: string };
 
 function toTable(data: Cell[][]): DataTable {
@@ -43,6 +45,11 @@ self.onmessage = async (event: MessageEvent<ParseRequest>) => {
       const sheets = await readXlsxFile(buffer);
       const result = parseCoverageWorkbook(sheets.map((s) => ({ name: s.sheet, data: s.data as Cell[][] })));
       (self as unknown as Worker).postMessage({ id, kind, result } satisfies ParseResponse);
+      return;
+    }
+    if (kind === 'oil') {
+      const sheets = (await readXlsxFile(buffer)).map((s) => ({ name: s.sheet, data: s.data as Cell[][] }));
+      (self as unknown as Worker).postMessage({ id, kind, result: parseOilWorkbook(sheets) } satisfies ParseResponse);
       return;
     }
     if (kind === 'plan' || kind === 'planSettings') {

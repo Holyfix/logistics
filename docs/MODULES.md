@@ -23,7 +23,7 @@ Pořadí skupin na rozcestníku (karty se čtou shora dolů po sloupcích):
 | Výroba | **Plánování** | Co a kdy vyrobit na linkách, aby byl zákazník pokrytý? | Fáze 7 (probíhá), montáž hotová |
 | Dodavatelé | **Příjem** | Co má dnes a zítra přijet a co je po termínu? | Fáze 9 |
 | Dodavatelé | **Dodavatelé** (OTD inbound) | Dodávají nám dodavatelé včas? | Později |
-| Řízení | **Akční plán** | Kdo co řeší a do kdy? | Později, upřesní se |
+| Řízení | **OIL** | Kdo co řeší a do kdy? | První verze hotová |
 | Řízení | **Reporty** | Týdenní souhrn pro vedení | Později |
 | Systém | **Data** | Jaká data jsou načtená a jsou v pořádku? | Hotové |
 | Systém | **Nastavení** | Prahy, horizont, jméno pro zápisy | Později |
@@ -117,11 +117,21 @@ Filtry: zákazník, projekt, strana (LHD/RHD) z kmenových dat, hledání dílu.
 ### Data
 - Výběr sdílené složky, stav načtených exportů, chyby v datech
 
+### OIL (Open Issue List)
+- ✅ Bod: číslo, problém, opatření, odpovědný, otevřeno, termín, uzavřeno
+- ✅ Plnění po krocích 0/25/50/75/100 % kliknutím na kolečko (Harvey ball), přesně v detailu bodu
+- ✅ Barva podle stavu: červená po termínu, žlutá rozpracováno, modrá nezahájeno, zelená hotovo, šedá zrušeno
+- ✅ Posun termínu s povinným důvodem: u bodu „posunuto N×“, původní termín a historie (kdo, kdy, z – na, proč)
+- ✅ Komentáře s datem a autorem
+- ✅ Filtry Otevřené / Po termínu / Hotové / Vše, odpovědný, hledání; ukazatele otevřené, po termínu, hotovo, posuny
+- ✅ Uložení do `OIL/OIL.xlsx` ve sdílené složce (listy OIL, Komentáře, Posuny termínu)
+- ⏳ Živá společná editace (po přechodu na Firebase)
+
 ### Nastavení
 - Prahy semaforu, horizont výhledu
-- Jméno uživatele pro zápisy (obaly, později akční plán)
+- Jméno uživatele pro zápisy (obaly; OIL ho už má ve svém modulu)
 
 ## Zápis dat
 
-Moduly Obaly a později Mimořádné přepravy a Akční plán do aplikace zapisují. Bez serveru se záznamy ukládají
+Plánování a OIL už do sdílené složky zapisují (`Plan/`, `OIL/OIL.xlsx`); Obaly a později Mimořádné přepravy přibudou. Bez serveru se záznamy ukládají
 jako malé samostatné soubory do sdílené složky (návrh v [ADR 0003](adr/0003-zapis-do-sdilene-slozky.md)).

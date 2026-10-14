@@ -64,6 +64,9 @@ funkce (plánování).
 ### Fáze 6: Dashboard
 - [x] Kritické díly u zákazníka, kritické komponenty, změny v odvolávkách, čerstvost dat; dlaždice a seznamy
 - [ ] Plnění plánu a prostoje, obaly (až budou moduly)
+### OIL (Open Issue List)
+- [x] Body, plnění po krocích, barvy podle stavu, posuny termínu s důvodem a historií, komentáře, OIL/OIL.xlsx
+- [ ] Živá společná editace (Firebase)
 ### Fáze 7: Plánování (probíhá)
 - [x] Modul s kartami Přehled, ASSEMBLY, FOA, SLH, IMM, Kapacity; linka dílu ve sloupci Line v mapování
 - [x] Kapacity linek, směny a doprava k zákazníkovi (Plan/Kapacity.xlsx)
@@ -78,7 +81,6 @@ Obsah modulů je v [MODULES.md](MODULES.md).
 
 ### Později
 - Expedice a dodávky (OTD outbound), Dodavatelé (OTD inbound). Dnes se sledují v jiné aplikaci.
-- Akční plán (upřesní se)
 - Mimořádné přepravy, Reporty
 - E-mailová upozornění, společná editace plánu v reálném čase (vyžadují server)
 

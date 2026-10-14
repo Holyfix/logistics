@@ -14,6 +14,7 @@ Soubory se rozpoznají podle názvu (nezáleží na velikosti písmen ani diakri
 | Náš sklad (Stock) | název začíná „Stock“ / „Sklad“, nebo leží ve složce `Stock` / `Sklad` | CSV nebo XLSX |
 | Kusovník (BOM) | název začíná „MBOM“ / „BOM“ / „Kusovník“, nebo leží ve složce `BOM` / `Kusovník` | XLSX nebo CSV |
 | Plánování: kapacity a plány linek | leží ve složce `Plan` (nebo `Plán`); `Kapacity.xlsx` = kapacity, ostatní = plány | XLSX (zapisuje aplikace) |
+| OIL (Open Issue List) | leží ve složce `OIL`, nebo název začíná „OIL“; platí nejnovější soubor | XLSX (zapisuje aplikace) |
 
 Doporučená struktura (složka se v aplikaci vybírá celá, podsložky se prohledají):
 
@@ -26,6 +27,7 @@ Logistics/
 ├── BOM/                  kusovníky z ERP (MBOM_<výrobek>.xlsx) pro modul Komponenty
 ├── Objednávky/           později: Příjem (otevřené nákupní objednávky)
 ├── Plan/                 Plánování: Kapacity.xlsx a plány linek (ASSEMBLY_<projekt>.xlsx), zapisuje aplikace
+├── OIL/                  OIL.xlsx (Open Issue List), zapisuje aplikace
 └── Obaly/                později: Obaly
 ```
 
@@ -216,6 +218,25 @@ V prohlížeči bez přístupu ke složce se soubor stáhne a uloží se ručně
   ručně jde zadat libovolné číslo.
 - **Vymazat směnu:** tlačítko ↺ nad směnou vymaže její kusy i automatický plán (kapacita směny zůstane).
   Plánovat jde každou směnu, i běžící nebo proběhlou (je jen podbarvená).
+
+## OIL (složka OIL)
+
+Soubor `OIL/OIL.xlsx` **vytváří aplikace** tlačítkem Uložit v modulu OIL (při prvním uložení prohlížeč požádá
+o povolení zápisu; bez přístupu ke složce se soubor stáhne). Když soubor mezitím změnil někdo jiný, aplikace se
+před přepsáním zeptá; jeho změny by se přepsáním ztratily.
+
+| List | Obsah |
+|---|---|
+| **OIL** | Číslo, Problém, Opatření, Odpovědný, Otevřeno, Termín, Původní termín, Posunů termínu, Plnění (%), Stav, Uzavřeno, Poslední komentář |
+| **Komentáře** | Číslo, Kdy, Kdo, Komentář |
+| **Posuny termínu** | Číslo, Kdy, Kdo, Z, Na, Důvod |
+
+- **Plnění** po krocích 0, 25, 50, 75, 100 %; 100 % bod uzavře (den uzavření).
+- **Stav** se počítá: Hotovo (100 %), Zrušeno, Po termínu (termín v minulosti), Rozpracováno (25–75 %),
+  Nezahájeno (0 %). V souboru je jen pro čtení; zpět se čte jen „Zrušeno“.
+- **Posun termínu:** první termín se jen nastaví, každá další změna je posun s povinným důvodem, kdo a kdy;
+  Původní termín a Posunů termínu jsou z historie.
+- **Kdo:** jméno, které si uživatel vyplní v modulu OIL (pamatuje si ho prohlížeč).
 
 ## Testovací data
 
