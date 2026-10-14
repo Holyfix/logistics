@@ -47,7 +47,7 @@ export function DataPage() {
   const bomProjects = (bom: BomData) => {
     const counts = new Map<string, number>();
     for (const parent of bom.parents.keys()) {
-      const project = projectOf.get(parent) || '';
+      const project = projectOf.get(parent) || bom.info.get(parent)?.project || '';
       counts.set(project, (counts.get(project) ?? 0) + 1);
     }
     return [...counts]

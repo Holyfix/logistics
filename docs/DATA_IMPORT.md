@@ -147,7 +147,8 @@ v Komponentách se bere z Item Mappingu (sloupec Project u hotového dílu).
 | Level | Úroveň: „Parent“ nebo `0` = hotový díl, pak `1`, `.2`, `..3` … | ano |
 | Component Item | Component, Komponenta | ano |
 | Quantity Per | Qty Per, Množství (na 1 ks nadřazeného dílu) | ano |
-| Description, UM, Purchase/Manufacture | Popis, MJ, P/M (P = nákup, L = výroba) | ne |
+| Description, UM, Purchase/Manufacture | Popis, MJ, P/M nebo sloupec s „Purchased“ v názvu, např. „P = Purchased / L = Line manufactured“ (P = nákup, L = výroba) | ne |
+| Project | Projekt; projekt hotového dílu, když ho nemá Item Mapping | ne |
 
 - **Množství na hotový díl** = součin „Quantity Per“ od hotového dílu dolů; stejná komponenta na víc místech se sečte.
   Rozpad je hrubý: zásoba mezivýrob se neodečítá. „Start Eff“ se nepoužívá.

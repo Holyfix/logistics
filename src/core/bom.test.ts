@@ -31,7 +31,7 @@ describe('parseBom', () => {
     expect(fg1.get('SUB-2')!.qty).toBe(2);
     expect(fg1.get('LABEL')!.qty).toBe(1);
     expect(r.value.parents.get('FG-2')!.map((c) => c.item)).toEqual(['SUB-1', 'CLIP-1']);
-    expect(r.value.info.get('1000100')).toEqual({ description: 'GRANULATE', um: 'KG', source: 'P' });
+    expect(r.value.info.get('1000100')).toEqual({ description: 'GRANULATE', um: 'KG', source: 'P', project: '' });
     expect(r.value.issues).toEqual([{ row: 13, column: 'Quantity Per', value: 'abc', message: 'invalidNumber' }]);
   });
 
@@ -40,6 +40,17 @@ describe('parseBom', () => {
     if (!r.ok) throw new Error();
     expect(r.value.parents.get('FG-9')).toEqual([{ item: 'K-9', qty: 2, level: 1 }]);
     expect(r.value.issueCount).toBe(0);
+  });
+
+  it('druh dílu ze sloupce s vysvětlivkou a projekt z kusovníku', () => {
+    const r = parseBom([
+      ['Level', 'Component Item', 'Description', 'Project', 'Quantity Per', 'UM', 'P = Purchased / L = Line manufactured'],
+      ['Parent', 'FG-7', 'COCKPIT', 'OV1', null, 'EA', 'L'],
+      ['1', 2266346, 'NUT', 'W1', 2, 'EA', 'P'],
+    ]);
+    if (!r.ok) throw new Error();
+    expect(r.value.info.get('FG-7')).toMatchObject({ source: 'L', project: 'OV1' });
+    expect(r.value.info.get('2266346')).toMatchObject({ source: 'P', project: 'W1' });
   });
 
   it('bez záhlaví vrátí chybějící sloupce', () => {

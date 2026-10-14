@@ -241,7 +241,7 @@ export const cs = {
       products: 'Hotových dílů',
       components: 'Komponent',
       modified: 'Změněno',
-      projects: 'Projekty hotových dílů (podle Item Mappingu)',
+      projects: 'Projekty hotových dílů (podle Item Mappingu, jinak kusovníku)',
       noProject: 'bez projektu',
       marked: 'Komponenty označené v Item Mappingu (Component Coverage)',
       noColumn: 'Item Mapping nemá sloupec Component Coverage, v modulu Komponenty se proto zobrazí všechny nakupované komponenty.',

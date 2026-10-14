@@ -239,7 +239,7 @@ export const en: Messages = {
       products: 'Finished parts',
       components: 'Components',
       modified: 'Modified',
-      projects: 'Finished part projects (per Item Mapping)',
+      projects: 'Finished part projects (per Item Mapping, else the BOM)',
       noProject: 'no project',
       marked: 'Components marked in Item Mapping (Component Coverage)',
       noColumn: 'Item Mapping has no Component Coverage column, so the Components module shows all purchased components.',

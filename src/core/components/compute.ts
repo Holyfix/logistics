@@ -144,7 +144,7 @@ export function buildComponents({ bom, master, coverage = [], callOffs, stock, t
     return {
       item,
       description: m?.description || bom.info.get(item)?.description || '',
-      project: m?.project ?? '',
+      project: m?.project || bom.info.get(item)?.project || '',
       callOffs: callOffQty,
       ...customerNeed(callOffQty, days, plans.get(item)),
       production: days.map(() => 0),
