@@ -258,3 +258,98 @@ export function autoPlan(
   const remaining = queues.reduce((sum, q) => sum + q.reduce((a, b) => a + b.qty, 0), 0);
   return { cells: result, remaining: Math.round(remaining * 1000) / 1000 };
 }
+
+export interface PlanMetrics {
+  /** Index prvního nepokrytého dne nejhoršího dílu; null = všechny díly pokryté celé období. */
+  shortDay: number | null;
+  /** Díly, které ani s plánem nejsou pokryté celé období. */
+  uncovered: number;
+  /** Kolik kusů i s plánem chybí (součet přes díly). */
+  missing: number;
+  /** Přestavby mezi stranami na směnách `slots` (v pořadí výroby). */
+  changeovers: number;
+}
+
+/** Hodnocení plánu: pokrytí nejhoršího dílu, nepokryté díly, chybějící kusy a počet přestaveb. */
+export function planMetrics(items: readonly PlanItem[], days: readonly DayNumber[], cells: Readonly<Record<string, number>>, slots: readonly ShiftSlot[]): PlanMetrics {
+  const statuses = items.map((it) => evaluateItem(it, plannedTotal(cells, it.item, days)));
+  const short = statuses.flatMap((s) => (s.shortDay === null ? [] : [s.shortDay]));
+  const order = slotSides(items, slots, (s, it) => cells[cellKey(s.key, it.item)] ?? 0).flat();
+  return {
+    shortDay: short.length ? Math.min(...short) : null,
+    uncovered: short.length,
+    missing: Math.round(statuses.reduce((sum, s) => sum + s.missing, 0) * 1000) / 1000,
+    changeovers: order.filter((side, i) => i > 0 && side !== order[i - 1]).length,
+  };
+}
+
+/** Lepší plán: později první nepokrytý den, pak méně chybějících kusů, pak méně přestaveb. */
+export function compareMetrics(a: PlanMetrics, b: PlanMetrics): number {
+  const day = (m: PlanMetrics) => m.shortDay ?? Infinity;
+  return day(b) - day(a) || a.missing - b.missing || a.changeovers - b.changeovers;
+}
+
+export type VariantId = 'both' | 'oneSide';
+
+export interface PlanVariant {
+  id: VariantId;
+  /** Automatický plán navržených směn (ostatní směny beze změny). */
+  auto: Record<string, AutoMode>;
+  result: AutoPlanResult;
+  metrics: PlanMetrics;
+}
+
+export interface SuggestInputs {
+  items: readonly PlanItem[];
+  days: readonly DayNumber[];
+  /** Plán, jak ho zadal plánovač (ruční množství a automatické směny). */
+  cells: Readonly<Record<string, number>>;
+  auto: Readonly<Record<string, AutoMode>>;
+  /** Všechny směny horizontu (pro výpočet automatického plánu). */
+  slots: readonly ShiftSlot[];
+  /** Směny plánovacích dnů (pro počet přestaveb). */
+  planSlots: readonly ShiftSlot[];
+  /** Směny, které návrh smí nastavit (bez ručních čísel). */
+  targets: readonly ShiftSlot[];
+  capacity: (slot: ShiftSlot) => number;
+  pack: (item: PlanItem) => number;
+}
+
+/**
+ * Návrhy automatického plánu pro směny `targets`; ruční směny zůstanou. „both“ = na všech směnách obě strany:
+ * kusy vždy dostane díl, kterému chybí nejdřív, takže pokrytí je nejlepší (za cenu přestavby uvnitř směny).
+ * „oneSide“ = každá směna jen jedna strana: strana dílu, kterému po dosavadním plánu chybí nejdřív (při shodě
+ * strana předchozí směny), takže přestavby jsou jen mezi směnami.
+ */
+export function suggestPlans({ items, days, cells, auto, slots, planSlots, targets, capacity, pack }: SuggestInputs): PlanVariant[] {
+  const targetKeys = new Set(targets.map((s) => s.key));
+  const baseAuto = Object.fromEntries(Object.entries(auto).filter(([key]) => !targetKeys.has(key)));
+  const baseCells = Object.fromEntries(Object.entries(cells).filter(([key]) => !targetKeys.has(key.slice(0, key.indexOf('|')))));
+  const variant = (id: VariantId, modes: Record<string, AutoMode>): PlanVariant => {
+    const result = autoPlan(items, days, baseCells, { ...baseAuto, ...modes }, slots, capacity, pack);
+    return { id, auto: modes, result, metrics: planMetrics(items, days, result.cells, planSlots) };
+  };
+
+  const both = variant('both', Object.fromEntries(targets.map((s) => [s.key, 'BOTH' as const])));
+
+  const oneSide: Record<string, AutoMode> = {};
+  let previous = '';
+  for (const slot of targets) {
+    const { cells: planned } = autoPlan(items, days, baseCells, { ...baseAuto, ...oneSide }, slots, capacity, pack);
+    let first = Infinity;
+    const sides = new Set<string>();
+    for (const it of items) {
+      const side = sideGroup(it.side);
+      const short = evaluateItem(it, plannedTotal(planned, it.item, days)).shortDay;
+      if (!side || short === null || short > first) continue;
+      if (short < first) sides.clear();
+      first = short;
+      sides.add(side);
+    }
+    if (sides.size === 0) break;
+    const side = (sides.has(previous) ? previous : [...sides].sort()[0]!) as AutoMode;
+    oneSide[slot.key] = side;
+    previous = side;
+  }
+  return [both, variant('oneSide', oneSide)];
+}

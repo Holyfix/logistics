@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { dayFromParts } from '../dates';
 import { parseMasterData } from '../masterdata';
 import { parseCsv } from '../csv';
-import { assemblyItems, autoPlan, evaluateItem, packOf, plannedTotal, roundUpToPack, slotCapacity, slotSides, type PlanItem } from './assembly';
+import { assemblyItems, autoPlan, evaluateItem, packOf, plannedTotal, planMetrics, roundUpToPack, suggestPlans, slotCapacity, slotSides, type PlanItem } from './assembly';
 import { sideGroup } from '../masterdata';
 import { cellKey, emptyPlan, parsePlanWorkbook, planFileName, planSheets, shiftSlots, sideOrder, slotKey } from './plan';
 import { DEFAULT_SETTINGS, destinationOf, lineCapacity, parseSettings, parseShifts, parseTime, settingsSheets, type PlanSettings } from './settings';
@@ -269,5 +269,38 @@ describe('automatický plán', () => {
     // R: A, B (po); O: B pokračuje (RHD), pak C.
     expect([qty(cells, MON, 'R', 'A'), qty(cells, MON, 'R', 'B')]).toEqual([50, 50]);
     expect([qty(cells, MON, 'O', 'B'), qty(cells, MON, 'O', 'C')]).toEqual([50, 50]);
+  });
+});
+
+describe('návrh plánu', () => {
+  const days = [MON, TUE, MON + 2, MON + 3];
+  const slots = shiftSlots(MON, 4, 360);
+  const planSlots = slots.slice(0, 6);
+  const cap = () => 100;
+
+  it('obě strany pokryjí víc než pevné strany, jedna strana na směnu má méně přestaveb', () => {
+    // A (LHD) chybí po 100, st 100; B (RHD) chybí po 100, út 100.
+    const a = item('A', 'LHD', 0, [-100, -100, -200, -200]);
+    const b = item('B', 'RHD', 0, [-100, -200, -200, -200]);
+    const targets = planSlots.slice(0, 3);
+    const [both, oneSide] = suggestPlans({ items: [a, b], days, cells: {}, auto: {}, slots, planSlots, targets, capacity: cap, pack: () => 1 });
+    expect(both!.auto).toEqual({ [targets[0]!.key]: 'BOTH', [targets[1]!.key]: 'BOTH', [targets[2]!.key]: 'BOTH' });
+    // obě: R A 100, O B 100 (po), N B 100 (út) → zbývá A st 100
+    expect(both!.metrics).toMatchObject({ shortDay: 2, uncovered: 1, missing: 100 });
+    // jedna strana: R LHD (A po), O RHD (B po), N RHD (B út)
+    expect(Object.values(oneSide!.auto)).toEqual(['LHD', 'RHD', 'RHD']);
+    expect(oneSide!.metrics).toMatchObject({ shortDay: 2, missing: 100, changeovers: 1 });
+
+    // Pevně jedna směna LHD a další RHD (bez ohledu na potřebu) je horší než návrh.
+    const fixed = autoPlan([a, b], days, {}, { [targets[0]!.key]: 'LHD', [targets[1]!.key]: 'LHD', [targets[2]!.key]: 'RHD' }, slots, cap);
+    expect(planMetrics([a, b], days, fixed.cells, planSlots)).toMatchObject({ shortDay: 1, missing: 100 });
+  });
+
+  it('ruční směny zůstanou a započítají se', () => {
+    const a = item('A', 'LHD', 0, [-100, -100, -100, -100]);
+    const manual = { [cellKey(planSlots[0]!.key, 'A')]: 60 };
+    const [both] = suggestPlans({ items: [a], days, cells: manual, auto: {}, slots, planSlots, targets: planSlots.slice(1, 3), capacity: cap, pack: () => 12 });
+    expect(both!.result.cells).toEqual({ [cellKey(planSlots[0]!.key, 'A')]: 60, [cellKey(planSlots[1]!.key, 'A')]: 48 });
+    expect(both!.metrics).toMatchObject({ shortDay: null, missing: 0, changeovers: 0 });
   });
 });
