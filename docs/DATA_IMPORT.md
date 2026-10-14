@@ -214,12 +214,6 @@ V prohlížeči bez přístupu ke složce se soubor stáhne a uloží se ručně
 - **Balení:** kusy se plánují po celých baleních: Order Multiple z mapování, jinak Ks v balení linky (výchozí 12).
   Automatický plán zaokrouhluje nahoru (kusy navíc pokryjí další dny) a do kapacity směny dá jen celá balení;
   ručně jde zadat libovolné číslo.
-- **Návrh plánu:** porovná aktuální plán se dvěma variantami automatického plánu pro směny plánovacích dnů, které
-  ještě neskončily, mají kapacitu a nemají ruční čísla: **Nejlepší pokrytí** (všechny směny obě strany; kusy vždy
-  dostane díl, kterému chybí nejdřív) a **Méně přestaveb** (každá směna jen jedna strana: strana dílu, kterému po
-  dosavadním plánu chybí nejdřív, při shodě strana předchozí směny). U každé varianty: pokryto do (nejhorší díl),
-  nepokryté díly, chybějící kusy a přestavby. Doporučená je ta s nejpozdějším prvním nepokrytým dnem, pak nejméně
-  chybějícími kusy, pak nejméně přestavbami; Použít nastaví navrženým směnám automatický plán.
 - **Vymazat směnu:** tlačítko ↺ nad směnou vymaže její kusy i automatický plán (kapacita směny zůstane).
   Plánovat jde každou směnu, i běžící nebo proběhlou (je jen podbarvená).
 

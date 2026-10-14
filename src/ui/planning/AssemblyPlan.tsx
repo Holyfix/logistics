@@ -1,19 +1,7 @@
 import { useMemo, type KeyboardEvent } from 'react';
 import { dayToIso, parseDay, weekday, type DayNumber } from '../../core/dates';
 import { formatDayShort, formatQuantity } from '../../core/format';
-import {
-  compareMetrics,
-  evaluateItem,
-  packOf,
-  PLAN_DAYS,
-  plannedTotal,
-  planMetrics,
-  slotCapacity,
-  slotSides,
-  suggestPlans,
-  type PlanMetrics,
-  type PlanVariant,
-} from '../../core/planning/assembly';
+import { evaluateItem, packOf, PLAN_DAYS, plannedTotal, slotCapacity, slotSides } from '../../core/planning/assembly';
 import { AUTO_MODES, cellKey, shiftSlots, type AutoMode, type LinePlan, type ShiftSlot } from '../../core/planning/plan';
 import { formatTime } from '../../core/planning/settings';
 import { useI18n } from '../../i18n/I18nProvider';
@@ -98,31 +86,6 @@ export function AssemblyPlan({ data, today, now }: { data: PlanningData; today: 
   const planned = (slot: ShiftSlot) => sum(items.map((it) => qty(slot, it.item)));
   const sides = slotSides(items, slots, (s, it) => qty(s, it.item));
   const past = (slot: ShiftSlot) => slot.end <= now;
-  const isManualSlot = (slot: ShiftSlot) => !plan.auto[slot.key] && Object.entries(plan.cells).some(([key, q]) => q > 0 && key.startsWith(`${slot.key}|`));
-
-  // Návrh plánu: směny plánovacích dnů, které ještě neskončily, mají kapacitu a nemají ruční čísla.
-  const targets = slots.filter((s) => !past(s) && slotCapacity(s, capacity, plan.capacity) > 0 && !isManualSlot(s));
-  const current = planMetrics(project.items, days, cells, slots);
-  const variants = targets.length
-    ? suggestPlans({
-        items: project.items,
-        days,
-        cells: plan.cells,
-        auto: plan.auto,
-        slots: data.slots,
-        planSlots: slots,
-        targets,
-        capacity: (s) => slotCapacity(s, capacity, plan.capacity),
-        pack: (it) => packOf(it, capacity),
-      })
-    : [];
-  const best = variants.reduce<PlanVariant | null>((b, v) => (b === null || compareMetrics(v.metrics, b.metrics) < 0 ? v : b), null);
-  const applied = (v: PlanVariant) => targets.every((s) => (plan.auto[s.key] ?? '') === (v.auto[s.key] ?? ''));
-  const applyVariant = (v: PlanVariant) => {
-    const keys = new Set(targets.map((s) => s.key));
-    const auto = Object.fromEntries(Object.entries(plan.auto).filter(([key]) => !keys.has(key)));
-    update({ ...plan, cells: Object.fromEntries(Object.entries(plan.cells).filter(([key]) => !keys.has(key.slice(0, key.indexOf('|'))))), auto: { ...auto, ...v.auto } });
-  };
   const update = (next: LinePlan) => drafts.setPlan(next, project.key);
 
   /** Plán se směnou přepnutou na ruční zadání: dopočítaná množství zůstanou jako ručně zadaná. */
@@ -185,33 +148,6 @@ export function AssemblyPlan({ data, today, now }: { data: PlanningData; today: 
   const shiftClass = (slot: ShiftSlot) => `${slot.code === 'R' ? ' plan-day-start' : ''}${weekend(slot.day)}`;
   const covStart = (k: number) => (k === 0 ? ' plan-cov-start' : '');
   const modeText = (mode: AutoMode) => (mode === 'BOTH' ? tp.assembly.autoBoth : mode);
-  function metricsRow(name: string, note: string, m: PlanMetrics, v: PlanVariant | null) {
-    return (
-      <tr key={v?.id ?? 'current'}>
-        <td>
-          <strong>{name}</strong>
-          {v === best && (
-            <>
-              {' '}
-              <span className="chip">{tp.suggest.best}</span>
-            </>
-          )}
-          <small className="muted cell-note">{note}</small>
-        </td>
-        <td className={m.shortDay === null ? undefined : 'cell-short'}>{untilText(m.shortDay)}</td>
-        <td className="n">{formatQuantity(m.uncovered, locale)}</td>
-        <td className="n">{formatQuantity(m.missing, locale)}</td>
-        <td className="n">{formatQuantity(m.changeovers, locale)}</td>
-        <td>
-          {v && (
-            <button type="button" className="button button-small" disabled={applied(v)} onClick={() => applyVariant(v)}>
-              {applied(v) ? tp.suggest.applied : tp.suggest.apply}
-            </button>
-          )}
-        </td>
-      </tr>
-    );
-  }
   /** Souhrnný řádek: pod coverage prázdná buňka přes všechny dny. */
   const covFiller = <td className="plan-cov-start" colSpan={days.length} />;
 
@@ -277,36 +213,6 @@ export function AssemblyPlan({ data, today, now }: { data: PlanningData; today: 
           </span>
         </div>
       </div>
-
-      {variants.length > 0 && (
-        <div className="panel">
-          <div className="panel-head">
-            <h2>{tp.suggest.heading}</h2>
-            <span className="muted">
-              {tp.suggest.sub} {formatQuantity(targets.length, locale)}
-            </span>
-          </div>
-          <div className="table-scroll">
-            <table className="table table-data">
-              <thead>
-                <tr>
-                  <th>{tp.suggest.variant}</th>
-                  <th>{tp.kpi.coveredUntil}</th>
-                  <th className="n">{tp.kpi.uncovered}</th>
-                  <th className="n">{tp.suggest.missing}</th>
-                  <th className="n">{tp.suggest.changeovers}</th>
-                  <th />
-                </tr>
-              </thead>
-              <tbody>
-                {metricsRow(tp.suggest.current, tp.suggest.currentNote, current, null)}
-                {variants.map((v) => metricsRow(tp.suggest[v.id], tp.suggest[`${v.id}Note`], v.metrics, v))}
-              </tbody>
-            </table>
-          </div>
-          <p className="muted">{tp.suggest.note}</p>
-        </div>
-      )}
 
       <div className="panel">
         <div className="panel-head">

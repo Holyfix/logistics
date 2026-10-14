@@ -74,7 +74,7 @@ function renderPage(now = day(12) * 1440 + 300) {
 }
 
 const input = (label: string) => screen.getByRole('textbox', { name: label }) as HTMLInputElement;
-const kpi = (label: string) => screen.getAllByText(label).find((el) => el.classList.contains('kpi-label'))!.parentElement!.querySelector('.kpi-value')!.textContent;
+const kpi = (label: string) => screen.getByText(label).parentElement!.querySelector('.kpi-value')!.textContent;
 
 describe('PlanningPage', () => {
   afterEach(cleanup);
@@ -155,25 +155,6 @@ describe('PlanningPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Ubrat plánovací den' }));
     expect(document.querySelectorAll('th.plan-shift').length).toBe(6);
     expect((screen.getByRole('button', { name: 'Ubrat plánovací den' }) as HTMLButtonElement).disabled).toBe(true);
-  });
-
-  it('návrh plánu: porovnání variant a použití', () => {
-    renderPage();
-    fireEvent.click(screen.getByRole('button', { name: 'P1' }));
-    const panel = screen.getByRole('heading', { name: 'Návrh plánu' }).closest('.panel') as HTMLElement;
-    const row = (name: string) => within(panel).getByText(name).closest('tr')!;
-    const cells = (name: string) => [...row(name).querySelectorAll('td')].slice(1, 5).map((td) => td.textContent);
-    expect(cells('Aktuální plán')).toEqual(['St 14. 10.', '2', '90', '0']);
-    // Nejlepší pokrytí: FG-L 60 → 60, FG-R 30 → 36 na ranní, zákazník pokrytý celé období.
-    expect(cells('Nejlepší pokrytí')).toEqual(['Ne 25. 10. a déle', '0', '0', '1']);
-    expect(cells('Méně přestaveb')).toEqual(['Ne 25. 10. a déle', '0', '0', '1']);
-    fireEvent.click(within(row('Méně přestaveb')).getByRole('button', { name: 'Použít' }));
-    expect(within(row('Méně přestaveb')).getByRole('button', { name: 'Použito' })).toBeTruthy();
-    expect((screen.getByRole('combobox', { name: 'Automaticky Po 12. 10. R' }) as HTMLSelectElement).value).toBe('LHD');
-    expect((screen.getByRole('combobox', { name: 'Automaticky Po 12. 10. O' }) as HTMLSelectElement).value).toBe('RHD');
-    expect(input('FG-L Po 12. 10. R').value).toBe('60');
-    expect(input('FG-R Po 12. 10. O').value).toBe('36');
-    expect(kpi('Nepokryté díly')).toBe('0');
   });
 
   it('i proběhlou nebo běžící směnu jde plánovat', () => {

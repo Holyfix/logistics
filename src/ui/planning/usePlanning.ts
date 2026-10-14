@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import type { DayNumber } from '../../core/dates';
 import { ASSEMBLY, assemblyItems, autoPlan, packOf, slotCapacity, type AutoPlanResult, type PlanItem } from '../../core/planning/assembly';
-import { emptyPlan, shiftSlots, type LinePlan, type ShiftSlot } from '../../core/planning/plan';
+import { emptyPlan, shiftSlots, type LinePlan } from '../../core/planning/plan';
 import { DEFAULT_SETTINGS, lineCapacity, type LineCapacity, type PlanSettings } from '../../core/planning/settings';
 import { stockByItem } from '../../core/stock';
 import type { SavedPlan } from '../../platform/loader';
@@ -30,8 +30,6 @@ export interface PlanningData {
   settingsFile: { path: string; lastModified: number } | null;
   /** Dny coverage od dneška (i víkendy). */
   days: DayNumber[];
-  /** Směny všech dnů coverage (pro automatický plán). */
-  slots: ShiftSlot[];
   projects: ProjectPlan[];
   /** Díly montáže podle sloupce Line v mapování (jinak všechny díly ze souborů coverage). */
   byLineColumn: boolean;
@@ -92,7 +90,6 @@ export function usePlanning(today: DayNumber): PlanningData | null {
       settingsDirty: drafts.settings !== null,
       settingsFile: data.planSettings ? { path: data.planSettings.path, lastModified: data.planSettings.lastModified } : null,
       days: items.days,
-      slots,
       projects,
       byLineColumn: data.master?.data.hasLineColumn ?? false,
     };
