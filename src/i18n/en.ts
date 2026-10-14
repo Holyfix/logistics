@@ -439,7 +439,7 @@ export const en: Messages = {
       balance: 'Numbers by day',
       balanceGross: 'Our component stock − cumulative usage by call-offs (finished part call-offs × BOM). Stock uses the same locations as Coverage.',
       balanceNet: 'Our component stock − cumulative usage by call-offs; call-offs are first covered by our stock of finished parts and intermediates, the component is used only for the rest.',
-      until: 'Last working day with balance 0 or more. The next day is the first day the component is short. “… or later” = enough for all 14 days.',
+      until: 'Last day (weekends included) with balance 0 or more. The next day is the first day the component is short. “… or later” = enough for all 14 days.',
       reserve: 'Reserve',
       reserveText: 'How many production days the component stock lasts: stock ÷ average usage per production day (call-offs over the first 7 days × BOM ÷ working days Mon–Fri in them).',
       customer: 'Last day the customer is covered with finished parts containing this component: its stock + transit per coverage (beyond the file call-offs). Each finished part separately – a day with even 1 piece of one part missing is not covered. The day is framed in the day row.',

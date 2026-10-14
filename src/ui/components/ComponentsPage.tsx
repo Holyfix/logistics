@@ -92,14 +92,14 @@ export function ComponentsPage({ today = localToday() }: { today?: DayNumber } =
   const callOffTotals = days.map((_, k) => sum(shownProducts.map((p) => p.callOffs[k]!)));
   const need7 = (c: ComponentLine) => sum(c.usage.slice(0, NEED_DAYS));
   const reserve = (c: ComponentLine) => (c.productionDays === null ? tc.table.noUsage : `${tc.table.reserve} ${formatOneDecimal(c.productionDays, locale)} ${tc.table.productionDays}`);
-  /** Poslední pracovní den před dnem `short` (index); null, když chybí už dnes. */
+  /** Poslední pokrytý den před dnem `short` (index), i víkend (zákazník může mít víkendové směny); null = chybí už dnes. */
   const lastDayBefore = (short: number | null): DayNumber | null => {
-    for (let k = (short ?? days.length) - 1; k >= 0; k--) if (weekday(days[k]!) <= 5) return days[k]!;
-    return null;
+    const k = (short ?? days.length) - 1;
+    return k >= 0 ? days[k]! : null;
   };
   const untilText = (short: number | null) => {
-    // Vystačí na celý horizont: poslední pracovní den horizontu „a déle“.
-    if (short === null) return `${dayLabel(lastDayBefore(null) ?? days.at(-1)!)} ${tc.table.orLater}`;
+    // Vystačí na celý horizont: poslední den horizontu „a déle“.
+    if (short === null) return `${dayLabel(days.at(-1)!)} ${tc.table.orLater}`;
     const until = lastDayBefore(short);
     return until === null ? tc.table.notCovered : dayLabel(until);
   };
