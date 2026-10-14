@@ -422,7 +422,6 @@ export const cs = {
     demand: {
       heading: 'Odvolávky hotových dílů',
       sub: 'ks za den',
-      subNet: 'ks za den po odečtu našeho skladu hotových dílů',
       item: 'Hotový díl',
       description: 'Popis',
       project: 'Projekt',
@@ -431,8 +430,7 @@ export const cs = {
       noCallOffs: 'Není načtený žádný export odvolávek, potřeba je 0.',
       shown: 'zobrazeno',
       empty: 'Filtru neodpovídá žádný hotový díl.',
-      note: 'Odvolávky po odečtu našeho skladu hotových dílů (z nich se počítá potřeba komponent). Tabulka se řídí filtry nad pokrytím komponent.',
-      noteGross: 'Odvolávky bez odečtu našeho skladu hotových dílů. Tabulka se řídí filtry nad pokrytím komponent.',
+      note: 'Čistý požadavek zákazníka podle nejnovějšího exportu odvolávek, bez odečtu našeho skladu. Tabulka se řídí filtry nad pokrytím komponent.',
     },
     legend: {
       negative: 'Komponenta chybí: kolik kusů chybí na odvolávky',

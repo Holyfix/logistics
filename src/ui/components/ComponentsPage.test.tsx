@@ -102,8 +102,8 @@ describe('ComponentsPage', () => {
     const withFg = parseStock(parseCsv('Item Number;Location;Zone ID;Qty On Hand - Inv Detail\nCLIP-1;A-01;PURCH;30\nRESIN;B-01;PURCH;100\nFG-1;F-01;SALE;5'));
     if (!withFg.ok) throw new Error();
     renderWith(<ComponentsPage today={day(13)} />, { ...state, data: { ...state.data!, stock: { path: 'Stock_1.csv', lastModified: 0, data: withFg.value } } });
-    // 5 ks FG-1 pokryje první den → výroba 0, 5, 10 → spona 30, 20, 0
-    expect(cells(rows(1)[0]!).slice(3, 7)).toEqual(['15', '0', '5', '10']);
+    // 5 ks FG-1 pokryje první den → výroba 0, 5, 10 → spona 30, 20, 0; tabulka odvolávek ukazuje čistý požadavek
+    expect(cells(rows(1)[0]!).slice(3, 7)).toEqual(['20', '5', '5', '10']);
     expect(cells(rows(0).find((r) => cells(r)[0] === 'CLIP-1')!).slice(8, 11)).toEqual(['30', '20', '0']);
     fireEvent.click(screen.getByLabelText('Odečíst náš sklad hotových dílů a mezivýroby'));
     expect(cells(rows(0).find((r) => cells(r)[0] === 'CLIP-1')!).slice(8, 11)).toEqual(['20', '10', '-10']);

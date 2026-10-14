@@ -420,7 +420,6 @@ export const en: Messages = {
     demand: {
       heading: 'Finished part call-offs',
       sub: 'pcs per day',
-      subNet: 'pcs per day after our stock of finished parts',
       item: 'Finished part',
       description: 'Description',
       project: 'Project',
@@ -429,8 +428,7 @@ export const en: Messages = {
       noCallOffs: 'No call-off export is loaded, the need is 0.',
       shown: 'shown',
       empty: 'No finished part matches the filters.',
-      note: 'Call-offs after our stock of finished parts (component need is calculated from them). The table follows the component filters.',
-      noteGross: 'Call-offs without deducting our stock of finished parts. The table follows the component filters.',
+      note: 'Net customer requirement from the latest call-off export, without deducting our stock. The table follows the component filters.',
     },
     legend: {
       negative: 'Component short: how many pieces are missing for the call-offs',

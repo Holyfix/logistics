@@ -171,7 +171,7 @@ v Komponentách se bere z Item Mappingu (sloupec Project u hotového dílu).
   denní spotřeba; spotřeba = odvolávky hotových dílů za prvních 7 dní × kusovník (bez odečtu našeho skladu hotových
   dílů), vydělená počtem pracovních dní po–pá v těchto 7 dnech. Příklad: odvolávky za 7 dní × kusovník = 1 000 ks
   komponenty, v 7 dnech je 5 pracovních dní → 200 ks za den; sklad 700 ks → zásoba 3,5 dne výroby.
-- Tabulka **Odvolávky hotových dílů** ukazuje odvolávky po dnech (s přepínačem po odečtu našeho skladu hotových dílů),
+- Tabulka **Odvolávky hotových dílů** ukazuje čistý požadavek zákazníka (odvolávky po dnech, bez odečtu našeho skladu),
   součet za 7 dní a jako poslední řádek součet dnů; řídí se filtry nad pokrytím komponent.
 - Bez otevřených nákupních objednávek a bez doby výroby.
 
