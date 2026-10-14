@@ -12,7 +12,7 @@ export function localToday(): DayNumber {
 }
 
 /** Pokrytí komponent z načtených dat; null, když není načtený žádný kusovník. */
-export function useComponents(today: DayNumber, netOwnStock = true): ComponentTable | null {
+export function useComponents(today: DayNumber, netOwnStock = false): ComponentTable | null {
   const { state } = useData();
   const data = state.data;
   return useMemo(() => {

@@ -21,7 +21,7 @@ export function ComponentsPage({ today = localToday() }: { today?: DayNumber } =
   const { t, locale } = useI18n();
   const tc = t.components;
   const { state } = useData();
-  const [netOwnStock, setNetOwnStock] = useState(true);
+  const [netOwnStock, setNetOwnStock] = useState(false);
   const table = useComponents(today, netOwnStock);
 
   const [project, setProject] = useState('');
@@ -105,7 +105,8 @@ export function ComponentsPage({ today = localToday() }: { today?: DayNumber } =
   };
   const coveredText = (c: ComponentLine) => untilText(c.shortDay);
   const customerText = (c: ComponentLine) => untilText(c.customerShortDay);
-  /** Den „Zákazník pokryt do“ v řádku dnů (rámeček); null, když vystačí na celý horizont nebo chybí už dnes. */
+  const finishedText = (c: ComponentLine) => `${tc.table.finishedOnly} ${untilText(c.finishedShortDay)}`;
+  /** Den „Zákazník pokryt do“ v řádku dnů (rámeček); null, když pokryje celý horizont nebo chybí už dnes. */
   const customerDay = (c: ComponentLine) => (c.customerShortDay === null ? null : lastDayBefore(c.customerShortDay));
 
   const buildExport = (): ExportTable => ({
@@ -282,6 +283,7 @@ export function ComponentsPage({ today = localToday() }: { today?: DayNumber } =
                     </td>
                     <td className="cell-until" title={tc.table.customerTitle}>
                       <strong className={c.customerShortDay === null ? undefined : 'cell-short'}>{customerText(c)}</strong>
+                      <small className="muted cell-note">{finishedText(c)}</small>
                     </td>
                     {c.balance.map((v, k) => {
                       const framed = customerDay(c) === days[k];
@@ -317,7 +319,18 @@ export function ComponentsPage({ today = localToday() }: { today?: DayNumber } =
             <i className="swatch swatch-weekend" /> {tc.legend.weekend}
           </li>
         </ul>
-        <p className="muted">{netOwnStock ? tc.table.note : tc.table.noteGross}</p>
+        <dl className="explain">
+          <dt>{tc.explain.balance}</dt>
+          <dd>{netOwnStock ? tc.explain.balanceNet : tc.explain.balanceGross}</dd>
+          <dt>{tc.table.until}</dt>
+          <dd>{tc.explain.until}</dd>
+          <dt>{tc.explain.reserve}</dt>
+          <dd>{tc.explain.reserveText}</dd>
+          <dt>{tc.table.customer}</dt>
+          <dd>{tc.explain.customer}</dd>
+          <dt>{tc.table.need}</dt>
+          <dd>{tc.explain.need}</dd>
+        </dl>
       </div>
 
       <div className="panel">

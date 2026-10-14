@@ -1,6 +1,6 @@
-// Pokrytí komponent podle odvolávek: odvolávky hotových dílů, které nepokryje náš sklad hotových dílů a mezivýroby,
-// × kusovník, odečtené od našeho skladu komponent. Pro srovnání „Zákazník pokryt do“: stejný výpočet z chybějícího
-// množství u zákazníka (sklad + transit u sekvencéra podle jeho souboru, dál odvolávky).
+// Pokrytí komponent podle odvolávek: odvolávky hotových dílů × kusovník, odečtené od našeho skladu komponent
+// (volitelně se nejdřív spotřebuje náš sklad hotových dílů a mezivýroby). „Zákazník pokryt do“: do kdy pokryjeme
+// zákazníka podle coverage (jeho sklad + transit) naším skladem hotových dílů, mezivýrobou a výrobou z komponent.
 
 import type { BomData, BomNode } from '../bom';
 import type { CallOffExport } from '../calloffs/parse';
@@ -28,11 +28,13 @@ export interface ProductDemand {
   /** Potřeba výroby: odvolávky, které nepokryje náš sklad hotového dílu (bez odečtu skladu = odvolávky). */
   production: number[];
   /**
-   * Chybějící množství u zákazníka pro „Zákazník pokryt do“: ve dnech souboru sekvencéra přírůstek chybějícího
-   * množství podle jeho souboru (sklad + transit − plán zákazníka), za koncem souboru odvolávky po spotřebování
-   * zbytku u sekvencéra. Bez souboru sekvencéra odvolávky.
+   * Chybějící množství u zákazníka: ve dnech souboru coverage přírůstek záporného stavu (sklad + transit u zákazníka
+   * − plán zákazníka; chybějící kusy z minulých dnů patří do dneška), za koncem souboru odvolávky po spotřebování
+   * zbytku u zákazníka. Bez souboru coverage odvolávky.
    */
   customerNeed: number[];
+  /** Index prvního dne, kdy chybějící množství u zákazníka nepokryje náš sklad hotového dílu; null = pokryje. */
+  finishedShortDay: number | null;
 }
 
 export interface ComponentLine {
@@ -50,10 +52,12 @@ export interface ComponentLine {
   /** Index prvního dne v záporu (první chybějící komponenta podle odvolávek); null, když vystačí na celý horizont. */
   shortDay: number | null;
   /**
-   * Index prvního dne, kdy komponenta chybí na pokrytí zákazníka (sklad + transit u sekvencéra + náš sklad hotových
-   * dílů a mezivýroby); null, když vystačí na celý horizont.
+   * Zákazník pokryt do (rámeček): index prvního dne, kdy chybějící množství u zákazníka (podle coverage) nepokryje
+   * náš sklad hotových dílů, mezivýroba ani výroba z našeho skladu komponenty; null = pokryje celý horizont.
    */
   customerShortDay: number | null;
+  /** Jen náš sklad hotových dílů: index prvního dne, kdy u některého hotového dílu s komponentou chybí; null = pokryje. */
+  finishedShortDay: number | null;
   /** Průměrná spotřeba za den výroby podle odvolávek za prvních 7 dní (pracovní dny po–pá). */
   avgDaily: number;
   /** Zásoba komponenty ve dnech výroby (sklad ÷ průměrná spotřeba); null bez spotřeby. */
@@ -129,17 +133,17 @@ export interface ComponentInputs {
   /** Náš sklad po dílech (velkými písmeny); undefined, když soubor skladu není načtený. */
   stock: ReadonlyMap<string, number> | undefined;
   today: DayNumber;
-  /** Odečíst náš sklad hotových dílů a mezivýroby (výchozí ano). */
+  /** Odečíst náš sklad hotových dílů a mezivýroby (výchozí ne: jen odvolávky a sklad komponent). */
   netOwnStock?: boolean;
 }
 
 /**
- * Pokrytí komponent podle odvolávek. Potřeba hotového dílu na den = odvolávky; odečte se náš sklad hotových dílů
- * a mezivýroby, zbytek × kusovník je potřeba komponenty; stav = náš sklad komponenty − kumulovaná potřeba.
- * Pro srovnání „Zákazník pokryt do“ se stejně spočítá potřeba z chybějícího množství u zákazníka podle souboru
- * sekvencéra (sklad + transit − plán zákazníka, za koncem souboru a u dílů bez souboru odvolávky).
+ * Pokrytí komponent podle odvolávek. Potřeba = odvolávky × kusovník; stav = náš sklad komponenty − kumulovaná potřeba.
+ * S `netOwnStock` se odvolávky nejdřív kryjí naším skladem hotových dílů a mezivýroby (jako MRP).
+ * „Zákazník pokryt do“: chybějící množství u zákazníka podle coverage se vždy nejdřív kryje naším skladem hotových
+ * dílů, pak mezivýrobou a nakonec výrobou z našeho skladu komponenty (jako MRP, bez doby výroby).
  */
-export function buildComponents({ bom, master, coverage = [], callOffs, stock, today, netOwnStock = true }: ComponentInputs): ComponentTable {
+export function buildComponents({ bom, master, coverage = [], callOffs, stock, today, netOwnStock = false }: ComponentInputs): ComponentTable {
   const days = Array.from({ length: COMPONENT_DAYS }, (_, k) => today + k);
   const calls = callOffDemand(callOffs);
   const plans = sequencerPlans(coverage, master);
@@ -155,6 +159,7 @@ export function buildComponents({ bom, master, coverage = [], callOffs, stock, t
       callOffs: callOffQty,
       production: days.map(() => 0),
       customerNeed: customerNeed(callOffQty, days, plans.get(item)).need,
+      finishedShortDay: null,
     };
   });
 
@@ -181,6 +186,7 @@ export function buildComponents({ bom, master, coverage = [], callOffs, stock, t
           balance: [],
           shortDay: null,
           customerShortDay: null,
+          finishedShortDay: null,
           avgDaily: 0,
           productionDays: null,
           products: [],
@@ -195,22 +201,31 @@ export function buildComponents({ bom, master, coverage = [], callOffs, stock, t
   }
 
   const tracked = new Set(lines.keys());
+  const productBy = new Map(products.map((p) => [p.item, p]));
   const items = products.map((p) => p.item);
-  const byCallOffs = explode(bom, items, products.map((p) => p.callOffs), days.length, stock, netOwnStock, tracked);
-  products.forEach((p, i) => (p.production = byCallOffs.production[i]!));
-  const byCustomer = explode(bom, items, products.map((p) => p.customerNeed), days.length, stock, netOwnStock, tracked);
+  // Zákazník podle coverage: vždy s odečtem našeho skladu hotových dílů a mezivýroby.
+  const forCustomer = explode(bom, items, products.map((p) => p.customerNeed), days.length, stock, true, tracked);
+  for (const p of products) {
+    let left = Math.max(0, stock?.get(p.item) ?? 0);
+    const k = p.customerNeed.findIndex((q) => (left -= q) < -1e-9);
+    p.finishedShortDay = k === -1 ? null : k;
+  }
   const firstShort = (stockQty: number, usage: readonly number[] | undefined) => {
     let left = stockQty;
     const k = (usage ?? []).findIndex((u) => (left -= u) < -1e-9);
     return k === -1 ? null : k;
   };
+  const earliest = (values: readonly (number | null)[]) => values.reduce<number | null>((a, b) => (b === null ? a : a === null ? b : Math.min(a, b)), null);
+  const byCallOffs = explode(bom, items, products.map((p) => p.callOffs), days.length, stock, netOwnStock, tracked);
+  products.forEach((p, i) => (p.production = byCallOffs.production[i]!));
   for (const line of lines.values()) {
     line.usage = byCallOffs.usage.get(line.item) ?? days.map(() => 0);
     let left = line.stock ?? 0;
     line.balance = line.usage.map((u) => (left -= u));
     const k = line.balance.findIndex((v) => v < -1e-9);
     line.shortDay = k === -1 ? null : k;
-    line.customerShortDay = firstShort(line.stock ?? 0, byCustomer.usage.get(line.item));
+    line.customerShortDay = firstShort(line.stock ?? 0, forCustomer.usage.get(line.item));
+    line.finishedShortDay = earliest(line.products.map((item) => productBy.get(item)!.finishedShortDay));
     line.productionDays = line.avgDaily > 0 ? Math.max(0, line.stock ?? 0) / line.avgDaily : null;
     line.projects.sort();
   }
