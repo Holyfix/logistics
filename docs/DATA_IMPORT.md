@@ -136,12 +136,15 @@ Soubor obsahuje celý sklad, takže ho mohou použít i další moduly (Komponen
 
 ## Kusovník (BOM) a modul Komponenty
 
-Export víceúrovňového kusovníku z ERP, jeden soubor na výrobek (např. `MBOM_<výrobek>.xlsx`). Načtou se všechny soubory;
-když je hotový díl ve víc souborech, použije se nejnovější soubor.
+Export víceúrovňového kusovníku z ERP, jeden soubor na výrobek (např. `MBOM_<výrobek>.xlsx`), nebo víc výrobků v jednom
+souboru (i na víc listech). Načtou se všechny soubory a všechny listy; když je hotový díl ve víc souborech, použije se
+nejnovější soubor. Soubor musí ležet ve složce `BOM` / `Kusovník`, nebo mít název začínající „MBOM“, „BOM“ či „Kusovník“.
+Modul Data ukazuje u každého souboru počet hotových dílů a jejich projekty podle Item Mappingu; projekt pro filtr
+v Komponentách se bere z Item Mappingu (sloupec Project u hotového dílu).
 
 | Sloupec | Další povolené názvy | Povinný |
 |---|---|---|
-| Level | Úroveň: „Parent“ = hotový díl, pak `1`, `.2`, `..3` … | ano |
+| Level | Úroveň: „Parent“ nebo `0` = hotový díl, pak `1`, `.2`, `..3` … | ano |
 | Component Item | Component, Komponenta | ano |
 | Quantity Per | Qty Per, Množství (na 1 ks nadřazeného dílu) | ano |
 | Description, UM, Purchase/Manufacture | Popis, MJ, P/M (P = nákup, L = výroba) | ne |

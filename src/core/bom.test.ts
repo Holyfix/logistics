@@ -35,6 +35,13 @@ describe('parseBom', () => {
     expect(r.value.issues).toEqual([{ row: 13, column: 'Quantity Per', value: 'abc', message: 'invalidNumber' }]);
   });
 
+  it('úroveň 0 je hotový díl stejně jako „Parent“', () => {
+    const r = parseBom([rows[0]!, ['0', 'FG-9', 'X', null, 'EA', 'L', null], ['1', 'K-9', 'K', 2, 'EA', 'P', null]]);
+    if (!r.ok) throw new Error();
+    expect(r.value.parents.get('FG-9')).toEqual([{ item: 'K-9', qty: 2, level: 1 }]);
+    expect(r.value.issueCount).toBe(0);
+  });
+
   it('bez záhlaví vrátí chybějící sloupce', () => {
     expect(parseBom([['A', 'B']])).toEqual({ ok: false, error: 'missingColumns', columns: ['Level', 'Component Item'] });
   });

@@ -51,12 +51,12 @@ export type BomResult = { ok: true; value: BomData } | { ok: false; error: 'miss
 
 const PARENT = 'parent';
 
-/** Úroveň z textu „1“, „.2“, „..3“ … nebo „Parent“ (0). */
+/** Úroveň z textu „1“, „.2“, „..3“ … nebo „Parent“ / „0“ (hotový díl). */
 function levelOf(cell: Cell | undefined): number | null {
   const text = cellText(cell).toLowerCase();
   if (text === PARENT) return 0;
   const n = Number(text.replace(/^\.+/, ''));
-  return Number.isInteger(n) && n > 0 ? n : null;
+  return Number.isInteger(n) && n >= 0 ? n : null;
 }
 
 /**

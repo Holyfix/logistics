@@ -5,7 +5,7 @@ import { parseCallOffExport, type CallOffExport, type ParseResult } from '../cor
 import { parseCoverageWorkbook, type CoverageResult } from '../core/coverage/parse';
 import { parseCsv } from '../core/csv';
 import { parseMasterData, type MasterResult } from '../core/masterdata';
-import { parseBom, type BomResult } from '../core/bom';
+import { mergeBoms, parseBom, type BomResult } from '../core/bom';
 import { parseStock, type StockResult } from '../core/stock';
 import { parsePlanWorkbook, type PlanResult } from '../core/planning/plan';
 import { parseSettings, type PlanSettings } from '../core/planning/settings';
@@ -53,9 +53,12 @@ self.onmessage = async (event: MessageEvent<ParseRequest>) => {
       return;
     }
     if (kind === 'bom') {
-      // Kusovník: první list (záhlaví může být o pár řádků níž).
-      const data = format === 'csv' ? (({ header, rows }) => [header, ...rows])(parseCsv(decodeText(buffer))) : ((await readSheet(buffer)) as Cell[][]);
-      (self as unknown as Worker).postMessage({ id, kind, result: parseBom(data) } satisfies ParseResponse);
+      // Kusovník: všechny listy sešitu (např. list na projekt), záhlaví může být o pár řádků níž.
+      const sheets = format === 'csv' ? [(({ header, rows }) => [header, ...rows])(parseCsv(decodeText(buffer)))] : (await readXlsxFile(buffer)).map((s) => s.data as Cell[][]);
+      const results = sheets.map(parseBom);
+      const ok = results.flatMap((r) => (r.ok ? [r.value] : []));
+      const result: BomResult = ok.length === 0 ? results[0]! : { ok: true, value: mergeBoms(ok) };
+      (self as unknown as Worker).postMessage({ id, kind, result } satisfies ParseResponse);
       return;
     }
     if (kind === 'stock') {
