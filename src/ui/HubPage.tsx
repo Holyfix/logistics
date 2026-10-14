@@ -1,12 +1,14 @@
 import { useMemo, type ReactNode } from 'react';
 import { callOffSummary } from '../core/calloffs/views';
 import { COMPONENT_SOON_DAYS } from '../core/components/compute';
+import { oilAlerts } from '../core/dashboard';
 import { buildCoverage, SHORTAGE_DAYS, shortage } from '../core/coverage/compute';
 import { formatQuantity } from '../core/format';
 import { useI18n } from '../i18n/I18nProvider';
 import { useData } from './data/DataProvider';
 import { localToday, useComponents } from './components/useComponents';
 import { Icon } from './icons';
+import { useOilDraftList } from './oil/OilProvider';
 import { GROUPS, MODULES, type ModuleDef, type ModuleId } from './modules';
 
 function StatusChip({ module }: { module: ModuleDef }) {
@@ -67,7 +69,11 @@ function useMetrics(): Partial<Record<ModuleId, ReactNode>> {
     return { withoutTransit: pieces(false), withTransit: pieces(true) };
   }, [coverage, master]);
 
-  const components = useComponents(useMemo(localToday, []));
+  const today = useMemo(localToday, []);
+  const components = useComponents(today);
+  const oilDraft = useOilDraftList();
+  const oilList = oilDraft ?? state.data?.oil?.list ?? null;
+  const oil = useMemo(() => (oilList ? oilAlerts(oilList, today) : null), [oilList, today]);
 
   const metrics: Partial<Record<ModuleId, ReactNode>> = {};
   const tm = t.hub.metrics;
@@ -106,6 +112,16 @@ function useMetrics(): Partial<Record<ModuleId, ReactNode>> {
   if (components) {
     const soon = components.components.filter((c) => c.shortDay !== null && c.shortDay < COMPONENT_SOON_DAYS).length;
     metrics.components = <Metric value={formatQuantity(soon, locale)} label={t.components.hub.label} tone={soon > 0 ? 'crit' : 'ok'} title={t.components.hub.title} />;
+  }
+  if (oil) {
+    const overdue = oil.filter((a) => a.severity === 'crit').length;
+    const soon = oil.filter((a) => a.severity === 'warn').length;
+    const title = `${tm.oilTitle}: ${overdue} ${tm.oilOverdue}, ${soon} ${tm.oilSoon}, ${oil.length} ${tm.oilOpen}`;
+    metrics.oil = overdue
+      ? <Metric value={formatQuantity(overdue, locale)} label={tm.oilOverdue} tone="crit" title={title} />
+      : soon
+        ? <Metric value={formatQuantity(soon, locale)} label={tm.oilSoon} tone="warn" title={title} />
+        : <Metric value={formatQuantity(oil.length, locale)} label={tm.oilOpen} tone="ok" title={title} />;
   }
   return metrics;
 }
