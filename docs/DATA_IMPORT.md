@@ -154,25 +154,22 @@ v Komponentách se bere z Item Mappingu (sloupec Project u hotového dílu).
   Rozpad je hrubý: zásoba mezivýrob se neodečítá. „Start Eff“ se nepoužívá.
 - **Které komponenty se zobrazí:** ty, které mají v Item Mappingu ve sloupci „Component Coverage“ hodnotu „Ano“.
   Když sloupec v mappingu není, zobrazí se všechny nakupované komponenty (P). Mezivýroby tak lze vynechat.
-- **Horizont** je 14 dní od dneška. Pokrytí komponent se počítá **pro zákazníka**: kolik komponenty potřebujeme,
-  aby zákazník nenarazil.
-- **Potřeba zákazníka na nás** (po hotových dílech a dnech):
-  - ve dnech, které pokrývá soubor sekvencéra (Coverage), je to **chybějící množství podle jeho souboru**: stav =
-    sklad + transit − kumulovaná spotřeba podle plánu zákazníka; dokud je stav ≥ 0, zákazník je pokrytý, záporný stav
-    je kumulovaně to, co od nás musí přijít. Potřeba dne je přírůstek chybějícího množství; když se stav později zlepší
-    (dorazí transit), potřeba se nesnižuje. Chybějící množství ze dnů před dneškem patří do dneška;
-  - za koncem souboru odvolávky, které nejdřív pokryje zbytek u sekvencéra (stav posledního dne + to, co jsme měli dodat);
-  - u hotového dílu bez souboru sekvencéra odvolávky.
-- **Potřeba výroby** = potřeba zákazníka, kterou nepokryje náš sklad hotových dílů. Rozpadne se podle kusovníku;
+- **Horizont** je 14 dní od dneška. Pokrytí komponent se počítá **podle odvolávek** (nejnovější export).
+- **Potřeba výroby** = odvolávky hotového dílu, které nepokryje náš sklad hotových dílů. Rozpadne se podle kusovníku;
   mezivýroba se nejdřív kryje ze svého skladu a teprve zbytek jde o úroveň níž (jako MRP, den po dni, bez doby výroby).
   Přepínačem „Odečíst náš sklad hotových dílů a mezivýroby“ jde odečet vypnout.
-- **Stav komponenty** po dnech = náš sklad komponenty − kumulovaná potřeba; záporné číslo = kolik kusů komponenty chybí,
-  aby byl zákazník ten den pokrytý. **Pokryto do** = poslední pracovní den se stavem ≥ 0.
+- **Stav komponenty** po dnech = náš sklad komponenty − kumulovaná potřeba; záporné číslo = kolik kusů komponenty chybí
+  na odvolávky. **Pokryto do** = poslední pracovní den se stavem ≥ 0; první červený den je den první chybějící komponenty.
+- **Zákazník pokryt do** (srovnání s pokrytím hotového výrobku u zákazníka): stejný výpočet, jen potřeba hotového dílu
+  je chybějící množství u zákazníka. Ve dnech souboru sekvencéra (Coverage) je to přírůstek záporného stavu
+  (sklad + transit − plán zákazníka; pozdější transit už požadavek nesnižuje, chybějící množství z minulých dnů patří
+  do dneška), za koncem souboru odvolávky po spotřebování zbytku u sekvencéra, u dílů bez souboru odvolávky.
+  Den je v řádku dnů **orámovaný**. Rámeček za prvním červeným dnem znamená, že zákazník má díly ještě ze svého
+  skladu a transitu; rámeček před ním nebo na něm, že komponenta chybí dřív, než to ukazují odvolávky.
 - **Potřeba 7 dní** = potřeba komponenty za prvních 7 dní. **Zásoba (dní výroby)** = sklad komponenty ÷ průměrná
-  denní spotřeba podle odvolávek za prvních 7 dní (pracovní dny po–pá v nich): jak dlouho komponenta vydrží,
-  jakmile se začne vyrábět.
-- Tabulka **Potřeba výroby hotových dílů** ukazuje potřebu výroby po dnech (dny z odvolávek jsou podbarvené, dny ze souboru sekvencéra bez podkladu),
-  potřebu za 7 dní a jako poslední řádek součet; řídí se filtry nad pokrytím komponent.
+  denní spotřeba podle odvolávek za prvních 7 dní (pracovní dny po–pá v nich).
+- Tabulka **Potřeba výroby hotových dílů** ukazuje potřebu výroby z odvolávek po dnech, potřebu za 7 dní a jako
+  poslední řádek součet; řídí se filtry nad pokrytím komponent.
 - Bez otevřených nákupních objednávek a bez doby výroby.
 
 ## Plánování (složka Plan)

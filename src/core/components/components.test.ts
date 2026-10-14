@@ -33,18 +33,17 @@ const mapping = (extra = '') =>
   parseMasterData(parseCsv(`Item Number;Customer Number;Description;Project${extra ? ';Component Coverage' : ''}\nFG-1;C1;PANEL LHD;P1${extra ? ';' : ''}\nCLIP-1;;CLIP;${extra ? ';Ano' : ''}\nSUB-1;;INTERMEDIATE;${extra ? ';' : ''}`));
 
 describe('buildComponents', () => {
-  it('bez souboru sekvencéra je potřeba z odvolávek od dneška', () => {
+  it('potřeba z odvolávek od dneška, bez souboru sekvencéra stejná i pro Zákazník pokryt do', () => {
     const m = mapping();
     if (!m.ok) throw new Error();
     const t = buildComponents({ bom: bom.value, master: m.value, callOffs, stock: new Map([['CLIP-1', 40], ['FG-2', 5]]), today });
     expect(t.days).toHaveLength(COMPONENT_DAYS);
     const [fg1, fg2] = t.products;
     expect(fg1!.callOffs.slice(0, 4)).toEqual([10, 0, 0, 7]);
-    expect(fg1!.need.slice(0, 4)).toEqual([10, 0, 0, 7]);
-    expect(fg1!.fixed.some(Boolean)).toBe(false);
+    expect(fg1!.customerNeed.slice(0, 4)).toEqual([10, 0, 0, 7]);
     expect(fg1!.project).toBe('P1');
     // FG-2: odvolávky 3 a 4, náš sklad 5 → výroba 0 a 2
-    expect(fg2!.need.slice(0, 3)).toEqual([3, 4, 0]);
+    expect(fg2!.callOffs.slice(0, 3)).toEqual([3, 4, 0]);
     expect(fg2!.production.slice(0, 3)).toEqual([0, 2, 0]);
   });
 
@@ -118,7 +117,7 @@ describe('odečet našeho skladu hotových dílů a mezivýroby', () => {
   });
 });
 
-describe('potřeba podle souboru sekvencéra (fix) a odvolávek', () => {
+describe('Zákazník pokryt do: chybějící množství podle souboru sekvencéra, dál odvolávky', () => {
   // A: odvolávky 100 ks každý pracovní den. A = 1× S (mezivýroba), S = 2× K (nákup). Náš sklad A 150, S 100, K 400.
   const monday = dayFromParts(2026, 10, 12)!;
   const tree = parseBom([
@@ -154,21 +153,21 @@ describe('potřeba podle souboru sekvencéra (fix) a odvolávek', () => {
     // sklad 200, do středy spotřeba 200, ve středu dorazí transit 100 → stav se transitem po, st = 100
     const t = build(sequencer([monday, monday + 2], [100, 0], [0, 100], 200));
     const a = t.products[0]!;
-    expect(a.fixed.slice(0, 4)).toEqual([true, true, true, false]);
     // čt 100 pokryje zbytek u sekvencéru, od pátku odvolávky na nás
-    expect(a.need).toEqual([0, 0, 0, 0, 100, 0, 0, 100, 100, 100, 100, 100, 0, 0]);
-    // náš sklad A 150 (pá, po), S 100 (po, út), pak K: út 100, st 200 → 100, čt chybí → pokryto do st 21. 10.
+    expect(a.customerNeed).toEqual([0, 0, 0, 0, 100, 0, 0, 100, 100, 100, 100, 100, 0, 0]);
     const k = t.components.find((c) => c.item === 'K')!;
-    expect(k.shortDay).toBe(10);
-    expect(k.balance[9]).toBe(100);
-    expect(k.balance[10]).toBe(-100);
+    // pokrytí podle odvolávek: K chybí v pátek (index 4)
+    expect(k.balance.slice(0, 5)).toEqual([400, 400, 300, 100, -100]);
+    expect(k.shortDay).toBe(4);
+    // zákazník: náš sklad A 150 (pá, po), S 100 (po, út), pak K: út 100, st 200 → 100, čt chybí → pokryto do st 21. 10.
+    expect(k.customerShortDay).toBe(10);
   });
 
   it('chybějící množství podle souboru je požadavek; pozdější transit ho nesnižuje', () => {
     // stav se transitem: po 50, út −30, st −80, čt −20 (dorazil transit) → požadavek 0, 30, 50, 0
     const t = build(sequencer([monday, monday + 1, monday + 2, monday + 3], [50, -30, -80, -120], [0, 0, 0, 100], 100));
     // pá za koncem souboru: u sekvencéru zbývá −20 + 80 dodaných = 60 ks, z odvolávky 100 zbude na nás 40
-    expect(t.products[0]!.need.slice(0, 5)).toEqual([0, 30, 50, 0, 40]);
+    expect(t.products[0]!.customerNeed.slice(0, 5)).toEqual([0, 30, 50, 0, 40]);
   });
 
   it('chybějící množství ze dnů před dneškem patří do dneška', () => {
@@ -180,6 +179,6 @@ describe('potřeba podle souboru sekvencéra (fix) a odvolávek', () => {
       stock: new Map(),
       today: monday,
     });
-    expect(t.products[0]!.need.slice(0, 3)).toEqual([60, 0, 100]);
+    expect(t.products[0]!.customerNeed.slice(0, 3)).toEqual([60, 0, 100]);
   });
 });
