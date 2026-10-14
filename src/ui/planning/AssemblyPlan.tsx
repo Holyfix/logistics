@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { dayToIso, parseDay, weekday, type DayNumber } from '../../core/dates';
 import { formatDayShort, formatQuantity } from '../../core/format';
-import { evaluateItem, packOf, PLAN_DAYS, plannedTotal, roundUpToPack, slotCapacity, slotSides, type PlanItem } from '../../core/planning/assembly';
+import { evaluateItem, packOf, PLAN_DAYS, plannedTotal, slotCapacity, slotSides } from '../../core/planning/assembly';
 import { AUTO_MODES, cellKey, shiftSlots, type AutoMode, type LinePlan, type ShiftSlot } from '../../core/planning/plan';
 import { formatTime } from '../../core/planning/settings';
 import { useI18n } from '../../i18n/I18nProvider';
@@ -92,12 +92,6 @@ export function AssemblyPlan({ data, today, now }: { data: PlanningData; today: 
     if (q > 0) next[cellKey(slot.key, item)] = q;
     else delete next[cellKey(slot.key, item)];
     update({ ...base, cells: next });
-  };
-  /** Po opuštění políčka: množství nahoru na celá balení dílu. */
-  const roundCell = (slot: ShiftSlot, it: PlanItem) => {
-    const q = qty(slot, it.item);
-    const rounded = roundUpToPack(q, packOf(it, capacity));
-    if (q > 0 && rounded !== q) setCell(slot, it.item, String(rounded));
   };
   const setAuto = (slot: ShiftSlot, mode: AutoMode | '') => {
     if (!mode) return update(manualSlot(slot));
@@ -357,7 +351,6 @@ export function AssemblyPlan({ data, today, now }: { data: PlanningData; today: 
                           aria-label={`${it.item} ${slotLabel(slot)}`}
                           value={qty(slot, it.item) || ''}
                           onChange={(e) => setCell(slot, it.item, e.target.value)}
-                          onBlur={() => roundCell(slot, it)}
                         />
                       </td>
                     ))}

@@ -101,12 +101,11 @@ describe('PlanningPage', () => {
     expect(row('FG-L').querySelectorAll('td.plan-cov').length).toBe(14);
     expect(cov('FG-L')).toEqual(['20', '30', '20', '-60', '-60']);
 
-    // 70 ks v úterý na noční → po opuštění políčka 72 (6 balení po 12): čtvrtek −60 → 12 (plán se přičte do všech dnů).
+    // 70 ks v úterý na noční: čtvrtek −60 → 10 (plán se přičte do všech dnů; ručně libovolné číslo, i mimo balení).
     fireEvent.change(input('FG-L Út 13. 10. N'), { target: { value: '70' } });
-    expect(cov('FG-L')).toEqual(['90', '100', '90', '10', '10']);
     fireEvent.blur(input('FG-L Út 13. 10. N'));
-    expect(input('FG-L Út 13. 10. N').value).toBe('72');
-    expect(cov('FG-L')[3]).toBe('12');
+    expect(input('FG-L Út 13. 10. N').value).toBe('70');
+    expect(cov('FG-L')).toEqual(['90', '100', '90', '10', '10']);
     expect(kpi('Nepokryté díly')).toBe('1');
     expect(screen.getAllByText('Neuložené změny').length).toBeGreaterThan(0);
     expect(screen.getByRole('tab', { name: 'ASSEMBLY •' })).toBeTruthy();
@@ -119,14 +118,14 @@ describe('PlanningPage', () => {
     expect(input('FG-R Po 12. 10. O').closest('td')!.className).toContain('cell-auto');
     expect(kpi('Nepokryté díly')).toBe('0');
 
-    // Přepsáním čísla je směna ruční: 20 → 24, v pátek chybí 6 ks.
+    // Přepsáním čísla je směna ruční: 20 ks, v pátek chybí 10 ks.
     fireEvent.change(input('FG-R Po 12. 10. O'), { target: { value: '20' } });
     fireEvent.blur(input('FG-R Po 12. 10. O'));
     expect(auto('Po 12. 10. O').value).toBe('');
-    expect(cov('FG-R')[4]).toBe('-6');
+    expect(cov('FG-R')[4]).toBe('-10');
     expect(row('FG-R').querySelectorAll('td.plan-cov')[4]!.className).toContain('cell-negative');
 
-    // Noční obě strany: doplní zbylých 6 ks FG-R celým balením.
+    // Noční obě strany: doplní zbylých 10 ks FG-R celým balením.
     fireEvent.change(auto('Po 12. 10. N'), { target: { value: 'BOTH' } });
     expect(input('FG-R Po 12. 10. N').value).toBe('12');
     expect(kpi('Nepokryté díly')).toBe('0');
@@ -136,7 +135,7 @@ describe('PlanningPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Vymazat směnu Po 12. 10. N' }));
     expect(input('FG-R Po 12. 10. N').value).toBe('');
     expect(auto('Po 12. 10. N').value).toBe('');
-    expect(input('FG-R Po 12. 10. O').value).toBe('24');
+    expect(input('FG-R Po 12. 10. O').value).toBe('20');
     expect(kpi('Nepokryté díly')).toBe('1');
 
     // Plánovací dny: přidat třetí, ubrat jde jen po úterý (tam je plán).

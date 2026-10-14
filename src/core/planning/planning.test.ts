@@ -247,6 +247,19 @@ describe('automatický plán', () => {
     expect(remaining).toBe(14);
   });
 
+  it('obě strany: při stejném dni navazuje na stranu, kterou skončila předchozí ruční směna', () => {
+    const a = item('A', 'LHD', 0, [-80]);
+    const b = item('B', 'RHD', 0, [-80]);
+    const c = item('C', 'RHD', 0, [0]);
+    const manual = { [cellKey(slotKey(MON, 'R'), 'C')]: 10 };
+    const auto = { [slotKey(MON, 'O')]: 'BOTH' } as const;
+    const { cells } = autoPlan([a, b, c], [MON], manual, auto, slots, cap);
+    expect([qty(cells, MON, 'O', 'B'), qty(cells, MON, 'O', 'A')]).toEqual([80, 20]);
+    // bez předchozí směny LHD
+    const first = autoPlan([a, b, c], [MON], {}, auto, slots, cap).cells;
+    expect([qty(first, MON, 'O', 'A'), qty(first, MON, 'O', 'B')]).toEqual([80, 20]);
+  });
+
   it('při stejném dni pokračuje stranou, která se právě vyrábí', () => {
     const a = item('A', 'LHD', 0, [-50, -50]);
     const b = item('B', 'RHD', 0, [-50, -100]);
