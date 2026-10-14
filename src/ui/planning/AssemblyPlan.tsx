@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { dayToIso, parseDay, weekday, type DayNumber } from '../../core/dates';
 import { formatDayShort, formatQuantity } from '../../core/format';
-import { evaluateItem, PLAN_DAYS, plannedTotal, slotCapacity, slotSides } from '../../core/planning/assembly';
+import { evaluateItem, packOf, PLAN_DAYS, plannedTotal, roundUpToPack, slotCapacity, slotSides, type PlanItem } from '../../core/planning/assembly';
 import { AUTO_MODES, cellKey, shiftSlots, type AutoMode, type LinePlan, type ShiftSlot } from '../../core/planning/plan';
 import { formatTime } from '../../core/planning/settings';
 import { useI18n } from '../../i18n/I18nProvider';
@@ -93,6 +93,12 @@ export function AssemblyPlan({ data, today, now }: { data: PlanningData; today: 
     else delete next[cellKey(slot.key, item)];
     update({ ...base, cells: next });
   };
+  /** Po opuštění políčka: množství nahoru na celá balení dílu. */
+  const roundCell = (slot: ShiftSlot, it: PlanItem) => {
+    const q = qty(slot, it.item);
+    const rounded = roundUpToPack(q, packOf(it, capacity));
+    if (q > 0 && rounded !== q) setCell(slot, it.item, String(rounded));
+  };
   const setAuto = (slot: ShiftSlot, mode: AutoMode | '') => {
     if (!mode) return update(manualSlot(slot));
     const rest = Object.fromEntries(Object.entries(plan.cells).filter(([key]) => slotOf(key) !== slot.key));
@@ -107,17 +113,12 @@ export function AssemblyPlan({ data, today, now }: { data: PlanningData; today: 
     update({ ...plan, capacity: overrides });
   };
 
-  const open = slots.filter((s) => s.start >= now);
-  const openKeys = new Set(open.map((s) => s.key));
-  const openHasPlan = Object.entries(cells).some(([key, q]) => q > 0 && openKeys.has(slotOf(key))) || Object.keys(plan.auto).some((k) => openKeys.has(k));
-  const firstOpen = open[0];
-  const clear = () => {
-    if (!firstOpen || !window.confirm(`${tp.assembly.confirmClear} ${slotLabel(firstOpen)}?`)) return;
-    update({
-      ...plan,
-      cells: Object.fromEntries(Object.entries(plan.cells).filter(([key]) => !openKeys.has(slotOf(key)))),
-      auto: Object.fromEntries(Object.entries(plan.auto).filter(([key]) => !openKeys.has(key))),
-    });
+  const slotHasPlan = (slot: ShiftSlot) => !!plan.auto[slot.key] || Object.entries(cells).some(([key, q]) => q > 0 && slotOf(key) === slot.key);
+  /** Vymaže plán jedné směny: množství i automatický plán (kapacita směny zůstane). */
+  const resetSlot = (slot: ShiftSlot) => {
+    const auto = { ...plan.auto };
+    delete auto[slot.key];
+    update({ ...plan, auto, cells: Object.fromEntries(Object.entries(plan.cells).filter(([key]) => slotOf(key) !== slot.key)) });
   };
 
   const dayLabel = (d: DayNumber) => `${t.calloffs.weekdays[weekday(d) - 1]} ${formatDayShort(dayToIso(d), locale)}`;
@@ -167,9 +168,6 @@ export function AssemblyPlan({ data, today, now }: { data: PlanningData; today: 
           </button>
         </span>
         <span className="filters-break" role="presentation" />
-        <button type="button" className="button" onClick={clear} disabled={!openHasPlan}>
-          {tp.assembly.clear}
-        </button>
         <button type="button" className="button button-primary" disabled={flow.busy} onClick={() => void flow.run((force) => savePlan(project, force))}>
           {tp.save}
         </button>
@@ -243,6 +241,29 @@ export function AssemblyPlan({ data, today, now }: { data: PlanningData; today: 
             <tbody>
               <tr className="plan-summary">
                 <td className="sticky-col">
+                  <strong>{tp.assembly.resetRow}</strong>
+                </td>
+                <td colSpan={3} className="muted">
+                  {tp.assembly.resetHint}
+                </td>
+                {slots.map((slot) => (
+                  <td key={slot.key} className={shiftClass(slot)}>
+                    <button
+                      type="button"
+                      className="button button-small"
+                      aria-label={`${tp.assembly.resetRow} ${slotLabel(slot)}`}
+                      title={`${tp.assembly.resetRow} ${slotLabel(slot)}`}
+                      disabled={!slotHasPlan(slot)}
+                      onClick={() => resetSlot(slot)}
+                    >
+                      ↺
+                    </button>
+                  </td>
+                ))}
+                {covFiller}
+              </tr>
+              <tr className="plan-summary">
+                <td className="sticky-col">
                   <strong>{tp.assembly.autoRow}</strong>
                 </td>
                 <td colSpan={3} className="muted">
@@ -254,7 +275,6 @@ export function AssemblyPlan({ data, today, now }: { data: PlanningData; today: 
                       className="plan-select"
                       aria-label={`${tp.assembly.autoRow} ${slotLabel(slot)}`}
                       value={plan.auto[slot.key] ?? ''}
-                      disabled={past(slot)}
                       onChange={(e) => setAuto(slot, e.target.value as AutoMode | '')}
                     >
                       <option value="">{tp.assembly.autoManual}</option>
@@ -283,7 +303,6 @@ export function AssemblyPlan({ data, today, now }: { data: PlanningData; today: 
                       aria-label={`${tp.assembly.capacityRow} ${slotLabel(slot)}`}
                       value={capOf(slot) || ''}
                       placeholder="0"
-                      disabled={past(slot)}
                       onChange={(e) => setCapacity(slot, e.target.value)}
                     />
                   </td>
@@ -317,7 +336,12 @@ export function AssemblyPlan({ data, today, now }: { data: PlanningData; today: 
                       <strong>{it.item}</strong>
                       {it.customerNumber && <small className="muted cell-note">{it.customerNumber}</small>}
                     </td>
-                    <td>{it.side || '—'}</td>
+                    <td>
+                      {it.side || '—'}
+                      <small className="muted cell-note">
+                        {tp.assembly.pack} {formatQuantity(packOf(it, capacity), locale)}
+                      </small>
+                    </td>
                     <td className="n">{formatQuantity(it.stock, locale)}</td>
                     <td className="cell-until">
                       <strong className={status.shortDay === null ? undefined : 'cell-short'}>{untilText(status.shortDay)}</strong>
@@ -332,8 +356,8 @@ export function AssemblyPlan({ data, today, now }: { data: PlanningData; today: 
                           inputMode="numeric"
                           aria-label={`${it.item} ${slotLabel(slot)}`}
                           value={qty(slot, it.item) || ''}
-                          disabled={past(slot)}
                           onChange={(e) => setCell(slot, it.item, e.target.value)}
+                          onBlur={() => roundCell(slot, it)}
                         />
                       </td>
                     ))}
@@ -381,6 +405,12 @@ export function AssemblyPlan({ data, today, now }: { data: PlanningData; today: 
           <dd>{tp.explain.auto}</dd>
           <dt>{tp.assembly.planDays}</dt>
           <dd>{tp.explain.planDays}</dd>
+          <dt>{tp.explain.pack}</dt>
+          <dd>{tp.explain.packText}</dd>
+          <dt>{tp.explain.sides}</dt>
+          <dd>{tp.explain.sidesText}</dd>
+          <dt>{tp.explain.reset}</dt>
+          <dd>{tp.explain.resetText}</dd>
         </dl>
       </div>
     </>

@@ -71,6 +71,7 @@ export function CapacityPage({ data }: { data: PlanningData }) {
                 <th>{tc.project}</th>
                 <th className="n">{tc.perShift}</th>
                 <th>{tc.shifts}</th>
+                <th className="n">{tc.pack}</th>
               </tr>
             </thead>
             <tbody>
@@ -102,6 +103,18 @@ export function CapacityPage({ data }: { data: PlanningData }) {
                         </label>
                       ))}
                     </span>
+                  </td>
+                  <td className="n">
+                    <input
+                      className="plan-input plan-input-wide"
+                      inputMode="numeric"
+                      aria-label={`${tc.pack} ${row.line} ${row.project}`}
+                      value={row.pack}
+                      onChange={(e) => {
+                        const n = num(e.target.value);
+                        if (n !== null && n >= 1) setLine(row, { pack: Math.round(n) });
+                      }}
+                    />
                   </td>
                 </tr>
               ))}

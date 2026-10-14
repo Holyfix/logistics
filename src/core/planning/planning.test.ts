@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { dayFromParts } from '../dates';
 import { parseMasterData } from '../masterdata';
 import { parseCsv } from '../csv';
-import { assemblyItems, autoPlan, evaluateItem, plannedTotal, slotCapacity, slotSides, type PlanItem } from './assembly';
+import { assemblyItems, autoPlan, evaluateItem, packOf, plannedTotal, roundUpToPack, slotCapacity, slotSides, type PlanItem } from './assembly';
 import { sideGroup } from '../masterdata';
 import { cellKey, emptyPlan, parsePlanWorkbook, planFileName, planSheets, shiftSlots, sideOrder, slotKey } from './plan';
 import { DEFAULT_SETTINGS, destinationOf, lineCapacity, parseSettings, parseShifts, parseTime, settingsSheets, type PlanSettings } from './settings';
@@ -30,7 +30,7 @@ describe('nastavení', () => {
   it('uloží a znovu načte kapacity a dopravu', () => {
     const settings: PlanSettings = {
       firstShiftStart: 330,
-      lines: [{ line: 'ASSEMBLY', project: 'P100', perShift: 120, shifts: ['R', 'O'] }],
+      lines: [{ line: 'ASSEMBLY', project: 'P100', perShift: 120, shifts: ['R', 'O'], pack: 16 }],
       destinations: [
         { location: 'Lokalita A', coverDays: 2, transitHours: 24, arrival: 360 },
         { location: '', coverDays: 3, transitHours: 48, arrival: 420 },
@@ -40,7 +40,7 @@ describe('nastavení', () => {
   });
 
   it('bez řádku platí výchozí kapacita 0 a doprava 2 dny / 24 h / 6:00, jinak řádek „ostatní“', () => {
-    expect(lineCapacity(DEFAULT_SETTINGS, 'ASSEMBLY', 'P1')).toMatchObject({ perShift: 0, shifts: ['R', 'O', 'N'] });
+    expect(lineCapacity(DEFAULT_SETTINGS, 'ASSEMBLY', 'P1')).toMatchObject({ perShift: 0, shifts: ['R', 'O', 'N'], pack: 12 });
     expect(destinationOf(DEFAULT_SETTINGS, 'X')).toMatchObject({ coverDays: 2, transitHours: 24, arrival: 360 });
     const s = { ...DEFAULT_SETTINGS, destinations: [{ location: '', coverDays: 1, transitHours: 12, arrival: 300 }] };
     expect(destinationOf(s, 'X').transitHours).toBe(12);
@@ -55,7 +55,7 @@ describe('směny a soubor plánu', () => {
   });
 
   it('kapacita směny: ruční hodnota, jinak kapacita linky v pracovní dny', () => {
-    const line = { line: 'ASSEMBLY', project: 'P', perShift: 100, shifts: ['R', 'O'] as const };
+    const line = { line: 'ASSEMBLY', project: 'P', perShift: 100, shifts: ['R', 'O'] as const, pack: 12 };
     const [r, , n] = shiftSlots(MON, 1, 360);
     const sat = shiftSlots(MON + 5, 1, 360)[0]!;
     expect(slotCapacity(r!, { ...line, shifts: [...line.shifts] }, {})).toBe(100);
@@ -128,7 +128,7 @@ function coverageFile(item: string, location: string, project: string, days: num
 
 describe('díly montáže z coverage', () => {
   it('jen díly se souborem coverage; stav u zákazníka po dnech a chybějící kusy', () => {
-    const master = parseMasterData(parseCsv('Item Number;Project;Variant;Line\nA;;LHD;Assembly\nB;P;RHD;FOA\nC;P;LHD;ASSEMBLY'));
+    const master = parseMasterData(parseCsv('Item Number;Project;Variant;Line;Order Multiple\nA;;LHD;Assembly;16\nB;P;RHD;FOA;\nC;P;LHD;ASSEMBLY;'));
     if (!master.ok) throw new Error();
     // Stav u sekvencéra: čt 15. 10. −40, pá 16. 10. −30 (zlepšení), po 19. 10. −70.
     const cov = coverageFile('A', 'Lokalita A', 'P1', [MON + 3, MON + 4, MON + 7], [-40, -30, -70]);
@@ -142,6 +142,7 @@ describe('díly montáže z coverage', () => {
     // za koncem souboru zůstává poslední stav
     expect(items[0]!.base.at(-1)).toBe(-70);
     expect(items[0]!.stock).toBe(5);
+    expect(items[0]!.pack).toBe(16);
   });
 
   it('bez sloupce Line všechny díly ze souborů coverage', () => {
@@ -153,7 +154,7 @@ describe('díly montáže z coverage', () => {
   });
 });
 
-const item = (id: string, side: string, stock: number, base: number[]): PlanItem => ({
+const item = (id: string, side: string, stock: number, base: number[], pack = 0): PlanItem => ({
   item: id,
   customerNumber: '',
   description: '',
@@ -161,6 +162,7 @@ const item = (id: string, side: string, stock: number, base: number[]): PlanItem
   project: 'P',
   location: '',
   stock,
+  pack,
   base,
 });
 
@@ -228,6 +230,21 @@ describe('automatický plán', () => {
     expect([qty(cells, MON, 'R', 'A'), qty(cells, MON, 'O', 'A'), qty(cells, MON, 'N', 'A'), qty(cells, TUE, 'R', 'A')]).toEqual([30, 100, 100, 0]);
     // chybí 1000 − sklad 50 − 30 − 200 = 720
     expect(remaining).toBe(720);
+  });
+
+  it('po celých baleních: kusy navíc pokryjí další dny, do kapacity se vejdou jen celá balení', () => {
+    // A (balení 12) chybí po 50, út 20, st 100; B (balení linky 10) chybí po 25.
+    const a = item('A', 'LHD', 0, [-50, -70, -170, -170], 12);
+    const b = item('B', 'LHD', 0, [-25, -25, -25, -25]);
+    const line = { line: 'ASSEMBLY', project: 'P', perShift: 100, shifts: [], pack: 10 };
+    expect([packOf(a, line), packOf(b, line), roundUpToPack(50, 12), roundUpToPack(48, 12), roundUpToPack(5, 1)]).toEqual([12, 10, 60, 48, 5]);
+    const auto = { [slotKey(MON, 'R')]: 'LHD', [slotKey(MON, 'O')]: 'LHD' } as const;
+    const { cells, remaining } = autoPlan([a, b], days, {}, auto, slots, cap, (it) => packOf(it, line));
+    // R: A 60 (50 po + 10 na út), B 30 (25 → 3 balení); zbývá 10, A potřebuje út zbylých 10 → 12 se nevejde.
+    expect([qty(cells, MON, 'R', 'A'), qty(cells, MON, 'R', 'B')]).toEqual([60, 30]);
+    // O: A út 10 → 12 (2 navíc na st), st 98 → 84 (7 balení, víc kapacita nedovolí).
+    expect(qty(cells, MON, 'O', 'A')).toBe(96);
+    expect(remaining).toBe(14);
   });
 
   it('při stejném dni pokračuje stranou, která se právě vyrábí', () => {

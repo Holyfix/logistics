@@ -16,7 +16,12 @@ export interface LineCapacity {
   project: string;
   perShift: number;
   shifts: ShiftCode[];
+  /** Kusů v balení pro díly, které nemají balení (Order Multiple) v mapování; plánuje se po celých baleních. */
+  pack: number;
 }
+
+/** Výchozí počet kusů v balení hotového dílu. */
+export const DEFAULT_PACK = 12;
 
 /** Doprava k zákazníkovi podle destinace (složky souboru coverage). */
 export interface Destination {
@@ -48,7 +53,7 @@ const sameKey = (a: string, b: string) => a.trim().toUpperCase() === b.trim().to
 
 /** Kapacita linky pro projekt; bez řádku v nastavení 0 ks a všechny tři směny. */
 export function lineCapacity(settings: PlanSettings, line: string, project: string): LineCapacity {
-  return settings.lines.find((l) => sameKey(l.line, line) && sameKey(l.project, project)) ?? { line, project, perShift: 0, shifts: DEFAULT_SHIFTS };
+  return settings.lines.find((l) => sameKey(l.line, line) && sameKey(l.project, project)) ?? { line, project, perShift: 0, shifts: DEFAULT_SHIFTS, pack: DEFAULT_PACK };
 }
 
 /** Doprava pro destinaci: vlastní řádek, jinak řádek „ostatní“, jinak výchozí 2 dny pokrytí, 24 h, příjezd 6:00. */
@@ -97,6 +102,7 @@ const COLUMNS = {
   project: ['Projekt', 'Project'],
   perShift: ['Ks za směnu', 'Pcs per shift', 'Kapacita'],
   shifts: ['Směny po–pá', 'Směny', 'Shifts'],
+  pack: ['Ks v balení', 'Balení', 'Pcs per pack'],
   location: ['Destinace', 'Destination'],
   coverDays: ['Pokrytí u zákazníka (dny)', 'Pokrytí', 'Coverage days'],
   transit: ['Transit (h)', 'Transit'],
@@ -108,8 +114,8 @@ export function settingsSheets(settings: PlanSettings): PlanSheet[] {
   return [
     {
       name: 'Linky',
-      header: [COLUMNS.line[0], COLUMNS.project[0], COLUMNS.perShift[0], COLUMNS.shifts[0]],
-      rows: settings.lines.map((l) => [l.line, l.project, l.perShift, l.shifts.join(' ')]),
+      header: [COLUMNS.line[0], COLUMNS.project[0], COLUMNS.perShift[0], COLUMNS.shifts[0], COLUMNS.pack[0]],
+      rows: settings.lines.map((l) => [l.line, l.project, l.perShift, l.shifts.join(' '), l.pack]),
     },
     {
       name: 'Destinace',
@@ -132,9 +138,10 @@ export function parseSettings(sheets: readonly { name: string; data: Cell[][] }[
   };
 
   const lines: LineCapacity[] = [];
-  const lineTable = table(COLUMNS.line, COLUMNS.project, COLUMNS.perShift, COLUMNS.shifts);
+  const lineTable = table(COLUMNS.line, COLUMNS.project, COLUMNS.perShift, COLUMNS.shifts, COLUMNS.pack);
   for (const row of lineTable?.rows ?? []) {
-    const [line, project, perShift, shifts] = lineTable!.cols;
+    const [line, project, perShift, shifts, pack] = lineTable!.cols;
+    const packQty = pack === -1 ? null : cellNumber(row[pack!]);
     const name = cellText(row[line!]).toUpperCase();
     if (!name) continue;
     lines.push({
@@ -142,6 +149,7 @@ export function parseSettings(sheets: readonly { name: string; data: Cell[][] }[
       project: project === -1 ? '' : cellText(row[project!]),
       perShift: Math.max(0, (perShift === -1 ? null : cellNumber(row[perShift!])) ?? 0),
       shifts: shifts === -1 ? DEFAULT_SHIFTS : parseShifts(row[shifts!]),
+      pack: packQty !== null && packQty >= 1 ? Math.round(packQty) : DEFAULT_PACK,
     });
   }
 
