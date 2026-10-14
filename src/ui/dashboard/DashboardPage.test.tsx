@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { cleanup, render, screen, within } from '@testing-library/react';
 import { parseCallOffExport, type CallOffExport } from '../../core/calloffs/parse';
 import type { CoverageSource } from '../../core/coverage/compute';
 import { parseCsv } from '../../core/csv';
@@ -65,12 +65,9 @@ const state: DataState = {
 const kpi = (label: string) => screen.getAllByText(label).find((el) => el.classList.contains('kpi-label'))!.closest('.kpi')!;
 
 describe('DashboardPage', () => {
-  afterEach(() => {
-    cleanup();
-    localStorage.clear();
-  });
+  afterEach(cleanup);
 
-  it('dlaždice a seznamy, přepnutí na úkoly na dnes', () => {
+  it('dlaždice a seznamy', () => {
     localStorage.setItem('logistics-locale', 'cs');
     render(
       <I18nProvider>
@@ -93,14 +90,5 @@ describe('DashboardPage', () => {
     const changes = screen.getByRole('heading', { name: 'Změny v odvolávkách' }).closest('.panel') as HTMLElement;
     expect(within(changes).getByText('+100')).toBeTruthy();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Úkoly na dnes' }));
-    const crit = screen.getByRole('heading', { name: /Hoří/ }).closest('.panel') as HTMLElement;
-    expect(crit.querySelector('li')!.textContent).toContain('FG-L – u zákazníka chybí 50 ks od zítřka');
-    const warn = screen.getByRole('heading', { name: /Pozor/ }).closest('.panel') as HTMLElement;
-    const texts = [...warn.querySelectorAll('.task-title')].map((el) => el.textContent);
-    expect(texts).toContain('FG-R – bez transitu chybí 30 ks od zítřka, čeká na transit');
-    expect(texts).toContain('Sklad Stock_1.csv – soubor je starý, nahrajte nový export');
-    expect(texts).toContain('FG-L – odvolávky +100 ks (+100 %)');
-    expect(localStorage.getItem('logistics-dashboard-view')).toBe('tasks');
   });
 });

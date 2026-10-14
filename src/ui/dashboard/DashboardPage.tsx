@@ -1,7 +1,6 @@
-import { useMemo, useState, type ReactNode } from 'react';
+import { useMemo, useState } from 'react';
 import { buildCoverage } from '../../core/coverage/compute';
 import {
-  bySeverity,
   callOffDigest,
   componentAlerts,
   customerAlerts,
@@ -19,47 +18,17 @@ import { localToday, useComponents } from '../components/useComponents';
 import { useData } from '../data/DataProvider';
 import { Icon } from '../icons';
 
-type View = 'tiles' | 'tasks';
-const VIEW_KEY = 'logistics-dashboard-view';
-/** Kolik řádků ukazují seznamy a sekce úkolů, než se rozbalí. */
+/** Kolik řádků ukazují seznamy, než se rozbalí. */
 const LIST_ROWS = 8;
-const TASK_ROWS = 12;
-
-function readView(): View {
-  try {
-    return localStorage.getItem(VIEW_KEY) === 'tasks' ? 'tasks' : 'tiles';
-  } catch {
-    return 'tiles';
-  }
-}
-
-function saveView(view: View) {
-  try {
-    localStorage.setItem(VIEW_KEY, view);
-  } catch {
-    // Bez úložiště se podoba jen nezapamatuje.
-  }
-}
-
-/** Úkol v podobě „Úkoly na dnes“: jeden řádek z kteréhokoli modulu. */
-interface Task {
-  key: string;
-  severity: Severity;
-  day: DayNumber | null;
-  module: 'coverage' | 'components' | 'calloffs' | 'data';
-  title: ReactNode;
-  meta: string;
-}
 
 const Dot = ({ tone }: { tone: Severity | 'ok' }) => <i className={`dot dot-${tone}`} aria-hidden="true" />;
 
-/** Dashboard: co je dnes potřeba řešit z dostupných modulů, jako dlaždice se seznamy nebo jako seznam úkolů. */
+/** Dashboard: co je dnes potřeba řešit z dostupných modulů, jako dlaždice se seznamy. */
 export function DashboardPage({ today = localToday(), now = Date.now() }: { today?: DayNumber; now?: number } = {}) {
   const { t, locale } = useI18n();
   const td = t.dashboard;
   const { state } = useData();
   const data = state.data;
-  const [view, setView] = useState<View>(readView);
   const components = useComponents(today);
 
   const customer = useMemo(() => {
@@ -122,81 +91,11 @@ export function DashboardPage({ today = localToday(), now = Date.now() }: { toda
     const date = new Date(ms);
     return formatDayShort(`${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`, locale);
   };
-  const fromLabel = (d: DayNumber) => (d === today ? td.fromToday : d === today + 1 ? td.fromTomorrow : `${td.customer.from2} ${dayLabel(d)}`);
   const sourceLabel = (f: Freshness) => td.data.kinds[f.kind];
   /** Zákazník pokryt do: den před prvním chybějícím dnem (i víkend); chybí už dnes = nepokryto. */
   const coveredUntil = (shortDay: DayNumber) => (shortDay <= today ? td.components.notCovered : dayLabel(shortDay - 1));
   const count = <T extends { severity: Severity }>(list: readonly T[] | null, s: Severity) => (list ?? []).filter((a) => a.severity === s).length;
   const stale = freshness.filter((f) => f.stale);
-
-  // Úkoly ze všech modulů.
-  const tasks: Task[] = [
-    ...(customer ?? []).map(
-      (a): Task => ({
-        key: `c|${a.id}`,
-        severity: a.severity,
-        day: a.day,
-        module: 'coverage',
-        title: (
-          <>
-            <strong>{a.item || a.customerNumber}</strong> – {a.transitOnly ? td.customer.taskTransit : td.customer.taskShort} {pcs(a.missing)} {fromLabel(a.day)}
-            {a.transitOnly && `, ${td.customer.taskTransitEnd}`}
-          </>
-        ),
-        meta: [t.modules.coverage.title, a.project, a.location].filter(Boolean).join(' · '),
-      }),
-    ),
-    ...(componentList ?? []).map(
-      (a): Task => ({
-        key: `k|${a.item}`,
-        severity: a.severity,
-        day: a.day,
-        module: 'components',
-        title: (
-          <>
-            <strong>{a.item}</strong> – {td.components.taskShort} {dayLabel(a.day)} ({pcs(a.missing)})
-            {a.customerShortDay !== null &&
-              `; ${a.customerShortDay <= today ? td.components.taskCustomerNone : `${td.components.taskCustomer} ${coveredUntil(a.customerShortDay)}`}`}
-          </>
-        ),
-        meta: [t.modules.components.title, a.description].filter(Boolean).join(' · '),
-      }),
-    ),
-    ...(calloffs?.alerts ?? []).map(
-      (a): Task => ({
-        key: `o|${a.item}`,
-        severity: a.severity,
-        day: null,
-        module: 'calloffs',
-        title: (
-          <>
-            <strong>{a.item}</strong> –{' '}
-            {a.backlog > 0 ? `${td.calloffs.taskBacklog} ${pcs(a.backlog)}` : `${td.calloffs.taskChange} ${formatSigned(a.diff, locale)} ${td.pcs}`}
-            {a.backlog <= 0 && a.percent !== null && ` (${formatPercent(a.percent, locale, true)})`}
-            {a.backlog > 0 && a.changedWeeks > 0 && `; ${td.calloffs.taskChange} ${formatSigned(a.diff, locale)} ${td.pcs}`}
-          </>
-        ),
-        meta: [t.modules.calloffs.title, a.description, calloffs?.previous ? `CW ${calloffs.week} ${td.calloffs.against} CW ${calloffs.previous.week}` : ''].filter(Boolean).join(' · '),
-      }),
-    ),
-    ...stale.map(
-      (f): Task => ({
-        key: `d|${f.kind}|${f.label}`,
-        severity: 'warn',
-        day: null,
-        module: 'data',
-        title: (
-          <>
-            <strong>{sourceLabel(f)}</strong>
-            {f.label && ` ${f.label}`} – {f.missing ? td.data.taskMissing : td.data.taskStale}
-          </>
-        ),
-        meta: [t.modules.data.title, f.week ? `CW ${f.week.week}/${f.week.year}` : modifiedLabel(f.modified)].filter((x) => x && x !== '—').join(' · '),
-      }),
-    ),
-  ];
-  const moduleOrder = { data: 0, coverage: 1, components: 2, calloffs: 3 };
-  tasks.sort((a, b) => bySeverity(a, b) || (a.day ?? Infinity) - (b.day ?? Infinity) || moduleOrder[a.module] - moduleOrder[b.module]);
 
   const tiles = (
     <div className="kpis">
@@ -243,29 +142,11 @@ export function DashboardPage({ today = localToday(), now = Date.now() }: { toda
 
   return (
     <section className="page" aria-labelledby="page-title">
-      <div className="page-head-row">
-        {head}
-        <div className="segmented" role="group" aria-label={td.views.label}>
-          {(['tiles', 'tasks'] as const).map((v) => (
-            <button
-              key={v}
-              type="button"
-              aria-pressed={view === v}
-              onClick={() => {
-                setView(v);
-                saveView(v);
-              }}
-            >
-              {td.views[v]}
-            </button>
-          ))}
-        </div>
-      </div>
+      {head}
 
       {tiles}
 
-      {view === 'tiles' ? (
-        <div className="dash-grid">
+      <div className="dash-grid">
           <CustomerPanel alerts={customer} dayLabel={dayLabel} pcs={pcs} />
           <ComponentPanel alerts={componentList} dayLabel={dayLabel} coveredUntil={coveredUntil} pcs={pcs} />
           <CallOffPanel digest={calloffs} pcs={pcs} />
@@ -300,9 +181,7 @@ export function DashboardPage({ today = localToday(), now = Date.now() }: { toda
             </div>
           </div>
         </div>
-      ) : (
-        <TaskList tasks={tasks} />
-      )}
+
     </section>
   );
 }
@@ -495,49 +374,5 @@ function CallOffPanel({ digest, pcs }: { digest: ReturnType<typeof callOffDigest
       )}
       <MoreButton total={alerts.length} shown={LIST_ROWS} all={all} toggle={toggle} />
     </div>
-  );
-}
-
-function TaskSection({ severity, tasks }: { severity: Severity; tasks: Task[] }) {
-  const { t, locale } = useI18n();
-  const { all, toggle } = useShowAll();
-  const rows = all ? tasks : tasks.slice(0, TASK_ROWS);
-  return (
-    <div className="panel">
-      <div className="panel-head">
-        <h2>
-          <Dot tone={severity} /> {t.dashboard.severity[severity]}
-        </h2>
-        <span className="muted">{formatQuantity(tasks.length, locale)}</span>
-      </div>
-      {tasks.length === 0 ? (
-        <p className="muted">{t.dashboard.none}</p>
-      ) : (
-        <ol className="task-list">
-          {rows.map((task) => (
-            <li key={task.key}>
-              <span className="task-title">{task.title}</span>
-              <span className="task-meta muted">
-                {task.meta} ·{' '}
-                <a className="link-button" href={`#${task.module}`}>
-                  {t.dashboard.open} →
-                </a>
-              </span>
-            </li>
-          ))}
-        </ol>
-      )}
-      <MoreButton total={tasks.length} shown={TASK_ROWS} all={all} toggle={toggle} />
-    </div>
-  );
-}
-
-function TaskList({ tasks }: { tasks: Task[] }) {
-  return (
-    <>
-      {(['crit', 'warn', 'info'] as const).map((s) => (
-        <TaskSection key={s} severity={s} tasks={tasks.filter((task) => task.severity === s)} />
-      ))}
-    </>
   );
 }

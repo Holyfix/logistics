@@ -53,7 +53,7 @@ export const en: Messages = {
         'Critical components by call-offs and our stock',
         'Call-off changes against the previous export and overdue quantities',
         'Freshness of loaded data',
-        'Two views: tiles with lists, or today’s tasks sorted by urgency',
+        'Tiles with key figures and lists linking to the module',
       ],
     },
     kpi: {
@@ -363,18 +363,14 @@ export const en: Messages = {
   dashboard: {
     noData: 'The dashboard combines call-offs, customer coverage, the bill of materials and stock. No data is loaded yet.',
     noDataAction: 'Load data',
-    views: { label: 'View', tiles: 'Tiles and lists', tasks: 'Today’s tasks' },
     today: 'today',
     tomorrow: 'tomorrow',
-    fromToday: 'from today',
-    fromTomorrow: 'from tomorrow',
     pcs: 'pcs',
     open: 'Open',
     more: 'and',
     showAll: 'Show all',
     showLess: 'Show less',
     none: 'Nothing to handle.',
-    severity: { crit: 'Urgent: today and tomorrow', warn: 'Attention', info: 'For information' },
     customer: {
       heading: 'Critical parts at the customer',
       sub: 'customer coverage from today, with transit',
@@ -387,10 +383,6 @@ export const en: Messages = {
       from: 'Missing from',
       missing: 'Missing pcs',
       transitOnly: 'waiting for transit',
-      taskShort: 'missing at the customer',
-      taskTransit: 'missing without transit',
-      taskTransitEnd: 'waiting for transit',
-      from2: 'from',
     },
     components: {
       heading: 'Critical components',
@@ -403,10 +395,7 @@ export const en: Messages = {
       missing: 'Missing pcs',
       customer: 'Customer covered until',
       products: 'Finished parts',
-      taskShort: 'component runs out',
-      taskCustomer: 'customer covered until',
       notCovered: 'not covered',
-      taskCustomerNone: 'customer already not covered',
     },
     calloffs: {
       heading: 'Call-off changes',
@@ -421,9 +410,6 @@ export const en: Messages = {
       percent: 'Change',
       weeks: 'Weeks changed',
       backlogCol: 'Overdue',
-      taskBacklog: 'overdue',
-      taskChange: 'call-offs',
-      taskWeeks: 'weeks changed',
     },
     data: {
       heading: 'Data freshness',
@@ -440,8 +426,6 @@ export const en: Messages = {
       fresh: 'up to date',
       justNow: 'just now',
       hoursAgo: '{n} h ago',
-      taskStale: 'file is old, upload a new export',
-      taskMissing: 'file is missing',
     },
   },
   components: {

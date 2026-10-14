@@ -51,7 +51,7 @@ export const cs = {
         'Kritické komponenty podle odvolávek a našeho skladu',
         'Změny v odvolávkách proti předchozímu exportu a nedodáno po termínu',
         'Čerstvost načtených dat',
-        'Dvě podoby: dlaždice se seznamy, nebo úkoly na dnes seřazené podle naléhavosti',
+        'Dlaždice s hlavními čísly a seznamy s odkazem do modulu',
       ],
     },
     kpi: {
@@ -365,18 +365,14 @@ export const cs = {
   dashboard: {
     noData: 'Dashboard skládá přehled z odvolávek, coverage od zákazníka, kusovníku a skladu. Zatím nejsou načtená žádná data.',
     noDataAction: 'Načíst data',
-    views: { label: 'Podoba', tiles: 'Dlaždice a seznamy', tasks: 'Úkoly na dnes' },
     today: 'dnes',
     tomorrow: 'zítra',
-    fromToday: 'od dneška',
-    fromTomorrow: 'od zítřka',
     pcs: 'ks',
     open: 'Otevřít',
     more: 'a další',
     showAll: 'Zobrazit všechny',
     showLess: 'Zobrazit méně',
     none: 'Nic k řešení.',
-    severity: { crit: 'Hoří: dnes a zítra', warn: 'Pozor', info: 'Pro informaci' },
     customer: {
       heading: 'Kritické díly u zákazníka',
       sub: 'coverage od zákazníka, od dneška, s transitem',
@@ -389,10 +385,6 @@ export const cs = {
       from: 'Chybí od',
       missing: 'Chybí ks',
       transitOnly: 'čeká na transit',
-      taskShort: 'u zákazníka chybí',
-      taskTransit: 'bez transitu chybí',
-      taskTransitEnd: 'čeká na transit',
-      from2: 'od',
     },
     components: {
       heading: 'Kritické komponenty',
@@ -405,10 +397,7 @@ export const cs = {
       missing: 'Chybí ks',
       customer: 'Zákazník pokryt do',
       products: 'Hotové díly',
-      taskShort: 'komponenta dojde',
-      taskCustomer: 'zákazník pokryt do',
       notCovered: 'nepokryto',
-      taskCustomerNone: 'zákazník už nepokrytý',
     },
     calloffs: {
       heading: 'Změny v odvolávkách',
@@ -423,9 +412,6 @@ export const cs = {
       percent: 'Změna',
       weeks: 'Týdnů se změnou',
       backlogCol: 'Nedodáno',
-      taskBacklog: 'nedodáno po termínu',
-      taskChange: 'odvolávky',
-      taskWeeks: 'týdnů se změnou',
     },
     data: {
       heading: 'Čerstvost dat',
@@ -442,8 +428,6 @@ export const cs = {
       fresh: 'aktuální',
       justNow: 'před chvílí',
       hoursAgo: 'před {n} h',
-      taskStale: 'soubor je starý, nahrajte nový export',
-      taskMissing: 'soubor chybí',
     },
   },
   components: {
