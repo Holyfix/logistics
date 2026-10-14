@@ -24,7 +24,8 @@ export function usePlanSaving() {
     async (project: ProjectPlan, force = false): Promise<SaveResult> => {
       const path = project.saved?.path ?? `${planFolder(data)}/${planFileName(project.line, project.project)}`;
       const info = new Map<string, PlanItemInfo>(project.items.map((it) => [it.item, it]));
-      const plan = project.plan;
+      // Do souboru jde výsledný plán: i množství dopočítaná na automatických směnách.
+      const plan = { ...project.plan, cells: project.result.cells };
       const result = await saveFile(path, () => xlsxBlob(planSheets(plan, info)), project.saved?.lastModified ?? null, force);
       if (result.status === 'saved') {
         updateData((d) => ({

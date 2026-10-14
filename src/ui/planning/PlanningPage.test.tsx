@@ -88,42 +88,50 @@ describe('PlanningPage', () => {
     expect(within(screen.getByRole('table')).getByText('FOA').closest('tr')!.textContent).toContain('připravujeme');
   });
 
-  it('plán jako coverage: plánovací dny, návrh podle prvních nepokrytých dnů a přepočet coverage', () => {
+  it('plán jako coverage: plán vlevo, kusy se přičtou do celé coverage, automatické směny podle strany', () => {
     renderPage();
     fireEvent.click(screen.getByRole('button', { name: 'P1' }));
     expect(screen.getByRole('tab', { name: 'ASSEMBLY' }).getAttribute('aria-selected')).toBe('true');
     expect(kpi('Nepokryté díly')).toBe('2');
     expect(kpi('Pokryto do (nejhorší díl)')).toBe('St 14. 10.');
-    // Výchozí 2 plánovací dny po směnách, pak dny coverage do 25. 10.
+    // Výchozí 2 plánovací dny po směnách vlevo, vpravo coverage po dnech do 25. 10.
     expect(document.querySelectorAll('th.plan-shift').length).toBe(6);
-    const coverageRow = (item: string) => input(`${item} Po 12. 10. R`).closest('tr')!.nextElementSibling!;
-    const cells = (item: string) => [...coverageRow(item).querySelectorAll('td')].slice(0, 5).map((td) => td.textContent);
-    expect(cells('FG-L')).toEqual(['20', '30', '20', '-60', '-60']);
-    expect(coverageRow('FG-L').querySelectorAll('td')[0]!.colSpan).toBe(3);
+    const row = (item: string) => input(`${item} Po 12. 10. R`).closest('tr')!;
+    const cov = (item: string) => [...row(item).querySelectorAll('td.plan-cov')].slice(0, 5).map((td) => td.textContent);
+    expect(row('FG-L').querySelectorAll('td.plan-cov').length).toBe(14);
+    expect(cov('FG-L')).toEqual(['20', '30', '20', '-60', '-60']);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Navrhnout plán' }));
-    // Ranní směna: nejdřív FG-L (chybí od čtvrtka), pak FG-R (od pátku).
-    expect(input('FG-L Po 12. 10. R').value).toBe('60');
-    expect(input('FG-R Po 12. 10. R').value).toBe('30');
-    expect(input('FG-L Út 13. 10. R').value).toBe('');
-    expect(cells('FG-L')).toEqual(['80', '90', '80', '0', '0']);
-    expect(kpi('Nepokryté díly')).toBe('0');
-    expect(kpi('Pokryto do (nejhorší díl)')).toBe('Ne 25. 10. a déle');
+    // 70 ks v úterý na noční: čtvrtek −60 → 10 (plán se přičte do všech dnů).
+    fireEvent.change(input('FG-L Út 13. 10. N'), { target: { value: '70' } });
+    expect(cov('FG-L')).toEqual(['90', '100', '90', '10', '10']);
+    expect(kpi('Nepokryté díly')).toBe('1');
     expect(screen.getAllByText('Neuložené změny').length).toBeGreaterThan(0);
     expect(screen.getByRole('tab', { name: 'ASSEMBLY •' })).toBeTruthy();
 
-    // Méně kusů FG-R: zákazník pokrytý jen do čtvrtka, v pátek chybí 20 ks.
-    fireEvent.change(input('FG-R Po 12. 10. R'), { target: { value: '10' } });
-    expect(kpi('Nepokryté díly')).toBe('1');
-    expect(cells('FG-R')[4]).toBe('-20');
-    expect(coverageRow('FG-R').querySelectorAll('td')[4]!.className).toContain('cell-negative');
+    // Odpolední směna automaticky RHD: FG-R se doplní sám (chybí 30 ks).
+    const auto = (label: string) => screen.getByRole('combobox', { name: `Automaticky ${label}` }) as HTMLSelectElement;
+    fireEvent.change(auto('Po 12. 10. O'), { target: { value: 'RHD' } });
+    expect(input('FG-R Po 12. 10. O').value).toBe('30');
+    expect(input('FG-L Po 12. 10. O').value).toBe('');
+    expect(input('FG-R Po 12. 10. O').closest('td')!.className).toContain('cell-auto');
+    expect(kpi('Nepokryté díly')).toBe('0');
 
-    // Plánovací dny: přidat třetí, ubrat až na pondělí (tam je plán).
+    // Přepsáním čísla je směna ruční: v pátek chybí 10 ks.
+    fireEvent.change(input('FG-R Po 12. 10. O'), { target: { value: '20' } });
+    expect(auto('Po 12. 10. O').value).toBe('');
+    expect(cov('FG-R')[4]).toBe('-10');
+    expect(row('FG-R').querySelectorAll('td.plan-cov')[4]!.className).toContain('cell-negative');
+
+    // Noční obě strany: doplní zbylých 10 ks FG-R.
+    fireEvent.change(auto('Po 12. 10. N'), { target: { value: 'BOTH' } });
+    expect(input('FG-R Po 12. 10. N').value).toBe('10');
+    expect(kpi('Nepokryté díly')).toBe('0');
+
+    // Plánovací dny: přidat třetí, ubrat jde jen po úterý (tam je plán).
     fireEvent.click(screen.getByRole('button', { name: 'Přidat plánovací den' }));
     expect(document.querySelectorAll('th.plan-shift').length).toBe(9);
     fireEvent.click(screen.getByRole('button', { name: 'Ubrat plánovací den' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Ubrat plánovací den' }));
-    expect(document.querySelectorAll('th.plan-shift').length).toBe(3);
+    expect(document.querySelectorAll('th.plan-shift').length).toBe(6);
     expect((screen.getByRole('button', { name: 'Ubrat plánovací den' }) as HTMLButtonElement).disabled).toBe(true);
   });
 

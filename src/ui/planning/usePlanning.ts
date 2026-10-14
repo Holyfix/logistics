@@ -1,21 +1,24 @@
 import { useMemo } from 'react';
 import type { DayNumber } from '../../core/dates';
-import { ASSEMBLY, assemblyItems, type PlanItem } from '../../core/planning/assembly';
-import { emptyPlan, type LinePlan } from '../../core/planning/plan';
+import { ASSEMBLY, assemblyItems, autoPlan, slotCapacity, type AutoPlanResult, type PlanItem } from '../../core/planning/assembly';
+import { emptyPlan, shiftSlots, type LinePlan } from '../../core/planning/plan';
 import { DEFAULT_SETTINGS, lineCapacity, type LineCapacity, type PlanSettings } from '../../core/planning/settings';
 import { stockByItem } from '../../core/stock';
 import type { SavedPlan } from '../../platform/loader';
 import { useData } from '../data/DataProvider';
 import { planKey, usePlanningDrafts } from './PlanningProvider';
 
-/** Plán linky pro jeden projekt: díly s požadavky, kapacita a plán (rozpracovaný, uložený, nebo prázdný). */
+/** Plán linky pro jeden projekt: díly, kapacita a plán (rozpracovaný, uložený, nebo prázdný). */
 export interface ProjectPlan {
   line: string;
   project: string;
   key: string;
   items: PlanItem[];
   capacity: LineCapacity;
+  /** Plán, jak ho zadal plánovač (automatické směny bez dopočítaných množství). */
   plan: LinePlan;
+  /** Výsledný plán: ruční směny + dopočítané automatické směny; tento se zobrazuje a ukládá. */
+  result: AutoPlanResult;
   saved: SavedPlan | null;
   /** Plán má neuložené změny. */
   dirty: boolean;
@@ -58,6 +61,7 @@ export function usePlanning(today: DayNumber): PlanningData | null {
 
   return useMemo(() => {
     if (!data || !items) return null;
+    const slots = shiftSlots(items.days[0] ?? today, items.days.length, settings.firstShiftStart);
     const byProject = new Map<string, PlanItem[]>();
     for (const it of items.items) byProject.set(it.project, [...(byProject.get(it.project) ?? []), it]);
     const projects = [...byProject.keys()]
@@ -66,13 +70,17 @@ export function usePlanning(today: DayNumber): PlanningData | null {
         const key = planKey(ASSEMBLY, project);
         const saved = data.plans.find((p) => p.plan.line === ASSEMBLY && p.plan.project === project) ?? null;
         const draft = drafts.plans[key];
+        const plan = draft ?? saved?.plan ?? emptyPlan(ASSEMBLY, project);
+        const capacity = lineCapacity(settings, ASSEMBLY, project);
+        const list = byProject.get(project)!;
         return {
           line: ASSEMBLY,
           project,
           key,
-          items: byProject.get(project)!,
-          capacity: lineCapacity(settings, ASSEMBLY, project),
-          plan: draft ?? saved?.plan ?? emptyPlan(ASSEMBLY, project),
+          items: list,
+          capacity,
+          plan,
+          result: autoPlan(list, items.days, plan.cells, plan.auto, slots, (slot) => slotCapacity(slot, capacity, plan.capacity)),
           saved,
           dirty: draft !== undefined,
         };
@@ -85,5 +93,5 @@ export function usePlanning(today: DayNumber): PlanningData | null {
       projects,
       byLineColumn: data.master?.data.hasLineColumn ?? false,
     };
-  }, [data, items, settings, drafts.plans, drafts.settings]);
+  }, [data, items, today, settings, drafts.plans, drafts.settings]);
 }

@@ -24,6 +24,11 @@ const YES = new Set(['ano', 'a', 'yes', 'y', 'x', '1', 'true', 'pravda']);
 
 export const SIDES = ['LHD', 'RHD'] as const;
 
+/** Strana pro výrobu: LHD nebo RHD podle začátku (např. „RHD HUD“ je RHD); jinak prázdná. */
+export function sideGroup(side: string): string {
+  return /^\s*(LHD|RHD)\b/i.exec(side)?.[1]?.toUpperCase() ?? '';
+}
+
 export interface MasterItem {
   item: string;
   /** Číslo dílu u zákazníka, jak je v mapování. */
@@ -133,7 +138,7 @@ export function parseMasterData(table: DataTable): MasterResult {
     if (items.has(item)) issue({ row: rowNo, column: MASTER_COLUMNS.item[0], value: item, message: 'duplicateItem' });
     const variant = text(row, col.variant);
     const side = sideOf(text(row, col.side), variant);
-    if (col.side !== -1 && side && !(SIDES as readonly string[]).includes(side)) {
+    if (col.side !== -1 && side && !sideGroup(side)) {
       issue({ row: rowNo, column: MASTER_COLUMNS.side[0], value: side, message: 'unknownSide' });
     }
     const customerNumber = text(row, col.customerNumber);

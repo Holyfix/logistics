@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { dayFromParts } from '../dates';
 import { parseMasterData } from '../masterdata';
 import { parseCsv } from '../csv';
-import { assemblyItems, evaluateItem, plannedByDay, proposePlan, slotCapacity, slotSides, type PlanItem } from './assembly';
+import { assemblyItems, autoPlan, evaluateItem, plannedTotal, slotCapacity, slotSides, type PlanItem } from './assembly';
+import { sideGroup } from '../masterdata';
 import { cellKey, emptyPlan, parsePlanWorkbook, planFileName, planSheets, shiftSlots, sideOrder, slotKey } from './plan';
 import { DEFAULT_SETTINGS, destinationOf, lineCapacity, parseSettings, parseShifts, parseTime, settingsSheets, type PlanSettings } from './settings';
 import type { Cell } from '../table';
@@ -77,6 +78,8 @@ describe('směny a soubor plánu', () => {
     plan.cells[cellKey(o, 'A')] = 5;
     plan.cells[cellKey(o, 'B')] = 7;
     plan.capacity[slotKey(MON + 5, 'R')] = 50;
+    plan.auto[slotKey(MON + 5, 'R')] = 'RHD';
+    plan.auto[slotKey(TUE, 'N')] = 'BOTH';
     const info = new Map([
       ['A', { customerNumber: 'C-A', description: 'Díl A', side: 'LHD' }],
       ['B', { customerNumber: 'C-B', description: 'Díl B', side: 'RHD' }],
@@ -89,13 +92,17 @@ describe('směny a soubor plánu', () => {
       ['ASSEMBLY', 'P100', '12.10.2026', 'O', 2, 'LHD', 'A', 'C-A', 'Díl A', 5],
     ]);
     expect(sheets[1]!.rows[0]).toEqual(['A', 'C-A', 'LHD', 10, 5, 15]);
+    expect(sheets[2]!.rows).toEqual([
+      ['13.10.2026', 'N', null, 'LHD+RHD'],
+      ['17.10.2026', 'R', 50, 'RHD'],
+    ]);
     const back = parsePlanWorkbook(toSheets(sheets), 'Plán/ASSEMBLY_P100.xlsx');
     expect(back).toEqual({ ok: true, value: plan });
   });
 
   it('linku a projekt vezme z názvu souboru, když nejsou ve sloupcích', () => {
     const r = parsePlanWorkbook([{ name: 'List1', data: [['Datum', 'Směna', 'Díl', 'Množství'], ['12.10.2026', 'n', 'A', 3]] }], 'Plán/ASSEMBLY_P200.xlsx');
-    expect(r).toEqual({ ok: true, value: { line: 'ASSEMBLY', project: 'P200', cells: { [cellKey('2026-10-12 N', 'A')]: 3 }, capacity: {} } });
+    expect(r).toEqual({ ok: true, value: { line: 'ASSEMBLY', project: 'P200', cells: { [cellKey('2026-10-12 N', 'A')]: 3 }, capacity: {}, auto: {} } });
     expect(planFileName('ASSEMBLY', 'P1/2')).toBe('ASSEMBLY_P1_2.xlsx');
   });
 });
@@ -131,8 +138,10 @@ describe('díly montáže z coverage', () => {
     expect(days[0]).toBe(MON);
     expect(days).toHaveLength(14);
     // před prvním dnem souboru platí počáteční stav (sklad + transit = 0)
-    expect(items[0]!.base.slice(0, 5)).toEqual([0, 0, 0, -40, -30]);
-    expect(items[0]).toMatchObject({ stock: 5, requirements: [{ day: MON + 3, qty: 40 }, { day: MON + 7, qty: 30 }] });
+    expect(items[0]!.base.slice(0, 9)).toEqual([0, 0, 0, -40, -30, -30, -30, -70, -70]);
+    // za koncem souboru zůstává poslední stav
+    expect(items[0]!.base.at(-1)).toBe(-70);
+    expect(items[0]!.stock).toBe(5);
   });
 
   it('bez sloupce Line všechny díly ze souborů coverage', () => {
@@ -144,7 +153,7 @@ describe('díly montáže z coverage', () => {
   });
 });
 
-const item = (id: string, side: string, stock: number, reqs: [number, number][], base: number[] = []): PlanItem => ({
+const item = (id: string, side: string, stock: number, base: number[]): PlanItem => ({
   item: id,
   customerNumber: '',
   description: '',
@@ -153,76 +162,81 @@ const item = (id: string, side: string, stock: number, reqs: [number, number][],
   location: '',
   stock,
   base,
-  requirements: reqs.map(([day, qty]) => ({ day, qty })),
 });
 
 describe('coverage s plánem', () => {
-  it('stav u zákazníka + náš sklad + naplánovaná výroba do konce dne', () => {
-    const it = item('A', 'LHD', 10, [], [30, 0, -40, -80]);
-    const cells = { [cellKey(slotKey(MON, 'R'), 'A')]: 20, [cellKey(slotKey(MON, 'N'), 'A')]: 10, [cellKey(slotKey(TUE, 'O'), 'A')]: 30 };
-    const planned = plannedByDay(cells, 'A', [MON, TUE, MON + 2, MON + 3]);
-    expect(planned).toEqual([30, 30, 0, 0]);
+  it('naplánované kusy se přičtou do všech dnů coverage', () => {
+    const it = item('A', 'LHD', 10, [30, 0, -40, -80]);
+    const cells = {
+      [cellKey(slotKey(MON - 1, 'N'), 'A')]: 99, // včerejší směna: už je v našem skladu
+      [cellKey(slotKey(MON, 'R'), 'A')]: 20,
+      [cellKey(slotKey(MON, 'N'), 'A')]: 10,
+      [cellKey(slotKey(MON + 3, 'O'), 'A')]: 30,
+      [cellKey(slotKey(MON, 'R'), 'B')]: 5,
+    };
+    const planned = plannedTotal(cells, 'A', [MON, TUE, MON + 2, MON + 3]);
+    expect(planned).toBe(60);
     const s = evaluateItem(it, planned);
     expect(s.withoutPlan).toEqual([40, 10, -30, -70]);
-    expect(s.coverage).toEqual([70, 70, 30, -10]);
-    expect(s).toMatchObject({ planned: 60, shortDay: 3, shortDayWithoutPlan: 2 });
-    expect(evaluateItem(it, [0, 0, 0, 100]).shortDay).toBe(2);
-    expect(evaluateItem(item('B', 'RHD', 0, [], [1, 2]), [0, 0]).shortDay).toBeNull();
+    // první nepokrytý den −30 + 60 = 30, i když část výroby je až ve čtvrtek
+    expect(s.coverage).toEqual([100, 70, 30, -10]);
+    expect(s).toMatchObject({ planned: 60, shortDay: 3, shortDayWithoutPlan: 2, missing: 10 });
+    expect(evaluateItem(item('B', 'RHD', 0, [1, 2]), 0)).toMatchObject({ shortDay: null, missing: 0 });
+  });
+
+  it('strana HUD patří ke své straně', () => {
+    expect(['LHD', 'LHD HUD', 'rhd hud', 'RHD', 'HUD', ''].map(sideGroup)).toEqual(['LHD', 'LHD', 'RHD', 'RHD', '', '']);
   });
 
   it('strany na směnách navazují', () => {
     const slots = shiftSlots(MON, 1, 360);
-    const a = item('A', 'LHD', 0, []);
+    const a = item('A', 'LHD HUD', 0, []);
     const b = item('B', 'RHD', 0, []);
     const sides = slotSides([a, b], slots, (s, i) => (s.code === 'O' && i.item === 'A' ? 0 : 1));
     expect(sides).toEqual([['LHD', 'RHD'], ['RHD'], ['RHD', 'LHD']]);
   });
 });
 
-describe('návrh plánu', () => {
+describe('automatický plán', () => {
+  const days = [MON, TUE, MON + 2, MON + 3];
   const slots = shiftSlots(MON, 2, 360);
   const cap = () => 100;
   const qty = (cells: Record<string, number>, day: number, code: 'R' | 'O' | 'N', id: string) => cells[cellKey(slotKey(day, code), id)] ?? 0;
 
-  it('kryje první chybějící dny všech dílů, po celých dnech, dokud je kapacita', () => {
-    // A chybí po 60 a út 60, B chybí po 50 a st 80. Kapacita 100 na směnu.
-    const a = item('A', 'LHD', 0, [
-      [MON, 60],
-      [TUE, 60],
-    ]);
-    const b = item('B', 'RHD', 0, [
-      [MON, 50],
-      [TUE + 1, 80],
-    ]);
-    const { cells, remaining } = proposePlan([a, b], slots, cap, {}, at(MON, 0));
-    // R: A 60 (den 1) + B 40; O: B 10 (den 1) + A 60 (den 2) + B 30; N: B 50.
-    expect([qty(cells, MON, 'R', 'A'), qty(cells, MON, 'R', 'B')]).toEqual([60, 40]);
-    expect([qty(cells, MON, 'O', 'A'), qty(cells, MON, 'O', 'B')]).toEqual([60, 40]);
-    expect([qty(cells, MON, 'N', 'A'), qty(cells, MON, 'N', 'B')]).toEqual([0, 50]);
+  it('směna zvolené strany kryje první nepokryté dny jejích dílů, po celých dnech', () => {
+    // A (LHD) chybí po 60 a út dalších 60, B (RHD HUD) chybí po 50 a st dalších 80, C (LHD) chybí út 50.
+    const a = item('A', 'LHD', 0, [-60, -120, -120, -120]);
+    const b = item('B', 'RHD HUD', 0, [-50, -50, -130, -130]);
+    const c = item('C', 'LHD', 0, [0, -50, -50, -50]);
+    const auto = { [slotKey(MON, 'R')]: 'LHD', [slotKey(MON, 'O')]: 'RHD', [slotKey(MON, 'N')]: 'BOTH' } as const;
+    const { cells, remaining } = autoPlan([a, b, c], days, {}, auto, slots, cap);
+    // R (LHD): A 60 (po), pak út: A 40 (C až po A, stejný den, ale A je první v pořadí)
+    expect([qty(cells, MON, 'R', 'A'), qty(cells, MON, 'R', 'B'), qty(cells, MON, 'R', 'C')]).toEqual([100, 0, 0]);
+    // O (RHD): B 50 (po) + 50 z 80 (st)
+    expect([qty(cells, MON, 'O', 'A'), qty(cells, MON, 'O', 'B')]).toEqual([0, 100]);
+    // N (obě): A zbylých 20 (út), C 50 (út), B zbylých 30 (st)
+    expect([qty(cells, MON, 'N', 'A'), qty(cells, MON, 'N', 'B'), qty(cells, MON, 'N', 'C')]).toEqual([20, 30, 50]);
     expect(remaining).toBe(0);
   });
 
-  it('odečte náš sklad a výrobu rozběhnutých směn, zbytek nepokrytých kusů vrátí', () => {
-    const a = item('A', 'LHD', 50, [
-      [MON, 100],
-      [TUE, 400],
-      [TUE + 1, 500],
-    ]);
-    const current = { [cellKey(slotKey(MON, 'R'), 'A')]: 30 };
-    // Pondělí 10:00: ranní běží a zůstane; sklad 50 + 30 pokryje 80 z prvních 100.
-    const { cells, remaining } = proposePlan([a], slots, cap, current, at(MON, 10));
-    expect(qty(cells, MON, 'R', 'A')).toBe(30);
-    expect([qty(cells, MON, 'O', 'A'), qty(cells, MON, 'N', 'A'), qty(cells, TUE, 'R', 'A'), qty(cells, TUE, 'N', 'A')]).toEqual([100, 100, 100, 100]);
-    // 920 chybějících − 5 směn × 100 = 420.
-    expect(remaining).toBe(420);
+  it('ruční směny a náš sklad se započítají, zbytek nepokrytých kusů vrátí', () => {
+    const a = item('A', 'LHD', 50, [-100, -500, -1000, -1000]);
+    const manual = { [cellKey(slotKey(MON, 'R'), 'A')]: 30, [cellKey(slotKey(MON, 'O'), 'A')]: 70 };
+    const auto = { [slotKey(MON, 'O')]: 'LHD', [slotKey(MON, 'N')]: 'LHD', [slotKey(TUE, 'R')]: 'RHD' } as const;
+    const { cells, remaining } = autoPlan([a], days, manual, auto, slots, cap);
+    // R zůstane ručně 30; O je automatická, ruční 70 se nahradí výpočtem; RHD směna pro A nic.
+    expect([qty(cells, MON, 'R', 'A'), qty(cells, MON, 'O', 'A'), qty(cells, MON, 'N', 'A'), qty(cells, TUE, 'R', 'A')]).toEqual([30, 100, 100, 0]);
+    // chybí 1000 − sklad 50 − 30 − 200 = 720
+    expect(remaining).toBe(720);
   });
 
   it('při stejném dni pokračuje stranou, která se právě vyrábí', () => {
-    const a = item('A', 'LHD', 0, [[MON, 50]]);
-    const b = item('B', 'RHD', 0, [[MON, 50], [TUE, 50]]);
-    const c = item('C', 'LHD', 0, [[TUE, 50]]);
-    const { cells } = proposePlan([a, b, c], slots.slice(0, 2), cap, {}, at(MON, 0));
-    // R: A, B (den 1); O: B pokračuje (RHD), pak C.
+    const a = item('A', 'LHD', 0, [-50, -50]);
+    const b = item('B', 'RHD', 0, [-50, -100]);
+    const c = item('C', 'LHD', 0, [0, -50]);
+    const auto = { [slotKey(MON, 'R')]: 'BOTH', [slotKey(MON, 'O')]: 'BOTH' } as const;
+    const { cells } = autoPlan([a, b, c], days.slice(0, 2), {}, auto, slots, cap);
+    // R: A, B (po); O: B pokračuje (RHD), pak C.
     expect([qty(cells, MON, 'R', 'A'), qty(cells, MON, 'R', 'B')]).toEqual([50, 50]);
     expect([qty(cells, MON, 'O', 'B'), qty(cells, MON, 'O', 'C')]).toEqual([50, 50]);
   });

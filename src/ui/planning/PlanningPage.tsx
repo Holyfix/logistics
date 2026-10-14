@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { dayToIso, weekday, type DayNumber } from '../../core/dates';
 import { formatDayShort, formatQuantity } from '../../core/format';
 import { LINES } from '../../core/masterdata';
-import { evaluateItem, plannedByDay } from '../../core/planning/assembly';
+import { evaluateItem, plannedTotal } from '../../core/planning/assembly';
 import { useI18n } from '../../i18n/I18nProvider';
 import { useData } from '../data/DataProvider';
 import { Icon } from '../icons';
@@ -91,7 +91,7 @@ function Overview({ data }: { data: PlanningData }) {
     const days = data.days;
     const earliest = (values: readonly (number | null)[]) => values.reduce<number | null>((w, v) => (v === null ? w : w === null ? v : Math.min(w, v)), null);
     return data.projects.map((p) => {
-      const statuses = p.items.map((it) => evaluateItem(it, plannedByDay(p.plan.cells, it.item, days)));
+      const statuses = p.items.map((it) => evaluateItem(it, plannedTotal(p.result.cells, it.item, days)));
       return {
         p,
         planned: sum(statuses.map((s) => s.planned)),

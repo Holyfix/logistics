@@ -3,6 +3,7 @@
 
 import { findColumn } from '../csv';
 import { dayToIso, parseDay, type DayNumber } from '../dates';
+import { sideGroup } from '../masterdata';
 import { cellDay, cellNumber, cellText, type Cell } from '../table';
 import { SHIFT_CODES, SHIFT_MINUTES, type PlanSheet, type ShiftCode } from './settings';
 
@@ -30,6 +31,20 @@ export function shiftSlots(from: DayNumber, days: number, firstShiftStart: numbe
   return slots;
 }
 
+/** Automatický plán směny: díly které strany se na směnu doplní samy (LHD a RHD = obě strany za sebou). */
+export const AUTO_MODES = ['LHD', 'RHD', 'BOTH'] as const;
+export type AutoMode = (typeof AUTO_MODES)[number];
+
+/** Text režimu v souboru plánu. */
+const AUTO_TEXT: Record<AutoMode, string> = { LHD: 'LHD', RHD: 'RHD', BOTH: 'LHD+RHD' };
+
+function parseAuto(text: string): AutoMode | null {
+  const t = text.toUpperCase().replace(/\s/g, '');
+  if (!t) return null;
+  if (t.includes('LHD') && t.includes('RHD')) return 'BOTH';
+  return t.startsWith('LHD') ? 'LHD' : t.startsWith('RHD') ? 'RHD' : null;
+}
+
 export interface LinePlan {
   line: string;
   project: string;
@@ -37,12 +52,14 @@ export interface LinePlan {
   cells: Record<string, number>;
   /** Kapacita směny zadaná ručně (svátek, přesčas o víkendu …) podle klíče směny; jinak platí kapacita linky. */
   capacity: Record<string, number>;
+  /** Směny s automatickým plánem podle klíče směny; množství se na nich dopočítají samy. */
+  auto: Record<string, AutoMode>;
 }
 
 export const cellKey = (slot: string, item: string) => `${slot}|${item}`;
 
 export function emptyPlan(line: string, project: string): LinePlan {
-  return { line, project, cells: {}, capacity: {} };
+  return { line, project, cells: {}, capacity: {}, auto: {} };
 }
 
 /** Název souboru plánu, např. „ASSEMBLY_P100.xlsx“ (znaky, které Windows v názvu nedovolí, nahradí „_“). */
@@ -57,7 +74,7 @@ function splitCell(key: string): { slot: string; item: string; day: DayNumber | 
   return { slot, item: key.slice(bar + 1), day: parseDay(iso), code: (SHIFT_CODES as readonly string[]).includes(code) ? (code as ShiftCode) : null };
 }
 
-/** Strany v pořadí výroby na směně: navazuje na stranu, kterou skončila předchozí směna (nejvýš jedno přepnutí). */
+/** Strany (LHD, RHD) v pořadí výroby na směně: navazuje na stranu, kterou skončila předchozí směna (nejvýš jedno přepnutí). */
 export function sideOrder(sides: ReadonlySet<string>, previous: string): string[] {
   const order = [...sides].sort();
   if (previous && order.includes(previous)) return [previous, ...order.filter((s) => s !== previous)];
@@ -78,6 +95,7 @@ const COLUMNS = {
   item: ['Díl', 'Item Number', 'Item'],
   qty: ['Množství', 'Qty', 'Quantity'],
   capacity: ['Kapacita', 'Capacity'],
+  auto: ['Automaticky', 'Auto'],
 } as const;
 
 const formatDate = (day: DayNumber) => {
@@ -87,7 +105,7 @@ const formatDate = (day: DayNumber) => {
 
 /**
  * Listy souboru plánu: „Plán“ (řádek = díl na směně v pořadí výroby, strany po blocích), „Přehled“ (díly × směny)
- * a „Kapacita směn“ (ručně zadané kapacity).
+ * a „Kapacita směn“ (ručně zadané kapacity a směny s automatickým plánem).
  */
 export function planSheets(plan: LinePlan, info: ReadonlyMap<string, PlanItemInfo>): PlanSheet[] {
   const entries = Object.entries(plan.cells)
@@ -101,7 +119,7 @@ export function planSheets(plan: LinePlan, info: ReadonlyMap<string, PlanItemInf
   let previous = '';
   for (const slot of slots) {
     const inSlot = entries.filter((e) => e.slot === slot.slot);
-    const side = (item: string) => info.get(item)?.side ?? '';
+    const side = (item: string) => sideGroup(info.get(item)?.side ?? '');
     const order = sideOrder(new Set(inSlot.map((e) => side(e.item))), previous);
     inSlot.sort((a, b) => order.indexOf(side(a.item)) - order.indexOf(side(b.item)) || a.item.localeCompare(b.item, 'en', { numeric: true }));
     inSlot.forEach((e, i) => {
@@ -122,8 +140,8 @@ export function planSheets(plan: LinePlan, info: ReadonlyMap<string, PlanItemInf
     }),
   };
 
-  const capacity = Object.entries(plan.capacity)
-    .map(([slot, value]) => ({ ...splitCell(`${slot}|`), value }))
+  const shiftKeys = [...new Set([...Object.keys(plan.capacity), ...Object.keys(plan.auto)])]
+    .map((slot) => splitCell(`${slot}|`))
     .filter((c) => c.day !== null && c.code !== null)
     .sort((a, b) => slotOrder(a) - slotOrder(b));
 
@@ -134,7 +152,11 @@ export function planSheets(plan: LinePlan, info: ReadonlyMap<string, PlanItemInf
       rows,
     },
     grid,
-    { name: 'Kapacita směn', header: [COLUMNS.day[0], COLUMNS.shift[0], COLUMNS.capacity[0]], rows: capacity.map((c) => [formatDate(c.day!), c.code, c.value]) },
+    {
+      name: 'Kapacita směn',
+      header: [COLUMNS.day[0], COLUMNS.shift[0], COLUMNS.capacity[0], COLUMNS.auto[0]],
+      rows: shiftKeys.map((c) => [formatDate(c.day!), c.code, plan.capacity[c.slot] ?? null, plan.auto[c.slot] ? AUTO_TEXT[plan.auto[c.slot]!] : null]),
+    },
   ];
 }
 
@@ -181,10 +203,14 @@ export function parsePlanWorkbook(sheets: readonly { name: string; data: Cell[][
   const capTable = find([COLUMNS.day, COLUMNS.shift, COLUMNS.capacity]);
   if (capTable && capTable !== planTable) {
     const [dayC, shiftC, capC] = capTable.cols;
+    const autoC = findColumn(capTable.header, COLUMNS.auto);
     for (const row of capTable.rows) {
       const slot = slotOf(row[dayC!], row[shiftC!]);
+      if (!slot) continue;
       const value = cellNumber(row[capC!]);
-      if (slot && value !== null && value >= 0) plan.capacity[slot] = value;
+      if (value !== null && value >= 0) plan.capacity[slot] = value;
+      const auto = autoC === -1 ? null : parseAuto(cellText(row[autoC]));
+      if (auto) plan.auto[slot] = auto;
     }
   }
   return { ok: true, value: plan };
