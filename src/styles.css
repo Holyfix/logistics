@@ -1049,3 +1049,13 @@ button:focus-visible {
     margin-bottom: 6px;
   }
 }
+
+/* Plán montáže jako coverage: řádek Plán (políčka) a pod ním řádek Coverage dílu. */
+.plan-grid tr.plan-coverage td {
+  font-weight: 600;
+  border-bottom: 2px solid var(--line);
+}
+
+.plan-grid tr.plan-coverage td.cell-negative {
+  font-weight: 700;
+}

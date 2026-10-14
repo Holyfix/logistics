@@ -2,8 +2,7 @@ import { useMemo } from 'react';
 import { dayToIso, weekday, type DayNumber } from '../../core/dates';
 import { formatDayShort, formatQuantity } from '../../core/format';
 import { LINES } from '../../core/masterdata';
-import { evaluateItem, slotCapacity } from '../../core/planning/assembly';
-import { cellKey } from '../../core/planning/plan';
+import { evaluateItem, plannedByDay } from '../../core/planning/assembly';
 import { useI18n } from '../../i18n/I18nProvider';
 import { useData } from '../data/DataProvider';
 import { Icon } from '../icons';
@@ -68,9 +67,9 @@ export function PlanningPage({ today = localToday(), now = localNow() }: { today
           </button>
         ))}
       </div>
-      {tab === 'overview' && <Overview data={data} today={today} />}
+      {tab === 'overview' && <Overview data={data} />}
       {tab === 'ASSEMBLY' && <AssemblyPlan data={data} today={today} now={now} />}
-      {tab === 'capacity' && <CapacityPage data={data} today={today} />}
+      {tab === 'capacity' && <CapacityPage data={data} />}
       {(tab === 'FOA' || tab === 'SLH' || tab === 'IMM') && (
         <div className="panel">
           <h2>{tab}</h2>
@@ -82,31 +81,32 @@ export function PlanningPage({ today = localToday(), now = localNow() }: { today
 }
 
 /** Přehled linek: potřeba, plán a vytížení na 7 dní, nepokryté díly a stav uložení. */
-function Overview({ data, today }: { data: PlanningData; today: DayNumber }) {
+function Overview({ data }: { data: PlanningData }) {
   const { t, locale } = useI18n();
   const tp = t.planning;
   const to = tp.overview;
   const { setTab, setProject } = usePlanningDrafts();
 
   const rows = useMemo(() => {
-    const slots = data.slots;
+    const days = data.days;
+    const earliest = (values: readonly (number | null)[]) => values.reduce<number | null>((w, v) => (v === null ? w : w === null ? v : Math.min(w, v)), null);
     return data.projects.map((p) => {
-      const qty = (key: string, item: string) => p.plan.cells[cellKey(key, item)] ?? 0;
-      const statuses = p.items.map((it) => evaluateItem(it, slots, (s) => qty(s.key, it.item), today));
-      const covered = statuses.map((s) => s.coveredWithPlan);
-      const worst: DayNumber | 'whole' | null = covered.includes(null) ? null : (covered.filter((c): c is DayNumber => typeof c === 'number').sort((a, b) => a - b)[0] ?? 'whole');
+      const statuses = p.items.map((it) => evaluateItem(it, plannedByDay(p.plan.cells, it.item, days)));
       return {
         p,
-        missing: sum(statuses.map((s) => s.missing)),
         planned: sum(statuses.map((s) => s.planned)),
-        capacity: sum(slots.map((s) => slotCapacity(s, p.capacity, p.plan.capacity))),
-        short: statuses.filter((s) => s.firstMissing !== null).length,
-        worst,
+        uncovered: statuses.filter((s) => s.shortDay !== null).length,
+        worst: earliest(statuses.map((s) => s.shortDay)),
+        worstWithout: earliest(statuses.map((s) => s.shortDayWithoutPlan)),
       };
     });
-  }, [data, today]);
+  }, [data]);
 
   const dayLabel = (d: DayNumber) => `${t.calloffs.weekdays[weekday(d) - 1]} ${formatDayShort(dayToIso(d), locale)}`;
+  const untilText = (short: number | null) => {
+    if (short === null) return `${dayLabel(data.days.at(-1)!)} ${tp.assembly.orLater}`;
+    return short === 0 ? tp.assembly.notCovered : dayLabel(data.days[short - 1]!);
+  };
   const open = (project: string) => {
     setProject(project);
     setTab('ASSEMBLY');
@@ -124,16 +124,14 @@ function Overview({ data, today }: { data: PlanningData; today: DayNumber }) {
             <tr>
               <th>{to.line}</th>
               <th>{to.project}</th>
-              <th className="n">{to.missing}</th>
-              <th className="n">{to.planned}</th>
-              <th className="n">{to.load}</th>
-              <th className="n">{to.short}</th>
+              <th className="n">{to.uncovered}</th>
               <th>{to.until}</th>
+              <th className="n">{to.planned}</th>
               <th>{to.status}</th>
             </tr>
           </thead>
           <tbody>
-            {rows.map(({ p, missing, planned, capacity, short, worst }) => (
+            {rows.map(({ p, planned, uncovered, worst, worstWithout }) => (
               <tr key={p.key}>
                 <td>
                   <strong>{p.line}</strong>
@@ -143,15 +141,16 @@ function Overview({ data, today }: { data: PlanningData; today: DayNumber }) {
                     <strong>{p.project || tp.noProject}</strong>
                   </button>
                 </td>
-                <td className="n">{formatQuantity(missing, locale)}</td>
+                <td className={`n${uncovered > 0 ? ' cell-negative' : ''}`}>
+                  {formatQuantity(uncovered, locale)} / {formatQuantity(p.items.length, locale)}
+                </td>
+                <td className="cell-until">
+                  <strong className={worst === null ? undefined : 'cell-short'}>{untilText(worst)}</strong>
+                  <small className="muted cell-note">
+                    {tp.assembly.withoutPlan} {untilText(worstWithout)}
+                  </small>
+                </td>
                 <td className="n">{formatQuantity(planned, locale)}</td>
-                <td className={`n${planned > capacity ? ' cell-negative' : ''}`}>{capacity > 0 ? `${Math.round((planned / capacity) * 100)} %` : <span className="muted">{to.noCapacity}</span>}</td>
-                <td className={`n${short > 0 ? ' cell-negative' : ''}`}>
-                  {formatQuantity(short, locale)} / {formatQuantity(p.items.length, locale)}
-                </td>
-                <td>
-                  <strong className={worst === 'whole' ? undefined : 'cell-short'}>{worst === 'whole' ? tp.assembly.whole : worst === null ? tp.assembly.notCovered : dayLabel(worst)}</strong>
-                </td>
                 <td>
                   {p.dirty ? (
                     <span className="save-dirty">{tp.status.dirty}</span>
@@ -170,7 +169,7 @@ function Overview({ data, today }: { data: PlanningData; today: DayNumber }) {
                 <td>
                   <strong>{line}</strong>
                 </td>
-                <td colSpan={7} className="muted">
+                <td colSpan={5} className="muted">
                   {tp.later}
                 </td>
               </tr>

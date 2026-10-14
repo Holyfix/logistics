@@ -1,26 +1,26 @@
-// Plán montáže: chybějící kusy u zákazníka podle souborů coverage (sklad + transit u sekvencéra + náš sklad),
-// vyhodnocení plánu po směnách a návrh plánu, který kryje první chybějící dny v rámci kapacity.
+// Plán montáže jako zákaznická coverage: stav u zákazníka po dnech (jeho sklad + transit − plán zákazníka podle
+// souboru coverage) + náš sklad + naplánovaná výroba. Návrh plánu kryje první chybějící dny v rámci kapacity.
 
 import type { CallOffExport } from '../calloffs/parse';
 import type { CoverageSource } from '../coverage/compute';
-import { weekday, type DayNumber } from '../dates';
+import { parseDay, weekday, type DayNumber } from '../dates';
 import { customerNeed, sequencerPlans } from '../demand';
 import { customerDisplay, type MasterData } from '../masterdata';
 import { cellKey, sideOrder, type ShiftSlot } from './plan';
-import { destinationOf, type LineCapacity, type PlanSettings } from './settings';
+import type { LineCapacity } from './settings';
 
-/** Kolik dní se plánuje: zbývající směny dneška a zítřek. */
+/** Kolik dní se plánuje po směnách, dokud si plánovač nepřidá další (dnes a zítra). */
 export const PLAN_DAYS = 2;
-/** Kolik dní souboru coverage se nejvýš načte (soubory sekvencéra mají obvykle 2–3 týdny). */
-const COVERAGE_DAYS = 42;
+/** Nejvíc dní coverage v plánu (soubory sekvencéra mají obvykle 2–3 týdny). */
+const MAX_COVERAGE_DAYS = 28;
+/** Bez souboru coverage: kolik dní zobrazit. */
+const DEFAULT_COVERAGE_DAYS = 14;
 
 export const ASSEMBLY = 'ASSEMBLY';
 
-/** Chybějící kusy u zákazníka v den `day` podle souboru coverage; musí být vyrobené do `deadline`. */
+/** Chybějící kusy u zákazníka v den `day` podle souboru coverage (přírůstek chybějícího množství). */
 export interface Requirement {
   day: DayNumber;
-  /** Termín výroby (minuty od 1. 1. 1970): odjezd auta, aby zákazník měl při příjezdu pokrytí na požadovaný počet dní. */
-  deadline: number;
   qty: number;
 }
 
@@ -33,8 +33,16 @@ export interface PlanItem {
   location: string;
   /** Náš sklad hotového dílu. */
   stock: number;
+  /** Stav u zákazníka na konci dne (jeho sklad + transit − plán zákazníka) pro dny `AssemblyData.days`. */
+  base: number[];
   /** Chybějící kusy po dnech souboru coverage (bez odečtu našeho skladu), seřazené podle dne. */
   requirements: Requirement[];
+}
+
+export interface AssemblyData {
+  /** Dny coverage od dneška do konce souborů coverage (i víkendy). */
+  days: DayNumber[];
+  items: PlanItem[];
 }
 
 export interface AssemblyInputs {
@@ -44,7 +52,6 @@ export interface AssemblyInputs {
   callOffs: CallOffExport | undefined;
   stock: ReadonlyMap<string, number> | undefined;
   today: DayNumber;
-  settings: PlanSettings;
 }
 
 /** Strana ze slova LHD nebo RHD v popisu (když ji mapování neuvádí). */
@@ -53,53 +60,38 @@ function sideFromText(text: string): string {
 }
 
 /**
- * Hotové díly pro montáž s požadavky zákazníka. Díly podle sloupce Line v mapování (ASSEMBLY); bez sloupce díly
- * ze souborů sekvencéra (coverage) a díly z mapování s projektem a stranou.
- * Projekt z mapování, jinak ze složky souboru coverage. Požadavky jen ze souboru coverage: přírůstek chybějícího
- * množství (sklad + transit u sekvencéra − plán zákazníka; chybějící kusy z minulých dnů patří do dneška).
- * Termín výroby = příjezd v den (den − pokrytí + 1) v čase příjezdu, minus transit.
+ * Hotové díly pro montáž: jen díly se souborem coverage (podle sloupce Line = ASSEMBLY v mapování, bez sloupce
+ * všechny díly ze souborů coverage). Projekt z mapování, jinak ze složky souboru coverage. Stav u zákazníka po dnech
+ * podle souboru; požadavky = přírůstek chybějícího množství (chybějící kusy z minulých dnů patří do dneška).
  */
-export function assemblyItems({ master, coverage = [], callOffs, stock, today, settings }: AssemblyInputs): PlanItem[] {
-  const days = Array.from({ length: COVERAGE_DAYS }, (_, k) => today + k);
+export function assemblyItems({ master, coverage = [], callOffs, stock, today }: AssemblyInputs): AssemblyData {
   const plans = sequencerPlans(coverage, master);
   const masterByItem = new Map([...(master?.items.values() ?? [])].map((m) => [m.item.toUpperCase(), m]));
   const callOffText = new Map((callOffs?.items ?? []).map((item, i) => [item.toUpperCase(), callOffs!.descriptions[i] ?? '']));
 
-  const candidates = new Set<string>();
-  if (master?.hasLineColumn) {
-    for (const [item, m] of masterByItem) if (m.line === ASSEMBLY) candidates.add(item);
-  } else {
-    for (const item of plans.keys()) candidates.add(item);
-    for (const [item, m] of masterByItem) if (m.project && m.side) candidates.add(item);
-  }
+  const candidates = master?.hasLineColumn ? [...plans.keys()].filter((item) => masterByItem.get(item)?.line === ASSEMBLY) : [...plans.keys()];
+  const last = Math.max(today + DEFAULT_COVERAGE_DAYS - 1, ...candidates.map((item) => plans.get(item)!.last));
+  const days = Array.from({ length: Math.min(MAX_COVERAGE_DAYS, last - today + 1) }, (_, k) => today + k);
 
-  const result: PlanItem[] = [];
-  for (const item of candidates) {
+  const items = candidates.map((item): PlanItem => {
     const m = masterByItem.get(item);
-    const plan = plans.get(item);
-    const { need, fixed } = plan ? customerNeed(days.map(() => 0), days, plan) : { need: [], fixed: [] };
-    const location = plan?.locations[0] ?? '';
-    const dest = destinationOf(settings, location);
-    const requirements: Requirement[] = [];
-    need.forEach((q, k) => {
-      if (q <= 1e-9 || !fixed[k]) return;
-      const day = days[k]!;
-      const deadline = (day - dest.coverDays + 1) * 1440 + dest.arrival - dest.transitHours * 60;
-      requirements.push({ day, deadline, qty: q });
-    });
-    const description = m?.description || plan?.description || callOffText.get(item) || '';
-    result.push({
+    const plan = plans.get(item)!;
+    const { need, fixed } = customerNeed(days.map(() => 0), days, plan);
+    const description = m?.description || plan.description || callOffText.get(item) || '';
+    return {
       item: m?.item ?? item,
       customerNumber: m?.customerNumber ? customerDisplay(m.customerNumber) : '',
       description,
       side: m?.side || sideFromText(description),
-      project: m?.project || plan?.projects[0] || '',
-      location,
+      project: m?.project || plan.projects[0] || '',
+      location: plan.locations[0] ?? '',
       stock: Math.max(0, stock?.get(item) ?? 0),
-      requirements,
-    });
-  }
-  return result.sort((a, b) => a.side.localeCompare(b.side) || a.item.localeCompare(b.item, 'en', { numeric: true }));
+      base: days.map((d) => plan.balance(d)),
+      requirements: need.flatMap((qty, k) => (qty > 1e-9 && fixed[k] ? [{ day: days[k]!, qty }] : [])),
+    };
+  });
+  items.sort((a, b) => a.side.localeCompare(b.side) || a.item.localeCompare(b.item, 'en', { numeric: true }));
+  return { days, items };
 }
 
 /** Kapacita směny: ručně zadaná, jinak kusů za směnu linky, když se směna v pracovní den jede. */
@@ -109,67 +101,43 @@ export function slotCapacity(slot: ShiftSlot, line: LineCapacity, overrides: Rea
   return weekday(slot.day) <= 5 && line.shifts.includes(slot.code) ? line.perShift : 0;
 }
 
-export interface ItemStatus {
-  /** Stav po každé směně: sklad + vyrobeno do konce směny − chybějící kusy s termínem do konce směny. Záporné = odeslání po termínu. */
-  balance: number[];
-  /** Chybějící kusy s termínem výroby v dané směně (první směna zahrnuje i starší termíny). */
-  due: number[];
-  planned: number;
-  /** Chybějící kusy v souborech coverage po odečtu našeho skladu. */
-  missing: number;
-  /** První den, kdy u zákazníka chybí díly (sklad + transit u sekvencéra + náš sklad); null = nic nechybí. */
-  firstMissing: DayNumber | null;
-  /** Poslední pracovní den pokrytý i s plánem; `whole` = celý soubor coverage, null = nepokryto ani dnes. */
-  coveredWithPlan: DayNumber | 'whole' | null;
-  /** Některé chybějící kusy plán nestihne vyrobit do termínu odeslání. */
-  late: boolean;
-}
-
-/** Poslední pracovní den před `day` (nejdřív dnes); null, když takový není. */
-function weekdayBefore(day: DayNumber, today: DayNumber): DayNumber | null {
-  for (let d = day - 1; d >= today; d--) if (weekday(d) <= 5) return d;
-  return null;
-}
-
-/** Den prvního požadavku, který nepokryje zásoba `supply`; null = pokryje všechny. */
-function firstUncovered(reqs: readonly Requirement[], supply: number): DayNumber | null {
-  let need = 0;
-  for (const r of reqs) {
-    need += r.qty;
-    if (need > supply + EPS) return r.day;
+/** Naplánovaná výroba dílu po dnech (součet směn dne) pro dny `days`. */
+export function plannedByDay(cells: Readonly<Record<string, number>>, item: string, days: readonly DayNumber[]): number[] {
+  const index = new Map(days.map((d, k) => [d, k]));
+  const result = days.map(() => 0);
+  for (const [key, qty] of Object.entries(cells)) {
+    const bar = key.indexOf('|');
+    if (key.slice(bar + 1) !== item) continue;
+    const day = parseDay(key.slice(0, bar).split(' ')[0] ?? '');
+    const k = day === null ? undefined : index.get(day);
+    if (k !== undefined) result[k]! += qty;
   }
-  return null;
+  return result;
 }
 
-/** Vyhodnotí plán dílu po směnách. `qty` vrátí množství dílu na směně. */
-export function evaluateItem(item: PlanItem, slots: readonly ShiftSlot[], qty: (slot: ShiftSlot) => number, today: DayNumber): ItemStatus {
-  const reqs = [...item.requirements].sort((a, b) => a.day - b.day);
-  const byDeadline = [...reqs].sort((a, b) => a.deadline - b.deadline);
-  const produced = slots.map(qty);
-  const due = slots.map(() => 0);
-  let r = 0;
-  slots.forEach((slot, k) => {
-    while (r < byDeadline.length && byDeadline[r]!.deadline <= slot.end) due[k]! += byDeadline[r++]!.qty;
-  });
-  let made = item.stock;
-  let needed = 0;
-  const balance = slots.map((_, k) => {
-    made += produced[k]!;
-    needed += due[k]!;
-    return made - needed;
-  });
-  const planned = produced.reduce((a, b) => a + b, 0);
-  const total = reqs.reduce((a, b) => a + b.qty, 0);
-  const withPlan = firstUncovered(reqs, item.stock + planned);
-  return {
-    balance,
-    due,
-    planned,
-    missing: Math.max(0, total - item.stock),
-    firstMissing: firstUncovered(reqs, item.stock),
-    coveredWithPlan: withPlan === null ? 'whole' : weekdayBefore(withPlan, today),
-    late: balance.some((b) => b < -EPS),
-  };
+export interface ItemStatus {
+  /** Coverage s plánem: stav u zákazníka + náš sklad + naplánovaná výroba do konce dne. */
+  coverage: number[];
+  /** Coverage bez plánu: stav u zákazníka + náš sklad. */
+  withoutPlan: number[];
+  planned: number;
+  /** Index prvního dne v záporu s plánem; null = pokryto celé období. */
+  shortDay: number | null;
+  /** Index prvního dne v záporu bez plánu; null = pokryto celé období. */
+  shortDayWithoutPlan: number | null;
+}
+
+const firstNegative = (values: readonly number[]) => {
+  const k = values.findIndex((v) => v < -EPS);
+  return k === -1 ? null : k;
+};
+
+/** Coverage dílu po dnech s plánem (`planned` po dnech) a bez něj. */
+export function evaluateItem(item: PlanItem, planned: readonly number[]): ItemStatus {
+  let made = 0;
+  const withoutPlan = item.base.map((b) => b + item.stock);
+  const coverage = withoutPlan.map((v, k) => v + (made += planned[k] ?? 0));
+  return { coverage, withoutPlan, planned: made, shortDay: firstNegative(coverage), shortDayWithoutPlan: firstNegative(withoutPlan) };
 }
 
 /** Strany na směnách v pořadí výroby (navazuje na předchozí směnu). */

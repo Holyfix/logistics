@@ -85,11 +85,12 @@ Filtry: zákazník, projekt, strana (LHD/RHD) z kmenových dat, hledání dílu.
 
 ### Plánování
 - Karty: **Přehled** · **ASSEMBLY** · **FOA** · **SLH** · **IMM** · **Kapacity**
-- Přehled: pro každou linku a projekt chybějící kusy podle coverage, plán a vytížení na dnes a zítra, díly s chybějícími kusy, pokryto s plánem do, stav uložení
-- ASSEMBLY (montáž): plán po směnách (díly × směny) na zbývající směny dneška a zítřek pro každý projekt; návrh plánu
-  kryje první chybějící dny podle coverage (sklad a transit u zákazníka + náš sklad) v rámci kapacity; ruční úpravy,
-  kapacita směn, pořadí stran (LHD a RHD nikdy zároveň), odeslání po termínu
-- Kapacity: kusů za směnu a směny po–pá pro linku a projekt, začátek směn, doprava podle destinace (pokrytí u zákazníka, transit, příjezd)
+- Přehled: pro každou linku a projekt nepokryté díly, pokryto do (s plánem a bez něj), naplánované kusy, stav uložení
+- ASSEMBLY (montáž): plán jako zákaznická coverage pro každý projekt; u dílu řádek plánu po směnách a řádek coverage
+  po dnech (stav u zákazníka + náš sklad + plán), který se s každým číslem přepočítá; plánovací dny se přidávají
+  a ubírají (výchozí dnes a zítra); návrh plánu kryje první nepokryté dny v rámci kapacity; ruční úpravy,
+  kapacita směn, pořadí stran (LHD a RHD nikdy zároveň)
+- Kapacity: kusů za směnu a směny po–pá pro linku a projekt, začátek směn
 - Plán se ukládá jako Excel do složky `Plan` (soubor na linku a projekt), dá se sdílet a aplikace ho zase načte
 - Později: FOA, SLH a IMM navázané na plán montáže přes kusovník, plán vs. skutečnost a prostoje (z MES)
 

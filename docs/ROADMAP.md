@@ -65,7 +65,7 @@ funkce (plánování).
 ### Fáze 7: Plánování (probíhá)
 - [x] Modul s kartami Přehled, ASSEMBLY, FOA, SLH, IMM, Kapacity; linka dílu ve sloupci Line v mapování
 - [x] Kapacity linek, směny a doprava k zákazníkovi (Plan/Kapacity.xlsx)
-- [x] Plán montáže po směnách na dnes a zítra: chybějící kusy z coverage, termín výroby podle pokrytí a transitu, návrh plánu, pořadí stran, uložení do Excelu
+- [x] Plán montáže jako coverage: řádek plánu po směnách a coverage po dnech, plánovací dny podle potřeby, návrh plánu, pořadí stran, uložení do Excelu
 - [ ] FOA, SLH: potřeba z plánu montáže přes kusovník
 - [ ] IMM: formy, kavity, přestavby
 - [ ] Plán vs. skutečnost a prostoje (exporty z MES)
