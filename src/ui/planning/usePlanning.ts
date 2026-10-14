@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import type { DayNumber } from '../../core/dates';
-import { ASSEMBLY, assemblyItems, autoPlan, slotCapacity, type AutoPlanResult, type PlanItem } from '../../core/planning/assembly';
+import { ASSEMBLY, assemblyItems, autoPlan, packOf, slotCapacity, type AutoPlanResult, type PlanItem } from '../../core/planning/assembly';
 import { emptyPlan, shiftSlots, type LinePlan } from '../../core/planning/plan';
 import { DEFAULT_SETTINGS, lineCapacity, type LineCapacity, type PlanSettings } from '../../core/planning/settings';
 import { stockByItem } from '../../core/stock';
@@ -80,7 +80,7 @@ export function usePlanning(today: DayNumber): PlanningData | null {
           items: list,
           capacity,
           plan,
-          result: autoPlan(list, items.days, plan.cells, plan.auto, slots, (slot) => slotCapacity(slot, capacity, plan.capacity)),
+          result: autoPlan(list, items.days, plan.cells, plan.auto, slots, (slot) => slotCapacity(slot, capacity, plan.capacity), (it) => packOf(it, capacity)),
           saved,
           dirty: draft !== undefined,
         };

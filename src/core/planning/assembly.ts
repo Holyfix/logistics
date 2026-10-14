@@ -18,6 +18,8 @@ const DEFAULT_COVERAGE_DAYS = 14;
 
 export const ASSEMBLY = 'ASSEMBLY';
 
+const EPS = 1e-9;
+
 export interface PlanItem {
   item: string;
   customerNumber: string;
@@ -27,6 +29,8 @@ export interface PlanItem {
   location: string;
   /** Náš sklad hotového dílu. */
   stock: number;
+  /** Kusů v balení podle mapování (Order Multiple); 0 = neuvedeno, platí balení linky. */
+  pack: number;
   /** Stav u zákazníka na konci dne (jeho sklad + transit − plán zákazníka) pro dny `AssemblyData.days`. */
   base: number[];
 }
@@ -77,6 +81,7 @@ export function assemblyItems({ master, coverage = [], callOffs, stock, today }:
       project: m?.project || plan.projects[0] || '',
       location: plan.locations[0] ?? '',
       stock: Math.max(0, stock?.get(item) ?? 0),
+      pack: m?.orderMultiple && m.orderMultiple >= 1 ? Math.round(m.orderMultiple) : 0,
       base: days.map((d) => plan.balance(d)),
     };
   });
@@ -89,6 +94,16 @@ export function slotCapacity(slot: ShiftSlot, line: LineCapacity, overrides: Rea
   const manual = overrides[slot.key];
   if (manual !== undefined) return manual;
   return weekday(slot.day) <= 5 && line.shifts.includes(slot.code) ? line.perShift : 0;
+}
+
+/** Kusů v balení dílu: z mapování, jinak balení linky (nejméně 1). */
+export function packOf(item: PlanItem, line: LineCapacity): number {
+  return Math.max(1, item.pack || line.pack);
+}
+
+/** Množství zaokrouhlené nahoru na celá balení. */
+export function roundUpToPack(qty: number, pack: number): number {
+  return pack > 1 ? Math.ceil(qty / pack - EPS) * pack : qty;
 }
 
 /** Naplánovaná výroba dílu celkem ve směnách dnů `days` (od dneška); starší směny už jsou v našem skladu. */
@@ -118,8 +133,6 @@ export interface ItemStatus {
   /** Kolik kusů i s plánem chybí do konce období (nejhlubší záporný stav). */
   missing: number;
 }
-
-const EPS = 1e-9;
 
 const firstNegative = (values: readonly number[]) => {
   const k = values.findIndex((v) => v < -EPS);
@@ -164,8 +177,9 @@ export interface AutoPlanResult {
 /**
  * Plán s dopočítanými automatickými směnami (`auto`, klíč směny → strana). Ruční směny zůstanou, jak jsou, a spolu
  * s naším skladem pokryjí nejdřívější chybějící kusy. Automatické směny se plní v pořadí `slots`: vždy díl zvolené
- * strany s nejdřívějším nepokrytým dnem (při shodě díl ze strany, která se právě vyrábí), po celých dnech, dokud je
- * kapacita. Chybějící kusy = přírůstek nejhlubšího záporného stavu coverage po dnech.
+ * strany s nejdřívějším nepokrytým dnem (při shodě díl ze strany, která se právě vyrábí), po celých dnech a celých
+ * baleních (`pack`; kusy navíc pokryjí další dny), dokud je kapacita. Chybějící kusy = přírůstek nejhlubšího
+ * záporného stavu coverage po dnech.
  */
 export function autoPlan(
   items: readonly PlanItem[],
@@ -174,6 +188,7 @@ export function autoPlan(
   auto: Readonly<Record<string, AutoMode>>,
   slots: readonly ShiftSlot[],
   capacity: (slot: ShiftSlot) => number,
+  pack: (item: PlanItem) => number = () => 1,
 ): AutoPlanResult {
   const autoSlots = slots.filter((s) => auto[s.key]);
   const autoKeys = new Set(autoSlots.map((s) => s.key));
@@ -204,20 +219,27 @@ export function autoPlan(
       let best = -1;
       items.forEach((it, i) => {
         const head = queues[i]![0];
-        if (!head || !fits(it)) return;
+        if (!head || !fits(it) || pack(it) > free + EPS) return;
         if (best === -1) return void (best = i);
         const other = queues[best]![0]!;
         const onSide = (x: PlanItem) => sideGroup(x.side) === side;
         if (head.day < other.day || (head.day === other.day && onSide(it) && !onSide(items[best]!))) best = i;
       });
       if (best === -1) break;
-      const head = queues[best]![0]!;
-      const take = Math.min(head.qty, free);
+      const queue = queues[best]!;
+      const p = pack(items[best]!);
+      const take = Math.min(roundUpToPack(queue[0]!.qty, p), Math.floor(free / p + EPS) * p);
       const key = cellKey(slot.key, items[best]!.item);
       result[key] = (result[key] ?? 0) + take;
-      head.qty -= take;
       free -= take;
-      if (head.qty <= EPS) queues[best]!.shift();
+      // Kusy navíc z celého balení pokryjí další chybějící dny.
+      let left = take;
+      while (left > EPS && queue[0]) {
+        const used = Math.min(left, queue[0].qty);
+        queue[0].qty -= used;
+        left -= used;
+        if (queue[0].qty <= EPS) queue.shift();
+      }
       side = sideGroup(items[best]!.side);
     }
   }

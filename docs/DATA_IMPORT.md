@@ -185,7 +185,7 @@ V prohlížeči bez přístupu ke složce se soubor stáhne a uloží se ručně
 
 | Soubor | Obsah |
 |---|---|
-| `Plan/Kapacity.xlsx` | list **Linky** (Linka, Projekt, Ks za směnu, Směny po–pá, např. `R O N`), list **Destinace** (Destinace, Pokrytí u zákazníka (dny), Transit (h), Příjezd; zatím se v plánu nepoužívá), list **Směny** (Ranní směna od) |
+| `Plan/Kapacity.xlsx` | list **Linky** (Linka, Projekt, Ks za směnu, Směny po–pá, např. `R O N`, Ks v balení – výchozí 12), list **Destinace** (Destinace, Pokrytí u zákazníka (dny), Transit (h), Příjezd; zatím se v plánu nepoužívá), list **Směny** (Ranní směna od) |
 | `Plan/<linka>_<projekt>.xlsx`, např. `ASSEMBLY_P100.xlsx` | list **Plán** (Linka, Projekt, Datum, Směna, Pořadí, Strana, Díl, Číslo zákazníka, Popis, Množství; jeden řádek = díl na směně v pořadí výroby), list **Přehled** (díly × směny, jen pro čtení), list **Kapacita směn** (Datum, Směna, Kapacita = ručně zadaná kapacita, Automaticky = `LHD`, `RHD` nebo `LHD+RHD` u směn s automatickým plánem) |
 
 - Jeden soubor na linku a projekt: každou linku plánuje jeden člověk, takže se zápisy nepotkají.
@@ -208,7 +208,12 @@ V prohlížeči bez přístupu ke složce se soubor stáhne a uloží se ručně
   Automatické směny se plní v pořadí směn: vždy díl zvolené strany s nejdřívějším nepokrytým dnem (při shodě díl
   ze strany, která se právě vyrábí), po celých dnech, dokud je kapacita. Přepsáním čísla nebo volbou „ručně“ se
   směna změní na ruční a dopočítaná čísla zůstanou. Do souboru se ukládají i dopočítaná množství. Na směně se díly
-  řadí po stranách (LHD a RHD nikdy zároveň).
+  řadí po stranách (LHD a RHD nikdy zároveň); pořadí „LHD → RHD“ = nejdřív LHD, pak přestavba na RHD.
+- **Balení:** kusy se plánují po celých baleních: Order Multiple z mapování, jinak Ks v balení linky (výchozí 12).
+  Automatický plán zaokrouhluje nahoru (kusy navíc pokryjí další dny) a do kapacity směny dá jen celá balení;
+  ručně zadané číslo se po opuštění políčka zaokrouhlí nahoru.
+- **Vymazat směnu:** tlačítko ↺ nad směnou vymaže její kusy i automatický plán (kapacita směny zůstane).
+  Plánovat jde každou směnu, i běžící nebo proběhlou (je jen podbarvená).
 
 ## Testovací data
 

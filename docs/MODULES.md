@@ -89,8 +89,9 @@ Filtry: zákazník, projekt, strana (LHD/RHD) z kmenových dat, hledání dílu.
 - ASSEMBLY (montáž): plán jako zákaznická coverage pro každý projekt; u dílu vlevo kusy po směnách, vpravo coverage
   po dnech (stav u zákazníka + náš sklad + vše naplánované), která se s každým číslem přepočítá; plánovací dny se
   přidávají a ubírají (výchozí dnes a zítra); automatické směny podle zvolené strany (LHD, RHD, obě; HUD patří
-  ke své straně) kryjí první nepokryté dny v rámci kapacity; ruční úpravy, kapacita směn, pořadí stran
-- Kapacity: kusů za směnu a směny po–pá pro linku a projekt, začátek směn
+  ke své straně) kryjí první nepokryté dny v rámci kapacity; plán po celých baleních (Order Multiple, jinak 12);
+  vymazání jednotlivé směny; ruční úpravy kterékoli směny, kapacita směn, pořadí stran
+- Kapacity: kusů za směnu, směny po–pá a kusů v balení pro linku a projekt, začátek směn
 - Plán se ukládá jako Excel do složky `Plan` (soubor na linku a projekt), dá se sdílet a aplikace ho zase načte
 - Později: FOA, SLH a IMM navázané na plán montáže přes kusovník, plán vs. skutečnost a prostoje (z MES)
 
