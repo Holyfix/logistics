@@ -42,7 +42,7 @@ export function DataPage() {
     [current, data],
   );
 
-  // Projekty hotových dílů v kusovníku podle mapování, např. „X540 (40), bez projektu (16)“.
+  // Projekty hotových dílů v kusovníku podle mapování, např. „P100 (40), bez projektu (16)“.
   const projectOf = useMemo(() => new Map([...(data?.master?.data.items.values() ?? [])].map((m) => [m.item.toUpperCase(), m.project])), [data]);
   const bomProjects = (bom: BomData) => {
     const counts = new Map<string, number>();

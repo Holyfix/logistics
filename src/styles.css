@@ -917,13 +917,14 @@ button:focus-visible {
   color: var(--down);
 }
 
-/* Komponenty: potřeba z odvolávek je podbarvená, ze souboru sekvencéra (fixní plán zákazníka) bez podkladu. */
-.table-data td.cell-forecast {
-  background: var(--accent-soft);
+/* Komponenty: den „Zákazník pokryt do“ v řádku dnů (srovnání s prvním chybějícím dnem podle odvolávek). */
+.table-data td.cell-customer {
+  font-weight: 700;
+  box-shadow: inset 0 0 0 2px var(--accent);
 }
 
-.swatch-forecast {
-  background: var(--accent-soft);
+.swatch-customer {
+  border: 2px solid var(--accent);
 }
 
 /* Součtový řádek tabulky. */

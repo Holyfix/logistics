@@ -85,7 +85,6 @@ export function ComponentsPage({ today = localToday() }: { today?: DayNumber } =
   const short = table.components.filter((c) => c.shortDay !== null).length;
   const soon = table.components.filter((c) => c.shortDay !== null && c.shortDay < COMPONENT_SOON_DAYS).length;
   const callOffs = state.data?.exports.at(-1);
-  const withFile = products.filter((p) => p.fixed.some(Boolean)).length;
   const toProduce = products.filter((p) => p.production.some((q) => q > 0)).length;
   const withoutProject = products.filter((p) => !p.project).map((p) => p.item);
   const boms = state.data?.boms.length ?? 0;
@@ -93,16 +92,20 @@ export function ComponentsPage({ today = localToday() }: { today?: DayNumber } =
   const productionTotals = days.map((_, k) => sum(shownProducts.map((p) => p.production[k]!)));
   const need7 = (c: ComponentLine) => sum(c.usage.slice(0, NEED_DAYS));
   const reserve = (c: ComponentLine) => (c.productionDays === null ? tc.table.noUsage : `${tc.table.reserve} ${formatOneDecimal(c.productionDays, locale)} ${tc.table.productionDays}`);
-  /** Poslední pracovní den před prvním dnem v záporu; null, když chybí už dnes. */
-  const coveredUntil = (c: ComponentLine): DayNumber | null => {
-    for (let k = (c.shortDay ?? days.length) - 1; k >= 0; k--) if (weekday(days[k]!) <= 5) return days[k]!;
+  /** Poslední pracovní den před dnem `short` (index); null, když chybí už dnes. */
+  const lastDayBefore = (short: number | null): DayNumber | null => {
+    for (let k = (short ?? days.length) - 1; k >= 0; k--) if (weekday(days[k]!) <= 5) return days[k]!;
     return null;
   };
-  const coveredText = (c: ComponentLine) => {
-    if (c.shortDay === null) return tc.table.whole;
-    const until = coveredUntil(c);
+  const untilText = (short: number | null) => {
+    if (short === null) return tc.table.whole;
+    const until = lastDayBefore(short);
     return until === null ? tc.table.notCovered : dayLabel(until);
   };
+  const coveredText = (c: ComponentLine) => untilText(c.shortDay);
+  const customerText = (c: ComponentLine) => untilText(c.customerShortDay);
+  /** Den „Zákazník pokryt do“ v řádku dnů (rámeček); null, když vystačí na celý horizont nebo chybí už dnes. */
+  const customerDay = (c: ComponentLine) => (c.customerShortDay === null ? null : lastDayBefore(c.customerShortDay));
 
   const buildExport = (): ExportTable => ({
     fileName: fileBase,
@@ -116,6 +119,7 @@ export function ComponentsPage({ today = localToday() }: { today?: DayNumber } =
       tc.table.need,
       tc.table.until,
       tc.table.reserveHead,
+      tc.table.customer,
       tc.table.products,
       ...days.map(dayToIso),
     ],
@@ -128,6 +132,7 @@ export function ComponentsPage({ today = localToday() }: { today?: DayNumber } =
       round(need7(c)),
       coveredText(c),
       c.productionDays === null ? null : Math.round(c.productionDays * 10) / 10,
+      customerText(c),
       c.products.join(', '),
       ...c.balance.map(round),
     ]),
@@ -174,7 +179,7 @@ export function ComponentsPage({ today = localToday() }: { today?: DayNumber } =
           <span className="kpi-label">{tc.kpi.demand}</span>
           <span className="kpi-value">{formatQuantity(toProduce, locale)}</span>
           <span className="kpi-note">
-            {tc.kpi.demandNote} {formatQuantity(products.length, locale)}; {tc.kpi.withFile}: {formatQuantity(withFile, locale)}
+            {tc.kpi.demandNote} {formatQuantity(products.length, locale)}
           </span>
         </div>
       </div>
@@ -247,6 +252,7 @@ export function ComponentsPage({ today = localToday() }: { today?: DayNumber } =
                   <th className="n">{tc.table.stock}</th>
                   <th className="n">{tc.table.need}</th>
                   <th>{tc.table.until}</th>
+                  <th title={tc.table.customerTitle}>{tc.table.customer}</th>
                   {days.map((d) => (
                     <th key={d} className={`n${weekend(d)}`}>
                       {dayLabel(d)}
@@ -273,11 +279,21 @@ export function ComponentsPage({ today = localToday() }: { today?: DayNumber } =
                       <strong className={c.shortDay === null ? undefined : 'cell-short'}>{coveredText(c)}</strong>
                       <small className="muted cell-note">{reserve(c)}</small>
                     </td>
-                    {c.balance.map((v, k) => (
-                      <td key={k} className={`n${weekend(days[k]!)}${v < -1e-9 ? ' cell-negative' : ''}`}>
-                        {amount(v, c.um)}
-                      </td>
-                    ))}
+                    <td className="cell-until" title={tc.table.customerTitle}>
+                      <strong className={c.customerShortDay === null ? undefined : 'cell-short'}>{customerText(c)}</strong>
+                    </td>
+                    {c.balance.map((v, k) => {
+                      const framed = customerDay(c) === days[k];
+                      return (
+                        <td
+                          key={k}
+                          className={`n${weekend(days[k]!)}${v < -1e-9 ? ' cell-negative' : ''}${framed ? ' cell-customer' : ''}`}
+                          title={framed ? tc.legend.customer : undefined}
+                        >
+                          {amount(v, c.um)}
+                        </td>
+                      );
+                    })}
                   </tr>
                 ))}
               </tbody>
@@ -292,6 +308,9 @@ export function ComponentsPage({ today = localToday() }: { today?: DayNumber } =
         <ul className="cov-legend">
           <li>
             <i className="swatch swatch-negative" /> {tc.legend.negative}
+          </li>
+          <li>
+            <i className="swatch swatch-customer" /> {tc.legend.customer}
           </li>
           <li>
             <i className="swatch swatch-weekend" /> {tc.legend.weekend}
@@ -336,7 +355,7 @@ export function ComponentsPage({ today = localToday() }: { today?: DayNumber } =
                   <td>{p.project || '—'}</td>
                   <td className="n">{formatQuantity(sum(p.production.slice(0, NEED_DAYS)), locale)}</td>
                   {p.production.map((q, k) => (
-                    <td key={k} className={`n${weekend(days[k]!)}${p.fixed[k] ? '' : ' cell-forecast'}`}>
+                    <td key={k} className={`n${weekend(days[k]!)}`}>
                       {q === 0 ? <span className="muted">0</span> : formatQuantity(q, locale)}
                     </td>
                   ))}
@@ -364,14 +383,6 @@ export function ComponentsPage({ today = localToday() }: { today?: DayNumber } =
         </div>
         {!callOffs && <p className="muted">{tc.demand.noCallOffs}</p>}
         {shownProducts.length === 0 && <p>{tc.demand.empty}</p>}
-        <ul className="cov-legend">
-          <li>
-            <i className="swatch" /> {tc.demand.fixed}
-          </li>
-          <li>
-            <i className="swatch swatch-forecast" /> {tc.demand.forecast}
-          </li>
-        </ul>
         <p className="muted">{netOwnStock ? tc.demand.note : tc.demand.noteGross}</p>
       </div>
     </section>
