@@ -12,9 +12,12 @@ interface PlanningDrafts {
   settings: PlanSettings | null;
   tab: PlanningTab;
   project: string;
+  /** Počet plánovacích dnů (po směnách) podle klíče `linka|projekt`; bez záznamu výchozí. */
+  planDays: Record<string, number>;
 }
 
 interface PlanningContextValue extends PlanningDrafts {
+  setPlanDays: (key: string, days: number) => void;
   setPlan: (plan: LinePlan | null, key: string) => void;
   setSettings: (settings: PlanSettings | null) => void;
   setTab: (tab: PlanningTab) => void;
@@ -23,7 +26,7 @@ interface PlanningContextValue extends PlanningDrafts {
 
 export const planKey = (line: string, project: string) => `${line}|${project}`;
 
-const EMPTY: PlanningDrafts = { plans: {}, settings: null, tab: 'overview', project: '' };
+const EMPTY: PlanningDrafts = { plans: {}, settings: null, tab: 'overview', project: '', planDays: {} };
 const PlanningContext = createContext<PlanningContextValue | null>(null);
 
 export function PlanningProvider({ children }: { children: ReactNode }) {
@@ -50,11 +53,12 @@ export function PlanningProvider({ children }: { children: ReactNode }) {
   );
   const setTab = useCallback((tab: PlanningTab) => setDrafts((d) => ({ ...d, tab })), []);
   const setProject = useCallback((project: string) => setDrafts((d) => ({ ...d, project })), []);
+  const setPlanDays = useCallback((key: string, days: number) => setDrafts((d) => ({ ...d, planDays: { ...d.planDays, [key]: days } })), []);
 
-  const { plans, settings, tab, project } = drafts;
+  const { plans, settings, tab, project, planDays } = drafts;
   const value = useMemo(
-    () => ({ plans, settings, tab, project, setPlan, setSettings, setTab, setProject }),
-    [plans, settings, tab, project, setPlan, setSettings, setTab, setProject],
+    () => ({ plans, settings, tab, project, planDays, setPlan, setSettings, setTab, setProject, setPlanDays }),
+    [plans, settings, tab, project, planDays, setPlan, setSettings, setTab, setProject, setPlanDays],
   );
   return <PlanningContext.Provider value={value}>{children}</PlanningContext.Provider>;
 }

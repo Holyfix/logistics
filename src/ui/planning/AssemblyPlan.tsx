@@ -1,15 +1,14 @@
-import { useMemo, useState } from 'react';
-import { dayToIso, weekday, type DayNumber } from '../../core/dates';
+import { useMemo } from 'react';
+import { dayToIso, parseDay, weekday, type DayNumber } from '../../core/dates';
 import { formatDayShort, formatQuantity } from '../../core/format';
-import { evaluateItem, proposePlan, slotCapacity, slotSides } from '../../core/planning/assembly';
-import { cellKey, type LinePlan, type ShiftSlot } from '../../core/planning/plan';
+import { evaluateItem, PLAN_DAYS, plannedTotal, slotCapacity, slotSides } from '../../core/planning/assembly';
+import { AUTO_MODES, cellKey, shiftSlots, type AutoMode, type LinePlan, type ShiftSlot } from '../../core/planning/plan';
 import { formatTime } from '../../core/planning/settings';
 import { useI18n } from '../../i18n/I18nProvider';
 import { usePlanningDrafts } from './PlanningProvider';
 import { usePlanSaving } from './save';
 import { SaveStatus, useSaveFlow } from './SaveStatus';
 import type { PlanningData } from './usePlanning';
-
 
 const sum = (values: readonly number[]) => values.reduce((a, b) => a + b, 0);
 
@@ -21,24 +20,28 @@ function parseQty(value: string): number | null {
   return Number.isFinite(n) && n >= 0 ? n : null;
 }
 
+/**
+ * Plán montáže jako zákaznická coverage: u každého dílu vlevo kusy po směnách plánovacích dnů, vpravo coverage po dnech
+ * (stav u zákazníka + náš sklad + vše naplánované), která se s každým číslem přepočítá. Směna s automatickým plánem
+ * (zvolená strana) se dopočítá sama podle prvních nepokrytých dnů.
+ */
 export function AssemblyPlan({ data, today, now }: { data: PlanningData; today: DayNumber; now: number }) {
   const { t, locale } = useI18n();
   const tp = t.planning;
   const drafts = usePlanningDrafts();
   const { savePlan } = usePlanSaving();
   const flow = useSaveFlow();
-  const [proposal, setProposal] = useState<{ project: string; remaining: number } | null>(null);
 
   const project = data.projects.find((p) => p.project === drafts.project) ?? data.projects[0];
-  const slots = data.slots;
-  const plan = project?.plan;
+  const days = data.days;
+  const cells = project?.result.cells;
 
   const statuses = useMemo(() => {
-    if (!project || !plan) return new Map<string, ReturnType<typeof evaluateItem>>();
-    return new Map(project.items.map((it) => [it.item, evaluateItem(it, slots, (s) => plan.cells[cellKey(s.key, it.item)] ?? 0, today)]));
-  }, [project, plan, slots, today]);
+    if (!project || !cells) return new Map<string, ReturnType<typeof evaluateItem>>();
+    return new Map(project.items.map((it) => [it.item, evaluateItem(it, plannedTotal(cells, it.item, days))]));
+  }, [project, cells, days]);
 
-  if (!project || !plan) {
+  if (!project || !cells) {
     return (
       <div className="panel">
         <p>{tp.assembly.noItems}</p>
@@ -47,27 +50,53 @@ export function AssemblyPlan({ data, today, now }: { data: PlanningData; today: 
     );
   }
 
-  const { capacity } = project;
-  // Nejdřív díly, kterým u zákazníka chybí kusy nejdřív.
+  const { capacity, plan } = project;
+  const slotOf = (key: string) => key.slice(0, key.indexOf('|'));
+  const dayOf = (slot: string) => parseDay(slot.slice(0, slot.indexOf(' ')));
+  // Plánovací dny: zvolený počet, ale nejméně do posledního dne, kde už je něco naplánované nebo automatické.
+  const usedDays = new Set([...Object.entries(cells).flatMap(([key, q]) => (q > 0 ? [dayOf(slotOf(key))] : [])), ...Object.keys(plan.auto).map(dayOf)]);
+  const lastUsed = days.reduce((last, d, k) => (usedDays.has(d) ? k : last), -1);
+  const minDays = Math.max(1, lastUsed + 1);
+  const planDays = Math.min(days.length, Math.max(minDays, drafts.planDays[project.key] ?? PLAN_DAYS));
+  const slots = shiftSlots(today, planDays, data.settings.firstShiftStart);
+  // Nejdřív díly, kterým zákazníkovi díly bez plánu dojdou nejdřív.
   const items = [...project.items].sort(
-    (a, b) => (statuses.get(a.item)!.firstMissing ?? Infinity) - (statuses.get(b.item)!.firstMissing ?? Infinity) || a.side.localeCompare(b.side) || a.item.localeCompare(b.item, 'en', { numeric: true }),
+    (a, b) =>
+      (statuses.get(a.item)!.shortDayWithoutPlan ?? Infinity) - (statuses.get(b.item)!.shortDayWithoutPlan ?? Infinity) ||
+      a.side.localeCompare(b.side) ||
+      a.item.localeCompare(b.item, 'en', { numeric: true }),
   );
-  const shown = slots;
-  const qty = (slot: ShiftSlot, item: string) => plan.cells[cellKey(slot.key, item)] ?? 0;
+
+  const qty = (slot: ShiftSlot, item: string) => cells[cellKey(slot.key, item)] ?? 0;
   const capOf = (slot: ShiftSlot) => slotCapacity(slot, capacity, plan.capacity);
   const nominal = (slot: ShiftSlot) => slotCapacity(slot, capacity, {});
   const planned = (slot: ShiftSlot) => sum(items.map((it) => qty(slot, it.item)));
-  const sides = slotSides(items, shown, (s, it) => qty(s, it.item));
+  const sides = slotSides(items, slots, (s, it) => qty(s, it.item));
   const past = (slot: ShiftSlot) => slot.end <= now;
   const update = (next: LinePlan) => drafts.setPlan(next, project.key);
 
+  /** Plán se směnou přepnutou na ruční zadání: dopočítaná množství zůstanou jako ručně zadaná. */
+  const manualSlot = (slot: ShiftSlot): LinePlan => {
+    if (!plan.auto[slot.key]) return plan;
+    const auto = { ...plan.auto };
+    delete auto[slot.key];
+    const own = Object.fromEntries(Object.entries(cells).filter(([key]) => slotOf(key) === slot.key));
+    const rest = Object.fromEntries(Object.entries(plan.cells).filter(([key]) => slotOf(key) !== slot.key));
+    return { ...plan, auto, cells: { ...rest, ...own } };
+  };
   const setCell = (slot: ShiftSlot, item: string, value: string) => {
     const q = parseQty(value);
     if (q === null) return;
-    const cells = { ...plan.cells };
-    if (q > 0) cells[cellKey(slot.key, item)] = q;
-    else delete cells[cellKey(slot.key, item)];
-    update({ ...plan, cells });
+    const base = manualSlot(slot);
+    const next = { ...base.cells };
+    if (q > 0) next[cellKey(slot.key, item)] = q;
+    else delete next[cellKey(slot.key, item)];
+    update({ ...base, cells: next });
+  };
+  const setAuto = (slot: ShiftSlot, mode: AutoMode | '') => {
+    if (!mode) return update(manualSlot(slot));
+    const rest = Object.fromEntries(Object.entries(plan.cells).filter(([key]) => slotOf(key) !== slot.key));
+    update({ ...plan, cells: rest, auto: { ...plan.auto, [slot.key]: mode } });
   };
   const setCapacity = (slot: ShiftSlot, value: string) => {
     const q = value.trim() === '' ? nominal(slot) : parseQty(value);
@@ -79,19 +108,16 @@ export function AssemblyPlan({ data, today, now }: { data: PlanningData; today: 
   };
 
   const open = slots.filter((s) => s.start >= now);
-  const openHasPlan = open.some((s) => items.some((it) => qty(s, it.item) > 0));
+  const openKeys = new Set(open.map((s) => s.key));
+  const openHasPlan = Object.entries(cells).some(([key, q]) => q > 0 && openKeys.has(slotOf(key))) || Object.keys(plan.auto).some((k) => openKeys.has(k));
   const firstOpen = open[0];
-  const propose = () => {
-    if (openHasPlan && firstOpen && !window.confirm(`${tp.assembly.confirmPropose} ${slotLabel(firstOpen)}?`)) return;
-    const result = proposePlan(items, slots, capOf, plan.cells, now);
-    update({ ...plan, cells: result.cells });
-    setProposal({ project: project.project, remaining: result.remaining });
-  };
   const clear = () => {
     if (!firstOpen || !window.confirm(`${tp.assembly.confirmClear} ${slotLabel(firstOpen)}?`)) return;
-    const openKeys = new Set(open.map((s) => s.key));
-    update({ ...plan, cells: Object.fromEntries(Object.entries(plan.cells).filter(([key]) => !openKeys.has(key.slice(0, key.indexOf('|'))))) });
-    setProposal(null);
+    update({
+      ...plan,
+      cells: Object.fromEntries(Object.entries(plan.cells).filter(([key]) => !openKeys.has(slotOf(key)))),
+      auto: Object.fromEntries(Object.entries(plan.auto).filter(([key]) => !openKeys.has(key))),
+    });
   };
 
   const dayLabel = (d: DayNumber) => `${t.calloffs.weekdays[weekday(d) - 1]} ${formatDayShort(dayToIso(d), locale)}`;
@@ -99,13 +125,23 @@ export function AssemblyPlan({ data, today, now }: { data: PlanningData; today: 
     return `${dayLabel(slot.day)} ${slot.code}`;
   }
   const weekend = (d: DayNumber) => (weekday(d) >= 6 ? ' col-weekend' : '');
+  const untilText = (short: number | null) => {
+    if (short === null) return `${dayLabel(days.at(-1)!)} ${tp.assembly.orLater}`;
+    return short === 0 ? tp.assembly.notCovered : dayLabel(days[short - 1]!);
+  };
   const statusList = [...statuses.values()];
-  const short = statusList.filter((s) => s.firstMissing !== null).length;
-  const late = statusList.filter((s) => s.late).length;
+  const uncovered = statusList.filter((s) => s.shortDay !== null).length;
+  const missing = sum(statusList.map((s) => s.missing));
+  const worst = (pick: (s: (typeof statusList)[number]) => number | null) =>
+    statusList.reduce<number | null>((w, s) => (pick(s) === null ? w : w === null ? pick(s) : Math.min(w, pick(s)!)), null);
   const loadCap = sum(slots.map(capOf));
   const loadPlanned = sum(slots.map(planned));
-  const coveredText = (until: DayNumber | 'whole' | null) => (until === 'whole' ? tp.assembly.whole : until === null ? tp.assembly.notCovered : dayLabel(until));
   const shiftTitle = (slot: ShiftSlot) => `${slotLabel(slot)} · ${formatTime(slot.start)}–${formatTime(slot.end)}`;
+  const shiftClass = (slot: ShiftSlot) => `${slot.code === 'R' ? ' plan-day-start' : ''}${weekend(slot.day)}`;
+  const covStart = (k: number) => (k === 0 ? ' plan-cov-start' : '');
+  const modeText = (mode: AutoMode) => (mode === 'BOTH' ? tp.assembly.autoBoth : mode);
+  /** Souhrnný řádek: pod coverage prázdná buňka přes všechny dny. */
+  const covFiller = <td className="plan-cov-start" colSpan={days.length} />;
 
   return (
     <>
@@ -120,14 +156,21 @@ export function AssemblyPlan({ data, today, now }: { data: PlanningData; today: 
             ))}
           </div>
         )}
+        <span className="inline-field" role="group" aria-label={tp.assembly.planDays}>
+          <span>{tp.assembly.planDays}</span>
+          <button type="button" className="button button-small" aria-label={tp.assembly.lessDays} disabled={planDays <= minDays} onClick={() => drafts.setPlanDays(project.key, planDays - 1)}>
+            −
+          </button>
+          <strong>{planDays}</strong>
+          <button type="button" className="button button-small" aria-label={tp.assembly.moreDays} disabled={planDays >= days.length} onClick={() => drafts.setPlanDays(project.key, planDays + 1)}>
+            +
+          </button>
+        </span>
         <span className="filters-break" role="presentation" />
-        <button type="button" className="button button-primary" onClick={propose} disabled={!firstOpen}>
-          {tp.assembly.propose}
-        </button>
         <button type="button" className="button" onClick={clear} disabled={!openHasPlan}>
           {tp.assembly.clear}
         </button>
-        <button type="button" className="button" disabled={flow.busy} onClick={() => void flow.run((force) => savePlan(project, force))}>
+        <button type="button" className="button button-primary" disabled={flow.busy} onClick={() => void flow.run((force) => savePlan(project, force))}>
           {tp.save}
         </button>
         <SaveStatus dirty={project.dirty} saved={project.saved} message={flow.message} />
@@ -141,25 +184,20 @@ export function AssemblyPlan({ data, today, now }: { data: PlanningData; today: 
           </button>
         </div>
       )}
-      {proposal?.project === project.project && (
-        <p className="muted" role="status">
-          {proposal.remaining > 0 ? `${tp.assembly.remaining} ${formatQuantity(proposal.remaining, locale)} ${tp.pcs}.` : tp.assembly.proposed}
-        </p>
-      )}
 
       <div className="kpis">
         <div className="kpi">
-          <span className="kpi-label">{tp.kpi.short}</span>
-          <span className="kpi-value">{formatQuantity(short, locale)}</span>
+          <span className="kpi-label">{tp.kpi.uncovered}</span>
+          <span className="kpi-value">{formatQuantity(uncovered, locale)}</span>
           <span className="kpi-note">
-            {tp.kpi.shortNote} {formatQuantity(items.length, locale)}
+            {tp.kpi.missing} {formatQuantity(missing, locale)} {tp.pcs} · {tp.kpi.uncoveredNote} {formatQuantity(items.length, locale)}
           </span>
         </div>
         <div className="kpi">
-          <span className="kpi-label">{tp.kpi.planned}</span>
-          <span className="kpi-value">{formatQuantity(sum(statusList.map((s) => s.planned)), locale)}</span>
+          <span className="kpi-label">{tp.kpi.coveredUntil}</span>
+          <span className="kpi-value">{untilText(worst((s) => s.shortDay))}</span>
           <span className="kpi-note">
-            {tp.kpi.missing} {formatQuantity(sum(statusList.map((s) => s.missing)), locale)} {tp.pcs}
+            {tp.kpi.withoutPlan} {untilText(worst((s) => s.shortDayWithoutPlan))}
           </span>
         </div>
         <div className="kpi">
@@ -169,11 +207,6 @@ export function AssemblyPlan({ data, today, now }: { data: PlanningData; today: 
             {formatQuantity(loadPlanned, locale)} / {formatQuantity(loadCap, locale)} {tp.pcs} · {tp.kpi.loadNote}
           </span>
         </div>
-        <div className="kpi">
-          <span className="kpi-label">{tp.kpi.late}</span>
-          <span className="kpi-value">{formatQuantity(late, locale)}</span>
-          <span className="kpi-note">{tp.kpi.lateNote}</span>
-        </div>
       </div>
 
       <div className="panel">
@@ -182,7 +215,7 @@ export function AssemblyPlan({ data, today, now }: { data: PlanningData; today: 
             {tp.assembly.heading} {project.project}
           </h2>
           <span className="muted">
-            {tp.assembly.capacity}: {formatQuantity(capacity.perShift, locale)} {tp.pcs} · {capacity.shifts.join(' ') || '—'}
+            {tp.assembly.capacity}: {formatQuantity(capacity.perShift, locale)} {tp.pcs} · {capacity.shifts.join(' ') || '—'} · {tp.assembly.layout}
           </span>
         </div>
         <div className="table-scroll table-tall">
@@ -192,13 +225,17 @@ export function AssemblyPlan({ data, today, now }: { data: PlanningData; today: 
                 <th className="sticky-col">{tp.assembly.item}</th>
                 <th>{tp.assembly.side}</th>
                 <th className="n">{tp.assembly.stock}</th>
-                <th className="n">{tp.assembly.missing}</th>
-                <th>{tp.assembly.firstMissing}</th>
                 <th>{tp.assembly.until}</th>
-                {shown.map((slot) => (
-                  <th key={slot.key} className={`n plan-shift${slot.code === 'R' ? ' plan-day-start' : ''}${weekend(slot.day)}`} title={shiftTitle(slot)}>
+                {slots.map((slot) => (
+                  <th key={slot.key} className={`n plan-shift${shiftClass(slot)}`} title={shiftTitle(slot)}>
                     <small className="plan-day">{slot.code === 'R' ? dayLabel(slot.day) : ' '}</small>
                     {slot.code}
+                  </th>
+                ))}
+                {days.map((d, k) => (
+                  <th key={d} className={`n${covStart(k)}${weekend(d)}`}>
+                    <small className="plan-day">{k === 0 ? tp.assembly.coverageHead : ' '}</small>
+                    {dayLabel(d)}
                   </th>
                 ))}
               </tr>
@@ -206,13 +243,40 @@ export function AssemblyPlan({ data, today, now }: { data: PlanningData; today: 
             <tbody>
               <tr className="plan-summary">
                 <td className="sticky-col">
+                  <strong>{tp.assembly.autoRow}</strong>
+                </td>
+                <td colSpan={3} className="muted">
+                  {tp.assembly.autoHint}
+                </td>
+                {slots.map((slot) => (
+                  <td key={slot.key} className={`${shiftClass(slot)}${plan.auto[slot.key] ? ' cell-auto' : ''}`}>
+                    <select
+                      className="plan-select"
+                      aria-label={`${tp.assembly.autoRow} ${slotLabel(slot)}`}
+                      value={plan.auto[slot.key] ?? ''}
+                      disabled={past(slot)}
+                      onChange={(e) => setAuto(slot, e.target.value as AutoMode | '')}
+                    >
+                      <option value="">{tp.assembly.autoManual}</option>
+                      {AUTO_MODES.map((mode) => (
+                        <option key={mode} value={mode}>
+                          {modeText(mode)}
+                        </option>
+                      ))}
+                    </select>
+                  </td>
+                ))}
+                {covFiller}
+              </tr>
+              <tr className="plan-summary">
+                <td className="sticky-col">
                   <strong>{tp.assembly.capacityRow}</strong>
                 </td>
-                <td colSpan={5} className="muted">
+                <td colSpan={3} className="muted">
                   {tp.assembly.capacityHint}
                 </td>
-                {shown.map((slot) => (
-                  <td key={slot.key} className={`n${slot.code === 'R' ? ' plan-day-start' : ''}${weekend(slot.day)}${plan.capacity[slot.key] !== undefined ? ' cell-manual' : ''}`}>
+                {slots.map((slot) => (
+                  <td key={slot.key} className={`n${shiftClass(slot)}${plan.capacity[slot.key] !== undefined ? ' cell-manual' : ''}`}>
                     <input
                       className="plan-input"
                       inputMode="numeric"
@@ -224,69 +288,64 @@ export function AssemblyPlan({ data, today, now }: { data: PlanningData; today: 
                     />
                   </td>
                 ))}
+                {covFiller}
               </tr>
               <tr className="plan-summary">
                 <td className="sticky-col">
                   <strong>{tp.assembly.plannedRow}</strong>
                 </td>
-                <td colSpan={5} />
-                {shown.map((slot) => {
+                <td colSpan={3} className="muted">
+                  {tp.assembly.sidesHint}
+                </td>
+                {slots.map((slot, i) => {
                   const p = planned(slot);
+                  const order = sides[i]!;
                   return (
-                    <td key={slot.key} className={`n${slot.code === 'R' ? ' plan-day-start' : ''}${weekend(slot.day)}${p > capOf(slot) ? ' cell-negative' : ''}`}>
+                    <td key={slot.key} className={`n${shiftClass(slot)}${p > capOf(slot) ? ' cell-negative' : ''}`}>
                       {p > 0 ? formatQuantity(p, locale) : <span className="muted">0</span>}
+                      {order.length > 0 && <small className="cell-note muted">{order.map((s) => s || '?').join(' → ')}</small>}
                     </td>
                   );
                 })}
-              </tr>
-              <tr className="plan-summary">
-                <td className="sticky-col">
-                  <strong>{tp.assembly.sidesRow}</strong>
-                </td>
-                <td colSpan={5} className="muted">
-                  {tp.assembly.sidesHint}
-                </td>
-                {shown.map((slot, k) => (
-                  <td key={slot.key} className={`plan-sides${slot.code === 'R' ? ' plan-day-start' : ''}${weekend(slot.day)}`}>
-                    {sides[k]!.map((s) => s || '?').join(' → ')}
-                  </td>
-                ))}
+                {covFiller}
               </tr>
               {items.map((it) => {
                 const status = statuses.get(it.item)!;
                 return (
-                  <tr key={it.item}>
+                  <tr key={it.item} className="plan-row">
                     <td className="sticky-col">
                       <strong>{it.item}</strong>
                       {it.customerNumber && <small className="muted cell-note">{it.customerNumber}</small>}
                     </td>
                     <td>{it.side || '—'}</td>
                     <td className="n">{formatQuantity(it.stock, locale)}</td>
-                    <td className="n">{status.missing > 0 ? formatQuantity(status.missing, locale) : <span className="muted">0</span>}</td>
                     <td className="cell-until">
-                      {status.firstMissing === null ? <span className="muted">{tp.assembly.noMissing}</span> : <strong className="cell-short">{dayLabel(status.firstMissing)}</strong>}
+                      <strong className={status.shortDay === null ? undefined : 'cell-short'}>{untilText(status.shortDay)}</strong>
+                      <small className="muted cell-note">
+                        {tp.assembly.withoutPlan} {untilText(status.shortDayWithoutPlan)}
+                      </small>
                     </td>
-                    <td className="cell-until">
-                      <strong className={status.coveredWithPlan === 'whole' ? undefined : 'cell-short'}>{coveredText(status.coveredWithPlan)}</strong>
-                    </td>
-                    {shown.map((slot, k) => {
-                      const balance = status.balance[k]!;
-                      const due = status.due[k]!;
+                    {slots.map((slot) => (
+                      <td key={slot.key} className={`n plan-cell${shiftClass(slot)}${plan.auto[slot.key] ? ' cell-auto' : ''}${past(slot) ? ' cell-past' : ''}`}>
+                        <input
+                          className="plan-input"
+                          inputMode="numeric"
+                          aria-label={`${it.item} ${slotLabel(slot)}`}
+                          value={qty(slot, it.item) || ''}
+                          disabled={past(slot)}
+                          onChange={(e) => setCell(slot, it.item, e.target.value)}
+                        />
+                      </td>
+                    ))}
+                    {days.map((d, k) => {
+                      const v = status.coverage[k]!;
                       return (
                         <td
-                          key={slot.key}
-                          className={`n plan-cell${slot.code === 'R' ? ' plan-day-start' : ''}${weekend(slot.day)}${past(slot) ? ' cell-past' : ''}${balance < -1e-9 ? ' cell-negative' : ''}`}
-                          title={`${slotLabel(slot)} · ${tp.assembly.due}: ${formatQuantity(due, locale)} · ${tp.assembly.balance}: ${formatQuantity(balance, locale)}`}
+                          key={d}
+                          className={`n plan-cov${covStart(k)}${weekend(d)}${v < -1e-9 ? ' cell-negative' : ''}`}
+                          title={`${dayLabel(d)} · ${tp.assembly.withoutPlan} ${formatQuantity(status.withoutPlan[k]!, locale)}`}
                         >
-                          <input
-                            className="plan-input"
-                            inputMode="numeric"
-                            aria-label={`${it.item} ${slotLabel(slot)}`}
-                            value={qty(slot, it.item) || ''}
-                            disabled={past(slot)}
-                            onChange={(e) => setCell(slot, it.item, e.target.value)}
-                          />
-                          <small className="cell-note">{due > 0 ? `${formatQuantity(balance, locale)} ▾${formatQuantity(due, locale)}` : formatQuantity(balance, locale)}</small>
+                          {formatQuantity(v, locale)}
                         </td>
                       );
                     })}
@@ -298,7 +357,10 @@ export function AssemblyPlan({ data, today, now }: { data: PlanningData; today: 
         </div>
         <ul className="cov-legend">
           <li>
-            <i className="swatch swatch-negative" /> {tp.legend.late}
+            <i className="swatch swatch-auto" /> {tp.legend.auto}
+          </li>
+          <li>
+            <i className="swatch swatch-negative" /> {tp.legend.negative}
           </li>
           <li>
             <i className="swatch swatch-manual" /> {tp.legend.manual}
@@ -310,7 +372,16 @@ export function AssemblyPlan({ data, today, now }: { data: PlanningData; today: 
             <i className="swatch swatch-weekend" /> {tp.legend.weekend}
           </li>
         </ul>
-        <p className="muted">{tp.assembly.note}</p>
+        <dl className="explain">
+          <dt>{tp.explain.coverage}</dt>
+          <dd>{tp.explain.coverageText}</dd>
+          <dt>{tp.assembly.until}</dt>
+          <dd>{tp.explain.until}</dd>
+          <dt>{tp.assembly.autoRow}</dt>
+          <dd>{tp.explain.auto}</dd>
+          <dt>{tp.assembly.planDays}</dt>
+          <dd>{tp.explain.planDays}</dd>
+        </dl>
       </div>
     </>
   );

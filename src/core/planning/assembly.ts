@@ -1,28 +1,22 @@
-// Plán montáže: chybějící kusy u zákazníka podle souborů coverage (sklad + transit u sekvencéra + náš sklad),
-// vyhodnocení plánu po směnách a návrh plánu, který kryje první chybějící dny v rámci kapacity.
+// Plán montáže jako zákaznická coverage: stav u zákazníka po dnech (jeho sklad + transit − plán zákazníka podle
+// souboru coverage) + náš sklad + vše naplánované. Automatický plán směny kryje první nepokryté dny v rámci kapacity.
 
 import type { CallOffExport } from '../calloffs/parse';
 import type { CoverageSource } from '../coverage/compute';
-import { weekday, type DayNumber } from '../dates';
-import { customerNeed, sequencerPlans } from '../demand';
-import { customerDisplay, type MasterData } from '../masterdata';
-import { cellKey, sideOrder, type ShiftSlot } from './plan';
-import { destinationOf, type LineCapacity, type PlanSettings } from './settings';
+import { parseDay, weekday, type DayNumber } from '../dates';
+import { sequencerPlans } from '../demand';
+import { customerDisplay, sideGroup, type MasterData } from '../masterdata';
+import { cellKey, sideOrder, type AutoMode, type ShiftSlot } from './plan';
+import type { LineCapacity } from './settings';
 
-/** Kolik dní se plánuje: zbývající směny dneška a zítřek. */
+/** Kolik dní se plánuje po směnách, dokud si plánovač nepřidá další (dnes a zítra). */
 export const PLAN_DAYS = 2;
-/** Kolik dní souboru coverage se nejvýš načte (soubory sekvencéra mají obvykle 2–3 týdny). */
-const COVERAGE_DAYS = 42;
+/** Nejvíc dní coverage v plánu (soubory sekvencéra mají obvykle 2–3 týdny). */
+const MAX_COVERAGE_DAYS = 28;
+/** Bez souboru coverage: kolik dní zobrazit. */
+const DEFAULT_COVERAGE_DAYS = 14;
 
 export const ASSEMBLY = 'ASSEMBLY';
-
-/** Chybějící kusy u zákazníka v den `day` podle souboru coverage; musí být vyrobené do `deadline`. */
-export interface Requirement {
-  day: DayNumber;
-  /** Termín výroby (minuty od 1. 1. 1970): odjezd auta, aby zákazník měl při příjezdu pokrytí na požadovaný počet dní. */
-  deadline: number;
-  qty: number;
-}
 
 export interface PlanItem {
   item: string;
@@ -33,8 +27,14 @@ export interface PlanItem {
   location: string;
   /** Náš sklad hotového dílu. */
   stock: number;
-  /** Chybějící kusy po dnech souboru coverage (bez odečtu našeho skladu), seřazené podle dne. */
-  requirements: Requirement[];
+  /** Stav u zákazníka na konci dne (jeho sklad + transit − plán zákazníka) pro dny `AssemblyData.days`. */
+  base: number[];
+}
+
+export interface AssemblyData {
+  /** Dny coverage od dneška do konce souborů coverage (i víkendy). */
+  days: DayNumber[];
+  items: PlanItem[];
 }
 
 export interface AssemblyInputs {
@@ -44,7 +44,6 @@ export interface AssemblyInputs {
   callOffs: CallOffExport | undefined;
   stock: ReadonlyMap<string, number> | undefined;
   today: DayNumber;
-  settings: PlanSettings;
 }
 
 /** Strana ze slova LHD nebo RHD v popisu (když ji mapování neuvádí). */
@@ -53,53 +52,36 @@ function sideFromText(text: string): string {
 }
 
 /**
- * Hotové díly pro montáž s požadavky zákazníka. Díly podle sloupce Line v mapování (ASSEMBLY); bez sloupce díly
- * ze souborů sekvencéra (coverage) a díly z mapování s projektem a stranou.
- * Projekt z mapování, jinak ze složky souboru coverage. Požadavky jen ze souboru coverage: přírůstek chybějícího
- * množství (sklad + transit u sekvencéra − plán zákazníka; chybějící kusy z minulých dnů patří do dneška).
- * Termín výroby = příjezd v den (den − pokrytí + 1) v čase příjezdu, minus transit.
+ * Hotové díly pro montáž: jen díly se souborem coverage (podle sloupce Line = ASSEMBLY v mapování, bez sloupce
+ * všechny díly ze souborů coverage). Projekt z mapování, jinak ze složky souboru coverage. Stav u zákazníka po dnech
+ * podle souboru (za koncem souboru zůstává poslední stav).
  */
-export function assemblyItems({ master, coverage = [], callOffs, stock, today, settings }: AssemblyInputs): PlanItem[] {
-  const days = Array.from({ length: COVERAGE_DAYS }, (_, k) => today + k);
+export function assemblyItems({ master, coverage = [], callOffs, stock, today }: AssemblyInputs): AssemblyData {
   const plans = sequencerPlans(coverage, master);
   const masterByItem = new Map([...(master?.items.values() ?? [])].map((m) => [m.item.toUpperCase(), m]));
   const callOffText = new Map((callOffs?.items ?? []).map((item, i) => [item.toUpperCase(), callOffs!.descriptions[i] ?? '']));
 
-  const candidates = new Set<string>();
-  if (master?.hasLineColumn) {
-    for (const [item, m] of masterByItem) if (m.line === ASSEMBLY) candidates.add(item);
-  } else {
-    for (const item of plans.keys()) candidates.add(item);
-    for (const [item, m] of masterByItem) if (m.project && m.side) candidates.add(item);
-  }
+  const candidates = master?.hasLineColumn ? [...plans.keys()].filter((item) => masterByItem.get(item)?.line === ASSEMBLY) : [...plans.keys()];
+  const last = Math.max(today + DEFAULT_COVERAGE_DAYS - 1, ...candidates.map((item) => plans.get(item)!.last));
+  const days = Array.from({ length: Math.min(MAX_COVERAGE_DAYS, last - today + 1) }, (_, k) => today + k);
 
-  const result: PlanItem[] = [];
-  for (const item of candidates) {
+  const items = candidates.map((item): PlanItem => {
     const m = masterByItem.get(item);
-    const plan = plans.get(item);
-    const { need, fixed } = plan ? customerNeed(days.map(() => 0), days, plan) : { need: [], fixed: [] };
-    const location = plan?.locations[0] ?? '';
-    const dest = destinationOf(settings, location);
-    const requirements: Requirement[] = [];
-    need.forEach((q, k) => {
-      if (q <= 1e-9 || !fixed[k]) return;
-      const day = days[k]!;
-      const deadline = (day - dest.coverDays + 1) * 1440 + dest.arrival - dest.transitHours * 60;
-      requirements.push({ day, deadline, qty: q });
-    });
-    const description = m?.description || plan?.description || callOffText.get(item) || '';
-    result.push({
+    const plan = plans.get(item)!;
+    const description = m?.description || plan.description || callOffText.get(item) || '';
+    return {
       item: m?.item ?? item,
       customerNumber: m?.customerNumber ? customerDisplay(m.customerNumber) : '',
       description,
       side: m?.side || sideFromText(description),
-      project: m?.project || plan?.projects[0] || '',
-      location,
+      project: m?.project || plan.projects[0] || '',
+      location: plan.locations[0] ?? '',
       stock: Math.max(0, stock?.get(item) ?? 0),
-      requirements,
-    });
-  }
-  return result.sort((a, b) => a.side.localeCompare(b.side) || a.item.localeCompare(b.item, 'en', { numeric: true }));
+      base: days.map((d) => plan.balance(d)),
+    };
+  });
+  items.sort((a, b) => a.side.localeCompare(b.side) || a.item.localeCompare(b.item, 'en', { numeric: true }));
+  return { days, items };
 }
 
 /** Kapacita směny: ručně zadaná, jinak kusů za směnu linky, když se směna v pracovní den jede. */
@@ -109,145 +91,137 @@ export function slotCapacity(slot: ShiftSlot, line: LineCapacity, overrides: Rea
   return weekday(slot.day) <= 5 && line.shifts.includes(slot.code) ? line.perShift : 0;
 }
 
-export interface ItemStatus {
-  /** Stav po každé směně: sklad + vyrobeno do konce směny − chybějící kusy s termínem do konce směny. Záporné = odeslání po termínu. */
-  balance: number[];
-  /** Chybějící kusy s termínem výroby v dané směně (první směna zahrnuje i starší termíny). */
-  due: number[];
-  planned: number;
-  /** Chybějící kusy v souborech coverage po odečtu našeho skladu. */
-  missing: number;
-  /** První den, kdy u zákazníka chybí díly (sklad + transit u sekvencéra + náš sklad); null = nic nechybí. */
-  firstMissing: DayNumber | null;
-  /** Poslední pracovní den pokrytý i s plánem; `whole` = celý soubor coverage, null = nepokryto ani dnes. */
-  coveredWithPlan: DayNumber | 'whole' | null;
-  /** Některé chybějící kusy plán nestihne vyrobit do termínu odeslání. */
-  late: boolean;
-}
-
-/** Poslední pracovní den před `day` (nejdřív dnes); null, když takový není. */
-function weekdayBefore(day: DayNumber, today: DayNumber): DayNumber | null {
-  for (let d = day - 1; d >= today; d--) if (weekday(d) <= 5) return d;
-  return null;
-}
-
-/** Den prvního požadavku, který nepokryje zásoba `supply`; null = pokryje všechny. */
-function firstUncovered(reqs: readonly Requirement[], supply: number): DayNumber | null {
-  let need = 0;
-  for (const r of reqs) {
-    need += r.qty;
-    if (need > supply + EPS) return r.day;
+/** Naplánovaná výroba dílu celkem ve směnách dnů `days` (od dneška); starší směny už jsou v našem skladu. */
+export function plannedTotal(cells: Readonly<Record<string, number>>, item: string, days: readonly DayNumber[]): number {
+  const first = days[0] ?? 0;
+  const last = days.at(-1) ?? -1;
+  let total = 0;
+  for (const [key, qty] of Object.entries(cells)) {
+    const bar = key.indexOf('|');
+    if (key.slice(bar + 1) !== item) continue;
+    const day = parseDay(key.slice(0, bar).split(' ')[0] ?? '');
+    if (day !== null && day >= first && day <= last) total += qty;
   }
-  return null;
+  return total;
 }
 
-/** Vyhodnotí plán dílu po směnách. `qty` vrátí množství dílu na směně. */
-export function evaluateItem(item: PlanItem, slots: readonly ShiftSlot[], qty: (slot: ShiftSlot) => number, today: DayNumber): ItemStatus {
-  const reqs = [...item.requirements].sort((a, b) => a.day - b.day);
-  const byDeadline = [...reqs].sort((a, b) => a.deadline - b.deadline);
-  const produced = slots.map(qty);
-  const due = slots.map(() => 0);
-  let r = 0;
-  slots.forEach((slot, k) => {
-    while (r < byDeadline.length && byDeadline[r]!.deadline <= slot.end) due[k]! += byDeadline[r++]!.qty;
-  });
-  let made = item.stock;
-  let needed = 0;
-  const balance = slots.map((_, k) => {
-    made += produced[k]!;
-    needed += due[k]!;
-    return made - needed;
-  });
-  const planned = produced.reduce((a, b) => a + b, 0);
-  const total = reqs.reduce((a, b) => a + b.qty, 0);
-  const withPlan = firstUncovered(reqs, item.stock + planned);
+export interface ItemStatus {
+  /** Coverage s plánem: stav u zákazníka + náš sklad + vše naplánované (do všech dnů). */
+  coverage: number[];
+  /** Coverage bez plánu: stav u zákazníka + náš sklad. */
+  withoutPlan: number[];
+  planned: number;
+  /** Index prvního dne v záporu s plánem; null = pokryto celé období. */
+  shortDay: number | null;
+  /** Index prvního dne v záporu bez plánu; null = pokryto celé období. */
+  shortDayWithoutPlan: number | null;
+  /** Kolik kusů i s plánem chybí do konce období (nejhlubší záporný stav). */
+  missing: number;
+}
+
+const EPS = 1e-9;
+
+const firstNegative = (values: readonly number[]) => {
+  const k = values.findIndex((v) => v < -EPS);
+  return k === -1 ? null : k;
+};
+
+/**
+ * Coverage dílu s plánem a bez něj. Naplánované kusy se přičtou do všech dnů coverage: první nepokrytý den −50
+ * a v plánu 60 ks → 10 (kdy vyrobit, aby díly k zákazníkovi dorazily včas, řídí plánovač).
+ */
+export function evaluateItem(item: PlanItem, planned: number): ItemStatus {
+  const withoutPlan = item.base.map((b) => b + item.stock);
+  const coverage = withoutPlan.map((v) => v + planned);
   return {
-    balance,
-    due,
+    coverage,
+    withoutPlan,
     planned,
-    missing: Math.max(0, total - item.stock),
-    firstMissing: firstUncovered(reqs, item.stock),
-    coveredWithPlan: withPlan === null ? 'whole' : weekdayBefore(withPlan, today),
-    late: balance.some((b) => b < -EPS),
+    shortDay: firstNegative(coverage),
+    shortDayWithoutPlan: firstNegative(withoutPlan),
+    missing: Math.max(0, -Math.min(0, ...coverage)),
   };
 }
 
-/** Strany na směnách v pořadí výroby (navazuje na předchozí směnu). */
+/** Strany (LHD, RHD) na směnách v pořadí výroby (navazuje na předchozí směnu). */
 export function slotSides(items: readonly PlanItem[], slots: readonly ShiftSlot[], qty: (slot: ShiftSlot, item: PlanItem) => number): string[][] {
   let previous = '';
   return slots.map((slot) => {
-    const sides = new Set(items.filter((it) => qty(slot, it) > 0).map((it) => it.side));
+    const sides = new Set(items.filter((it) => qty(slot, it) > 0).map((it) => sideGroup(it.side)));
     const order = sideOrder(sides, previous);
     previous = order.at(-1) ?? previous;
     return order;
   });
 }
 
-const EPS = 1e-9;
-
-export interface Proposal {
+export interface AutoPlanResult {
+  /** Plán: ručně zadané směny beze změny + dopočítané automatické směny. */
   cells: Record<string, number>;
-  /** Chybějící kusy, které po návrhu zůstanou nepokryté (nevešly se do kapacity). */
+  /** Kusy, které ani s plánem nejsou pokryté (nevešly se do kapacity automatických směn). */
   remaining: number;
 }
 
 /**
- * Návrh plánu podle pokrytí. Směny, které už začaly (`start < now`), zůstanou, jak jsou; jejich výroba a náš sklad
- * pokryjí nejdřívější chybějící kusy. Ostatní směny se plní od první: vždy díl s nejdřívějším nepokrytým dnem
- * (při shodě díl ze strany, která se právě vyrábí), po celých dnech, dokud je kapacita. Tím se pokrytí zvedá
- * rovnoměrně u všech dílů. Na směně se díly řadí po stranách (LHD a RHD nikdy zároveň).
+ * Plán s dopočítanými automatickými směnami (`auto`, klíč směny → strana). Ruční směny zůstanou, jak jsou, a spolu
+ * s naším skladem pokryjí nejdřívější chybějící kusy. Automatické směny se plní v pořadí `slots`: vždy díl zvolené
+ * strany s nejdřívějším nepokrytým dnem (při shodě díl ze strany, která se právě vyrábí), po celých dnech, dokud je
+ * kapacita. Chybějící kusy = přírůstek nejhlubšího záporného stavu coverage po dnech.
  */
-export function proposePlan(
+export function autoPlan(
   items: readonly PlanItem[],
+  days: readonly DayNumber[],
+  cells: Readonly<Record<string, number>>,
+  auto: Readonly<Record<string, AutoMode>>,
   slots: readonly ShiftSlot[],
   capacity: (slot: ShiftSlot) => number,
-  current: Readonly<Record<string, number>>,
-  now: number,
-): Proposal {
-  const cells: Record<string, number> = {};
-  const lockedSlots = slots.filter((s) => s.start < now);
-  for (const slot of lockedSlots)
-    for (const it of items) {
-      const q = current[cellKey(slot.key, it.item)] ?? 0;
-      if (q > 0) cells[cellKey(slot.key, it.item)] = q;
-    }
+): AutoPlanResult {
+  const autoSlots = slots.filter((s) => auto[s.key]);
+  const autoKeys = new Set(autoSlots.map((s) => s.key));
+  const result: Record<string, number> = {};
+  for (const [key, qty] of Object.entries(cells)) if (qty > 0 && !autoKeys.has(key.slice(0, key.indexOf('|')))) result[key] = qty;
 
-  // Nepokryté kusy po dnech: náš sklad a výroba v rozběhnutých směnách pokryjí nejdřívější dny.
   const queues = items.map((it) => {
-    let supply = it.stock + lockedSlots.reduce((sum, s) => sum + (cells[cellKey(s.key, it.item)] ?? 0), 0);
+    let supply = plannedTotal(result, it.item, days);
+    let deepest = 0;
     const queue: { day: DayNumber; qty: number }[] = [];
-    for (const req of [...it.requirements].sort((a, b) => a.day - b.day)) {
-      const used = Math.min(supply, req.qty);
+    evaluateItem(it, 0).withoutPlan.forEach((v, k) => {
+      if (-v <= deepest + EPS) return;
+      const need = -v - deepest;
+      deepest = -v;
+      const used = Math.min(supply, need);
       supply -= used;
-      if (req.qty - used > EPS) queue.push({ day: req.day, qty: req.qty - used });
-    }
+      if (need - used > EPS) queue.push({ day: days[k]!, qty: need - used });
+    });
     return queue;
   });
 
   let side = '';
-  for (const slot of slots.filter((s) => s.start >= now)) {
+  for (const slot of autoSlots) {
+    const mode = auto[slot.key]!;
+    const fits = (it: PlanItem) => mode === 'BOTH' || sideGroup(it.side) === mode;
     let free = Math.max(0, capacity(slot));
     while (free > EPS) {
       let best = -1;
       items.forEach((it, i) => {
         const head = queues[i]![0];
-        if (!head) return;
+        if (!head || !fits(it)) return;
         if (best === -1) return void (best = i);
         const other = queues[best]![0]!;
-        if (head.day < other.day || (head.day === other.day && it.side === side && items[best]!.side !== side)) best = i;
+        const onSide = (x: PlanItem) => sideGroup(x.side) === side;
+        if (head.day < other.day || (head.day === other.day && onSide(it) && !onSide(items[best]!))) best = i;
       });
       if (best === -1) break;
       const head = queues[best]![0]!;
       const take = Math.min(head.qty, free);
       const key = cellKey(slot.key, items[best]!.item);
-      cells[key] = (cells[key] ?? 0) + take;
+      result[key] = (result[key] ?? 0) + take;
       head.qty -= take;
       free -= take;
       if (head.qty <= EPS) queues[best]!.shift();
-      side = items[best]!.side;
+      side = sideGroup(items[best]!.side);
     }
   }
-  for (const key of Object.keys(cells)) cells[key] = Math.round(cells[key]! * 1000) / 1000;
+  for (const key of Object.keys(result)) result[key] = Math.round(result[key]! * 1000) / 1000;
   const remaining = queues.reduce((sum, q) => sum + q.reduce((a, b) => a + b.qty, 0), 0);
-  return { cells, remaining: Math.round(remaining * 1000) / 1000 };
+  return { cells: result, remaining: Math.round(remaining * 1000) / 1000 };
 }

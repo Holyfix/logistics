@@ -1049,3 +1049,42 @@ button:focus-visible {
     margin-bottom: 6px;
   }
 }
+
+/* Plán montáže jako coverage: vlevo políčka plánu po směnách, vpravo coverage dílu po dnech. */
+.plan-grid .plan-cov-start {
+  box-shadow: inset 2px 0 0 var(--ink-2);
+}
+
+.plan-grid td.plan-cov {
+  font-weight: 600;
+}
+
+.plan-grid td.plan-cov.cell-negative {
+  font-weight: 700;
+}
+
+.table-data td.cell-auto,
+.plan-grid tr.plan-summary td.cell-auto {
+  background: var(--accent-soft);
+}
+
+.swatch-auto {
+  background: var(--accent-soft);
+}
+
+.plan-select {
+  width: 58px;
+  font: inherit;
+  font-size: 12px;
+  color: inherit;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 2px 1px;
+}
+
+.plan-select:disabled {
+  color: var(--muted);
+  background: transparent;
+  border-color: transparent;
+}

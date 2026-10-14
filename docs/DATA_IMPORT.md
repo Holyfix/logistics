@@ -185,27 +185,30 @@ V prohlížeči bez přístupu ke složce se soubor stáhne a uloží se ručně
 
 | Soubor | Obsah |
 |---|---|
-| `Plan/Kapacity.xlsx` | list **Linky** (Linka, Projekt, Ks za směnu, Směny po–pá, např. `R O N`), list **Destinace** (Destinace, Pokrytí u zákazníka (dny), Transit (h), Příjezd; prázdná destinace = ostatní), list **Směny** (Ranní směna od) |
-| `Plan/<linka>_<projekt>.xlsx`, např. `ASSEMBLY_P100.xlsx` | list **Plán** (Linka, Projekt, Datum, Směna, Pořadí, Strana, Díl, Číslo zákazníka, Popis, Množství; jeden řádek = díl na směně v pořadí výroby), list **Přehled** (díly × směny, jen pro čtení), list **Kapacita směn** (ručně zadané kapacity směn) |
+| `Plan/Kapacity.xlsx` | list **Linky** (Linka, Projekt, Ks za směnu, Směny po–pá, např. `R O N`), list **Destinace** (Destinace, Pokrytí u zákazníka (dny), Transit (h), Příjezd; zatím se v plánu nepoužívá), list **Směny** (Ranní směna od) |
+| `Plan/<linka>_<projekt>.xlsx`, např. `ASSEMBLY_P100.xlsx` | list **Plán** (Linka, Projekt, Datum, Směna, Pořadí, Strana, Díl, Číslo zákazníka, Popis, Množství; jeden řádek = díl na směně v pořadí výroby), list **Přehled** (díly × směny, jen pro čtení), list **Kapacita směn** (Datum, Směna, Kapacita = ručně zadaná kapacita, Automaticky = `LHD`, `RHD` nebo `LHD+RHD` u směn s automatickým plánem) |
 
 - Jeden soubor na linku a projekt: každou linku plánuje jeden člověk, takže se zápisy nepotkají.
   Když soubor mezitím změnil někdo jiný, aplikace se před přepsáním zeptá.
-- **Díly montáže:** podle sloupce Line = `ASSEMBLY` v mapování. Bez sloupce díly ze souborů coverage
-  a díly z mapování s projektem a stranou. Projekt z mapování, jinak ze složky souboru coverage.
-- **Chybějící kusy:** jen ze souborů coverage (odvolávky se pro plán nepoužívají). Pokrytí = sklad a transit
-  u zákazníka (sekvencéra) + náš sklad hotových dílů; přírůstek chybějícího množství v den souboru je požadavek
-  na ten den, chybějící kusy z minulých dnů patří do dneška. Díly bez souboru coverage nemají požadavky.
-- **Termín výroby** = odjezd auta: příjezd k zákazníkovi v den (den − pokrytí + 1) v čase příjezdu, minus transit.
-  Příklad: chybí 15. 10., pokrytí 2 dny, transit 24 h, příjezd 6:00 → příjezd 14. 10. 6:00 → vyrobit a odeslat
-  do 13. 10. 6:00. Výroba po termínu se v plánu označí červeně (odeslání po termínu).
-- **Horizont plánu:** zbývající směny dneška a zítřek. Směny R, O, N po 8 hodinách od začátku ranní směny;
-  kapacita linky platí v pracovní dny pro vybrané směny, víkendy, svátky a přesčasy se zadávají v plánu.
-- **Návrh plánu:** směny, které už začaly, se nemění a jejich výroba se počítá jako hotová (spolu s naším skladem
-  pokryje nejdřívější chybějící kusy). Ostatní směny se plní od první: vždy díl s nejdřívějším nepokrytým dnem
-  (při shodě díl ze strany, která se právě vyrábí), po celých dnech, dokud je kapacita. Na směně se díly řadí
-  po stranách (LHD a RHD nikdy zároveň).
-- V plánu je u dílu: **Chybí ks** (v souborech coverage po odečtu našeho skladu), **Chybí od** (první den, kdy
-  zákazníkovi díly chybí) a **Pokryto s plánem do** (poslední pracovní den pokrytý i s plánem na dnes a zítra).
+- **Díly montáže:** jen díly se souborem coverage; se sloupcem Line v mapování jen díly s Line = `ASSEMBLY`.
+  Projekt z mapování, jinak ze složky souboru coverage. Plán je po projektech (každý projekt má jiný soubor coverage).
+- **Plán vypadá jako coverage:** u každého dílu vlevo kusy po směnách plánovacích dnů, vpravo coverage po dnech:
+  stav u zákazníka na konci dne podle souboru coverage (jeho sklad + transit − jeho plán) + náš sklad hotového dílu
+  (vždy) + **vše naplánované, přičtené do všech dnů** (první nepokrytý den −50 a v plánu 60 ks → 10; kdy vyrobit,
+  aby díly dorazily včas, řídí plánovač). Počítají se směny od dneška, starší výroba už je v našem skladu.
+  Záporný stav = zákazník nepokrytý. Coverage se přepočítá s každým zapsaným číslem.
+- **Pokryto do** = poslední den (i víkend) s coverage 0 nebo víc, s plánem i bez něj. „… a déle“ = pokryto celé
+  období souboru coverage (nejvýš 28 dní, bez souboru 14 dní od dneška).
+- **Plánovací dny:** výchozí dnes a zítra po směnách R, O, N (po 8 hodinách od začátku ranní směny); tlačítky − a +
+  se přidávají nebo ubírají další dny. Den, ve kterém už je něco naplánované nebo automatická směna, ubrat nejde. Kapacita linky platí
+  v pracovní dny pro vybrané směny, víkendy, svátky a přesčasy se zadávají v plánu.
+- **Automatický plán:** u směny se zvolí strana (`LHD`, `RHD` nebo obě) a směna se naplánuje sama a přepočítává se
+  s každou změnou. Strana dílu se bere podle začátku (`RHD HUD` = RHD, `LHD HUD` = LHD). Chybějící kusy = přírůstek
+  nejhlubšího záporného stavu coverage bez plánu po dnech; náš sklad a ruční směny pokryjí nejdřívější z nich.
+  Automatické směny se plní v pořadí směn: vždy díl zvolené strany s nejdřívějším nepokrytým dnem (při shodě díl
+  ze strany, která se právě vyrábí), po celých dnech, dokud je kapacita. Přepsáním čísla nebo volbou „ručně“ se
+  směna změní na ruční a dopočítaná čísla zůstanou. Do souboru se ukládají i dopočítaná množství. Na směně se díly
+  řadí po stranách (LHD a RHD nikdy zároveň).
 
 ## Testovací data
 

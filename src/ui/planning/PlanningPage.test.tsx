@@ -14,7 +14,7 @@ const day = (n: number) => dayFromParts(2026, 10, n)!;
 const master = parseMasterData(parseCsv('Item Number;Customer Number;Project;Variant;Line\nFG-L;A1234567890  00001234;P1;LHD;ASSEMBLY\nFG-R;;P1;RHD;Montáž\nK1;;;;'));
 const stock = parseStock(parseCsv('Item Number;Location;Zone ID;Qty On Hand - Inv Detail\nFG-L;A-01;SALE;20'));
 if (!master.ok || !stock.ok) throw new Error();
-// Coverage od sekvencéra: FG-L chybí od čt 15. 10. 80 ks, FG-R od pá 16. 10. 30 ks.
+// Coverage od sekvencéra (stav u zákazníka vč. transitu): FG-L chybí od čt 15. 10. 80 ks, FG-R od pá 16. 10. 30 ks.
 const covDays = [13, 14, 15, 16, 19].map(day);
 const row = (item: string, balance: number[]) => ({
   customerNumber: '',
@@ -79,39 +79,60 @@ const kpi = (label: string) => screen.getByText(label).parentElement!.querySelec
 describe('PlanningPage', () => {
   afterEach(cleanup);
 
-  it('přehled linek: chybějící kusy podle coverage a pokrytí s plánem', () => {
+  it('přehled linek: nepokryté díly a pokrytí zákazníka s plánem a bez něj', () => {
     renderPage();
     const tr = screen.getByRole('button', { name: 'P1' }).closest('tr')!;
     const texts = [...tr.querySelectorAll('td')].map((td) => td.textContent);
-    // FG-L chybí 80 − sklad 20 = 60 ks, FG-R 30 ks; bez plánu je zákazník pokrytý do středy.
-    expect(texts).toEqual(['ASSEMBLY', 'P1', '90', '0', '0 %', '2 / 2', 'St 14. 10.', 'Zatím neuloženo']);
+    // FG-L: zákazník + náš sklad 20 vydrží do středy (ve čtvrtek -60), FG-R do čtvrtka.
+    expect(texts).toEqual(['ASSEMBLY', 'P1', '2 / 2', 'St 14. 10.bez plánu: St 14. 10.', '0', 'Zatím neuloženo']);
     expect(within(screen.getByRole('table')).getByText('FOA').closest('tr')!.textContent).toContain('připravujeme');
   });
 
-  it('plán na zbývající směny dneška a zítřek, návrh podle prvních chybějících dnů a ruční úprava', () => {
+  it('plán jako coverage: plán vlevo, kusy se přičtou do celé coverage, automatické směny podle strany', () => {
     renderPage();
     fireEvent.click(screen.getByRole('button', { name: 'P1' }));
     expect(screen.getByRole('tab', { name: 'ASSEMBLY' }).getAttribute('aria-selected')).toBe('true');
-    expect(kpi('Díly s chybějícími kusy')).toBe('2');
-    // Jen dnes a zítra: 6 směn.
+    expect(kpi('Nepokryté díly')).toBe('2');
+    expect(kpi('Pokryto do (nejhorší díl)')).toBe('St 14. 10.');
+    // Výchozí 2 plánovací dny po směnách vlevo, vpravo coverage po dnech do 25. 10.
     expect(document.querySelectorAll('th.plan-shift').length).toBe(6);
-    const fgL = input('FG-L Po 12. 10. R').closest('tr')!;
-    expect([...fgL.querySelectorAll('td')].slice(1, 6).map((td) => td.textContent)).toEqual(['LHD', '20', '60', 'Čt 15. 10.', 'St 14. 10.']);
+    const row = (item: string) => input(`${item} Po 12. 10. R`).closest('tr')!;
+    const cov = (item: string) => [...row(item).querySelectorAll('td.plan-cov')].slice(0, 5).map((td) => td.textContent);
+    expect(row('FG-L').querySelectorAll('td.plan-cov').length).toBe(14);
+    expect(cov('FG-L')).toEqual(['20', '30', '20', '-60', '-60']);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Navrhnout plán' }));
-    // Ranní směna: nejdřív FG-L (chybí od čtvrtka), pak FG-R (od pátku).
-    expect(input('FG-L Po 12. 10. R').value).toBe('60');
-    expect(input('FG-R Po 12. 10. R').value).toBe('30');
-    expect(input('FG-L Út 13. 10. R').value).toBe('');
-    expect(kpi('Odeslání po termínu')).toBe('0');
-    expect(screen.getAllByText('celý soubor coverage').length).toBe(2);
+    // 70 ks v úterý na noční: čtvrtek −60 → 10 (plán se přičte do všech dnů).
+    fireEvent.change(input('FG-L Út 13. 10. N'), { target: { value: '70' } });
+    expect(cov('FG-L')).toEqual(['90', '100', '90', '10', '10']);
+    expect(kpi('Nepokryté díly')).toBe('1');
     expect(screen.getAllByText('Neuložené změny').length).toBeGreaterThan(0);
     expect(screen.getByRole('tab', { name: 'ASSEMBLY •' })).toBeTruthy();
 
-    // Méně kusů FG-R: zákazník pokrytý do čtvrtka a odeslání do st 6:00 nestihne.
-    fireEvent.change(input('FG-R Po 12. 10. R'), { target: { value: '10' } });
-    expect(kpi('Odeslání po termínu')).toBe('1');
-    expect(within(input('FG-R Po 12. 10. R').closest('tr')!).getByText('Čt 15. 10.')).toBeTruthy();
+    // Odpolední směna automaticky RHD: FG-R se doplní sám (chybí 30 ks).
+    const auto = (label: string) => screen.getByRole('combobox', { name: `Automaticky ${label}` }) as HTMLSelectElement;
+    fireEvent.change(auto('Po 12. 10. O'), { target: { value: 'RHD' } });
+    expect(input('FG-R Po 12. 10. O').value).toBe('30');
+    expect(input('FG-L Po 12. 10. O').value).toBe('');
+    expect(input('FG-R Po 12. 10. O').closest('td')!.className).toContain('cell-auto');
+    expect(kpi('Nepokryté díly')).toBe('0');
+
+    // Přepsáním čísla je směna ruční: v pátek chybí 10 ks.
+    fireEvent.change(input('FG-R Po 12. 10. O'), { target: { value: '20' } });
+    expect(auto('Po 12. 10. O').value).toBe('');
+    expect(cov('FG-R')[4]).toBe('-10');
+    expect(row('FG-R').querySelectorAll('td.plan-cov')[4]!.className).toContain('cell-negative');
+
+    // Noční obě strany: doplní zbylých 10 ks FG-R.
+    fireEvent.change(auto('Po 12. 10. N'), { target: { value: 'BOTH' } });
+    expect(input('FG-R Po 12. 10. N').value).toBe('10');
+    expect(kpi('Nepokryté díly')).toBe('0');
+
+    // Plánovací dny: přidat třetí, ubrat jde jen po úterý (tam je plán).
+    fireEvent.click(screen.getByRole('button', { name: 'Přidat plánovací den' }));
+    expect(document.querySelectorAll('th.plan-shift').length).toBe(9);
+    fireEvent.click(screen.getByRole('button', { name: 'Ubrat plánovací den' }));
+    expect(document.querySelectorAll('th.plan-shift').length).toBe(6);
+    expect((screen.getByRole('button', { name: 'Ubrat plánovací den' }) as HTMLButtonElement).disabled).toBe(true);
   });
 
   it('ručně zadaná kapacita směny a kapacity linek', () => {
@@ -123,6 +144,5 @@ describe('PlanningPage', () => {
     fireEvent.click(screen.getByRole('tab', { name: /Kapacity/ }));
     fireEvent.change(input('Ks za směnu ASSEMBLY P1'), { target: { value: '120' } });
     expect(screen.getByRole('tab', { name: 'Kapacity •' })).toBeTruthy();
-    expect(screen.getByText('Lokalita A')).toBeTruthy();
   });
 });
