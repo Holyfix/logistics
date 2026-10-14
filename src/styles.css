@@ -1019,3 +1019,33 @@ button:focus-visible {
   color: var(--down);
   font-weight: 600;
 }
+
+/* Vysvětlivky pod tabulkou: pojem a krátký popis, na širokých obrazovkách vedle sebe. */
+.explain {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 4px 14px;
+  margin: 12px 0 0;
+  font-size: 13px;
+  color: var(--ink-2);
+}
+
+.explain dt {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.explain dd {
+  margin: 0;
+  max-width: 90ch;
+}
+
+@media (max-width: 600px) {
+  .explain {
+    grid-template-columns: 1fr;
+  }
+
+  .explain dd {
+    margin-bottom: 6px;
+  }
+}
