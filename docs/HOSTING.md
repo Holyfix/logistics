@@ -26,6 +26,18 @@ GitHub Pages (jen kód) ──► Prohlížeč ──čte──► sdílená slo
 - Jako varianta 2, ale na firemním serveru nebo ve firemním cloudu.
 - **Plusy:** nejlepší z hlediska TISAX. **Minusy:** závislost na firemním IT.
 
+## Varianta 4: Firebase (zvažováno)
+```
+Firebase Hosting (kód) ──► Prohlížeč / telefon ──přihlášení──► Firebase Authentication
+                            ├─ nahraje zpracované exporty z ERP ──► Firestore (EU)
+                            └─ plány a kapacity živě pro všechny ◄──► Firestore
+```
+- **Plusy:** přihlášení, živá data a plány pro všechny uživatele, i na telefonu; tarif Spark zdarma;
+  výpočty a obrazovky zůstávají, mění se jen vrstva čtení a ukládání dat.
+- **Minusy:** zpracovaná data u Googlu (nutný souhlas ISB), exporty z ERP se dál nahrávají ručně,
+  bezpečnost stojí na správných pravidlech databáze.
+- Postup založení projektu: [FIREBASE_SETUP.md](FIREBASE_SETUP.md).
+
 ## Naměřená rychlost varianty 1
 
 Test v Chromiu na smyšlených souborech (3 000 dílů × 50 termínů = 150 000 řádků odvolávek):

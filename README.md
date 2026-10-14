@@ -48,4 +48,5 @@ popisuje [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 | [docs/HOSTING.md](docs/HOSTING.md) | Varianty provozu a naměřená rychlost |
 | [docs/BACKUP_AND_SECURITY.md](docs/BACKUP_AND_SECURITY.md) | Zálohování, bezpečnost, TISAX |
 | [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) | Nastavení GitHub Pages |
+| [docs/FIREBASE_SETUP.md](docs/FIREBASE_SETUP.md) | Založení projektu Firebase (přihlášení, živá data) |
 | [docs/adr/](docs/adr/) | Zaznamenaná rozhodnutí |

@@ -110,6 +110,17 @@ describe('PlanningPage', () => {
     expect(screen.getAllByText('Neuložené změny').length).toBeGreaterThan(0);
     expect(screen.getByRole('tab', { name: 'ASSEMBLY •' })).toBeTruthy();
 
+    // Enter potvrdí a přejde na díl pod tím ve stejné směně, Shift+Enter zpět nahoru.
+    input('FG-L Út 13. 10. N').focus();
+    fireEvent.keyDown(input('FG-L Út 13. 10. N'), { key: 'Enter' });
+    expect(document.activeElement).toBe(input('FG-R Út 13. 10. N'));
+    fireEvent.keyDown(input('FG-R Út 13. 10. N'), { key: 'Enter', shiftKey: true });
+    expect(document.activeElement).toBe(input('FG-L Út 13. 10. N'));
+    fireEvent.keyDown(input('FG-L Út 13. 10. N'), { key: 'Enter', shiftKey: true });
+    expect(document.activeElement).toBe(input('Kapacita směny Út 13. 10. N'));
+    fireEvent.keyDown(input('FG-R Út 13. 10. N'), { key: 'Enter' });
+    expect(cov('FG-L')).toEqual(['90', '100', '90', '10', '10']);
+
     // Odpolední směna automaticky RHD: FG-R se doplní sám (chybí 30 ks → 3 balení).
     const auto = (label: string) => screen.getByRole('combobox', { name: `Automaticky ${label}` }) as HTMLSelectElement;
     fireEvent.change(auto('Po 12. 10. O'), { target: { value: 'RHD' } });
