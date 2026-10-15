@@ -108,13 +108,12 @@ describe('OilPage', () => {
     expect(row('Chybí obaly')).toBeTruthy();
     expect(screen.queryByText(/málo vozíků/, { selector: 'strong' })).toBeNull();
 
-    // Plnění tlačítky PDCA: Check = 75 %, v seznamu písmeno fáze.
-    fireEvent.click(within(detail).getByRole('button', { name: 'Check 75 %' }));
-    expect(within(detail).getByRole('button', { name: 'Check 75 %' }).getAttribute('aria-pressed')).toBe('true');
-    expect(within(row('Chybí obaly')).getByText('C')).toBeTruthy();
-    // Kritérium fáze a otázka pro další krok.
-    expect(within(detail).getByText(/máme důkaz, že to funguje/)).toBeTruthy();
-    expect(within(detail).getByText('Je to standard a můžeme bod uzavřít?')).toBeTruthy();
+    // Plnění barevnými tlačítky kroků OIL: 75 % = opatření zavedeno; pod tlačítky kritérium a otázka pro další krok.
+    fireEvent.click(within(detail).getByRole('button', { name: 'Opatření zavedeno 75 %' }));
+    expect(within(detail).getByRole('button', { name: 'Opatření zavedeno 75 %' }).getAttribute('aria-pressed')).toBe('true');
+    expect(within(row('Chybí obaly')).getByText('75 %')).toBeTruthy();
+    expect(within(detail).getByText(/Opatření je hotové/)).toBeTruthy();
+    expect(within(detail).getByText('Máme důkaz, že to funguje?')).toBeTruthy();
     fireEvent.click(within(detail).getByRole('button', { name: 'Zavřít' }));
 
     // Smazání: bez potvrzení se nic nestane, po potvrzení bod zmizí.

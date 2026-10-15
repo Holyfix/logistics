@@ -125,14 +125,14 @@ Filtry: zákazník, projekt, strana (LHD/RHD), kategorie z kmenových dat, hled�
 ### OIL (Open Issue List)
 - ✅ Bod: číslo, problém, opatření, odpovědný, otevřeno, termín, uzavřeno
 - ✅ Zrušení bodu (zůstane v seznamu) a trvalé smazání s potvrzením
-- ✅ Plnění po fázích PDCA přizpůsobených OIL (fáze platí, až je celá splněná):
-  - 0 % zapsáno (šedá) – víme co, ale ještě ne proč a co s tím
-  - P 25 % (červená) – víme proč a co uděláme: příčina / cíl, opatření, odpovědný, termín
-  - D 50 % (oranžová) – opatření je provedené
-  - C 75 % (žlutá) – účinnost ověřená, máme důkaz
-  - A 100 % (zelená) – standardizováno (proces, WI, školení) a uzavřeno
-  - v seznamu kolečko (Harvey ball) v barvě fáze s písmenem, kliknutím o krok dál; v detailu barevná tlačítka,
-    kritérium aktuální fáze a otázka pro další krok
+- ✅ Plnění po krocích OIL (krok platí, až je celý splněný), barevná tlačítka:
+  - 0 % zapsáno (šedá) – víme co, ale ještě ne proč
+  - 25 % problém popsán (červená) – víme co, kde, jak velké a proč (u úkolu cíl)
+  - 50 % opatření určeno (oranžová) – co, kdo, do kdy
+  - 75 % opatření zavedeno (žlutá) – opatření je hotové
+  - 100 % účinnost ověřena (zelená) – máme důkaz, že to funguje; bod se uzavře
+  - v seznamu kolečko (Harvey ball) v barvě kroku, kliknutím o krok dál; v detailu kritérium aktuálního kroku
+    a otázka pro další krok
 - ✅ Pruh u řádku a štítek podle stavu: červená po termínu, žlutá rozpracováno, modrá nezahájeno, zelená hotovo, šedá zrušeno
 - ✅ Posun termínu s povinným důvodem: u bodu „posunuto N×“, původní termín a historie (kdo, kdy, z – na, proč)
 - ✅ Komentáře s datem a autorem

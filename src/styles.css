@@ -1320,92 +1320,87 @@ button:focus-visible {
 
 .oil-ball-ring {
   fill: var(--surface);
-  stroke: var(--pdca);
+  stroke: var(--step);
   stroke-width: 2;
 }
 
 .oil-ball-fill {
-  fill: var(--pdca);
+  fill: var(--step);
 }
 
-/* Plnění po fázích PDCA: nezahájeno šedá, P červená, D oranžová, C žlutá, A zelená. */
-.pdca-0 {
-  --pdca: var(--muted);
-  --pdca-ink: #ffffff;
+/* Plnění po krocích OIL: zapsáno šedá, problém popsán červená, opatření určeno oranžová, zavedeno žlutá, ověřeno zelená. */
+.step-0 {
+  --step: var(--muted);
+  --step-ink: #ffffff;
 }
 
-.pdca-25 {
-  --pdca: #d03b3b;
-  --pdca-ink: #ffffff;
+.step-25 {
+  --step: #d03b3b;
+  --step-ink: #ffffff;
 }
 
-.pdca-50 {
-  --pdca: #ec7a1c;
-  --pdca-ink: #ffffff;
+.step-50 {
+  --step: #ec7a1c;
+  --step-ink: #ffffff;
 }
 
-.pdca-75 {
-  --pdca: #f2c12e;
-  --pdca-ink: #13202a;
+.step-75 {
+  --step: #f2c12e;
+  --step-ink: #13202a;
 }
 
-.pdca-100 {
-  --pdca: #0ca30c;
-  --pdca-ink: #ffffff;
+.step-100 {
+  --step: #0ca30c;
+  --step-ink: #ffffff;
 }
 
-.pdca-letter {
-  min-width: 10px;
-  font: 700 14px/1 var(--font-display);
-}
-
-.pdca {
+.oil-steps {
   display: flex;
   gap: 4px;
 }
 
-.pdca button {
+.oil-steps button {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 2px;
   flex: 1 1 0;
   min-width: 0;
-  max-width: 64px;
+  max-width: 72px;
   padding: 6px 2px 5px;
   font: inherit;
   color: var(--ink);
   background: var(--surface);
   border: 1px solid var(--line);
-  border-top: 4px solid var(--pdca);
+  border-top: 4px solid var(--step);
   border-radius: 6px;
   cursor: pointer;
 }
 
-.pdca button b {
+.oil-steps button b {
   font: 700 16px/1 var(--font-display);
 }
 
-.pdca button small {
+.oil-steps button small {
   font-size: 11px;
   color: var(--muted);
 }
 
-.pdca button:hover:not(:disabled) {
-  border-color: var(--pdca);
+.oil-steps button:hover:not(:disabled) {
+  border-color: var(--step);
 }
 
-.pdca button[aria-pressed='true'] {
-  color: var(--pdca-ink);
-  background: var(--pdca);
-  border-color: var(--pdca);
+.oil-steps button[aria-pressed='true'] {
+  color: var(--step-ink);
+  background: var(--step);
+  border-color: var(--step);
 }
 
-.pdca button[aria-pressed='true'] small {
+.oil-steps button[aria-pressed='true'] small {
   color: inherit;
 }
 
-.pdca button:disabled {
+.oil-steps button:disabled {
   opacity: 0.5;
   cursor: default;
 }
@@ -1576,7 +1571,7 @@ button.oil-step:disabled {
   background: var(--negative-bg);
 }
 
-.oil-detail small.pdca-help {
+.oil-detail small.step-help {
   color: var(--ink-2);
   line-height: 1.35;
 }

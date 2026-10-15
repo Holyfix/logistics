@@ -271,8 +271,8 @@ export function OilPage({ today = localToday() }: { today?: DayNumber } = {}) {
                         <button
                           type="button"
                           className="oil-step"
-                          aria-label={`${to.table.progress} ${item.id}: ${item.progress} % (${to.pdca[item.progress].name}), ${to.progressNext}`}
-                          title={`${to.pdca[item.progress].name}: ${to.pdca[item.progress].hint} · ${to.progressNext}`}
+                          aria-label={`${to.table.progress} ${item.id}: ${item.progress} % (${to.steps[item.progress].name}), ${to.progressNext}`}
+                          title={`${to.steps[item.progress].name}: ${to.steps[item.progress].hint} · ${to.progressNext}`}
                           disabled={item.cancelled || item.progress === 100}
                           onClick={(e) => {
                             e.stopPropagation();
@@ -280,7 +280,6 @@ export function OilPage({ today = localToday() }: { today?: DayNumber } = {}) {
                           }}
                         >
                           <ProgressBall progress={item.progress} />
-                          {item.progress > 0 && <b className="pdca-letter">{to.pdca[item.progress].short}</b>}
                           <span>{item.progress} %</span>
                         </button>
                       </td>
@@ -312,10 +311,10 @@ export function OilPage({ today = localToday() }: { today?: DayNumber } = {}) {
           </div>
         )}
         <ul className="cov-legend">
-          <li className="muted">{to.legendPdca}</li>
+          <li className="muted">{to.legendSteps}</li>
           {PROGRESS_STEPS.map((p) => (
-            <li key={p} title={to.pdca[p].hint}>
-              <ProgressBall progress={p} /> {p === 0 ? to.pdca[p].name : `${to.pdca[p].short} ${to.pdca[p].name}`}
+            <li key={p} title={to.steps[p].hint}>
+              <ProgressBall progress={p} /> {p} % {to.steps[p].name}
             </li>
           ))}
         </ul>
@@ -384,42 +383,39 @@ function OilDetail({
         </label>
         <div className="field">
           <span>{td.progress}</span>
-          <div className="pdca" role="group" aria-label={`${td.progress} ${item.id}`}>
+          <div className="oil-steps" role="group" aria-label={`${td.progress} ${item.id}`}>
             {PROGRESS_STEPS.map((p) => (
               <button
                 key={p}
                 type="button"
-                className={`pdca-${p}`}
+                className={`step-${p}`}
                 aria-pressed={item.progress === p}
-                aria-label={`${t.oil.pdca[p].name} ${p} %`}
-                title={t.oil.pdca[p].hint}
+                aria-label={`${t.oil.steps[p].name} ${p} %`}
+                title={t.oil.steps[p].hint}
                 disabled={item.cancelled}
                 onClick={() => change((i) => withProgress(i, p, today))}
               >
-                <b>{t.oil.pdca[p].short}</b>
-                <small>{p} %</small>
+                <b>{p} %</b>
+                <small>{t.oil.steps[p].short}</small>
               </button>
             ))}
           </div>
-          {/* Kritérium aktuální fáze a otázka pro další krok (fáze platí, až je celá splněná). */}
-          <small className="pdca-help">
+          {/* Kritérium aktuálního kroku a otázka pro další krok (krok platí, až je celý splněný). */}
+          <small className="step-help">
             <strong>
-              {t.oil.pdca[item.progress].short !== '–' && `${t.oil.pdca[item.progress].short} – `}
-              {t.oil.pdca[item.progress].name}:
+              {item.progress} % {t.oil.steps[item.progress].name}:
             </strong>{' '}
-            {t.oil.pdca[item.progress].hint}
+            {t.oil.steps[item.progress].hint}
           </small>
           {item.progress < 100 && (
-            <small className="pdca-help">
+            <small className="step-help">
               <strong>
-                {t.oil.pdcaNext} {t.oil.pdca[nextProgress(item.progress)].short}:
+                {t.oil.stepNext} {nextProgress(item.progress)} %:
               </strong>{' '}
-              {t.oil.pdca[nextProgress(item.progress)].question}
+              {t.oil.steps[nextProgress(item.progress)].question}
             </small>
           )}
-          <small className="muted">
-            {t.oil.pdcaRule}
-          </small>
+          <small className="muted">{t.oil.stepRule}</small>
           <small className="muted">
             {td.opened} {dayLabel(item.opened)}
             {item.closed !== null && ` · ${td.closed} ${dayLabel(item.closed)}`}
