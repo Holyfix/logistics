@@ -107,6 +107,11 @@ describe('OilPage', () => {
     fireEvent.change(within(detail).getByLabelText('Problém'), { target: { value: 'Chybí obaly\n\nPříčina: málo vozíků' } });
     expect(row('Chybí obaly')).toBeTruthy();
     expect(screen.queryByText(/málo vozíků/, { selector: 'strong' })).toBeNull();
+
+    // Plnění tlačítky PDCA: Check = 75 %, v seznamu písmeno fáze.
+    fireEvent.click(within(detail).getByRole('button', { name: 'Check 75 %' }));
+    expect(within(detail).getByRole('button', { name: 'Check 75 %' }).getAttribute('aria-pressed')).toBe('true');
+    expect(within(row('Chybí obaly')).getByText('C')).toBeTruthy();
     fireEvent.click(within(detail).getByRole('button', { name: 'Zavřít' }));
 
     // Smazání: bez potvrzení se nic nestane, po potvrzení bod zmizí.

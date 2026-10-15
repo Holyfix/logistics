@@ -404,6 +404,14 @@ export const cs = {
     times: '×',
     noDue: 'bez termínu',
     noProblem: '(bez popisu)',
+    pdca: {
+      0: { short: '–', name: 'Nezahájeno', hint: 'Bod je zapsaný, práce ještě nezačala.' },
+      25: { short: 'P', name: 'Plan', hint: 'Problém a příčina jsou popsané, opatření je naplánované.' },
+      50: { short: 'D', name: 'Do', hint: 'Opatření se realizuje.' },
+      75: { short: 'C', name: 'Check', hint: 'Opatření je zavedené, ověřuje se účinnost.' },
+      100: { short: 'A', name: 'Act', hint: 'Účinnost je potvrzená a standardizovaná, bod je uzavřený.' },
+    },
+    legendPdca: 'Plnění (PDCA):',
     progressNext: 'kliknutím o krok dál',
     empty: 'Žádný bod neodpovídá filtru.',
     emptyList: 'OIL je zatím prázdný. Začněte tlačítkem Nový bod.',
@@ -435,7 +443,7 @@ export const cs = {
       close: 'Zavřít',
       needName: 'Pro komentář a posun termínu vyplňte nahoře své jméno.',
     },
-    legend: 'Barva řádku a kolečka plnění podle stavu.',
+    legend: 'Barva pruhu u řádku podle stavu:',
   },
   dashboard: {
     noData: 'Dashboard skládá přehled z odvolávek, coverage od zákazníka, kusovníku, skladu a OIL. Zatím nejsou načtená žádná data.',

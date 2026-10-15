@@ -402,6 +402,14 @@ export const en: Messages = {
     times: '×',
     noDue: 'no due date',
     noProblem: '(no description)',
+    pdca: {
+      0: { short: '–', name: 'Not started', hint: 'The item is recorded, work has not started yet.' },
+      25: { short: 'P', name: 'Plan', hint: 'Problem and root cause are described, the action is planned.' },
+      50: { short: 'D', name: 'Do', hint: 'The action is being implemented.' },
+      75: { short: 'C', name: 'Check', hint: 'The action is implemented, effectiveness is being checked.' },
+      100: { short: 'A', name: 'Act', hint: 'Effectiveness is confirmed and standardised, the item is closed.' },
+    },
+    legendPdca: 'Progress (PDCA):',
     progressNext: 'click for the next step',
     empty: 'No item matches the filter.',
     emptyList: 'The OIL is empty. Start with New item.',
@@ -433,7 +441,7 @@ export const en: Messages = {
       close: 'Close',
       needName: 'Enter your name at the top to comment or shift the due date.',
     },
-    legend: 'Row and progress colour by status.',
+    legend: 'Row stripe colour by status:',
   },
   dashboard: {
     noData: 'The dashboard combines call-offs, customer coverage, the bill of materials, stock and the OIL. No data is loaded yet.',

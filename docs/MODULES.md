@@ -125,8 +125,8 @@ Filtry: zákazník, projekt, strana (LHD/RHD), kategorie z kmenových dat, hled�
 ### OIL (Open Issue List)
 - ✅ Bod: číslo, problém, opatření, odpovědný, otevřeno, termín, uzavřeno
 - ✅ Zrušení bodu (zůstane v seznamu) a trvalé smazání s potvrzením
-- ✅ Plnění po krocích 0/25/50/75/100 % kliknutím na kolečko (Harvey ball), přesně v detailu bodu
-- ✅ Barva podle stavu: červená po termínu, žlutá rozpracováno, modrá nezahájeno, zelená hotovo, šedá zrušeno
+- ✅ Plnění po fázích PDCA: nezahájeno 0 % (šedá), P – Plan 25 % (červená), D – Do 50 % (oranžová), C – Check 75 % (žlutá), A – Act 100 % (zelená); v seznamu kolečko (Harvey ball) s písmenem fáze, kliknutím o krok dál, v detailu barevná tlačítka s popisem fáze
+- ✅ Pruh u řádku a štítek podle stavu: červená po termínu, žlutá rozpracováno, modrá nezahájeno, zelená hotovo, šedá zrušeno
 - ✅ Posun termínu s povinným důvodem: u bodu „posunuto N×“, původní termín a historie (kdo, kdy, z – na, proč)
 - ✅ Komentáře s datem a autorem
 - ✅ Filtry Otevřené / Po termínu / Hotové / Vše, odpovědný (po osobách, bod „A / B“ patří k oběma), hledání; ukazatele otevřené, po termínu, hotovo, posuny

@@ -1320,32 +1320,94 @@ button:focus-visible {
 
 .oil-ball-ring {
   fill: var(--surface);
-  stroke: var(--oil-color);
+  stroke: var(--pdca);
   stroke-width: 2;
 }
 
 .oil-ball-fill {
-  fill: var(--oil-color);
+  fill: var(--pdca);
 }
 
-.oil-ball-done {
-  --oil-color: var(--good);
+/* Plnění po fázích PDCA: nezahájeno šedá, P červená, D oranžová, C žlutá, A zelená. */
+.pdca-0 {
+  --pdca: var(--muted);
+  --pdca-ink: #ffffff;
 }
 
-.oil-ball-overdue {
-  --oil-color: var(--crit);
+.pdca-25 {
+  --pdca: #d03b3b;
+  --pdca-ink: #ffffff;
 }
 
-.oil-ball-progress {
-  --oil-color: var(--warn);
+.pdca-50 {
+  --pdca: #ec7a1c;
+  --pdca-ink: #ffffff;
 }
 
-.oil-ball-open {
-  --oil-color: var(--accent);
+.pdca-75 {
+  --pdca: #f2c12e;
+  --pdca-ink: #13202a;
 }
 
-.oil-ball-cancelled {
-  --oil-color: var(--muted);
+.pdca-100 {
+  --pdca: #0ca30c;
+  --pdca-ink: #ffffff;
+}
+
+.pdca-letter {
+  min-width: 10px;
+  font: 700 14px/1 var(--font-display);
+}
+
+.pdca {
+  display: flex;
+  gap: 4px;
+}
+
+.pdca button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: 64px;
+  padding: 6px 2px 5px;
+  font: inherit;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-top: 4px solid var(--pdca);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.pdca button b {
+  font: 700 16px/1 var(--font-display);
+}
+
+.pdca button small {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.pdca button:hover:not(:disabled) {
+  border-color: var(--pdca);
+}
+
+.pdca button[aria-pressed='true'] {
+  color: var(--pdca-ink);
+  background: var(--pdca);
+  border-color: var(--pdca);
+}
+
+.pdca button[aria-pressed='true'] small {
+  color: inherit;
+}
+
+.pdca button:disabled {
+  opacity: 0.5;
+  cursor: default;
 }
 
 button.oil-step {
