@@ -112,7 +112,7 @@ export function CallOffsPage() {
       {tab === 'current' ? (
         <CurrentView current={current} previous={previous} items={items} master={master} filters={filters} />
       ) : tab === 'summary' ? (
-        <SummaryView current={current} previous={previous} items={items} master={master} filters={filters} />
+        <SummaryView current={current} previous={previous} items={items} master={master} filter={filter} filters={filters} />
       ) : (
         <CompareView exports={exports} filter={filter} master={master} filters={filters} />
       )}

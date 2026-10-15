@@ -17,6 +17,8 @@ export interface SummaryNode {
   backlog: number;
   /** Změna proti předchozímu exportu v obdobích, která oba exporty pokrývají; null bez předchozího exportu. */
   diff: number | null;
+  /** Součet předchozího exportu v týchž obdobích (základ pro změnu v %); null bez předchozího exportu. */
+  previousTotal: number | null;
   children: SummaryNode[];
 }
 
@@ -45,7 +47,14 @@ export function summarize(rows: readonly CurrentRow[], master: ReadonlyMap<strin
         const key = `${parent}|${label}`;
         const values = Array.from({ length: periods }, (_, k) => list.reduce((s, r) => s + r.values[k]!, 0));
         let diff = 0;
-        for (const r of list) r.values.forEach((v, k) => (diff += r.previous[k] === null ? 0 : v - r.previous[k]!));
+        let previousTotal = 0;
+        for (const r of list)
+          r.values.forEach((v, k) => {
+            const p = r.previous[k];
+            if (p === null || p === undefined) return;
+            diff += v - p;
+            previousTotal += p;
+          });
         return {
           key,
           level,
@@ -55,6 +64,7 @@ export function summarize(rows: readonly CurrentRow[], master: ReadonlyMap<strin
           total: values.reduce((a, b) => a + b, 0),
           backlog: list.reduce((s, r) => s + r.backlog, 0),
           diff: hasPrevious ? diff : null,
+          previousTotal: hasPrevious ? previousTotal : null,
           children: level < 2 ? build(list, (level + 1) as 1 | 2, key) : [],
         };
       })

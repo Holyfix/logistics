@@ -1,5 +1,7 @@
 // Stažení souboru vytvořeného v prohlížeči (CSV nebo Excel).
 
+import type { ReportSheet } from '../core/calloffs/summaryReport';
+
 /** Název souboru bez diakritiky a zvláštních znaků (některé prohlížeče a systémy s nimi mají potíže). */
 export function safeFileName(name: string): string {
   return name
@@ -57,4 +59,22 @@ export async function downloadXlsxSheets(fileName: string, sheets: XlsxSheet[]):
 
 export function downloadXlsx(fileName: string, sheetName: string, header: string[], rows: XlsxValue[][]): Promise<void> {
   return downloadXlsxSheets(fileName, [{ name: sheetName, header, rows }]);
+}
+
+/** Formátovaný sešit (barvy, formáty čísel, ukotvené řádky) pro reporty, které se posílají dál. */
+export async function downloadReport(fileName: string, sheets: ReportSheet[]): Promise<void> {
+  const { default: writeXlsxFile } = await import('write-excel-file/browser');
+  const blob = await writeXlsxFile(
+    sheets.map((sheet) => ({
+      sheet: sheet.name.slice(0, 31),
+      // Buňky reportu jsou podmnožina buněk knihovny.
+      data: sheet.data as Parameters<typeof writeXlsxFile>[0][number]['data'],
+      columns: sheet.columns,
+      stickyRowsCount: sheet.stickyRows,
+      stickyColumnsCount: sheet.stickyColumns,
+      showGridLines: false,
+      orientation: 'landscape' as const,
+    })),
+  ).toBlob();
+  downloadBlob(fileName, blob);
 }
