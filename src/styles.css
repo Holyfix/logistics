@@ -1477,15 +1477,7 @@ button.oil-step:disabled {
   font-weight: 600;
 }
 
-/* OIL: oblast a téma nad problémem, trvalé smazání bodu. */
-.oil-text .oil-tags {
-  display: block;
-  color: var(--muted);
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-}
-
+/* OIL: trvalé smazání bodu. */
 .button-danger {
   margin-left: auto;
   color: var(--crit);

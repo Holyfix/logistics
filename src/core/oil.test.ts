@@ -71,7 +71,7 @@ describe('OIL', () => {
 
   it('uloží do Excelu a znovu načte i s komentáři a posuny', () => {
     let list = addItem(addItem(emptyOil(), day(1)).list, day(2)).list;
-    list = updateItem(list, 1, (i) => withComment({ ...i, area: 'Sklad', topic: 'Obaly', problem: 'Chybí obaly', cause: 'Málo vozíků', action: 'Objednat', owner: 'Logistika' }, 'Objednáno', 'Logistika', '2.10.2026 7:30'));
+    list = updateItem(list, 1, (i) => withComment({ ...i, problem: 'Chybí obaly', action: 'Objednat', owner: 'Logistika' }, 'Objednáno', 'Logistika', '2.10.2026 7:30'));
     list = updateItem(list, 1, (i) => withDue(withDue(i, day(10), '', 'L', ''), day(16), 'Pozdní dodávka', 'Logistika', '9.10.2026 14:05'));
     list = updateItem(list, 1, (i) => withProgress(i, 75, TODAY));
     list = updateItem(list, 2, (i) => withProgress({ ...i, problem: 'Hotová věc', due: day(5) }, 100, day(6)));
@@ -79,14 +79,14 @@ describe('OIL', () => {
 
     const sheets = oilSheets(list, TODAY);
     expect(sheets.map((s) => s.name)).toEqual(['OIL', 'Komentáře', 'Posuny termínu']);
-    expect(sheets[0]!.rows[0]).toEqual([1, 'Sklad', 'Obaly', 'Chybí obaly', 'Málo vozíků', 'Objednat', 'Logistika', '01.10.2026', '16.10.2026', '10.10.2026', 1, 75, 'Rozpracováno', null, 'Objednáno']);
-    expect(sheets[0]!.rows.map((r) => r[12])).toEqual(['Rozpracováno', 'Hotovo', 'Zrušeno']);
+    expect(sheets[0]!.rows[0]).toEqual([1, 'Chybí obaly', 'Objednat', 'Logistika', '01.10.2026', '16.10.2026', '10.10.2026', 1, 75, 'Rozpracováno', null, 'Objednáno']);
+    expect(sheets[0]!.rows.map((r) => r[9])).toEqual(['Rozpracováno', 'Hotovo', 'Zrušeno']);
     expect(parseOilWorkbook(toSheets(sheets))).toEqual({ ok: true, value: list });
   });
 
-  it('starší soubor bez sloupců Oblast, Téma a Příčina se načte s prázdnými poli', () => {
-    const r = parseOilWorkbook([{ name: 'OIL', data: [['Číslo', 'Problém', 'Termín', 'Plnění (%)'], [4, 'Starý bod', '20.10.2026', 25]] }]);
-    expect(r.ok && r.value.items[0]).toMatchObject({ id: 4, area: '', topic: '', cause: '', problem: 'Starý bod', due: day(20), progress: 25 });
+  it('soubor se sloupci navíc (např. Oblast, Příčina) se načte, sloupce navíc se ignorují', () => {
+    const r = parseOilWorkbook([{ name: 'OIL', data: [['Číslo', 'Oblast', 'Problém', 'Příčina', 'Termín', 'Plnění (%)'], [4, 'Sklad', 'Starý bod', 'x', '20.10.2026', 25]] }]);
+    expect(r.ok && r.value.items[0]).toMatchObject({ id: 4, problem: 'Starý bod', due: day(20), progress: 25 });
   });
 
   it('odpovědní po osobách', () => {
