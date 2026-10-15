@@ -1,10 +1,13 @@
 import { useMemo, useState, type ReactNode } from 'react';
+import { MISSING_MASTER, type ItemFilter } from '../../core/calloffs/filter';
 import type { CallOffExport } from '../../core/calloffs/parse';
 import { summarize, visibleNodes, type SummaryNode } from '../../core/calloffs/summary';
+import { summaryReport } from '../../core/calloffs/summaryReport';
 import { buildCurrentRows, buildPeriods, DEFAULT_WEEKS, type PeriodCount } from '../../core/calloffs/views';
-import { formatQuantity, formatSigned } from '../../core/format';
+import { formatDate, formatQuantity, formatSigned } from '../../core/format';
 import type { MasterItem } from '../../core/masterdata';
 import { useI18n } from '../../i18n/I18nProvider';
+import { downloadReport } from '../../platform/download';
 import { ExportButtons, type ExportTable } from './ExportButtons';
 
 const RANGES: PeriodCount[] = [12, 26, 52, 'all'];
@@ -14,18 +17,21 @@ interface Props {
   previous: CallOffExport | undefined;
   items: string[];
   master: ReadonlyMap<string, MasterItem> | undefined;
+  /** Zvolené filtry (do záhlaví reportu). */
+  filter: ItemFilter;
   filters: ReactNode;
 }
 
 /** Přehled po projektech: Projekt → Kategorie → Strana se součty odvolávek po týdnech. */
-export function SummaryView({ current, previous, items, master, filters }: Props) {
+export function SummaryView({ current, previous, items, master, filter, filters }: Props) {
   const { t, locale } = useI18n();
   const ts = t.calloffs.summary;
   const [range, setRange] = useState<PeriodCount>(DEFAULT_WEEKS);
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
 
   const periods = useMemo(() => buildPeriods(current, 'week', range), [current, range]);
-  const tree = useMemo(() => summarize(buildCurrentRows(current, previous, items, periods), master), [current, previous, items, periods, master]);
+  const currentRows = useMemo(() => buildCurrentRows(current, previous, items, periods), [current, previous, items, periods]);
+  const tree = useMemo(() => summarize(currentRows, master), [currentRows, master]);
   const all = useMemo(() => {
     const keys: string[] = [];
     const walk = (nodes: readonly SummaryNode[]) => nodes.forEach((n) => n.children.length && (keys.push(n.key), walk(n.children)));
@@ -72,6 +78,46 @@ export function SummaryView({ current, previous, items, master, filters }: Props
     };
   };
 
+  // Report pro vedení: přehled v úrovni, jak je tabulka právě rozbalená, a list se všemi díly.
+  const downloadManagement = () => {
+    const tr = ts.report;
+    const now = new Date();
+    const iso = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    const fill = (text: string, week: number, year: number) => text.replace('{week}', String(week)).replace('{year}', String(year));
+    const subtitle = [fill(tr.subtitle, current.week, current.year).replace('{date}', formatDate(iso, locale)), previous ? fill(tr.against, previous.week, previous.year) : null]
+      .filter(Boolean)
+      .join(' · ');
+    const tf = t.calloffs.filters;
+    const chosen = [
+      filter.customer ? `${tf.customer}: ${filter.customer === MISSING_MASTER ? tr.missing : filter.customer}` : null,
+      filter.project ? `${tf.project}: ${filter.project}` : null,
+      filter.side ? `${tf.side}: ${filter.side}` : null,
+      filter.category ? `${tf.category}: ${filter.category}` : null,
+      filter.query.trim() ? `${tr.search}: „${filter.query.trim()}“` : null,
+    ].filter(Boolean);
+    const sheets = summaryReport(rows, tree, currentRows, periods, master, {
+      title: tr.title,
+      subtitle,
+      filters: chosen.length ? `${tr.filters}: ${chosen.join(' · ')}` : tr.filtersNone,
+      note: tr.note,
+      tree: ts.tree,
+      project: ts.project,
+      category: ts.category,
+      side: ts.side,
+      item: tr.item,
+      description: tr.description,
+      backlog: tr.backlog,
+      total: tr.total,
+      diff: tr.diff,
+      diffPercent: tr.diffPercent,
+      sum: tr.sum,
+      none: [ts.noProject, ts.noCategory, ts.noSide],
+      sheetSummary: tr.sheetSummary,
+      sheetItems: tr.sheetItems,
+    });
+    return downloadReport(`${t.calloffs.export.fileName}_${ts.fileName}_CW${current.week}-${current.year}.xlsx`, sheets);
+  };
+
   return (
     <div className="stack">
       {filters}
@@ -102,7 +148,7 @@ export function SummaryView({ current, previous, items, master, filters }: Props
               {ts.depthSides}
             </button>
           </span>
-          <ExportButtons build={buildExport} />
+          <ExportButtons build={buildExport} excel={downloadManagement} excelTitle={ts.report.buttonTitle} />
         </div>
         {tree.length === 0 ? (
           <p>{t.calloffs.table.empty}</p>

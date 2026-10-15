@@ -10,14 +10,18 @@ export interface ExportTable {
   rows: (string | number | null)[][];
 }
 
-/** Stažení tabulky v Excelu nebo CSV. Tabulka se sestaví až po kliknutí. */
-export function ExportButtons({ build }: { build: () => ExportTable }) {
+/**
+ * Stažení tabulky v Excelu nebo CSV. Tabulka se sestaví až po kliknutí. `excel` nahradí prostý sešit formátovaným
+ * reportem (CSV zůstává jako tabulka).
+ */
+export function ExportButtons({ build, excel: report, excelTitle }: { build: () => ExportTable; excel?: () => Promise<void>; excelTitle?: string }) {
   const { t } = useI18n();
   const [busy, setBusy] = useState(false);
 
   const excel = async () => {
     setBusy(true);
     try {
+      if (report) return await report();
       const table = build();
       await downloadXlsx(`${table.fileName}.xlsx`, table.sheetName, table.header, table.rows);
     } finally {
@@ -31,7 +35,7 @@ export function ExportButtons({ build }: { build: () => ExportTable }) {
 
   return (
     <span className="actions-row">
-      <button type="button" className="button button-small" onClick={() => void excel()} disabled={busy}>
+      <button type="button" className="button button-small" onClick={() => void excel()} disabled={busy} title={excelTitle}>
         ⤓ {t.calloffs.export.excel}
       </button>
       <button type="button" className="button button-small" onClick={csv}>
