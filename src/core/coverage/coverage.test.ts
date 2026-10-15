@@ -195,7 +195,7 @@ describe('buildCoverage', () => {
     expect(ids({ query: 'a1234567890 0001' })).toEqual(['900100']);
     expect(ids({ query: 'A12345678900001' })).toEqual(['900100']);
     expect(ids({ query: '      0001' })).toEqual(['900100']);
-    expect(coverageOptions(t)).toEqual({ locations: ['Lokalita A'], projects: ['P1', 'P100'], variants: ['LHD HUD'], unmapped: 1 });
+    expect(coverageOptions(t)).toEqual({ locations: ['Lokalita A'], projects: ['P1', 'P100'], variants: ['LHD HUD'], categories: [], unmapped: 1 });
   });
 
   it('souhrn po variantách', () => {
@@ -214,5 +214,14 @@ describe('shortage', () => {
     expect(shortage(lines, 2)).toEqual({ pieces: 9, parts: 3 });
     expect(shortage(lines, 3)).toEqual({ pieces: 35, parts: 4 });
     expect(shortage([], 2)).toEqual({ pieces: 0, parts: 0 });
+  });
+});
+
+describe('filtr kategorie', () => {
+  it('díly podle kategorie z mapování', () => {
+    const line = (id: string, category: string) => ({ id, location: 'L', project: 'P', item: id, customerNumber: '', fileCustomerNumber: '', description: '', variant: '', side: '', category, customerStock: 0, transit: 0, ourStock: null, firstUncovered: '', uncoveredAt: '', values: [1] }) as CoverageLine;
+    const t = { days: [dayFromParts(2026, 10, 12)!], lines: [line('A', 'DP'), line('B', 'HB'), line('C', '')] };
+    expect(filterCoverage(t, { ...EMPTY_COVERAGE_FILTER, category: 'HB' }).map((l) => l.item)).toEqual(['B']);
+    expect(coverageOptions(t).categories).toEqual(['DP', 'HB']);
   });
 });

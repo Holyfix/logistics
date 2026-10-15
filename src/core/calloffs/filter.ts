@@ -9,10 +9,12 @@ export interface ItemFilter {
   customer: string;
   project: string;
   side: string;
+  /** Kategorie z mapování (sloupec Category, např. DP, HB). */
+  category: string;
   query: string;
 }
 
-export const EMPTY_FILTER: ItemFilter = { customer: '', project: '', side: '', query: '' };
+export const EMPTY_FILTER: ItemFilter = { customer: '', project: '', side: '', category: '', query: '' };
 
 export function filterItems(
   items: readonly string[],
@@ -28,6 +30,7 @@ export function filterItems(
     } else if (filter.customer && m?.customer !== filter.customer) return false;
     if (filter.project && m?.project !== filter.project) return false;
     if (filter.side && m?.side !== filter.side) return false;
+    if (filter.category && m?.category !== filter.category) return false;
     if (query && !`${item} ${descriptions[i] ?? ''}`.toLowerCase().includes(query)) return false;
     return true;
   });
@@ -38,6 +41,7 @@ export function filterOptions(items: readonly string[], master: ReadonlyMap<stri
   const customers = new Set<string>();
   const projects = new Set<string>();
   const sides = new Set<string>();
+  const categories = new Set<string>();
   let missing = 0;
   for (const item of items) {
     const m = master?.get(item);
@@ -48,7 +52,8 @@ export function filterOptions(items: readonly string[], master: ReadonlyMap<stri
     if (m.customer) customers.add(m.customer);
     if (m.project) projects.add(m.project);
     if (m.side) sides.add(m.side);
+    if (m.category) categories.add(m.category);
   }
   const sorted = (s: Set<string>) => [...s].sort((a, b) => a.localeCompare(b, 'cs'));
-  return { customers: sorted(customers), projects: sorted(projects), sides: sorted(sides), missing };
+  return { customers: sorted(customers), projects: sorted(projects), sides: sorted(sides), categories: sorted(categories), missing };
 }

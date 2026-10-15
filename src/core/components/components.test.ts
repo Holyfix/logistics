@@ -204,3 +204,25 @@ describe('Zákazník pokryt do: sklad a transit u zákazníka podle souboru cove
     expect(t.components[0]!.customerShortDay).toBe(1);
   });
 });
+
+describe('kategorie komponent', () => {
+  it('kategorie komponenty z mapování a kategorie hotových dílů, ve kterých je', () => {
+    const monday = dayFromParts(2026, 10, 12)!;
+    const tree = parseBom([
+      ['Level', 'Component Item', 'Description', 'Quantity Per', 'UM', 'Purchase/Manufacture'],
+      ['Parent', 'A', 'PRODUCT', null, 'EA', 'L'],
+      ['.1', 'K', 'PART', 2, 'EA', 'P'],
+      ['Parent', 'B', 'PRODUCT', null, 'EA', 'L'],
+      ['.1', 'K', 'PART', 1, 'EA', 'P'],
+    ]);
+    if (!tree.ok) throw new Error();
+    const m = parseMasterData(parseCsv('Item Number;Component Coverage;Category\nA;;DP\nB;;HB\nK;Ano;CLIP'));
+    if (!m.ok) throw new Error();
+    const t = buildComponents({ bom: tree.value, master: m.value, callOffs: undefined, stock: undefined, today: monday });
+    expect(t.products.map((p) => [p.item, p.category])).toEqual([
+      ['A', 'DP'],
+      ['B', 'HB'],
+    ]);
+    expect(t.components.find((c) => c.item === 'K')!.categories).toEqual(['CLIP', 'DP', 'HB']);
+  });
+});

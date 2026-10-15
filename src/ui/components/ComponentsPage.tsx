@@ -25,27 +25,30 @@ export function ComponentsPage({ today = localToday() }: { today?: DayNumber } =
   const table = useComponents(today, netOwnStock);
 
   const [project, setProject] = useState('');
+  const [category, setCategory] = useState('');
   const [query, setQuery] = useState('');
   const [onlyShort, setOnlyShort] = useState(false);
 
   const projects = useMemo(() => [...new Set(table?.components.flatMap((c) => c.projects) ?? [])].sort((a, b) => a.localeCompare(b, 'cs')), [table]);
+  const categories = useMemo(() => [...new Set(table?.components.flatMap((c) => c.categories) ?? [])].sort((a, b) => a.localeCompare(b, 'cs')), [table]);
   const lines = useMemo(() => {
     const q = query.trim().toLowerCase();
     return (table?.components ?? []).filter(
       (c) =>
         (!project || c.projects.includes(project)) &&
+        (!category || c.categories.includes(category)) &&
         (!onlyShort || c.shortDay !== null) &&
         (!q || `${c.item} ${c.description}`.toLowerCase().includes(q)),
     );
-  }, [table, project, query, onlyShort]);
+  }, [table, project, category, query, onlyShort]);
 
   // Hotové díly podle filtru komponent: projekt omezí hotové díly na projekt; hledání nebo „jen v záporu“
   // na hotové díly, které vybrané komponenty mají v kusovníku.
   const byComponent = query.trim() !== '' || onlyShort;
   const shownProducts = useMemo(() => {
     const used = byComponent ? new Set(lines.flatMap((c) => c.products)) : null;
-    return (table?.products ?? []).filter((p) => (!project || p.project === project) && (!used || used.has(p.item)));
-  }, [table, lines, project, byComponent]);
+    return (table?.products ?? []).filter((p) => (!project || p.project === project) && (!category || p.category === category) && (!used || used.has(p.item)));
+  }, [table, lines, project, category, byComponent]);
 
   const head = (
     <div className="page-head module-head">
@@ -197,6 +200,19 @@ export function ComponentsPage({ today = localToday() }: { today?: DayNumber } =
             ))}
           </select>
         </label>
+        {categories.length > 0 && (
+          <label className="field">
+            <span>{tc.filters.category}</span>
+            <select value={category} onChange={(e) => setCategory(e.target.value)}>
+              <option value="">{tc.filters.all}</option>
+              {categories.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
         <label className="field field-wide">
           <span>{tc.filters.search}</span>
           <input type="search" value={query} placeholder={tc.filters.searchPlaceholder} onChange={(e) => setQuery(e.target.value)} />
@@ -210,6 +226,7 @@ export function ComponentsPage({ today = localToday() }: { today?: DayNumber } =
           className="link-button"
           onClick={() => {
             setProject('');
+            setCategory('');
             setQuery('');
             setOnlyShort(false);
           }}

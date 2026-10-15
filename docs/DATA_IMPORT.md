@@ -82,6 +82,7 @@ Tabulku udržuje uživatel. Jeden řádek = jeden díl. V Excelu na prvním list
 | Order Multiple | Balení, Kusů v balení | ne |
 | Component Coverage | Coverage Component, Komponenta | ne; „Ano“ (nebo Y, X, 1) = komponenta se sleduje v modulu Komponenty |
 | Line | Linka, Výrobní linka | ne; linka, na které se díl vyrábí: `ASSEMBLY`, `FOA`, `SLH`, `IMM` (přijme i Montáž, Assy, Foaming, Slush, Vstřikování) |
+| Category | Kategorie | ne; druh dílu nebo komponenty podle vlastní volby (např. `DP` = door panel, `HB`); filtr Kategorie v Call-offs, Coverage a Komponentách |
 
 Další sloupce (např. Yield Percent, Cost Total) aplikace ignoruje.
 
