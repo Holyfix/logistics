@@ -401,7 +401,25 @@ function OilDetail({
               </button>
             ))}
           </div>
-          <small className="muted">{t.oil.pdca[item.progress].hint}</small>
+          {/* Kritérium aktuální fáze a otázka pro další krok (fáze platí, až je celá splněná). */}
+          <small className="pdca-help">
+            <strong>
+              {t.oil.pdca[item.progress].short !== '–' && `${t.oil.pdca[item.progress].short} – `}
+              {t.oil.pdca[item.progress].name}:
+            </strong>{' '}
+            {t.oil.pdca[item.progress].hint}
+          </small>
+          {item.progress < 100 && (
+            <small className="pdca-help">
+              <strong>
+                {t.oil.pdcaNext} {t.oil.pdca[nextProgress(item.progress)].short}:
+              </strong>{' '}
+              {t.oil.pdca[nextProgress(item.progress)].question}
+            </small>
+          )}
+          <small className="muted">
+            {t.oil.pdcaRule}
+          </small>
           <small className="muted">
             {td.opened} {dayLabel(item.opened)}
             {item.closed !== null && ` · ${td.closed} ${dayLabel(item.closed)}`}

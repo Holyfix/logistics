@@ -112,6 +112,9 @@ describe('OilPage', () => {
     fireEvent.click(within(detail).getByRole('button', { name: 'Check 75 %' }));
     expect(within(detail).getByRole('button', { name: 'Check 75 %' }).getAttribute('aria-pressed')).toBe('true');
     expect(within(row('Chybí obaly')).getByText('C')).toBeTruthy();
+    // Kritérium fáze a otázka pro další krok.
+    expect(within(detail).getByText(/máme důkaz, že to funguje/)).toBeTruthy();
+    expect(within(detail).getByText('Je to standard a můžeme bod uzavřít?')).toBeTruthy();
     fireEvent.click(within(detail).getByRole('button', { name: 'Zavřít' }));
 
     // Smazání: bez potvrzení se nic nestane, po potvrzení bod zmizí.

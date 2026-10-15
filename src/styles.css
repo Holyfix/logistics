@@ -1576,12 +1576,7 @@ button.oil-step:disabled {
   background: var(--negative-bg);
 }
 
-/* Plnění v detailu bodu: pět stejně širokých tlačítek přes celou šířku pole. */
-.oil-detail .segmented {
-  display: flex;
-}
-
-.oil-detail .segmented button {
-  flex: 1 1 0;
-  padding-inline: 4px;
+.oil-detail small.pdca-help {
+  color: var(--ink-2);
+  line-height: 1.35;
 }

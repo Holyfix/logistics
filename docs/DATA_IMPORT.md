@@ -234,7 +234,7 @@ před přepsáním zeptá; jeho změny by se přepsáním ztratily.
 | **Komentáře** | Číslo, Kdy, Kdo, Komentář |
 | **Posuny termínu** | Číslo, Kdy, Kdo, Z, Na, Důvod |
 
-- **Plnění** po krocích 0, 25, 50, 75, 100 % = nezahájeno, P (Plan), D (Do), C (Check), A (Act); 100 % bod uzavře (den uzavření).
+- **Plnění** po krocích 0, 25, 50, 75, 100 % = zapsáno, P (Plan), D (Do), C (Check), A (Act) podle kritérií v modulu OIL; 100 % bod uzavře (den uzavření).
 - **Stav** se počítá: Hotovo (100 %), Zrušeno, Po termínu (termín v minulosti), Rozpracováno (25–75 %),
   Nezahájeno (0 %). V souboru je jen pro čtení; zpět se čte jen „Zrušeno“.
 - **Posun termínu:** první termín se jen nastaví, každá další změna je posun s povinným důvodem, kdo a kdy;
