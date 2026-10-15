@@ -1513,3 +1513,13 @@ button.oil-step:disabled {
 .button-danger:hover {
   background: var(--negative-bg);
 }
+
+/* Plnění v detailu bodu: pět stejně širokých tlačítek přes celou šířku pole. */
+.oil-detail .segmented {
+  display: flex;
+}
+
+.oil-detail .segmented button {
+  flex: 1 1 0;
+  padding-inline: 4px;
+}
