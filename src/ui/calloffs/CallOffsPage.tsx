@@ -5,9 +5,10 @@ import { Icon } from '../icons';
 import { useData } from '../data/DataProvider';
 import { CompareView } from './CompareView';
 import { CurrentView } from './CurrentView';
+import { SummaryView } from './SummaryView';
 import { YearExportButton } from './YearExportButton';
 
-type Tab = 'current' | 'compare';
+type Tab = 'current' | 'summary' | 'compare';
 
 export function CallOffsPage() {
   const { t } = useI18n();
@@ -98,7 +99,7 @@ export function CallOffsPage() {
       </div>
 
       <div className="tabs" role="tablist" aria-label={t.modules.calloffs.title}>
-        {(['current', 'compare'] as const).map((id) => (
+        {(['current', 'summary', 'compare'] as const).map((id) => (
           <button key={id} type="button" role="tab" className="tab" aria-selected={tab === id} onClick={() => setTab(id)}>
             {t.calloffs.tabs[id]}
           </button>
@@ -110,6 +111,8 @@ export function CallOffsPage() {
 
       {tab === 'current' ? (
         <CurrentView current={current} previous={previous} items={items} master={master} filters={filters} />
+      ) : tab === 'summary' ? (
+        <SummaryView current={current} previous={previous} items={items} master={master} filters={filters} />
       ) : (
         <CompareView exports={exports} filter={filter} master={master} filters={filters} />
       )}

@@ -1445,3 +1445,34 @@ button.oil-step:disabled {
 .field .oil-sub {
   margin-top: 8px;
 }
+
+/* Odvolávky: přehled po projektech jako strom (projekt → kategorie → strana). */
+.summary-tree .summary-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+.summary-toggle {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  line-height: 18px;
+  padding: 0;
+  font: inherit;
+  color: var(--ink-2);
+  text-align: center;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+.summary-tree tr.summary-level-0 td {
+  font-weight: 700;
+  background: var(--surface-2);
+}
+
+.summary-tree tr.summary-level-1 td {
+  font-weight: 600;
+}

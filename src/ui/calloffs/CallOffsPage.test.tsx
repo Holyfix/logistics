@@ -78,7 +78,7 @@ describe('CallOffsPage', () => {
 
   it('přehled od začátku roku je jen jako export do Excelu', () => {
     renderPage(state);
-    expect(screen.getAllByRole('tab').map((t) => t.textContent)).toEqual(['Aktuální odvolávky', 'Porovnání exportů']);
+    expect(screen.getAllByRole('tab').map((t) => t.textContent)).toEqual(['Aktuální odvolávky', 'Přehled po projektech', 'Porovnání exportů']);
     expect(screen.getByRole('button', { name: /Excel od začátku roku/ })).toBeTruthy();
   });
 
@@ -129,5 +129,23 @@ describe('CallOffsPage', () => {
   it('bez dat nabídne výběr složky', () => {
     renderPage({ ...state, status: 'noFolder', data: null });
     expect(screen.getByRole('link', { name: 'Vybrat složku s exporty' }).getAttribute('href')).toBe('#data');
+  });
+
+  it('přehled po projektech: projekt → kategorie → strana se součty po týdnech', () => {
+    renderPage(state);
+    fireEvent.click(screen.getByRole('tab', { name: 'Přehled po projektech' }));
+    const table = screen.getByRole('table');
+    const rows = [...table.querySelectorAll('tbody tr')].map((tr) => [...tr.querySelectorAll('td')].slice(0, 4).map((td) => td.textContent));
+    expect(rows.slice(0, 3)).toEqual([
+      ['▾P100 · 1 dílů', '—', '150', '0'],
+      ['▾bez kategorie · 1 dílů', '—', '150', '0'],
+      ['LHD · 1 dílů', '—', '150', '0'],
+    ]);
+    expect(rows.map((r) => r[0])).toContain('▾bez projektu · 1 dílů');
+    // Změna proti CW 41 u projektu P100: +50.
+    expect(table.querySelector('tbody tr')!.lastElementChild!.textContent).toBe('+50');
+    // Jen projekty.
+    fireEvent.click(screen.getByRole('button', { name: 'Projekty' }));
+    expect([...table.querySelectorAll('tbody tr')].map((tr) => tr.querySelector('td')!.textContent)).toEqual(['▸P100 · 1 dílů', '▸P300 · 1 dílů', '▸bez projektu · 1 dílů']);
   });
 });
