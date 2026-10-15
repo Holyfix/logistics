@@ -1476,3 +1476,22 @@ button.oil-step:disabled {
 .summary-tree tr.summary-level-1 td {
   font-weight: 600;
 }
+
+/* OIL: oblast a téma nad problémem, trvalé smazání bodu. */
+.oil-text .oil-tags {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.button-danger {
+  margin-left: auto;
+  color: var(--crit);
+  border-color: var(--crit);
+}
+
+.button-danger:hover {
+  background: var(--negative-bg);
+}

@@ -27,8 +27,8 @@ const state: DataState = {
       lastModified: 0,
       list: {
         items: [
-          { id: 1, problem: 'Chybí obaly', action: 'Objednat', owner: 'Logistika', opened: day(1), due: day(10), progress: 50, cancelled: false, closed: null, comments: [], shifts: [] },
-          { id: 2, problem: 'Hotová věc', action: '', owner: 'Kvalita', opened: day(1), due: day(5), progress: 100, cancelled: false, closed: day(5), comments: [], shifts: [] },
+          { id: 1, area: '', topic: '', cause: '', problem: 'Chybí obaly', action: 'Objednat', owner: 'Logistika', opened: day(1), due: day(10), progress: 50, cancelled: false, closed: null, comments: [], shifts: [] },
+          { id: 2, area: '', topic: '', cause: '', problem: 'Hotová věc', action: '', owner: 'Kvalita', opened: day(1), due: day(5), progress: 100, cancelled: false, closed: day(5), comments: [], shifts: [] },
         ],
       },
     },
@@ -97,5 +97,37 @@ describe('OilPage', () => {
     expect(screen.getByRole('group', { name: 'Detail bodu 3' })).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Hotové' }));
     expect(row('Hotová věc').className).toContain('oil-done');
+  });
+
+  it('oblast, téma a příčina; filtr oblasti; trvalé smazání po potvrzení', () => {
+    renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'Vše' }));
+    fireEvent.click(row('Chybí obaly'));
+    const detail = screen.getByRole('group', { name: 'Detail bodu 1' });
+    fireEvent.change(within(detail).getByLabelText('Oblast'), { target: { value: 'Sklad' } });
+    fireEvent.change(within(detail).getByLabelText('Téma / projekt'), { target: { value: 'Obaly' } });
+    fireEvent.change(within(detail).getByLabelText('Příčina'), { target: { value: 'Málo vozíků' } });
+    expect(within(row('Chybí obaly')).getByText('Sklad · Obaly')).toBeTruthy();
+
+    // Filtr oblasti nabízí jen vyplněné oblasti.
+    fireEvent.click(within(detail).getByRole('button', { name: 'Zavřít' }));
+    fireEvent.change(screen.getByRole('combobox', { name: 'Oblast' }), { target: { value: 'Sklad' } });
+    expect(screen.queryByText('Hotová věc')).toBeNull();
+    fireEvent.change(screen.getByRole('combobox', { name: 'Oblast' }), { target: { value: '' } });
+
+    // Smazání: bez potvrzení se nic nestane, po potvrzení bod zmizí.
+    fireEvent.click(row('Hotová věc'));
+    const confirm = window.confirm;
+    try {
+      window.confirm = () => false;
+      fireEvent.click(screen.getByRole('button', { name: 'Smazat trvale' }));
+      expect(row('Hotová věc')).toBeTruthy();
+      window.confirm = () => true;
+      fireEvent.click(screen.getByRole('button', { name: 'Smazat trvale' }));
+    } finally {
+      window.confirm = confirm;
+    }
+    expect(screen.queryByText('Hotová věc')).toBeNull();
+    expect(screen.getAllByText('Neuložené změny').length).toBeGreaterThan(0);
   });
 });

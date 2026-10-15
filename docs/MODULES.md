@@ -123,12 +123,13 @@ Filtry: zákazník, projekt, strana (LHD/RHD), kategorie z kmenových dat, hled�
 - Výběr sdílené složky, stav načtených exportů, chyby v datech
 
 ### OIL (Open Issue List)
-- ✅ Bod: číslo, problém, opatření, odpovědný, otevřeno, termín, uzavřeno
+- ✅ Bod: číslo, oblast, téma, problém, příčina, opatření, odpovědný, otevřeno, termín, uzavřeno
+- ✅ Zrušení bodu (zůstane v seznamu) a trvalé smazání s potvrzením
 - ✅ Plnění po krocích 0/25/50/75/100 % kliknutím na kolečko (Harvey ball), přesně v detailu bodu
 - ✅ Barva podle stavu: červená po termínu, žlutá rozpracováno, modrá nezahájeno, zelená hotovo, šedá zrušeno
 - ✅ Posun termínu s povinným důvodem: u bodu „posunuto N×“, původní termín a historie (kdo, kdy, z – na, proč)
 - ✅ Komentáře s datem a autorem
-- ✅ Filtry Otevřené / Po termínu / Hotové / Vše, odpovědný, hledání; ukazatele otevřené, po termínu, hotovo, posuny
+- ✅ Filtry Otevřené / Po termínu / Hotové / Vše, odpovědný, oblast, hledání; ukazatele otevřené, po termínu, hotovo, posuny
 - ✅ Uložení do `OIL/OIL.xlsx` ve sdílené složce (listy OIL, Komentáře, Posuny termínu)
 - ⏳ Živá společná editace (po přechodu na Firebase)
 

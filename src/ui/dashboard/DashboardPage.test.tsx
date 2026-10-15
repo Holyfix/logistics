@@ -63,10 +63,10 @@ const state: DataState = {
       lastModified: now,
       list: {
         items: [
-          { id: 1, problem: 'Později', action: '', owner: 'Logistika', opened: day(1), due: day(30), progress: 0, cancelled: false, closed: null, comments: [], shifts: [] },
-          { id: 2, problem: 'Po termínu', action: '', owner: 'Nákup', opened: day(1), due: day(12), progress: 25, cancelled: false, closed: null, comments: [], shifts: [{ at: '', author: '', from: day(9), to: day(12), reason: 'x' }] },
-          { id: 3, problem: 'Tento týden', action: '', owner: 'Kvalita', opened: day(1), due: day(16), progress: 50, cancelled: false, closed: null, comments: [], shifts: [] },
-          { id: 4, problem: 'Hotovo', action: '', owner: '', opened: day(1), due: day(2), progress: 100, cancelled: false, closed: day(2), comments: [], shifts: [] },
+          { id: 1, area: '', topic: '', cause: '', problem: 'Později', action: '', owner: 'Logistika', opened: day(1), due: day(30), progress: 0, cancelled: false, closed: null, comments: [], shifts: [] },
+          { id: 2, area: '', topic: '', cause: '', problem: 'Po termínu', action: '', owner: 'Nákup', opened: day(1), due: day(12), progress: 25, cancelled: false, closed: null, comments: [], shifts: [{ at: '', author: '', from: day(9), to: day(12), reason: 'x' }] },
+          { id: 3, area: '', topic: '', cause: '', problem: 'Tento týden', action: '', owner: 'Kvalita', opened: day(1), due: day(16), progress: 50, cancelled: false, closed: null, comments: [], shifts: [] },
+          { id: 4, area: '', topic: '', cause: '', problem: 'Hotovo', action: '', owner: '', opened: day(1), due: day(2), progress: 100, cancelled: false, closed: day(2), comments: [], shifts: [] },
         ],
       },
     },

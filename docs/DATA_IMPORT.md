@@ -230,7 +230,7 @@ před přepsáním zeptá; jeho změny by se přepsáním ztratily.
 
 | List | Obsah |
 |---|---|
-| **OIL** | Číslo, Problém, Opatření, Odpovědný, Otevřeno, Termín, Původní termín, Posunů termínu, Plnění (%), Stav, Uzavřeno, Poslední komentář |
+| **OIL** | Číslo, Oblast, Téma, Problém, Příčina, Opatření, Odpovědný, Otevřeno, Termín, Původní termín, Posunů termínu, Plnění (%), Stav, Uzavřeno, Poslední komentář |
 | **Komentáře** | Číslo, Kdy, Kdo, Komentář |
 | **Posuny termínu** | Číslo, Kdy, Kdo, Z, Na, Důvod |
 
@@ -240,6 +240,12 @@ před přepsáním zeptá; jeho změny by se přepsáním ztratily.
 - **Posun termínu:** první termín se jen nastaví, každá další změna je posun s povinným důvodem, kdo a kdy;
   Původní termín a Posunů termínu jsou z historie.
 - **Kdo:** jméno, které si uživatel vyplní v modulu OIL (pamatuje si ho prohlížeč).
+- **Oblast, Téma, Příčina** jsou volitelné (starší soubor bez nich se načte). Oblast slouží i jako filtr.
+- **Převod jiného OIL:** stačí sešit s listem, který má aspoň sloupce Číslo, Problém, Termín a Plnění (%);
+  ostatní sloupce a listy Komentáře a Posuny termínu jsou volitelné. Datum jako datum Excelu nebo `dd.mm.rrrr`,
+  plnění 0–100 (zaokrouhlí se na nejbližší krok). Uloží se pak do `OIL/OIL.xlsx`.
+- **Smazat trvale** odstraní bod i s komentáři a posuny (po potvrzení, do souboru se zapíše uložením). Zrušený
+  bod naopak v seznamu zůstává.
 
 ## Testovací data
 

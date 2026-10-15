@@ -58,7 +58,7 @@ describe('HubPage', () => {
 
   it('u OIL ukáže body po termínu', () => {
     const day = (offset: number) => dayFromParts(new Date().getFullYear(), new Date().getMonth() + 1, new Date().getDate())! + offset;
-    const item = (id: number, due: number, progress: 0 | 100 = 0) => ({ id, problem: '', action: '', owner: '', opened: day(-30), due: day(due), progress, cancelled: false, closed: null, comments: [], shifts: [] });
+    const item = (id: number, due: number, progress: 0 | 100 = 0) => ({ id, area: '', topic: '', cause: '', problem: '', action: '', owner: '', opened: day(-30), due: day(due), progress, cancelled: false, closed: null, comments: [], shifts: [] });
     renderHub([cw42], { items: [item(1, -2), item(2, 3), item(3, -5, 100), item(4, 20)] });
     const metric = screen.getByRole('link', { name: /OIL/ }).querySelector('.metric')!;
     expect(metric.textContent).toBe('1 po termínu');
