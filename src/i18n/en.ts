@@ -431,6 +431,8 @@ export const en: Messages = {
       needName: 'Enter your name at the top to comment or shift the due date.',
     },
     legend: 'Row and progress colour by status.',
+    remote: 'A newer OIL is in the folder, saved by someone else. Your unsaved changes would overwrite it when saving (the app will ask)',
+    remoteAccept: 'Load the newer one and discard my changes',
   },
   dashboard: {
     noData: 'The dashboard combines call-offs, customer coverage, the bill of materials, stock and the OIL. No data is loaded yet.',

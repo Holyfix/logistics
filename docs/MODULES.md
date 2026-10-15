@@ -128,6 +128,7 @@ Filtry: zákazník, projekt, strana (LHD/RHD) z kmenových dat, hledání dílu.
 - ✅ Komentáře s datem a autorem
 - ✅ Filtry Otevřené / Po termínu / Hotové / Vše, odpovědný, hledání; ukazatele otevřené, po termínu, hotovo, posuny
 - ✅ Uložení do `OIL/OIL.xlsx` ve sdílené složce (listy OIL, Komentáře, Posuny termínu)
+- ✅ Změny od kolegů se načtou samy (kontrola složky každých 30 s a při návratu do okna)
 - ⏳ Živá společná editace (po přechodu na Firebase)
 
 ### Nastavení

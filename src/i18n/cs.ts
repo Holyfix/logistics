@@ -433,6 +433,8 @@ export const cs = {
       needName: 'Pro komentář a posun termínu vyplňte nahoře své jméno.',
     },
     legend: 'Barva řádku a kolečka plnění podle stavu.',
+    remote: 'Ve složce je novější OIL, uložil ho někdo jiný. Vaše neuložené změny ho při uložení přepíšou (aplikace se zeptá)',
+    remoteAccept: 'Načíst novější a zahodit mé změny',
   },
   dashboard: {
     noData: 'Dashboard skládá přehled z odvolávek, coverage od zákazníka, kusovníku, skladu a OIL. Zatím nejsou načtená žádná data.',

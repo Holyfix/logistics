@@ -1,5 +1,7 @@
-import { afterEach, describe, expect, it } from 'vitest';
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import type { OilList } from '../../core/oil';
+import type { LoadedData } from '../../platform/loader';
 import { dayFromParts } from '../../core/dates';
 import { I18nProvider } from '../../i18n/I18nProvider';
 import { DataProvider, type DataState } from '../data/DataProvider';
@@ -37,11 +39,11 @@ const state: DataState = {
   },
 };
 
-function renderPage() {
+function renderPage(checkOil?: () => Promise<LoadedData['oil']>) {
   localStorage.setItem('logistics-locale', 'cs');
   return render(
     <I18nProvider>
-      <DataProvider initial={state}>
+      <DataProvider initial={state} checkOil={checkOil}>
         <OilProvider>
           <OilPage today={day(14)} />
         </OilProvider>
@@ -57,6 +59,7 @@ describe('OilPage', () => {
   afterEach(() => {
     cleanup();
     localStorage.clear();
+    vi.useRealTimers();
   });
 
   it('body podle stavu, plnění kliknutím, posun termínu s důvodem a komentář', () => {
@@ -97,5 +100,33 @@ describe('OilPage', () => {
     expect(screen.getByRole('group', { name: 'Detail bodu 3' })).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Hotové' }));
     expect(row('Hotová věc').className).toContain('oil-done');
+  });
+
+  it('novější OIL ve složce (uložil ho kolega) se načte sám; s neuloženými změnami se nabídne', async () => {
+    vi.useFakeTimers();
+    const saved = state.data!.oil!;
+    const newer: OilList = {
+      items: saved.list.items.map((i) => (i.id === 1 ? { ...i, comments: [{ at: '15.10.2026 9:00', author: 'Kolegyně', text: 'Dodavatel potvrdil' }] } : i)),
+    };
+    let next: LoadedData['oil'] = { ...saved, lastModified: 10, list: newer };
+    renderPage(async () => {
+      const result = next;
+      next = null;
+      return result;
+    });
+    expect(row('Chybí obaly').querySelectorAll('td')[6]!.textContent).toBe('');
+    await act(() => vi.advanceTimersByTimeAsync(30_000));
+    expect(row('Chybí obaly').querySelectorAll('td')[6]!.textContent).toBe('1');
+
+    // S neuloženými změnami: novější verze se jen nabídne.
+    fireEvent.click(within(row('Chybí obaly')).getByRole('button', { name: /Plnění 1/ }));
+    next = { ...saved, lastModified: 20, list: { items: newer.items.map((i) => ({ ...i, owner: 'Nákup' })) } };
+    await act(() => vi.advanceTimersByTimeAsync(30_000));
+    expect(within(row('Chybí obaly')).getByText('75 %')).toBeTruthy();
+    expect(within(row('Chybí obaly')).getByText('Logistika')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Načíst novější a zahodit mé změny' }));
+    expect(within(row('Chybí obaly')).getByText('Nákup')).toBeTruthy();
+    expect(within(row('Chybí obaly')).getByText('50 %')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Načíst novější a zahodit mé změny' })).toBeNull();
   });
 });

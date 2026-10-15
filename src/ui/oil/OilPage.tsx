@@ -56,7 +56,7 @@ export function OilPage({ today = localToday() }: { today?: DayNumber } = {}) {
   const { t, locale } = useI18n();
   const to = t.oil;
   const { state, saveFile, updateData } = useData();
-  const { draft, setDraft } = useOilDraft();
+  const { draft, setDraft, remote, acceptRemote } = useOilDraft();
   const flow = useSaveFlow();
   const data = state.data;
   const list: OilList = draft ?? data?.oil?.list ?? emptyOil();
@@ -184,6 +184,17 @@ export function OilPage({ today = localToday() }: { today?: DayNumber } = {}) {
         </button>
         <SaveStatus dirty={draft !== null} saved={data.oil ? { path: data.oil.path, lastModified: data.oil.lastModified } : null} message={flow.message} />
       </div>
+
+      {remote && (
+        <div className="banner" role="status">
+          <span>
+            {to.remote} ({new Date(remote.lastModified).toLocaleString(locale === 'cs' ? 'cs-CZ' : 'en-GB', { dateStyle: 'short', timeStyle: 'short' })}).
+          </span>
+          <button type="button" className="link-button" onClick={acceptRemote}>
+            {to.remoteAccept}
+          </button>
+        </div>
+      )}
 
       <div className="kpis">
         <div className="kpi">

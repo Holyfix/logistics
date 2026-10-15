@@ -237,6 +237,10 @@ před přepsáním zeptá; jeho změny by se přepsáním ztratily.
 - **Posun termínu:** první termín se jen nastaví, každá další změna je posun s povinným důvodem, kdo a kdy;
   Původní termín a Posunů termínu jsou z historie.
 - **Kdo:** jméno, které si uživatel vyplní v modulu OIL (pamatuje si ho prohlížeč).
+- **Změny od kolegů:** aplikace každých 30 s a při návratu do okna zkontroluje složku OIL; když tam je novější
+  soubor (uložil ho někdo jiný), načte ho sám (Dashboard i rozcestník se aktualizují). Když má uživatel neuložené
+  změny, novější verze se jen nabídne (banner v modulu OIL). Zpoždění dělá i synchronizace OneDrivu (obvykle
+  desítky sekund).
 
 ### Když soubor nejde přepsat
 
