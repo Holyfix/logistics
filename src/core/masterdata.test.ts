@@ -8,6 +8,10 @@ describe('customerKey', () => {
     expect(customerKey('A1234567890      9051')).toBe('A12345678909051');
     // Zápis s pomlčkou (číslo + varianta) dá stejný klíč.
     expect(customerKey(' a1234567890-9051 ')).toBe('A12345678909051');
+    // Jiný prostředek než nuly je součást čísla: dva různé díly.
+    expect(customerKey('A1234567890  ERS 8R01')).toBe('A1234567890ERS8R01');
+    expect(customerKey('A1234567890      8R01')).toBe('A12345678908R01');
+    expect(customerKey('A1234567890-ERS-8R01')).toBe('A1234567890ERS8R01');
     expect(customerKey('12345 678')).toBe('12345678');
     expect(customerKey('')).toBe('');
   });
@@ -17,6 +21,7 @@ describe('customerDisplay', () => {
   it('jednotný zápis bez doplňujících nul barvy', () => {
     expect(customerDisplay('A1234567890  00009L22')).toBe('A1234567890 9L22');
     expect(customerDisplay('A1234567890 9L22')).toBe('A1234567890 9L22');
+    expect(customerDisplay('A1234567890  ERS 8R01')).toBe('A1234567890 ERS 8R01');
     expect(customerDisplay('a1234567890      9051 ')).toBe('A1234567890 9051');
     expect(customerDisplay(' 12345  678 ')).toBe('12345 678');
   });
@@ -116,5 +121,15 @@ describe('masterDataTemplate', () => {
       ['1', 'C1', 'X', 'LHD', 'IP', 'P', '0', '', '16', '', 'ASSEMBLY'],
       ['2', '', 'Popis 2', '', '', '', '', '', '', '', ''],
     ]);
+  });
+});
+
+describe('čísla zákazníka s prostředkem', () => {
+  it('díl s „ERS“ uprostřed a díl bez něj nejsou duplicita', () => {
+    const r = parseMasterData(parseCsv('Item Number;Customer Number\n900200-8R01;A1234567890      8R01\n900200-8R01ERS;A1234567890  ERS 8R01'));
+    if (!r.ok) throw new Error();
+    expect(r.value.issues).toEqual([]);
+    expect(r.value.byCustomerKey.get(customerKey('A1234567890 8R01'))?.item).toBe('900200-8R01');
+    expect(r.value.byCustomerKey.get(customerKey('A1234567890 ERS 8R01'))?.item).toBe('900200-8R01ERS');
   });
 });

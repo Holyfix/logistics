@@ -67,20 +67,32 @@ export interface MasterData {
 export type MasterResult = { ok: true; value: MasterData } | { ok: false; error: 'missingColumns'; columns: string[] };
 
 /**
- * Číslo dílu zákazníka v jednotné podobě: velká písmena bez mezer. Dlouhá čísla začínající „A“
- * (číslo dílu + doplněná varianta, např. „A1234567890  00001234“) se zkrátí na prvních 11 a posledních 4 znaků,
- * aby se shodovala různá zápisová pravidla v souborech zákazníka.
+ * Dlouhé číslo zákazníka začínající „A“ rozdělené na číslo dílu (11 znaků), prostřední část a variantu (poslední
+ * 4 znaky). Prostřední část bez pomlček a doplňujících nul vlevo („  00009051“ → „“, „ ERS 8R01“ → „ERS“);
+ * null, když číslo tento tvar nemá.
  */
-export function customerKey(value: string): string {
+function splitCustomerNumber(value: string): { part: string; middle: string; variant: string } | null {
   const compact = value.replace(/\s+/g, '').toUpperCase();
-  if (compact.length >= 15 && compact.startsWith('A')) return compact.slice(0, 11) + compact.slice(-4);
-  return compact;
+  if (compact.length < 15 || !compact.startsWith('A')) return null;
+  return { part: compact.slice(0, 11), middle: compact.slice(11, -4).replace(/-/g, '').replace(/^0+/, ''), variant: compact.slice(-4) };
 }
 
-/** Jednotný zápis čísla zákazníka pro zobrazení: „A1234567890 1234“ (bez doplňujících nul barvy). */
+/**
+ * Číslo dílu zákazníka v jednotné podobě: velká písmena bez mezer. U dlouhých čísel začínajících „A“ (číslo dílu
+ * + doplněná varianta, např. „A1234567890  00001234“) se vynechají doplňující nuly a pomlčky mezi číslem dílu
+ * a variantou, aby se shodovala různá zápisová pravidla v souborech zákazníka. Jiný prostředek (např. „ERS“)
+ * zůstane, takže „A1234567890 ERS 8R01“ a „A1234567890 8R01“ jsou různé díly.
+ */
+export function customerKey(value: string): string {
+  const split = splitCustomerNumber(value);
+  if (split) return split.part + split.middle + split.variant;
+  return value.replace(/\s+/g, '').toUpperCase();
+}
+
+/** Jednotný zápis čísla zákazníka pro zobrazení: „A1234567890 1234“ (bez doplňujících nul barvy), „A1234567890 ERS 8R01“. */
 export function customerDisplay(value: string): string {
-  const compact = value.replace(/\s+/g, '').toUpperCase();
-  if (compact.length >= 15 && compact.startsWith('A')) return `${compact.slice(0, 11)} ${compact.slice(-4)}`;
+  const split = splitCustomerNumber(value);
+  if (split) return [split.part, split.middle, split.variant].filter(Boolean).join(' ');
   return value.trim().replace(/\s+/g, ' ');
 }
 
