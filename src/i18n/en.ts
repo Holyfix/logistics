@@ -566,6 +566,8 @@ export const en: Messages = {
       savedTo: 'Saved to',
       downloaded: 'The browser has no access to the folder, the file was downloaded. Save it to the Plan folder in the shared folder.',
       denied: 'Writing to the folder was not allowed, nothing was saved.',
+      locked:
+        'Not saved: the file cannot be overwritten right now. Close it in Excel (also on colleagues’ computers), wait until OneDrive finishes syncing it and check that you have edit rights to the folder. Then save again; your changes stay in the app.',
       conflict: 'Someone else changed the file in the meantime. Overwrite it with your version?',
       notSaved: 'Not saved: someone else changed the file. Reload the data.',
       error: 'Saving failed',

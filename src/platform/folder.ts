@@ -82,7 +82,16 @@ export type SaveResult =
   | { status: 'saved'; path: string; lastModified: number }
   | { status: 'conflict'; path: string; lastModified: number }
   | { status: 'denied' }
+  /** Systém soubor nedovolil přepsat (otevřený v Excelu, synchronizace OneDrive, jen právo čtení). */
+  | { status: 'locked'; path: string }
   | { status: 'downloaded' };
+
+/** Chyby zápisu, kdy soubor nejde přepsat kvůli stavu souborového systému (zámek, jen pro čtení). */
+const LOCKED_ERRORS = new Set(['NoModificationAllowedError', 'InvalidStateError']);
+
+/** Kolikrát zkusit zápis znovu, když je soubor dočasně zamčený (např. OneDrive ho právě synchronizuje). */
+const WRITE_ATTEMPTS = 3;
+const RETRY_MS = 800;
 
 /** Povolí zápis do složky (aplikace ji jinak jen čte). Musí být volané z kliknutí uživatele. */
 export async function requestWrite(handle: FileSystemDirectoryHandle): Promise<boolean> {
@@ -93,7 +102,7 @@ export async function requestWrite(handle: FileSystemDirectoryHandle): Promise<b
 /**
  * Zapíše soubor na cestu relativně ke složce (chybějící podsložky vytvoří). `expected` je čas změny souboru,
  * jak byl načtený (null = soubor nebyl); když ho mezitím změnil někdo jiný, vrátí `conflict` a nic nezapíše,
- * pokud není `force`.
+ * pokud není `force`. Když systém soubor nedovolí přepsat (zámek), zkusí to ještě dvakrát a pak vrátí `locked`.
  */
 export async function writeFile(
   root: FileSystemDirectoryHandle,
@@ -114,8 +123,18 @@ export async function writeFile(
   }
   if (!force && existing !== null && (expected === null || existing > expected)) return { status: 'conflict', path, lastModified: existing };
   const file = await dir.getFileHandle(name, { create: true });
-  const writable = await file.createWritable();
-  await writable.write(blob);
-  await writable.close();
-  return { status: 'saved', path, lastModified: (await file.getFile()).lastModified };
+  for (let attempt = 1; ; attempt++) {
+    let writable: FileSystemWritableFileStream | null = null;
+    try {
+      writable = await file.createWritable();
+      await writable.write(blob);
+      await writable.close();
+      return { status: 'saved', path, lastModified: (await file.getFile()).lastModified };
+    } catch (error) {
+      await writable?.abort().catch(() => undefined);
+      if (!(error instanceof DOMException) || !LOCKED_ERRORS.has(error.name)) throw error;
+      if (attempt >= WRITE_ATTEMPTS) return { status: 'locked', path };
+      await new Promise((resolve) => setTimeout(resolve, RETRY_MS));
+    }
+  }
 }

@@ -238,6 +238,14 @@ před přepsáním zeptá; jeho změny by se přepsáním ztratily.
   Původní termín a Posunů termínu jsou z historie.
 - **Kdo:** jméno, které si uživatel vyplní v modulu OIL (pamatuje si ho prohlížeč).
 
+### Když se plán nebo OIL neuloží
+
+Hláška „soubor teď nejde přepsat“ (v prohlížeči `NoModificationAllowedError`) znamená, že Windows soubor nedovolil
+přepsat. Aplikace to zkusí ještě dvakrát, změny zůstávají v aplikaci a stačí uložit znovu po odstranění příčiny:
+- soubor je **otevřený v Excelu** (u kohokoli, kdo ho má ve sdílené složce): zavřít;
+- **OneDrive soubor synchronizuje** nebo je jen online: počkat; složce nastavit „Vždy ponechat na tomto zařízení“;
+- uživatel má ke sdílené složce **jen právo čtení**: vlastník mu dá právo úprav (Sdílet → Může upravovat).
+
 ## Testovací data
 
 `sample-data/` obsahuje smyšlené exporty, mapování, soubory coverage, sklad, kusovník a kapacity plánování ve stejném formátu
