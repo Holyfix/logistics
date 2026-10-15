@@ -433,8 +433,6 @@ export const cs = {
       needName: 'Pro komentář a posun termínu vyplňte nahoře své jméno.',
     },
     legend: 'Barva řádku a kolečka plnění podle stavu.',
-    remote: 'Ve složce je novější OIL, uložil ho někdo jiný. Vaše neuložené změny ho při uložení přepíšou (aplikace se zeptá)',
-    remoteAccept: 'Načíst novější a zahodit mé změny',
   },
   dashboard: {
     noData: 'Dashboard skládá přehled z odvolávek, coverage od zákazníka, kusovníku, skladu a OIL. Zatím nejsou načtená žádná data.',
@@ -570,8 +568,6 @@ export const cs = {
       savedTo: 'Uloženo do',
       downloaded: 'Prohlížeč nemá přístup ke složce, soubor se stáhl. Uložte ho do složky Plan ve sdílené složce.',
       denied: 'Zápis do složky nebyl povolený, nic se neuložilo.',
-      locked:
-        'Neuloženo: do složky teď nejde zapisovat (soubor nejde přepsat ani vytvořit nový). Zkontrolujte, že máte ke složce právo úprav a že běží OneDrive, a uložte znovu; změny zůstávají v aplikaci.',
       conflict: 'Soubor mezitím změnil někdo jiný. Přepsat ho vaší verzí?',
       notSaved: 'Neuloženo: soubor změnil někdo jiný. Načtěte data znovu.',
       error: 'Uložení se nepovedlo',

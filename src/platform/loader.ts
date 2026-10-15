@@ -228,36 +228,3 @@ export async function loadFolder(source: FolderSource, onProgress: (p: LoadProgr
 
   return { folderName: source.name, exports, master, coverage, stock, boms, plans, planSettings, oil, failed, loadedAt: Date.now() };
 }
-
-/**
- * Novější OIL ve složce, než je načtený (`current`): nejnovější soubor OIL ve složce načteného souboru, jinak ve
- * složce OIL v kořeni. null = nic novějšího (nebo soubor nejde přečíst).
- */
-export async function newerOil(
-  root: FileSystemDirectoryHandle,
-  current: LoadedData['oil'],
-  parse: (path: string, file: File) => Promise<OilList | null> = parseOilFile,
-): Promise<LoadedData['oil']> {
-  const folder = current?.path.includes('/') ? current.path.slice(0, current.path.lastIndexOf('/')) : 'OIL';
-  let dir = root;
-  try {
-    for (const part of folder.split('/')) dir = await dir.getDirectoryHandle(part);
-  } catch {
-    return null;
-  }
-  let best: { path: string; file: File } | null = null;
-  for await (const entry of dir.values()) {
-    const path = `${folder}/${entry.name}`;
-    if (entry.kind !== 'file' || classifyPath(path) !== 'oil') continue;
-    const file = await (entry as FileSystemFileHandle).getFile();
-    if (!best || file.lastModified > best.file.lastModified) best = { path, file };
-  }
-  if (!best || (current && best.file.lastModified <= current.lastModified)) return null;
-  const list = await parse(best.path, best.file);
-  return list ? { path: best.path, lastModified: best.file.lastModified, list } : null;
-}
-
-async function parseOilFile(path: string, file: File): Promise<OilList | null> {
-  const response = await parseInWorker({ kind: 'oil', format: 'xlsx', name: path, file });
-  return response.kind === 'oil' && response.result.ok ? response.result.value : null;
-}

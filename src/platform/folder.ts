@@ -82,16 +82,7 @@ export type SaveResult =
   | { status: 'saved'; path: string; lastModified: number }
   | { status: 'conflict'; path: string; lastModified: number }
   | { status: 'denied' }
-  /** Systém soubor nedovolil přepsat (otevřený v Excelu, synchronizace OneDrive, jen právo čtení). */
-  | { status: 'locked'; path: string }
   | { status: 'downloaded' };
-
-/** Chyby zápisu, kdy soubor nejde přepsat kvůli stavu souborového systému (zámek, jen pro čtení). */
-const LOCKED_ERRORS = new Set(['NoModificationAllowedError', 'InvalidStateError']);
-
-/** Kolikrát zkusit zápis znovu, když je soubor dočasně zamčený (např. OneDrive ho právě synchronizuje). */
-const WRITE_ATTEMPTS = 3;
-const RETRY_MS = 800;
 
 /** Povolí zápis do složky (aplikace ji jinak jen čte). Musí být volané z kliknutí uživatele. */
 export async function requestWrite(handle: FileSystemDirectoryHandle): Promise<boolean> {
@@ -99,42 +90,10 @@ export async function requestWrite(handle: FileSystemDirectoryHandle): Promise<b
   return ((await handle.requestPermission?.({ mode: 'readwrite' })) ?? 'granted') === 'granted';
 }
 
-/** Náhradní název souboru s časem: „OIL.xlsx“ → „OIL_20261015-081230.xlsx“ (starší časová přípona se nahradí). */
-export function versionedName(name: string, date: Date): string {
-  const dot = name.lastIndexOf('.');
-  const base = (dot === -1 ? name : name.slice(0, dot)).replace(/_\d{8}-\d{6}$/, '');
-  const ext = dot === -1 ? '' : name.slice(dot);
-  const p = (n: number) => String(n).padStart(2, '0');
-  return `${base}_${date.getFullYear()}${p(date.getMonth() + 1)}${p(date.getDate())}-${p(date.getHours())}${p(date.getMinutes())}${p(date.getSeconds())}${ext}`;
-}
-
-/** Zápis obsahu do souboru; když ho systém nedovolí přepsat, zkusí to znovu. Vrátí čas změny, nebo null (zamčeno). */
-async function writeContent(file: FileSystemFileHandle, blob: Blob, attempts: number): Promise<number | null> {
-  for (let attempt = 1; ; attempt++) {
-    let writable: FileSystemWritableFileStream | null = null;
-    try {
-      writable = await file.createWritable();
-      await writable.write(blob);
-      await writable.close();
-      return (await file.getFile()).lastModified;
-    } catch (error) {
-      await writable?.abort().catch(() => undefined);
-      if (!(error instanceof DOMException) || !LOCKED_ERRORS.has(error.name)) throw error;
-      if (attempt >= attempts) return null;
-      await new Promise((resolve) => setTimeout(resolve, RETRY_MS));
-    }
-  }
-}
-
 /**
  * Zapíše soubor na cestu relativně ke složce (chybějící podsložky vytvoří). `expected` je čas změny souboru,
  * jak byl načtený (null = soubor nebyl); když ho mezitím změnil někdo jiný, vrátí `conflict` a nic nezapíše,
  * pokud není `force`.
- *
- * Prohlížeč zapisuje přes dočasný soubor, kterým pak původní nahradí. Když systém nahrazení nedovolí (soubor drží
- * OneDrive při synchronizaci nebo je jen online, je otevřený v Excelu), zkusí to ještě dvakrát a pak uloží nový
- * soubor s časem v názvu vedle původního (aplikace při načtení bere nejnovější), původní zkusí smazat a nový
- * přejmenovat zpět. Když nejde ani vytvořit nový soubor, vrátí `locked`.
  */
 export async function writeFile(
   root: FileSystemDirectoryHandle,
@@ -142,7 +101,6 @@ export async function writeFile(
   blob: Blob,
   expected: number | null,
   force = false,
-  now: () => Date = () => new Date(),
 ): Promise<SaveResult> {
   const parts = path.split('/');
   const name = parts.pop()!;
@@ -156,27 +114,8 @@ export async function writeFile(
   }
   if (!force && existing !== null && (expected === null || existing > expected)) return { status: 'conflict', path, lastModified: existing };
   const file = await dir.getFileHandle(name, { create: true });
-  const written = await writeContent(file, blob, WRITE_ATTEMPTS);
-  if (written !== null) return { status: 'saved', path, lastModified: written };
-
-  // Původní soubor nejde nahradit: nový soubor vedle něj.
-  const altName = versionedName(name, now());
-  const alt = await dir.getFileHandle(altName, { create: true });
-  const altWritten = await writeContent(alt, blob, 1);
-  if (altWritten === null) {
-    await dir.removeEntry(altName).catch(() => undefined);
-    return { status: 'locked', path };
-  }
-  let finalName = altName;
-  try {
-    await dir.removeEntry(name);
-    const movable = alt as FileSystemFileHandle & { move?: (name: string) => Promise<void> };
-    if (movable.move) {
-      await movable.move(name);
-      finalName = name;
-    }
-  } catch {
-    // Původní soubor zůstane (starší), platí nový s časem v názvu.
-  }
-  return { status: 'saved', path: [...parts, finalName].join('/'), lastModified: finalName === name ? (await alt.getFile()).lastModified : altWritten };
+  const writable = await file.createWritable();
+  await writable.write(blob);
+  await writable.close();
+  return { status: 'saved', path, lastModified: (await file.getFile()).lastModified };
 }

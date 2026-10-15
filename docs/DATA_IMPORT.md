@@ -237,22 +237,6 @@ před přepsáním zeptá; jeho změny by se přepsáním ztratily.
 - **Posun termínu:** první termín se jen nastaví, každá další změna je posun s povinným důvodem, kdo a kdy;
   Původní termín a Posunů termínu jsou z historie.
 - **Kdo:** jméno, které si uživatel vyplní v modulu OIL (pamatuje si ho prohlížeč).
-- **Změny od kolegů:** aplikace každých 30 s a při návratu do okna zkontroluje složku OIL; když tam je novější
-  soubor (uložil ho někdo jiný), načte ho sám (Dashboard i rozcestník se aktualizují). Když má uživatel neuložené
-  změny, novější verze se jen nabídne (banner v modulu OIL). Zpoždění dělá i synchronizace OneDrivu (obvykle
-  desítky sekund).
-
-### Když soubor nejde přepsat
-
-Prohlížeč ukládá přes dočasný soubor, kterým pak původní nahradí. Ve sdílené složce na OneDrivu/SharePointu to
-Windows občas odmítne (soubor právě synchronizuje OneDrive, je jen online, nebo je otevřený v Excelu). Aplikace pak:
-1. zkusí uložit ještě dvakrát (asi 2 s),
-2. uloží **nový soubor s časem v názvu** vedle původního (např. `OIL/OIL_20261015-081230.xlsx`),
-3. původní zkusí smazat a nový přejmenovat zpět na původní název; když to nejde, platí nový soubor
-   (při načtení se bere nejnovější, starší se v modulu Data ukáže jako „Ve stejné složce je novější soubor“).
-
-Hláška „do složky teď nejde zapisovat“ se ukáže, jen když nejde vytvořit ani nový soubor: chybí právo úprav
-nebo neběží OneDrive. Změny zůstávají v aplikaci, stačí uložit znovu.
 
 ## Testovací data
 

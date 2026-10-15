@@ -431,8 +431,6 @@ export const en: Messages = {
       needName: 'Enter your name at the top to comment or shift the due date.',
     },
     legend: 'Row and progress colour by status.',
-    remote: 'A newer OIL is in the folder, saved by someone else. Your unsaved changes would overwrite it when saving (the app will ask)',
-    remoteAccept: 'Load the newer one and discard my changes',
   },
   dashboard: {
     noData: 'The dashboard combines call-offs, customer coverage, the bill of materials, stock and the OIL. No data is loaded yet.',
@@ -568,8 +566,6 @@ export const en: Messages = {
       savedTo: 'Saved to',
       downloaded: 'The browser has no access to the folder, the file was downloaded. Save it to the Plan folder in the shared folder.',
       denied: 'Writing to the folder was not allowed, nothing was saved.',
-      locked:
-        'Not saved: the folder cannot be written right now (the file cannot be overwritten and no new file can be created). Check that you have edit rights to the folder and OneDrive is running, then save again; your changes stay in the app.',
       conflict: 'Someone else changed the file in the meantime. Overwrite it with your version?',
       notSaved: 'Not saved: someone else changed the file. Reload the data.',
       error: 'Saving failed',

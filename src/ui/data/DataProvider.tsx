@@ -12,7 +12,7 @@ import {
   type SaveResult,
 } from '../../platform/folder';
 import { downloadBlob } from '../../platform/download';
-import { loadFolder, newerOil, type LoadedData, type LoadProgress } from '../../platform/loader';
+import { loadFolder, type LoadedData, type LoadProgress } from '../../platform/loader';
 
 export type DataStatus = 'checking' | 'noFolder' | 'needsPermission' | 'loading' | 'ready' | 'error';
 
@@ -37,8 +37,6 @@ interface DataContextValue {
   saveFile: (path: string, build: () => Promise<Blob>, expected: number | null, force?: boolean) => Promise<SaveResult>;
   /** Změní načtená data bez nového načtení složky (např. po uložení plánu). */
   updateData: (update: (data: LoadedData) => LoadedData) => void;
-  /** Novější OIL ve složce, než je načtený (uložil ho někdo jiný); null = nic nového nebo bez přístupu ke složce. */
-  checkOil: () => Promise<LoadedData['oil']>;
   rememberFolder: boolean;
 }
 
@@ -46,16 +44,8 @@ const DataContext = createContext<DataContextValue | null>(null);
 
 const INITIAL: DataState = { status: 'checking', folderName: '', progress: null, data: null, error: '' };
 
-/** `initial` a `checkOil` slouží pro testy: data se nenačítají ze složky. */
-export function DataProvider({
-  children,
-  initial,
-  checkOil: checkOilForTest,
-}: {
-  children: ReactNode;
-  initial?: DataState;
-  checkOil?: (() => Promise<LoadedData['oil']>) | undefined;
-}) {
+/** `initial` slouží pro testy: data se nenačítají ze složky. */
+export function DataProvider({ children, initial }: { children: ReactNode; initial?: DataState }) {
   const [state, setState] = useState<DataState>(initial ?? INITIAL);
   const source = useRef<FolderSource | null>(null);
   const pendingHandle = useRef<FileSystemDirectoryHandle | null>(null);
@@ -126,22 +116,13 @@ export function DataProvider({
     return writeFile(current.handle, path, await build(), expected, force);
   }, []);
 
-  const latest = useRef(state.data);
-  latest.current = state.data;
-  const checkOil = useCallback(async (): Promise<LoadedData['oil']> => {
-    if (checkOilForTest) return checkOilForTest();
-    const current = source.current;
-    if (current?.kind !== 'handle' || !latest.current) return null;
-    return newerOil(current.handle, latest.current.oil);
-  }, [checkOilForTest]);
-
   const updateData = useCallback((update: (data: LoadedData) => LoadedData) => {
     setState((s) => (s.data ? { ...s, data: update(s.data) } : s));
   }, []);
 
   const value = useMemo(
-    () => ({ state, chooseFolder, chooseFiles, grantPermission, reload, saveFile, updateData, checkOil, rememberFolder }),
-    [state, chooseFolder, chooseFiles, grantPermission, reload, saveFile, updateData, checkOil, rememberFolder],
+    () => ({ state, chooseFolder, chooseFiles, grantPermission, reload, saveFile, updateData, rememberFolder }),
+    [state, chooseFolder, chooseFiles, grantPermission, reload, saveFile, updateData, rememberFolder],
   );
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
 }
