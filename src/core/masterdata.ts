@@ -67,20 +67,49 @@ export interface MasterData {
 export type MasterResult = { ok: true; value: MasterData } | { ok: false; error: 'missingColumns'; columns: string[] };
 
 /**
- * Číslo dílu zákazníka v jednotné podobě: velká písmena bez mezer. Dlouhá čísla začínající „A“
- * (číslo dílu + doplněná varianta, např. „A1234567890  00001234“) se zkrátí na prvních 11 a posledních 4 znaků,
- * aby se shodovala různá zápisová pravidla v souborech zákazníka.
+ * Dlouhé číslo zákazníka začínající „A“ rozdělené na číslo dílu (11 znaků), variantu (4 znaky, např. „9051“,
+ * „8R01“) a písmenné označení (aspoň 3 písmena, např. „ERS“), které zákazník píše před variantu i za ni.
+ * Doplňující nuly a pomlčky se vynechají („  00009051“ → varianta „9051“); jiný zbytek (`middle`) zůstane.
+ * null, když číslo tento tvar nemá.
  */
-export function customerKey(value: string): string {
-  const compact = value.replace(/\s+/g, '').toUpperCase();
-  if (compact.length >= 15 && compact.startsWith('A')) return compact.slice(0, 11) + compact.slice(-4);
-  return compact;
+function splitCustomerNumber(value: string): { part: string; middle: string; variant: string; tag: string } | null {
+  const compact = value.replace(/[\s-]+/g, '').toUpperCase();
+  if (compact.length < 15 || !compact.startsWith('A')) return null;
+  let rest = compact.slice(11);
+  let tag = '';
+  // Po odebrání označení musí zbýt varianta (aspoň 4 znaky, ne samé doplňující nuly).
+  const leavesVariant = (remaining: string) => remaining.length >= 4 && /[^0]/.test(remaining);
+  const trailing = /[A-Z]{3,}$/.exec(rest);
+  if (trailing && leavesVariant(rest.slice(0, -trailing[0].length))) {
+    tag = trailing[0];
+    rest = rest.slice(0, -tag.length);
+  } else {
+    const leading = /^0*([A-Z]{3,})/.exec(rest);
+    if (leading && leavesVariant(rest.slice(leading[0].length))) {
+      tag = leading[1]!;
+      rest = rest.slice(leading[0].length);
+    }
+  }
+  return { part: compact.slice(0, 11), middle: rest.slice(0, -4).replace(/^0+/, ''), variant: rest.slice(-4), tag };
 }
 
-/** Jednotný zápis čísla zákazníka pro zobrazení: „A1234567890 1234“ (bez doplňujících nul barvy). */
+/**
+ * Číslo dílu zákazníka v jednotné podobě: velká písmena bez mezer. U dlouhých čísel začínajících „A“ (číslo dílu
+ * + doplněná varianta, např. „A1234567890  00001234“) se vynechají doplňující nuly a pomlčky mezi číslem dílu
+ * a variantou, aby se shodovala různá zápisová pravidla v souborech zákazníka. Písmenné označení (např. „ERS“)
+ * zůstane, před variantou i za ní: „A1234567890 ERS 8R01“ = „A1234567890 8R01 ERS“, ale jiný díl než
+ * „A1234567890 8R01“.
+ */
+export function customerKey(value: string): string {
+  const split = splitCustomerNumber(value);
+  if (split) return split.part + split.middle + split.variant + split.tag;
+  return value.replace(/\s+/g, '').toUpperCase();
+}
+
+/** Jednotný zápis čísla zákazníka pro zobrazení: „A1234567890 1234“ (bez doplňujících nul barvy), „A1234567890 8R01 ERS“. */
 export function customerDisplay(value: string): string {
-  const compact = value.replace(/\s+/g, '').toUpperCase();
-  if (compact.length >= 15 && compact.startsWith('A')) return `${compact.slice(0, 11)} ${compact.slice(-4)}`;
+  const split = splitCustomerNumber(value);
+  if (split) return [split.part, split.middle, split.variant, split.tag].filter(Boolean).join(' ');
   return value.trim().replace(/\s+/g, ' ');
 }
 

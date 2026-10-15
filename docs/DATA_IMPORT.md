@@ -88,8 +88,10 @@ Další sloupce (např. Yield Percent, Cost Total) aplikace ignoruje.
 - Šablonu se všemi díly z aktuálního exportu odvolávek stáhnete v modulu Data.
 - Díly bez kmenových dat lze v Call-offs vyfiltrovat volbou „Bez kmenových dat“.
 - **Číslo zákazníka** se pro párování se soubory zákazníka sjednotí: velká písmena, bez mezer;
-  dlouhá čísla začínající „A“ (15 a více znaků) se zkrátí na prvních 11 a posledních 4 znaků.
-  Tím se shodnou zápisy `A1234567890  00009051`, `A1234567890      9051` i `A1234567890-9051`.
+  u dlouhých čísel začínajících „A“ (15 a více znaků) se mezi prvními 11 a posledními 4 znaky vynechají
+  doplňující nuly a pomlčky. Tím se shodnou zápisy `A1234567890  00009051`, `A1234567890      9051`
+  i `A1234567890-9051`. Písmenné označení (aspoň 3 písmena, např. `ERS`) zůstane, ať je před variantou, nebo za ní:
+  `A1234567890  ERS 8R01` = `A1234567890 8R01 ERS`, ale jiný díl než `A1234567890 8R01`.
 
 ## Pokrytí od zákazníka (Coverage)
 
