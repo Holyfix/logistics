@@ -27,7 +27,13 @@ export interface OilShift {
 export interface OilItem {
   /** Číslo bodu (1, 2, 3 …), nemění se. */
   id: number;
+  /** Oblast (sklad, plánování, nákup …); volitelné. */
+  area: string;
+  /** Téma nebo projekt, kterého se bod týká; volitelné. */
+  topic: string;
   problem: string;
+  /** Příčina problému; volitelné. */
+  cause: string;
   action: string;
   owner: string;
   opened: DayNumber;
@@ -69,12 +75,25 @@ export function stamp(date: Date): string {
 
 export function addItem(list: OilList, today: DayNumber): { list: OilList; id: number } {
   const id = Math.max(0, ...list.items.map((i) => i.id)) + 1;
-  const item: OilItem = { id, problem: '', action: '', owner: '', opened: today, due: null, progress: 0, cancelled: false, closed: null, comments: [], shifts: [] };
+  const item: OilItem = { id, area: '', topic: '', problem: '', cause: '', action: '', owner: '', opened: today, due: null, progress: 0, cancelled: false, closed: null, comments: [], shifts: [] };
   return { list: { items: [...list.items, item] }, id };
 }
 
 export function updateItem(list: OilList, id: number, change: (item: OilItem) => OilItem): OilList {
   return { items: list.items.map((i) => (i.id === id ? change(i) : i)) };
+}
+
+/** Jednotliví odpovědní z pole Odpovědný („A / B“, „A, B“ nebo „A; B“). */
+export function ownerNames(owner: string): string[] {
+  return owner
+    .split(/[/,;]/)
+    .map((name) => name.trim())
+    .filter(Boolean);
+}
+
+/** Trvalé smazání bodu včetně komentářů a posunů (na rozdíl od zrušení, které bod v seznamu ponechá). */
+export function removeItem(list: OilList, id: number): OilList {
+  return { items: list.items.filter((i) => i.id !== id) };
 }
 
 /** Plnění: 100 % uzavře bod (den uzavření), méně ho zase otevře. */
@@ -105,7 +124,10 @@ export function withComment(item: OilItem, text: string, author: string, at: str
 
 const COLUMNS = {
   id: ['Číslo', 'ID', 'No.'],
+  area: ['Oblast', 'Area'],
+  topic: ['Téma', 'Topic'],
   problem: ['Problém', 'Problem', 'Issue'],
+  cause: ['Příčina', 'Cause', 'Root Cause'],
   action: ['Opatření', 'Action'],
   owner: ['Odpovědný', 'Owner', 'Responsible'],
   opened: ['Otevřeno', 'Opened'],
@@ -141,10 +163,13 @@ export function oilSheets(list: OilList, today: DayNumber): OilSheet[] {
   return [
     {
       name: 'OIL',
-      header: [COLUMNS.id[0], COLUMNS.problem[0], COLUMNS.action[0], COLUMNS.owner[0], COLUMNS.opened[0], COLUMNS.due[0], 'Původní termín', 'Posunů termínu', COLUMNS.progress[0], COLUMNS.status[0], COLUMNS.closed[0], 'Poslední komentář'],
+      header: [COLUMNS.id[0], COLUMNS.area[0], COLUMNS.topic[0], COLUMNS.problem[0], COLUMNS.cause[0], COLUMNS.action[0], COLUMNS.owner[0], COLUMNS.opened[0], COLUMNS.due[0], 'Původní termín', 'Posunů termínu', COLUMNS.progress[0], COLUMNS.status[0], COLUMNS.closed[0], 'Poslední komentář'],
       rows: items.map((i) => [
         i.id,
+        i.area,
+        i.topic,
         i.problem,
+        i.cause,
         i.action,
         i.owner,
         formatDate(i.opened),
@@ -198,6 +223,10 @@ export function parseOilWorkbook(sheets: readonly { name: string; data: Cell[][]
   if (!main) return { ok: false, error: 'missingColumns', columns: [COLUMNS.id[0], COLUMNS.problem[0], COLUMNS.due[0], COLUMNS.progress[0]] };
   const col = (aliases: readonly string[]) => findColumn(main.header, aliases);
   const [idC, problemC, dueC, progressC] = main.cols as [number, number, number, number];
+  const text = (c: number, row: Cell[]) => (c === -1 ? '' : cellText(row[c]));
+  const areaC = col(COLUMNS.area);
+  const topicC = col(COLUMNS.topic);
+  const causeC = col(COLUMNS.cause);
   const actionC = col(COLUMNS.action);
   const ownerC = col(COLUMNS.owner);
   const openedC = col(COLUMNS.opened);
@@ -212,9 +241,12 @@ export function parseOilWorkbook(sheets: readonly { name: string; data: Cell[][]
     const opened = (openedC === -1 ? null : cellDay(row[openedC])) ?? cellDay(row[dueC]) ?? 0;
     items.set(id, {
       id: Math.round(id),
+      area: text(areaC, row),
+      topic: text(topicC, row),
       problem: cellText(row[problemC]),
-      action: actionC === -1 ? '' : cellText(row[actionC]),
-      owner: ownerC === -1 ? '' : cellText(row[ownerC]),
+      cause: text(causeC, row),
+      action: text(actionC, row),
+      owner: text(ownerC, row),
       opened,
       due: cellDay(row[dueC]),
       progress,

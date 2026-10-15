@@ -7,7 +7,9 @@ import {
   nextProgress,
   oilSheets,
   originalDue,
+  ownerNames,
   PROGRESS_STEPS,
+  removeItem,
   stamp,
   statusOf,
   updateItem,
@@ -63,11 +65,16 @@ export function OilPage({ today = localToday() }: { today?: DayNumber } = {}) {
 
   const [filter, setFilter] = useState<Filter>('open');
   const [owner, setOwner] = useState('');
+  const [area, setArea] = useState('');
   const [query, setQuery] = useState('');
   const [name, setName] = useState(readName);
   const [openId, setOpenId] = useState<number | null>(null);
 
-  const owners = useMemo(() => [...new Set(list.items.map((i) => i.owner).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'cs')), [list]);
+  const { owners, areas, topics } = useMemo(() => {
+    const values = (pick: (i: OilItem) => string[]) => [...new Set(list.items.flatMap(pick).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'cs'));
+    // Odpovědní po osobách: bod „A / B“ patří k A i k B.
+    return { owners: values((i) => ownerNames(i.owner)), areas: values((i) => [i.area]), topics: values((i) => [i.topic]) };
+  }, [list]);
 
   const head = (
     <div className="page-head module-head">
@@ -105,6 +112,11 @@ export function OilPage({ today = localToday() }: { today?: DayNumber } = {}) {
     setOpenId(result.id);
     setFilter((f) => (f === 'open' || f === 'all' ? f : 'open'));
   };
+  const remove = (id: number) => {
+    if (!window.confirm(to.detail.deleteConfirm.replace('{id}', String(id)))) return;
+    update(removeItem(list, id));
+    setOpenId(null);
+  };
   const save = () =>
     flow.run(async (force) => {
       const path = data.oil?.path ?? OIL_FILE;
@@ -132,8 +144,9 @@ export function OilPage({ today = localToday() }: { today?: DayNumber } = {}) {
       if (filter === 'open' && (s === 'done' || s === 'cancelled')) return false;
       if (filter === 'overdue' && s !== 'overdue') return false;
       if (filter === 'done' && s !== 'done') return false;
-      if (owner && i.owner !== owner) return false;
-      return !q || `${i.id} ${i.problem} ${i.action}`.toLowerCase().includes(q);
+      if (owner && !ownerNames(i.owner).includes(owner)) return false;
+      if (area && i.area !== area) return false;
+      return !q || `${i.id} ${i.area} ${i.topic} ${i.problem} ${i.cause} ${i.action}`.toLowerCase().includes(q);
     })
     .sort((a, b) => ORDER[status(a)] - ORDER[status(b)] || (a.due ?? Infinity) - (b.due ?? Infinity) || a.id - b.id);
 
@@ -163,6 +176,19 @@ export function OilPage({ today = localToday() }: { today?: DayNumber } = {}) {
             ))}
           </select>
         </label>
+        {areas.length > 0 && (
+          <label className="inline-field">
+            <span>{to.area}</span>
+            <select value={area} onChange={(e) => setArea(e.target.value)}>
+              <option value="">{to.allAreas}</option>
+              {areas.map((a) => (
+                <option key={a} value={a}>
+                  {a}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
         <label className="inline-field">
           <span>{to.search}</span>
           <input type="search" value={query} placeholder={to.searchPlaceholder} onChange={(e) => setQuery(e.target.value)} />
@@ -239,6 +265,7 @@ export function OilPage({ today = localToday() }: { today?: DayNumber } = {}) {
                         <strong>{item.id}</strong>
                       </td>
                       <td className="oil-text">
+                        {(item.area || item.topic) && <small className="oil-tags">{[item.area, item.topic].filter(Boolean).join(' · ')}</small>}
                         <strong>{item.problem || to.noProblem}</strong>
                         {item.action && <small className="muted cell-note">{item.action}</small>}
                       </td>
@@ -276,7 +303,16 @@ export function OilPage({ today = localToday() }: { today?: DayNumber } = {}) {
                     expanded && (
                       <tr key={`${item.id}-detail`} className={`oil-detail-row oil-${s}`}>
                         <td colSpan={7}>
-                          <OilDetail item={item} today={today} name={name.trim()} owners={owners} change={(fn) => change(item.id, fn)} close={() => setOpenId(null)} dayLabel={dayLabel} />
+                          <OilDetail
+                            item={item}
+                            today={today}
+                            name={name.trim()}
+                            lists={{ owners, areas, topics }}
+                            change={(fn) => change(item.id, fn)}
+                            remove={() => remove(item.id)}
+                            close={() => setOpenId(null)}
+                            dayLabel={dayLabel}
+                          />
                         </td>
                       </tr>
                     ),
@@ -303,16 +339,19 @@ function OilDetail({
   item,
   today,
   name,
-  owners,
+  lists,
   change,
+  remove,
   close,
   dayLabel,
 }: {
   item: OilItem;
   today: DayNumber;
   name: string;
-  owners: string[];
+  /** Hodnoty pro našeptávání (odpovědní, oblasti, témata). */
+  lists: { owners: string[]; areas: string[]; topics: string[] };
   change: (fn: (item: OilItem) => OilItem) => void;
+  remove: () => void;
   close: () => void;
   dayLabel: (d: DayNumber) => string;
 }) {
@@ -334,18 +373,33 @@ function OilDetail({
           <textarea rows={2} value={item.problem} onChange={(e) => change((i) => ({ ...i, problem: e.target.value }))} />
         </label>
         <label className="field">
+          <span>{td.cause}</span>
+          <textarea rows={2} value={item.cause} onChange={(e) => change((i) => ({ ...i, cause: e.target.value }))} />
+        </label>
+        <label className="field">
           <span>{td.action}</span>
           <textarea rows={2} value={item.action} onChange={(e) => change((i) => ({ ...i, action: e.target.value }))} />
         </label>
-        <label className="field">
-          <span>{td.owner}</span>
-          <input list={`oil-owners-${item.id}`} value={item.owner} onChange={(e) => change((i) => ({ ...i, owner: e.target.value }))} />
-          <datalist id={`oil-owners-${item.id}`}>
-            {owners.map((o) => (
-              <option key={o} value={o} />
-            ))}
-          </datalist>
-        </label>
+      </div>
+
+      <div className="oil-detail-grid">
+        {(
+          [
+            ['area', td.area, lists.areas],
+            ['topic', td.topic, lists.topics],
+            ['owner', td.owner, lists.owners],
+          ] as const
+        ).map(([key, label, options]) => (
+          <label key={key} className="field">
+            <span>{label}</span>
+            <input list={`oil-${key}-${item.id}`} value={item[key]} onChange={(e) => change((i) => ({ ...i, [key]: e.target.value }))} />
+            <datalist id={`oil-${key}-${item.id}`}>
+              {options.map((o) => (
+                <option key={o} value={o} />
+              ))}
+            </datalist>
+          </label>
+        ))}
         <div className="field">
           <span>{td.progress}</span>
           <div className="segmented" role="group" aria-label={`${td.progress} ${item.id}`}>
@@ -445,6 +499,9 @@ function OilDetail({
         </button>
         <button type="button" className="button button-small" onClick={close}>
           {td.close}
+        </button>
+        <button type="button" className="button button-small button-danger" onClick={remove}>
+          {td.delete}
         </button>
       </div>
     </div>
