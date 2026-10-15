@@ -9,9 +9,14 @@ describe('customerKey', () => {
     // Zápis s pomlčkou (číslo + varianta) dá stejný klíč.
     expect(customerKey(' a1234567890-9051 ')).toBe('A12345678909051');
     // Jiný prostředek než nuly je součást čísla: dva různé díly.
-    expect(customerKey('A1234567890  ERS 8R01')).toBe('A1234567890ERS8R01');
+    // Písmenné označení (ERS) před variantou i za ní je stejný díl; bez něj jiný díl.
+    const ers = 'A12345678908R01ERS';
+    expect(['A1234567890  ERS 8R01', 'A1234567890 8R01 ERS', 'A12345678908R01ERS', 'A1234567890-ERS-8R01', 'A1234567890 00ERS 8R01'].map(customerKey)).toEqual([ers, ers, ers, ers, ers]);
     expect(customerKey('A1234567890      8R01')).toBe('A12345678908R01');
-    expect(customerKey('A1234567890-ERS-8R01')).toBe('A1234567890ERS8R01');
+    // Varianta s písmeny na konci (méně než 3 písmena) zůstane variantou.
+    expect(customerKey('A1234567890  000012AB')).toBe('A123456789012AB');
+    // Varianta ze samých písmen s doplňujícími nulami není označení.
+    expect(customerKey('A1234567890  0000ABCD')).toBe(customerKey('A1234567890 ABCD'));
     expect(customerKey('12345 678')).toBe('12345678');
     expect(customerKey('')).toBe('');
   });
@@ -21,7 +26,8 @@ describe('customerDisplay', () => {
   it('jednotný zápis bez doplňujících nul barvy', () => {
     expect(customerDisplay('A1234567890  00009L22')).toBe('A1234567890 9L22');
     expect(customerDisplay('A1234567890 9L22')).toBe('A1234567890 9L22');
-    expect(customerDisplay('A1234567890  ERS 8R01')).toBe('A1234567890 ERS 8R01');
+    expect(customerDisplay('A1234567890  ERS 8R01')).toBe('A1234567890 8R01 ERS');
+    expect(customerDisplay('A1234567890 8R01 ERS')).toBe('A1234567890 8R01 ERS');
     expect(customerDisplay('a1234567890      9051 ')).toBe('A1234567890 9051');
     expect(customerDisplay(' 12345  678 ')).toBe('12345 678');
   });
@@ -127,9 +133,10 @@ describe('masterDataTemplate', () => {
 describe('čísla zákazníka s prostředkem', () => {
   it('díl s „ERS“ uprostřed a díl bez něj nejsou duplicita', () => {
     const r = parseMasterData(parseCsv('Item Number;Customer Number\n900200-8R01;A1234567890      8R01\n900200-8R01ERS;A1234567890  ERS 8R01'));
+    // zákazník v souboru píše ERS na konec
     if (!r.ok) throw new Error();
     expect(r.value.issues).toEqual([]);
     expect(r.value.byCustomerKey.get(customerKey('A1234567890 8R01'))?.item).toBe('900200-8R01');
-    expect(r.value.byCustomerKey.get(customerKey('A1234567890 ERS 8R01'))?.item).toBe('900200-8R01ERS');
+    expect(r.value.byCustomerKey.get(customerKey('A1234567890 8R01 ERS'))?.item).toBe('900200-8R01ERS');
   });
 });

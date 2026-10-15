@@ -90,7 +90,8 @@ Další sloupce (např. Yield Percent, Cost Total) aplikace ignoruje.
 - **Číslo zákazníka** se pro párování se soubory zákazníka sjednotí: velká písmena, bez mezer;
   u dlouhých čísel začínajících „A“ (15 a více znaků) se mezi prvními 11 a posledními 4 znaky vynechají
   doplňující nuly a pomlčky. Tím se shodnou zápisy `A1234567890  00009051`, `A1234567890      9051`
-  i `A1234567890-9051`. Jiný prostředek zůstane: `A1234567890  ERS 8R01` je jiný díl než `A1234567890 8R01`.
+  i `A1234567890-9051`. Písmenné označení (aspoň 3 písmena, např. `ERS`) zůstane, ať je před variantou, nebo za ní:
+  `A1234567890  ERS 8R01` = `A1234567890 8R01 ERS`, ale jiný díl než `A1234567890 8R01`.
 
 ## Pokrytí od zákazníka (Coverage)
 
