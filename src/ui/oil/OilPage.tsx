@@ -246,12 +246,18 @@ export function OilPage({ today = localToday() }: { today?: DayNumber } = {}) {
                       <td className="n">
                         <strong>{item.id}</strong>
                       </td>
+                      {/* V seznamu jen první odstavec problému a nejvýš 2 řádky textu; celý text v detailu a po najetí myší. */}
                       <td className="oil-text">
-                        {/* V seznamu jen první odstavec (např. bez připsané příčiny), celý text je v detailu. */}
-                        <strong>{item.problem.split(/\n\s*\n/)[0]!.trim() || to.noProblem}</strong>
-                        {item.action && <small className="muted cell-note">{item.action}</small>}
+                        <strong className="oil-clamp" title={item.problem}>
+                          {item.problem.split(/\n\s*\n/)[0]!.trim() || to.noProblem}
+                        </strong>
+                        {item.action && (
+                          <small className="muted oil-clamp" title={item.action}>
+                            {item.action}
+                          </small>
+                        )}
                       </td>
-                      <td>{item.owner || '—'}</td>
+                      <td className="oil-owner">{item.owner || '—'}</td>
                       <td className="cell-until">
                         {item.due === null ? <span className="muted">{to.noDue}</span> : <span className={s === 'overdue' ? 'cell-short' : undefined}>{dayLabel(item.due)}</span>}
                         {item.shifts.length > 0 && (

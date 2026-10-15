@@ -1285,10 +1285,32 @@ button:focus-visible {
   color: var(--muted);
 }
 
-.oil-text {
-  min-width: 260px;
-  max-width: 520px;
+/* Text bodu se zalamuje (obecné .table td je nowrap) a v seznamu má nejvýš 2 řádky. */
+.oil-table td.oil-text {
+  min-width: 280px;
+  width: 50%;
   white-space: normal;
+}
+
+.oil-table td.oil-owner {
+  min-width: 110px;
+  max-width: 200px;
+  white-space: normal;
+}
+
+.oil-clamp {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+
+.oil-text small.oil-clamp {
+  margin-top: 2px;
+  font-size: 12px;
+  font-weight: 400;
 }
 
 .oil-ball {
@@ -1411,6 +1433,10 @@ button.oil-step:disabled {
   border-radius: 6px;
   padding: 7px 9px;
   resize: vertical;
+  /* Výška podle textu (kde to prohlížeč umí), s rozumným minimem a maximem. */
+  field-sizing: content;
+  min-height: 3.6em;
+  max-height: 18em;
 }
 
 .oil-due {
@@ -1486,4 +1512,14 @@ button.oil-step:disabled {
 
 .button-danger:hover {
   background: var(--negative-bg);
+}
+
+/* Plnění v detailu bodu: pět stejně širokých tlačítek přes celou šířku pole. */
+.oil-detail .segmented {
+  display: flex;
+}
+
+.oil-detail .segmented button {
+  flex: 1 1 0;
+  padding-inline: 4px;
 }
