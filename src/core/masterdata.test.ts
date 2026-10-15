@@ -62,6 +62,7 @@ describe('parseMasterData', () => {
       orderMultiple: 16,
       componentCoverage: false,
       line: '',
+      category: '',
     });
     expect(r.value.hasComponentColumn).toBe(false);
     expect(r.value.items.get('900101-0001')).toMatchObject({ side: 'RHD', orderMultiple: null });
@@ -114,6 +115,7 @@ describe('masterDataTemplate', () => {
       orderMultiple: 16,
       componentCoverage: false,
       line: 'ASSEMBLY',
+      category: 'DP',
     };
     const t = masterDataTemplate(
       [
@@ -122,10 +124,10 @@ describe('masterDataTemplate', () => {
       ],
       new Map([['1', known]]),
     );
-    expect(t.header).toEqual(['Item Number', 'Customer Number', 'Description', 'Variant', 'Type', 'Project', 'Safety Stock', 'Safety Time', 'Order Multiple', 'Component Coverage', 'Line']);
+    expect(t.header).toEqual(['Item Number', 'Customer Number', 'Description', 'Variant', 'Type', 'Project', 'Safety Stock', 'Safety Time', 'Order Multiple', 'Component Coverage', 'Line', 'Category']);
     expect(t.rows).toEqual([
-      ['1', 'C1', 'X', 'LHD', 'IP', 'P', '0', '', '16', '', 'ASSEMBLY'],
-      ['2', '', 'Popis 2', '', '', '', '', '', '', '', ''],
+      ['1', 'C1', 'X', 'LHD', 'IP', 'P', '0', '', '16', '', 'ASSEMBLY', 'DP'],
+      ['2', '', 'Popis 2', '', '', '', '', '', '', '', '', ''],
     ]);
   });
 });
@@ -138,5 +140,17 @@ describe('čísla zákazníka s prostředkem', () => {
     expect(r.value.issues).toEqual([]);
     expect(r.value.byCustomerKey.get(customerKey('A1234567890 8R01'))?.item).toBe('900200-8R01');
     expect(r.value.byCustomerKey.get(customerKey('A1234567890 8R01 ERS'))?.item).toBe('900200-8R01ERS');
+  });
+});
+
+describe('kategorie', () => {
+  it('sloupec Category (nebo Kategorie) se přečte, mezery se sjednotí', () => {
+    const r = parseMasterData(parseCsv('Item Number;Side;Variant;Category\n1;LHD;SR2 heating;DP\n2;RHD;;HB\n3;LHD;;  Door   panel '));
+    if (!r.ok) throw new Error();
+    expect(['1', '2', '3'].map((i) => r.value.items.get(i)?.category)).toEqual(['DP', 'HB', 'Door panel']);
+    expect(r.value.items.get('1')).toMatchObject({ side: 'LHD', variant: 'SR2 heating' });
+    const cz = parseMasterData(parseCsv('Item Number;Kategorie\n1;DP'));
+    if (!cz.ok) throw new Error();
+    expect(cz.value.items.get('1')?.category).toBe('DP');
   });
 });

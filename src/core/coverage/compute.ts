@@ -34,6 +34,8 @@ export interface CoverageLine {
   description: string;
   variant: string;
   side: string;
+  /** Kategorie z mapování (sloupec Category). */
+  category: string;
   customerStock: number;
   /** Transit celkem za horizont souboru. */
   transit: number;
@@ -56,11 +58,12 @@ export interface CoverageFilter {
   location: string;
   project: string;
   variant: string;
+  category: string;
   query: string;
   rows: RowFilter;
 }
 
-export const EMPTY_COVERAGE_FILTER: CoverageFilter = { location: '', project: '', variant: '', query: '', rows: { kind: 'all' } };
+export const EMPTY_COVERAGE_FILTER: CoverageFilter = { location: '', project: '', variant: '', category: '', query: '', rows: { kind: 'all' } };
 
 /** Hodnota pro dny mezi dny souboru: platí poslední známý stav (např. víkend bez poptávky). */
 function valueOn(days: readonly DayNumber[], values: readonly number[], day: DayNumber): number | null {
@@ -99,6 +102,7 @@ export function buildCoverage(
         description: m?.description || row.description,
         variant: m?.variant ?? '',
         side: m?.side ?? '',
+        category: m?.category ?? '',
         customerStock: row.customerStock,
         transit: row.transit.at(-1) ?? 0,
         ourStock,
@@ -123,6 +127,7 @@ export function filterCoverage(table: CoverageTable, filter: CoverageFilter): Co
     if (filter.location && line.location !== filter.location) return false;
     if (filter.project && line.project !== filter.project) return false;
     if (filter.variant && line.variant !== filter.variant) return false;
+    if (filter.category && line.category !== filter.category) return false;
     if (query && !`${line.item} ${line.customerNumber} ${line.customerNumber.replace(/\s+/g, '')} ${line.fileCustomerNumber} ${line.description}`.toLowerCase().includes(query)) return false;
     if (filter.rows.kind === 'negativeAny') return line.values.some(isNegative);
     if (filter.rows.kind === 'negativeOn') return isNegative(line.values[dayIndex]);
@@ -137,6 +142,7 @@ export function coverageOptions(table: CoverageTable) {
     locations: sorted(table.lines.map((l) => l.location)),
     projects: sorted(table.lines.map((l) => l.project)),
     variants: sorted(table.lines.map((l) => l.variant)),
+    categories: sorted(table.lines.map((l) => l.category)),
     unmapped: table.lines.filter((l) => !l.item).length,
   };
 }

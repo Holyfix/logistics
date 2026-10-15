@@ -54,7 +54,7 @@ export function CallOffsPage() {
   }
 
   const set = (key: keyof ItemFilter) => (value: string) => setFilter((f) => ({ ...f, [key]: value }));
-  const select = (key: 'customer' | 'project' | 'side', label: string, values: string[], extra?: { value: string; label: string }) => (
+  const select = (key: 'customer' | 'project' | 'side' | 'category', label: string, values: string[], extra?: { value: string; label: string }) => (
     <label className="field">
       <span>{label}</span>
       <select value={filter[key]} onChange={(e) => set(key)(e.target.value)} disabled={!master}>
@@ -75,6 +75,7 @@ export function CallOffsPage() {
       {select('customer', t.calloffs.filters.customer, options.customers, options.missing > 0 && master ? { value: MISSING_MASTER, label: `${t.calloffs.filters.missing} (${options.missing})` } : undefined)}
       {select('project', t.calloffs.filters.project, options.projects)}
       {select('side', t.calloffs.filters.side, options.sides)}
+      {options.categories.length > 0 && select('category', t.calloffs.filters.category, options.categories)}
       <label className="field field-wide">
         <span>{t.calloffs.filters.search}</span>
         <input type="search" value={filter.query} placeholder={t.calloffs.filters.searchPlaceholder} onChange={(e) => set('query')(e.target.value)} />

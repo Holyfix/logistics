@@ -17,6 +17,7 @@ export const MASTER_COLUMNS = {
   orderMultiple: ['Order Multiple', 'Balení', 'Kusů v balení'],
   componentCoverage: ['Component Coverage', 'Coverage Component', 'Coverage komponent', 'Komponenta'],
   line: ['Line', 'Linka', 'Výrobní linka', 'Production Line'],
+  category: ['Category', 'Kategorie'],
 } as const;
 
 /** Hodnoty, které ve sloupci Component Coverage znamenají „sledovat“. */
@@ -50,6 +51,8 @@ export interface MasterItem {
   componentCoverage: boolean;
   /** Výrobní linka, na které se díl vyrábí (ASSEMBLY, FOA, SLH, IMM), velkými písmeny; prázdné = neuvedeno. */
   line: string;
+  /** Druh výrobku nebo komponenty (např. DP = door panel, HB), jak ho uživatel zapíše; prázdné = neuvedeno. */
+  category: string;
 }
 
 export interface MasterData {
@@ -187,6 +190,7 @@ export function parseMasterData(table: DataTable): MasterResult {
       orderMultiple: number(col.orderMultiple),
       componentCoverage: YES.has(text(row, col.componentCoverage).toLowerCase()),
       line: lineOf(text(row, col.line)),
+      category: text(row, col.category).replace(/\s+/g, ' '),
     };
     items.set(item, entry);
     if (entry.customerKey) {
@@ -207,11 +211,11 @@ export function masterDataTemplate(
   parts: readonly { item: string; description: string }[],
   existing: Map<string, MasterItem> | undefined,
 ): { header: string[]; rows: string[][] } {
-  const header = ['Item Number', 'Customer Number', 'Description', 'Variant', 'Type', 'Project', 'Safety Stock', 'Safety Time', 'Order Multiple', 'Component Coverage', 'Line'];
+  const header = ['Item Number', 'Customer Number', 'Description', 'Variant', 'Type', 'Project', 'Safety Stock', 'Safety Time', 'Order Multiple', 'Component Coverage', 'Line', 'Category'];
   const rows = parts.map(({ item, description }) => {
     const m = existing?.get(item);
     const n = (v: number | null | undefined) => (v === null || v === undefined ? '' : String(v));
-    return [item, m?.customerNumber ?? '', m?.description || description, m?.variant ?? '', m?.type ?? '', m?.project ?? '', n(m?.safetyStock), n(m?.safetyTime), n(m?.orderMultiple), m?.componentCoverage ? 'Ano' : '', m?.line ?? ''];
+    return [item, m?.customerNumber ?? '', m?.description || description, m?.variant ?? '', m?.type ?? '', m?.project ?? '', n(m?.safetyStock), n(m?.safetyTime), n(m?.orderMultiple), m?.componentCoverage ? 'Ano' : '', m?.line ?? '', m?.category ?? ''];
   });
   return { header, rows };
 }

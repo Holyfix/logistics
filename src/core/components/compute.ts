@@ -23,6 +23,8 @@ export interface ProductDemand {
   item: string;
   description: string;
   project: string;
+  /** Kategorie z mapování (sloupec Category, např. DP, HB). */
+  category: string;
   /** Odvolávky zákazníka. */
   callOffs: number[];
   /** Potřeba výroby: odvolávky, které nepokryje náš sklad hotového dílu (bez odečtu skladu = odvolávky). */
@@ -70,6 +72,8 @@ export interface ComponentLine {
   /** Hotové díly, ve kterých je komponenta. */
   products: string[];
   projects: string[];
+  /** Kategorie komponenty z mapování a kategorie hotových dílů, ve kterých je. */
+  categories: string[];
 }
 
 export interface ComponentTable {
@@ -161,6 +165,7 @@ export function buildComponents({ bom, master, coverage = [], callOffs, stock, t
       item,
       description: m?.description || bom.info.get(item)?.description || '',
       project: m?.project || bom.info.get(item)?.project || '',
+      category: m?.category ?? '',
       callOffs: callOffQty,
       production: days.map(() => 0),
       customerNeed: customerNeed(callOffQty, days, plans.get(item)).need,
@@ -197,12 +202,14 @@ export function buildComponents({ bom, master, coverage = [], callOffs, stock, t
           productionDays: null,
           products: [],
           projects: [],
+          categories: [masterByItem.get(component.item)?.category ?? ''].filter(Boolean),
         };
         lines.set(component.item, line);
       }
       line.avgDaily += (callOffTotal * component.qty) / workDays;
       line.products.push(product.item);
       if (product.project && !line.projects.includes(product.project)) line.projects.push(product.project);
+      if (product.category && !line.categories.includes(product.category)) line.categories.push(product.category);
     }
   }
 
@@ -229,6 +236,7 @@ export function buildComponents({ bom, master, coverage = [], callOffs, stock, t
     line.customerShortDay = earliest(covered.map((p) => p.customerShortDay));
     line.productionDays = line.avgDaily > 0 ? Math.max(0, line.stock ?? 0) / line.avgDaily : null;
     line.projects.sort();
+    line.categories.sort();
   }
 
   const components = [...lines.values()].sort((a, b) => (a.shortDay ?? Infinity) - (b.shortDay ?? Infinity) || a.item.localeCompare(b.item, 'en', { numeric: true }));

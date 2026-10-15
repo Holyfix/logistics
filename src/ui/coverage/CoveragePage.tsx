@@ -87,7 +87,7 @@ export function CoveragePage({ today = localToday() }: { today?: DayNumber } = {
 
   const newest = Math.max(...sources.map((s) => s.lastModified));
   const set = (key: keyof Omit<CoverageFilter, 'rows'>) => (value: string) => setFilter((f) => ({ ...f, [key]: value }));
-  const select = (key: 'location' | 'project' | 'variant', label: string, values: string[]) => (
+  const select = (key: 'location' | 'project' | 'variant' | 'category', label: string, values: string[]) => (
     <label className="field">
       <span>{label}</span>
       <select value={filter[key]} onChange={(e) => set(key)(e.target.value)}>
@@ -211,6 +211,7 @@ export function CoveragePage({ today = localToday() }: { today?: DayNumber } = {
         {select('location', tc.filters.location, options.locations)}
         {select('project', tc.filters.project, options.projects)}
         {select('variant', tc.filters.variant, options.variants)}
+        {options.categories.length > 0 && select('category', tc.filters.category, options.categories)}
         <label className="field field-wide">
           <span>{tc.filters.search}</span>
           <input type="search" value={filter.query} placeholder={tc.filters.searchPlaceholder} onChange={(e) => set('query')(e.target.value)} />

@@ -56,7 +56,7 @@ a Dodavatelé odložené. Modul Kapacity (odvolávky vs. kapacita linek) byl zva
 
 ### Call-offs
 Hlavní údaj je **Discrete Qty** (požadavek na den), kumulativy jsou doplňková informace.
-Filtry: zákazník, projekt, strana (LHD/RHD) z kmenových dat, hledání dílu.
+Filtry: zákazník, projekt, strana (LHD/RHD), kategorie z kmenových dat, hledání dílu.
 
 - ✅ **Aktuální odvolávky:** nejnovější export po týdnech nebo dnech, nedodáno po termínu,
   změna proti předchozímu exportu (zvýraznění od 20 %), export do Excelu a CSV
@@ -67,7 +67,7 @@ Filtry: zákazník, projekt, strana (LHD/RHD) z kmenových dat, hledání dílu.
 
 ### Coverage
 - ✅ Pokrytí u zákazníka po dnech ze souborů zákazníka (každý zákazník jiný formát, sjednotí se)
-- ✅ Přičtení transitu, filtry záporné kdykoli / ke zvolenému dni, závod, projekt, varianta, hledání
+- ✅ Přičtení transitu, filtry záporné kdykoli / ke zvolenému dni, závod, projekt, varianta, kategorie, hledání
 - ✅ Souhrn po variantách, export do Excelu a CSV, na rozcestníku chybějící kusy v prvních 2 dnech bez transitu a s transitem
 - ✅ Náš sklad ze souboru Stock (celý sklad po lokacích, sdílený s dalšími moduly)
 - ⏳ Dodatečný transit z naší expedice
@@ -83,6 +83,7 @@ Filtry: zákazník, projekt, strana (LHD/RHD) z kmenových dat, hledání dílu.
 - ✅ Pokrytí komponent podle odvolávek a našeho skladu komponent (volitelně po odečtu našeho skladu hotových dílů a mezivýroby); „Pokryto do“ (první chybějící komponenta), potřeba 7 dní, zásoba ve dnech výroby
 - ✅ „Zákazník pokryt do“ (rámeček): poslední den, kdy je zákazník pokrytý hotovými díly (jeho sklad + transit podle coverage, se zaškrtnutím i náš sklad hotových dílů); každý hotový díl zvlášť
 - ✅ Poptávka hotových dílů se řídí filtrem komponent (projekt, vybraná komponenta → hotové díly, které ji mají v kusovníku)
+- ✅ Filtr Kategorie: komponenty dané kategorie (z mapování) a komponenty ve výrobcích dané kategorie; hotové díly podle jejich kategorie
 - ⏳ Otevřené nákupní objednávky (pokud jsou v exportu)
 - Shortage list pro ranní poradu
 
