@@ -57,6 +57,7 @@ a Dodavatelé odložené. Modul Kapacity (odvolávky vs. kapacita linek) byl zva
 ### Call-offs
 Hlavní údaj je **Discrete Qty** (požadavek na den), kumulativy jsou doplňková informace.
 Filtry: zákazník, projekt, strana (LHD/RHD), kategorie z kmenových dat, hledání dílu.
+- ✅ **Přehled po projektech:** strom Projekt → Kategorie → Strana (sloupce Project, Category, Side v mapování) se součty po týdnech, nedodáno po termínu, celkem a změna proti předchozímu exportu; rozbalení po úrovních, export do Excelu a CSV
 
 - ✅ **Aktuální odvolávky:** nejnovější export po týdnech nebo dnech, nedodáno po termínu,
   změna proti předchozímu exportu (zvýraznění od 20 %), export do Excelu a CSV
