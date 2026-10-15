@@ -569,7 +569,7 @@ export const cs = {
       downloaded: 'Prohlížeč nemá přístup ke složce, soubor se stáhl. Uložte ho do složky Plan ve sdílené složce.',
       denied: 'Zápis do složky nebyl povolený, nic se neuložilo.',
       locked:
-        'Neuloženo: soubor teď nejde přepsat. Zavřete ho v Excelu (i u kolegů), počkejte, až ho OneDrive dosynchronizuje, a zkontrolujte, že máte ke složce právo úprav. Pak uložte znovu, změny zůstávají v aplikaci.',
+        'Neuloženo: do složky teď nejde zapisovat (soubor nejde přepsat ani vytvořit nový). Zkontrolujte, že máte ke složce právo úprav a že běží OneDrive, a uložte znovu; změny zůstávají v aplikaci.',
       conflict: 'Soubor mezitím změnil někdo jiný. Přepsat ho vaší verzí?',
       notSaved: 'Neuloženo: soubor změnil někdo jiný. Načtěte data znovu.',
       error: 'Uložení se nepovedlo',

@@ -238,13 +238,17 @@ před přepsáním zeptá; jeho změny by se přepsáním ztratily.
   Původní termín a Posunů termínu jsou z historie.
 - **Kdo:** jméno, které si uživatel vyplní v modulu OIL (pamatuje si ho prohlížeč).
 
-### Když se plán nebo OIL neuloží
+### Když soubor nejde přepsat
 
-Hláška „soubor teď nejde přepsat“ (v prohlížeči `NoModificationAllowedError`) znamená, že Windows soubor nedovolil
-přepsat. Aplikace to zkusí ještě dvakrát, změny zůstávají v aplikaci a stačí uložit znovu po odstranění příčiny:
-- soubor je **otevřený v Excelu** (u kohokoli, kdo ho má ve sdílené složce): zavřít;
-- **OneDrive soubor synchronizuje** nebo je jen online: počkat; složce nastavit „Vždy ponechat na tomto zařízení“;
-- uživatel má ke sdílené složce **jen právo čtení**: vlastník mu dá právo úprav (Sdílet → Může upravovat).
+Prohlížeč ukládá přes dočasný soubor, kterým pak původní nahradí. Ve sdílené složce na OneDrivu/SharePointu to
+Windows občas odmítne (soubor právě synchronizuje OneDrive, je jen online, nebo je otevřený v Excelu). Aplikace pak:
+1. zkusí uložit ještě dvakrát (asi 2 s),
+2. uloží **nový soubor s časem v názvu** vedle původního (např. `OIL/OIL_20261015-081230.xlsx`),
+3. původní zkusí smazat a nový přejmenovat zpět na původní název; když to nejde, platí nový soubor
+   (při načtení se bere nejnovější, starší se v modulu Data ukáže jako „Ve stejné složce je novější soubor“).
+
+Hláška „do složky teď nejde zapisovat“ se ukáže, jen když nejde vytvořit ani nový soubor: chybí právo úprav
+nebo neběží OneDrive. Změny zůstávají v aplikaci, stačí uložit znovu.
 
 ## Testovací data
 
