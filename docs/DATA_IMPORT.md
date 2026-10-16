@@ -1,5 +1,7 @@
 # Načítání dat
 
+Přehled, odkud se který údaj bere a jak jsou soubory navázané: [Mapa dat](DATA_MAP.md).
+
 ## Sdílená složka
 
 Aplikace čte soubory ze sdílené složky (SharePoint/OneDrive synchronizovaný do počítače).

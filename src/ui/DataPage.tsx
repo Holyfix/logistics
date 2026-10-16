@@ -9,6 +9,7 @@ import { useI18n } from '../i18n/I18nProvider';
 import { downloadXlsx } from '../platform/download';
 import { useData } from './data/DataProvider';
 import { FolderPicker } from './data/FolderPicker';
+import { DataMapPanel, MappingCheckPanel } from './data/MappingPanels';
 
 function IssueList({ issues, count }: { issues: DataIssue[]; count: number }) {
   const { t } = useI18n();
@@ -203,6 +204,8 @@ export function DataPage() {
             )}
           </div>
 
+          <MappingCheckPanel />
+
           <div className="panel">
             <h2>{t.data.coverage.heading}</h2>
             {data.coverage.length === 0 ? (
@@ -377,6 +380,8 @@ export function DataPage() {
           )}
         </>
       )}
+
+      <DataMapPanel />
 
       <div className="panel">
         <h2>{t.data.structure.heading}</h2>
