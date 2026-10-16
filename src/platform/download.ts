@@ -114,9 +114,6 @@ export async function downloadReport(fileName: string, sheets: ReportSheet[]): P
       stickyColumnsCount: sheet.stickyColumns,
       showGridLines: sheet.gridLines ?? false,
       orientation: 'landscape' as const,
-      ...(sheet.rules?.length
-        ? { conditionalFormatting: sheet.rules.map((r) => ({ cellRange: { from: r.from, to: r.to }, condition: { formula: r.formula }, style: r.style })) }
-        : {}),
     })),
     { features: [lists] },
   ).toBlob();

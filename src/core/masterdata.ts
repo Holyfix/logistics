@@ -170,65 +170,103 @@ export function lineOf(value: string): string {
   return LINE_ALIASES[key.split(/\s+/)[0] ?? ''] ?? key;
 }
 
-export function parseMasterData(table: DataTable): MasterResult {
-  const col = Object.fromEntries(
-    Object.entries(MASTER_COLUMNS).map(([key, aliases]) => [key, findColumn(table.header, aliases)]),
-  ) as Record<keyof typeof MASTER_COLUMNS, number>;
-  if (col.item === -1) return { ok: false, error: 'missingColumns', columns: [MASTER_COLUMNS.item[0]] };
+/** List mapování: název listu a tabulka (záhlaví v prvním řádku). */
+export interface MasterSheet {
+  name: string;
+  table: DataTable;
+}
 
+/** Druh dílu podle názvu listu (list „FG“, „SFG“, „PG“, případně s dovětkem, např. „FG – hotové“); jinak null. */
+export function sheetKind(name: string): ItemKind | null {
+  return (/^\s*(FG|SFG|PG)\b/i.exec(name)?.[1]?.toUpperCase() as ItemKind | undefined) ?? null;
+}
+
+/**
+ * Listy, ze kterých se mapování čte. Sešit s listy FG / SFG / PG (šablona): ty a další listy se sloupcem Item Type
+ * (list „Bez druhu“); ostatní listy (Návod) se vynechají. Jinak jen první list.
+ */
+export function masterSheets(sheets: readonly MasterSheet[]): MasterSheet[] {
+  if (!sheets.some((s) => sheetKind(s.name))) return sheets.slice(0, 1);
+  return sheets.filter((s) => sheetKind(s.name) || (findColumn(s.table.header, MASTER_COLUMNS.kind) !== -1 && findColumn(s.table.header, MASTER_COLUMNS.item) !== -1));
+}
+
+/** Mapování z jedné tabulky (CSV nebo první list). */
+export function parseMasterData(table: DataTable): MasterResult {
+  return parseMasterWorkbook([{ name: '', table }]);
+}
+
+/**
+ * Mapování ze sešitu: čte listy podle `masterSheets`. Druh dílu je ze sloupce Item Type, a když ho list nemá nebo je
+ * prázdný, z názvu listu (FG / SFG / PG). Díl na více listech je duplicita.
+ */
+export function parseMasterWorkbook(workbook: readonly MasterSheet[]): MasterResult {
+  const sheets = masterSheets(workbook);
+  const named = sheets.length > 1 || sheets.some((s) => sheetKind(s.name));
   const items = new Map<string, MasterItem>();
   const byCustomerKey = new Map<string, MasterItem>();
   const issues: DataIssue[] = [];
+  const columns = new Set<MasterField>();
   let issueCount = 0;
   const issue = (i: DataIssue) => {
     issueCount++;
     if (issues.length < MAX_ISSUES) issues.push(i);
   };
-  const text = (row: DataTable['rows'][number], c: number) => (c === -1 ? '' : cellText(row[c]));
 
-  table.rows.forEach((row, index) => {
-    const rowNo = index + 2;
-    const item = text(row, col.item);
-    if (!item) return;
-    if (items.has(item)) issue({ row: rowNo, column: MASTER_COLUMNS.item[0], value: item, message: 'duplicateItem' });
-    const variant = text(row, col.variant);
-    const side = sideOf(text(row, col.side), variant);
-    if (col.side !== -1 && side && !sideGroup(side)) {
-      issue({ row: rowNo, column: MASTER_COLUMNS.side[0], value: side, message: 'unknownSide' });
-    }
-    const customerNumber = text(row, col.customerNumber);
-    const number = (c: number) => (c === -1 ? null : cellNumber(row[c]));
-    const kind = kindOf(text(row, col.kind));
-    if (kind === null) issue({ row: rowNo, column: MASTER_COLUMNS.kind[0], value: text(row, col.kind), message: 'unknownKind' });
-    const entry: MasterItem = {
-      item,
-      customerNumber,
-      customerKey: customerKey(customerNumber),
-      description: text(row, col.description),
-      variant,
-      type: text(row, col.type),
-      kind: kind ?? '',
-      project: text(row, col.project),
-      customer: text(row, col.customer),
-      side,
-      safetyStock: number(col.safetyStock),
-      safetyTime: number(col.safetyTime),
-      orderMultiple: number(col.orderMultiple),
-      componentCoverage: YES.has(text(row, col.componentCoverage).toLowerCase()),
-      line: lineOf(text(row, col.line)),
-      category: text(row, col.category).replace(/\s+/g, ' '),
-    };
-    items.set(item, entry);
-    if (entry.customerKey) {
-      const other = byCustomerKey.get(entry.customerKey);
-      if (other && other.item !== item) {
-        issue({ row: rowNo, column: MASTER_COLUMNS.customerNumber[0], value: `${customerNumber} (${other.item})`, message: 'duplicateCustomerNumber' });
-      } else {
-        byCustomerKey.set(entry.customerKey, entry);
+  for (const { name, table } of sheets) {
+    const col = Object.fromEntries(
+      Object.entries(MASTER_COLUMNS).map(([key, aliases]) => [key, findColumn(table.header, aliases)]),
+    ) as Record<keyof typeof MASTER_COLUMNS, number>;
+    if (col.item === -1) continue;
+    for (const key of Object.keys(col) as MasterField[]) if (col[key] !== -1) columns.add(key);
+    const listKind = sheetKind(name);
+    if (listKind) columns.add('kind');
+    const sheet = named ? name : undefined;
+    const text = (row: DataTable['rows'][number], c: number) => (c === -1 ? '' : cellText(row[c]));
+
+    table.rows.forEach((row, index) => {
+      const at = { row: index + 2, ...(sheet === undefined ? {} : { sheet }) };
+      const item = text(row, col.item);
+      if (!item) return;
+      if (items.has(item)) issue({ ...at, column: MASTER_COLUMNS.item[0], value: item, message: 'duplicateItem' });
+      const variant = text(row, col.variant);
+      const side = sideOf(text(row, col.side), variant);
+      if (col.side !== -1 && side && !sideGroup(side)) {
+        issue({ ...at, column: MASTER_COLUMNS.side[0], value: side, message: 'unknownSide' });
       }
-    }
-  });
+      const customerNumber = text(row, col.customerNumber);
+      const number = (c: number) => (c === -1 ? null : cellNumber(row[c]));
+      const kind = kindOf(text(row, col.kind));
+      if (kind === null) issue({ ...at, column: MASTER_COLUMNS.kind[0], value: text(row, col.kind), message: 'unknownKind' });
+      const entry: MasterItem = {
+        item,
+        customerNumber,
+        customerKey: customerKey(customerNumber),
+        description: text(row, col.description),
+        variant,
+        type: text(row, col.type),
+        kind: kind || listKind || '',
+        project: text(row, col.project),
+        customer: text(row, col.customer),
+        side,
+        safetyStock: number(col.safetyStock),
+        safetyTime: number(col.safetyTime),
+        orderMultiple: number(col.orderMultiple),
+        componentCoverage: YES.has(text(row, col.componentCoverage).toLowerCase()),
+        line: lineOf(text(row, col.line)),
+        category: text(row, col.category).replace(/\s+/g, ' '),
+      };
+      items.set(item, entry);
+      if (entry.customerKey) {
+        const other = byCustomerKey.get(entry.customerKey);
+        if (other && other.item !== item) {
+          issue({ ...at, column: MASTER_COLUMNS.customerNumber[0], value: `${customerNumber} (${other.item})`, message: 'duplicateCustomerNumber' });
+        } else {
+          byCustomerKey.set(entry.customerKey, entry);
+        }
+      }
+    });
+  }
 
-  const columns = new Set((Object.keys(col) as MasterField[]).filter((key) => col[key] !== -1));
-  return { ok: true, value: { items, byCustomerKey, columns, hasComponentColumn: col.componentCoverage !== -1, hasLineColumn: col.line !== -1, issueCount, issues } };
+  if (!columns.has('item')) return { ok: false, error: 'missingColumns', columns: [MASTER_COLUMNS.item[0]] };
+  return { ok: true, value: { items, byCustomerKey, columns, hasComponentColumn: columns.has('componentCoverage'), hasLineColumn: columns.has('line'), issueCount, issues } };
 }

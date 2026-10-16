@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { parseCsv } from './csv';
-import { customerDisplay, customerKey, parseMasterData } from './masterdata';
+import { customerDisplay, customerKey, masterSheets, parseMasterData, parseMasterWorkbook, sheetKind } from './masterdata';
 
 describe('customerKey', () => {
   it('sjednotí zápis čísla zákazníka', () => {
@@ -130,5 +130,57 @@ describe('kategorie', () => {
     const cz = parseMasterData(parseCsv('Item Number;Kategorie\n1;DP'));
     if (!cz.ok) throw new Error();
     expect(cz.value.items.get('1')?.category).toBe('DP');
+  });
+});
+
+describe('mapování na více listech (FG / SFG / PG)', () => {
+  const sheet = (name: string, csv: string) => ({ name, table: parseCsv(csv) });
+
+  it('druh podle názvu listu, list se sloupcem Item Type, Návod a jiné listy se vynechají', () => {
+    const r = parseMasterWorkbook([
+      sheet('FG', 'Item Number;Project;Line\nF1;P1;ASSEMBLY'),
+      sheet('SFG – mezivýroba', 'Item Number;Project;Line\nS1;P1;FOA'),
+      sheet('pg', 'Item Number;Category;Component Coverage\nK1;K;Ano'),
+      sheet('Bez druhu', 'Item Number;Item Type;Description\nX1;;A\nX2;pg;B'),
+      sheet('Návod', 'Sloupec;FG\nItem Number;povinné'),
+      sheet('Jiný', 'Item Number;Project\nZ1;P9'),
+    ]);
+    if (!r.ok) throw new Error();
+    expect([...r.value.items.values()].map((m) => [m.item, m.kind])).toEqual([
+      ['F1', 'FG'],
+      ['S1', 'SFG'],
+      ['K1', 'PG'],
+      ['X1', ''],
+      ['X2', 'PG'],
+    ]);
+    expect(r.value.hasComponentColumn && r.value.hasLineColumn).toBe(true);
+    expect(['item', 'kind', 'project', 'line', 'category', 'description'].every((c) => r.value.columns.has(c as never))).toBe(true);
+    expect(r.value.columns.has('customer')).toBe(false);
+  });
+
+  it('sešit bez listů druhů: jen první list (dosavadní formát)', () => {
+    const books = [sheet('Mapping', 'Item Number;Item Type\nA;FG'), sheet('Export', 'Item Number\nB')];
+    expect(masterSheets(books).map((s) => s.name)).toEqual(['Mapping']);
+    const r = parseMasterWorkbook(books);
+    if (!r.ok) throw new Error();
+    expect([...r.value.items.keys()]).toEqual(['A']);
+  });
+
+  it('chyby s názvem listu; díl na dvou listech je duplicita; sloupec Item Type má přednost před listem', () => {
+    const r = parseMasterWorkbook([sheet('FG', 'Item Number;Item Type\nA;\nB;PG\nC;XYZ'), sheet('PG', 'Item Number\nA')]);
+    if (!r.ok) throw new Error();
+    expect(['A', 'B', 'C'].map((i) => r.value.items.get(i)!.kind)).toEqual(['PG', 'PG', 'FG']);
+    expect(r.value.issues.map((i) => [i.sheet, i.row, i.message])).toEqual([
+      ['FG', 4, 'unknownKind'],
+      ['PG', 2, 'duplicateItem'],
+    ]);
+    // jeden list (CSV) bez názvu listu v chybách
+    const one = parseMasterData(parseCsv('Item Number\nA\nA'));
+    if (!one.ok) throw new Error();
+    expect(one.value.issues[0]!.sheet).toBeUndefined();
+  });
+
+  it('název listu → druh', () => {
+    expect(['FG', ' sfg ', 'PG nákup', 'FGX', 'Návod'].map(sheetKind)).toEqual(['FG', 'SFG', 'PG', null, null]);
   });
 });

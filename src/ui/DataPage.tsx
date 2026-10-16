@@ -17,6 +17,7 @@ function IssueList({ issues, count }: { issues: DataIssue[]; count: number }) {
     <ul className="issues">
       {issues.slice(0, 5).map((i, k) => (
         <li key={k}>
+          {i.sheet && `${t.data.issue.sheet} ${i.sheet}, `}
           {i.row > 1 && `${t.data.issue.row} ${i.row}: `}
           {i.column && `${i.column} – `}
           {t.data.issue[i.message]}

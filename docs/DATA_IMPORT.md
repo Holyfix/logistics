@@ -68,7 +68,10 @@ Týdenní export požadavků na expedici z ERP, horizont podle dat od zákazník
 
 ## Mapování dílů (kmenová data)
 
-Tabulku udržuje uživatel. Jeden řádek = jeden díl. V Excelu na prvním listu, záhlaví v prvním řádku.
+Tabulku udržuje uživatel. Jeden řádek = jeden díl. V Excelu na prvním listu, záhlaví v prvním řádku – nebo po
+druzích dílu na listech `FG`, `SFG`, `PG` (jako šablona): druh dílu pak určuje název listu (sloupec Item Type,
+pokud ho list má a je vyplněný, má přednost). Ze sešitu s listy druhů se čtou listy druhů a listy se sloupcem
+Item Type (Bez druhu); ostatní listy (Návod) se vynechají. Díl na dvou listech je duplicita.
 
 | Sloupec | Alternativní názvy | Povinný |
 |---|---|---|
@@ -89,12 +92,15 @@ Tabulku udržuje uživatel. Jeden řádek = jeden díl. V Excelu na prvním list
 
 Další sloupce (např. Yield Percent, Cost Total) aplikace ignoruje.
 
-- **Šablonu mapování** stáhnete v modulu Data: všechny díly z mapování a díly, které v něm chybí (z Coverage,
-  odvolávek a kusovníků). List **Mapping** má buňky obarvené podle druhu dílu (zeleně povinné vyplněné, žlutě
-  povinné k doplnění, šedě nepotřebné, oranžově chybí nebo neplatný druh). Barvy jsou podmíněné formátování podle
-  sloupce Item Type, takže se po vyplnění nebo změně druhu obarví řádek sám, i nově přidaný (500 volných řádků pod
-  díly); Item Type se vybírá ze seznamu FG/SFG/PG. List **Návod** má tabulku, co vyplnit pro FG, SFG a PG.
-  Aplikace čte jen první list; soubor uložte jako Item_Mapping.xlsx.
+- **Šablonu mapování** stáhnete v modulu Data. Každý druh dílu má vlastní list jen se sloupci, které aplikace
+  pro něj používá: **FG** (Item Number, Customer Number, Description, Project, Customer, Side, Variant, Category,
+  Line, Order Multiple), **SFG** (Item Number, Description, Project, Line), **PG** (Item Number, Description,
+  Category, Component Coverage). Díly bez druhu a díly, které v mapování chybí (z Coverage, odvolávek a kusovníků),
+  jsou na listu **Bez druhu** se všemi sloupci a výběrem Item Type ze seznamu; při dalším stažení se díl přesune
+  na svůj list. Formátování je jen statické, aby byl soubor rychlý: tmavé záhlaví = povinný sloupec, světlé =
+  volitelný, žlutě povinný údaj, který v době stažení chyběl. List **Návod** má tabulku, co vyplnit pro FG, SFG
+  a PG. Sloupce, které aplikace nepoužívá (Type, Safety Stock, Safety Time), šablona neobsahuje. Soubor uložte jako
+  Item_Mapping.xlsx.
 - Díly bez kmenových dat lze v Call-offs vyfiltrovat volbou „Bez kmenových dat“.
 - **Číslo zákazníka** se pro párování se soubory zákazníka sjednotí: velká písmena, bez mezer;
   u dlouhých čísel začínajících „A“ (15 a více znaků) se mezi prvními 11 a posledními 4 znaky vynechají

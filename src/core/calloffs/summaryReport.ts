@@ -36,8 +36,6 @@ export interface ReportSheet {
   stickyColumns: number;
   /** Zobrazit mřížku (např. u šablony k vyplňování); výchozí bez mřížky. */
   gridLines?: boolean;
-  /** Podmíněné formátování (barvy se v Excelu mění podle obsahu buněk). Dřívější pravidlo má přednost. */
-  rules?: ReportRule[];
   /** Výběr hodnoty ze seznamu. */
   lists?: ReportList[];
 }
@@ -46,12 +44,6 @@ export interface ReportSheet {
 export interface ReportRange {
   from: { row: number; column: number };
   to: { row: number; column: number };
-}
-
-/** Pravidlo podmíněného formátování: vzorec (bez „=“) pro levou horní buňku oblasti. */
-export interface ReportRule extends ReportRange {
-  formula: string;
-  style: { backgroundColor?: string; textColor?: string };
 }
 
 /** Seznam povolených hodnot pro oblast buněk. */

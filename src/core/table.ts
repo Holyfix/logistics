@@ -12,6 +12,8 @@ export interface DataTable {
 
 /** Problém v datech, který uživateli ukážeme v modulu Data. Řádek je číslo řádku v souboru (hlavička = 1). */
 export interface DataIssue {
+  /** List sešitu, když se čte víc listů. */
+  sheet?: string;
   row: number;
   column?: string;
   value?: string;
