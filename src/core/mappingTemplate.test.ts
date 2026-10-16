@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { parseCsv } from './csv';
-import { parseMasterData } from './masterdata';
-import { cellStatus, mappingTemplate, SPARE_ROWS, TEMPLATE_COLUMNS, type TemplateTexts } from './mappingTemplate';
+import { parseMasterData, parseMasterWorkbook, type MasterItem } from './masterdata';
+import { columnStatus, KIND_COLUMNS, mappingTemplate, TEMPLATE_COLUMNS, templateKind, type TemplateTexts } from './mappingTemplate';
+import type { ReportSheet } from './calloffs/summaryReport';
 
 const texts: TemplateTexts = {
-  sheetMapping: 'Mapping',
   sheetGuide: 'Návod',
   title: 'T',
-  legend: { filled: 'a', missing: 'b', optional: 'c', notNeeded: 'd', kindMissing: 'e' },
+  legend: { requiredColumn: 'a', optionalColumn: 'b' },
   column: 'Sloupec',
   kinds: { FG: 'hotový', SFG: 'mezi', PG: 'nákup' },
   note: 'Pozn.',
@@ -22,53 +22,74 @@ const texts: TemplateTexts = {
 const master = parseMasterData(
   parseCsv(
     [
-      'Item Number;Item Type;Customer Number;Description;Project;Customer;Side;Variant;Category;Line;Order Multiple',
-      'FG1;FG;A1111111111 0001;DOOR;P1;Z;LHD;LHD BASIS;DP;ASSEMBLY;',
-      'PG1;PG;;CLIP;;;;;;;',
-      'X1;;;;;;;;;;',
+      'Item Number;Item Type;Customer Number;Description;Project;Customer;Side;Variant;Category;Line;Order Multiple;Component Coverage',
+      'FG1;FG;A1111111111 0001;DOOR;P1;Z;LHD;LHD BASIS;DP;ASSEMBLY;;',
+      'FG2;FG;A2222222222 0001;DOOR;P1;Z;RHD;;DP;ASSEMBLY;12;',
+      'FG3;FG;A3333333333 0001;PANEL;P2;Z;RHD;;IP;ASSEMBLY;8;',
+      'SFG1;SFG;;FOAM;P1;;;;;FOA;;',
+      'PG1;PG;;CLIP;;;;;;;;Ano',
+      'X1;;;SPARE;P1;;;;;;;',
+      'X2;;;FOAM 2;P1;;;;;SLH;;',
+      'X3;;;NUT;;;;;;;;Ano',
     ].join('\n'),
   ),
 );
 if (!master.ok) throw new Error();
-const [mapping, guide] = mappingTemplate(master.value, [{ item: 'NEW', customerNumber: 'A9999999999  00000001', description: 'NEW PART' }, { item: 'FG1', customerNumber: '', description: '' }], texts);
-const col = (key: string) => TEMPLATE_COLUMNS.findIndex((c) => c.key === key);
-const row = (item: string) => mapping!.data.find((r) => r[0]?.value === item)!;
+const sheets = mappingTemplate(master.value, [{ item: 'NEW', customerNumber: 'A9999999999  00000001', description: 'NEW PART' }, { item: 'FG1', customerNumber: '', description: '' }], texts);
+const byName = (name: string) => sheets.find((s) => s.name === name)!;
+const headers = (s: ReportSheet) => s.data[0]!.map((c) => c?.value);
+const row = (s: ReportSheet, item: string) => {
+  const r = s.data.find((x) => x[0]?.value === item)!;
+  return Object.fromEntries(headers(s).map((h, i) => [h, r[i]]));
+};
 
-describe('šablona mapování', () => {
-  it('záhlaví v prvním řádku, všechny díly mapování a díly, které v něm chybí (bez duplicit)', () => {
-    expect(mapping!.data[0]!.map((c) => c?.value)).toEqual(TEMPLATE_COLUMNS.map((c) => c.header));
-    expect(mapping!.data.slice(1).map((r) => r[0]?.value)).toEqual(['FG1', 'PG1', 'X1', 'NEW']);
-    expect(row('NEW')[col('customerNumber')]!.value).toBe('A9999999999 0001');
-    expect(mapping!.gridLines).toBe(true);
+describe('šablona mapování po druzích dílu', () => {
+  it('jen listy FG, SFG, PG (každý jen se svými sloupci) a Návod', () => {
+    expect(sheets.map((s) => s.name)).toEqual(['FG', 'SFG', 'PG', 'Návod']);
+    expect(headers(byName('SFG'))).toEqual(['Item Number', 'Description', 'Project', 'Line']);
+    expect(headers(byName('PG'))).toEqual(['Item Number', 'Description', 'Category', 'Component Coverage']);
+    expect(headers(byName('FG'))).toEqual(KIND_COLUMNS.FG.map((k) => TEMPLATE_COLUMNS[k].header));
   });
 
-  it('barvy jako podmíněné formátování podle Item Type, i pro prázdné řádky pod díly; druh ze seznamu', () => {
-    const last = 1 + 4 + SPARE_ROWS;
-    expect(mapping!.lists).toEqual([{ from: { row: 2, column: 2 }, to: { row: last, column: 2 }, values: ['FG', 'SFG', 'PG'] }]);
-    // statické buňky bez barev – barvy jsou jen v pravidlech
-    expect(row('FG1').slice(2).every((c) => c?.backgroundColor === undefined)).toBe(true);
-    const rules = mapping!.rules!;
-    expect(rules.every((r) => r.from.row === 2 && r.to.row === last)).toBe(true);
-    const of = (key: string) => rules.filter((r) => r.from.column === col(key) + 1).map((r) => [r.formula, r.style.backgroundColor]);
-    expect(of('kind')).toEqual([
-      ['AND($A2<>"",$B2="")', '#F8CBAD'],
-      ['AND($B2<>"",$B2<>"FG",$B2<>"SFG",$B2<>"PG")', '#F8CBAD'],
-    ]);
-    expect(of('project')).toEqual([
-      ['$B2="PG"', '#EDEDED'],
-      ['AND(OR($B2="FG",$B2="SFG"),E2="")', '#FFE699'],
-      ['AND(OR($B2="FG",$B2="SFG"),E2<>"")', '#E2EFDA'],
-    ]);
-    expect(of('variant')[1]![0]).toBe(`AND($B2="FG",H2="",$E2<>"",COUNTIFS($E$2:$E$${last},$E2,$H$2:$H$${last},"<>")>0)`);
-    expect(of('componentCoverage')).toEqual([['OR($B2="FG",$B2="SFG")', '#EDEDED']]);
-    expect(of('type')).toEqual([]);
+  it('díly bez druhu podle údajů, díly mimo mapování na FG (bez duplicit)', () => {
+    expect(byName('FG').data.slice(1).map((r) => r[0]?.value)).toEqual(['FG1', 'FG2', 'FG3', 'X1', 'NEW']);
+    expect(byName('SFG').data.slice(1).map((r) => r[0]?.value)).toEqual(['SFG1', 'X2']);
+    expect(byName('PG').data.slice(1).map((r) => r[0]?.value)).toEqual(['PG1', 'X3']);
+    expect(row(byName('FG'), 'NEW')['Customer Number']!.value).toBe('A9999999999 0001');
+    expect(templateKind(undefined)).toBe('FG');
   });
 
-  it('stav buňky podle druhu a návod', () => {
-    expect([cellStatus('variant', 'FG', true), cellStatus('variant', 'FG', false), cellStatus('variant', 'PG', true)]).toEqual(['required', 'optional', 'notNeeded']);
-    expect([cellStatus('line', 'SFG', false), cellStatus('line', 'PG', false), cellStatus('componentCoverage', 'PG', false)]).toEqual(['required', 'notNeeded', 'optional']);
-    expect(guide!.name).toBe('Návod');
-    const lineRow = guide!.data.find((r) => r[0]?.value === 'Line')!;
+  it('chybějící údaj zůstane prázdný bez zvýraznění; volitelné sloupce světlým záhlavím', () => {
+    const fg = row(byName('FG'), 'FG1');
+    expect(fg['Order Multiple']).toEqual({});
+    expect(byName('FG').data.slice(1).flat().every((c) => c?.backgroundColor === undefined)).toBe(true);
+    expect(byName('PG').data[0]!.map((c) => c?.backgroundColor)).toEqual(['#1D5C9E', '#1D5C9E', '#1D5C9E', '#BDD7EE']);
+    expect(byName('FG').data[0]!.every((c) => c?.backgroundColor === '#1D5C9E')).toBe(true);
+  });
+
+  it('prázdné listy druhů zůstanou se záhlavím', () => {
+    const only = parseMasterData(parseCsv('Item Number;Item Type;Description;Category\nPG1;PG;CLIP;K'));
+    if (!only.ok) throw new Error();
+    const s = mappingTemplate(only.value, [], texts);
+    expect(s.map((x) => x.name)).toEqual(['FG', 'SFG', 'PG', 'Návod']);
+    expect(s[0]!.data).toHaveLength(1);
+  });
+
+  it('stav sloupce podle druhu a návod', () => {
+    expect([columnStatus('variant', 'FG', true), columnStatus('variant', 'FG', false), columnStatus('variant', 'PG', true)]).toEqual(['required', 'optional', 'notNeeded']);
+    expect([columnStatus('line', 'SFG', false), columnStatus('line', 'PG', false), columnStatus('componentCoverage', 'PG', false)]).toEqual(['required', 'notNeeded', 'optional']);
+    const lineRow = byName('Návod').data.find((r) => r[0]?.value === 'Line')!;
     expect(lineRow.slice(1, 4).map((c) => c?.value)).toEqual(['povinné', 'povinné', '–']);
+  });
+
+  it('šablona se načte zpět: druh podle listu, údaje druhu beze ztráty', () => {
+    const table = (s: ReportSheet) => ({ name: s.name, table: { header: headers(s).map(String), rows: s.data.slice(1).map((r) => r.map((c) => c?.value ?? null)) } });
+    const back = parseMasterWorkbook(sheets.map(table));
+    if (!back.ok) throw new Error();
+    expect(Object.fromEntries([...back.value.items.values()].map((m) => [m.item, m.kind]))).toEqual({ FG1: 'FG', FG2: 'FG', FG3: 'FG', X1: 'FG', NEW: 'FG', SFG1: 'SFG', X2: 'SFG', PG1: 'PG', X3: 'PG' });
+    const kinded = [...master.value.items.values()].filter((m) => m.kind);
+    const fields = (m: MasterItem) => ({ ...m, type: '', safetyStock: null, safetyTime: null });
+    expect(kinded.map((m) => fields(back.value.items.get(m.item)!))).toEqual(kinded.map(fields));
+    expect(back.value.issues).toEqual([]);
   });
 });

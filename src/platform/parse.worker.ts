@@ -4,7 +4,7 @@ import readXlsxFile, { readSheet } from 'read-excel-file/universal';
 import { parseCallOffExport, type CallOffExport, type ParseResult } from '../core/calloffs/parse';
 import { parseCoverageWorkbook, type CoverageResult } from '../core/coverage/parse';
 import { parseCsv } from '../core/csv';
-import { parseMasterData, type MasterResult } from '../core/masterdata';
+import { parseMasterData, parseMasterWorkbook, type MasterResult } from '../core/masterdata';
 import { mergeBoms, parseBom, type BomResult } from '../core/bom';
 import { parseStock, type StockResult } from '../core/stock';
 import { parsePlanWorkbook, type PlanResult } from '../core/planning/plan';
@@ -78,6 +78,12 @@ self.onmessage = async (event: MessageEvent<ParseRequest>) => {
         table = toTable((sheet?.data ?? []) as Cell[][]);
       }
       (self as unknown as Worker).postMessage({ id, kind, result: parseStock(table) } satisfies ParseResponse);
+      return;
+    }
+    if (kind === 'masterdata' && format !== 'csv') {
+      // Mapování: první list, nebo listy FG / SFG / PG (+ list se sloupcem Item Type) ze šablony.
+      const sheets = (await readXlsxFile(buffer)).map((s) => ({ name: s.sheet, table: toTable(s.data as Cell[][]) }));
+      (self as unknown as Worker).postMessage({ id, kind, result: parseMasterWorkbook(sheets) } satisfies ParseResponse);
       return;
     }
     const table = await readTable(format, buffer);
