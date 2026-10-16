@@ -39,7 +39,7 @@ a Dodavatelé odložené. Modul Kapacity (odvolávky vs. kapacita linek) byl zva
   kliknutím do modulu. Nahoře souhrn: kolik oblastí hoří, pozor, v pořádku
 - ✅ **Pokrytí po projektech** (pod kartami): za každý projekt ze souborů coverage od dneška do kdy je pokrytý
   (poslední den, kdy mají všechny díly zůstatek 0 a víc) a kolik dní to je, s transitem i bez; „+“ = celý horizont
-  souboru; červená tečka = pokryto méně než 2 dny, jinak zelená
+  souboru (vysvětlení po najetí myší); červená tečka = pokryto méně než 2 dny, jinak zelená
 - ✅ **Kritické díly u zákazníka** (coverage od dneška): hoří = chybí i s transitem dnes nebo zítra, pozor = dnes
   nebo zítra chybí jen bez transitu (čeká na transit), pro informaci = chybí s transitem později
 - ✅ **Kritické komponenty** (podle odvolávek a našeho skladu): hoří = dojdou do 2 dnů, pozor = do 7 dnů,

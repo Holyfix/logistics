@@ -1583,10 +1583,6 @@ button.oil-step:disabled {
   max-width: 100%;
 }
 
-.dash-projects > p {
-  max-width: 460px;
-}
-
 .dash-projects td .dot {
   margin-right: 4px;
 }

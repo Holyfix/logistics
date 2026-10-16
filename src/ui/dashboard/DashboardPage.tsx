@@ -311,7 +311,6 @@ export function DashboardPage({ today = localToday(), now = Date.now() }: { toda
         <div className="panel dash-projects">
           <div className="panel-head">
             <h2>{td.projects.title}</h2>
-            <span className="muted">{td.projects.sub}</span>
           </div>
           <div className="table-scroll">
             <table className="table table-data">
@@ -336,7 +335,7 @@ export function DashboardPage({ today = localToday(), now = Date.now() }: { toda
                     </td>
                     {[p.withTransit, p.withoutTransit].flatMap((c, k) => [
                       <td key={`u${k}`}>{c.until === null ? <span className="cell-short">{td.projects.notCovered}</span> : dayLabel(c.until)}</td>,
-                      <td key={`d${k}`} className="n">
+                      <td key={`d${k}`} className="n" title={c.whole ? td.projects.whole : undefined}>
                         <strong className={c.days < SHORTAGE_DAYS && !c.whole ? 'cell-short' : undefined}>
                           {formatQuantity(c.days, locale)}
                           {c.whole && '+'}
@@ -348,7 +347,6 @@ export function DashboardPage({ today = localToday(), now = Date.now() }: { toda
               </tbody>
             </table>
           </div>
-          <p className="muted">{td.projects.note}</p>
         </div>
       )}
     </section>
