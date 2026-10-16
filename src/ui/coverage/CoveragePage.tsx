@@ -4,9 +4,11 @@ import {
   coverageOptions,
   EMPTY_COVERAGE_FILTER,
   filterCoverage,
+  setCoverageFilter,
   SHORTAGE_DAYS,
   shortage,
-  summarizeByVariant,
+  summarizeBySide,
+  type CoverageField,
   type CoverageFilter,
 } from '../../core/coverage/compute';
 import { dayToIso, parseDay, weekday, type DayNumber } from '../../core/dates';
@@ -51,13 +53,13 @@ export function CoveragePage({ today = localToday() }: { today?: DayNumber } = {
 
   const withStock = ourStock && stock !== undefined;
   const table = useMemo(() => buildCoverage(sources, master, { transit, ourStock: withStock }, stock), [sources, master, transit, withStock, stock]);
-  const options = useMemo(() => coverageOptions(table), [table]);
+  const options = useMemo(() => coverageOptions(table, filter), [table, filter]);
   const selectedDay = day !== null && table.days.includes(day) ? day : (table.days[0] ?? 0);
   const lines = useMemo(
     () => filterCoverage(table, { ...filter, rows: rowsMode === 'negativeOn' ? { kind: 'negativeOn', day: selectedDay } : { kind: rowsMode } }),
     [table, filter, rowsMode, selectedDay],
   );
-  const summary = useMemo(() => summarizeByVariant(table.days, lines), [table.days, lines]);
+  const summary = useMemo(() => summarizeBySide(table.days, lines), [table.days, lines]);
 
   const dayLabel = (d: DayNumber) => `${t.calloffs.weekdays[weekday(d) - 1]} ${formatDayShort(dayToIso(d), locale)}`;
 
@@ -92,8 +94,10 @@ export function CoveragePage({ today = localToday() }: { today?: DayNumber } = {
   }
 
   const newest = Math.max(...sources.map((s) => s.lastModified));
-  const set = (key: keyof Omit<CoverageFilter, 'rows'>) => (value: string) => setFilter((f) => ({ ...f, [key]: value }));
-  const select = (key: 'location' | 'project' | 'variant' | 'category', label: string, values: string[]) => (
+  const set = (key: CoverageField | 'query') => (value: string) => setFilter((f) => setCoverageFilter(f, key, value));
+  // Kategorie, strana a varianta se nabídnou, jen když je díly ve výběru mají (nebo je filtr nastavený).
+  const shown = (key: CoverageField, values: string[]) => values.length > 0 || filter[key] !== '';
+  const select = (key: CoverageField, label: string, values: string[]) => (
     <label className="field">
       <span>{label}</span>
       <select value={filter[key]} onChange={(e) => set(key)(e.target.value)}>
@@ -122,6 +126,8 @@ export function CoveragePage({ today = localToday() }: { today?: DayNumber } = {
       tc.table.description,
       tc.table.location,
       tc.table.project,
+      tc.table.category,
+      tc.table.side,
       tc.table.variant,
       tc.table.customerStock,
       tc.table.transit,
@@ -135,6 +141,8 @@ export function CoveragePage({ today = localToday() }: { today?: DayNumber } = {
       l.description,
       l.location,
       l.project,
+      l.category,
+      l.side,
       l.variant,
       l.customerStock,
       l.transit,
@@ -146,8 +154,8 @@ export function CoveragePage({ today = localToday() }: { today?: DayNumber } = {
   const buildSummaryExport = (): ExportTable => ({
     fileName: `${fileBase}_${tc.export.summarySheet.toLowerCase()}`,
     sheetName: tc.export.summarySheet,
-    header: [tc.summary.variant, ...table.days.map(dayToIso)],
-    rows: summary.map((s) => [s.variant || tc.summary.none, ...s.values]),
+    header: [tc.summary.side, ...table.days.map(dayToIso)],
+    rows: summary.map((s) => [s.side || tc.summary.none, ...s.values]),
   });
 
   // Hranice pokrytí 2 dny: konec zítřka (dnes + 1).
@@ -217,8 +225,9 @@ export function CoveragePage({ today = localToday() }: { today?: DayNumber } = {
       <div className="filters" role="group" aria-label={tc.filters.label}>
         {select('location', tc.filters.location, options.locations)}
         {select('project', tc.filters.project, options.projects)}
-        {select('variant', tc.filters.variant, options.variants)}
-        {options.categories.length > 0 && select('category', tc.filters.category, options.categories)}
+        {shown('category', options.categories) && select('category', tc.filters.category, options.categories)}
+        {shown('side', options.sides) && select('side', tc.filters.side, options.sides)}
+        {shown('variant', options.variants) && select('variant', tc.filters.variant, options.variants)}
         <label className="field field-wide">
           <span>{tc.filters.search}</span>
           <input type="search" value={filter.query} placeholder={tc.filters.searchPlaceholder} onChange={(e) => set('query')(e.target.value)} />
@@ -271,14 +280,14 @@ export function CoveragePage({ today = localToday() }: { today?: DayNumber } = {
           <table className="table table-data">
             <thead>
               <tr>
-                <th className="sticky-col">{tc.summary.variant}</th>
+                <th className="sticky-col">{tc.summary.side}</th>
                 {table.days.map(dayHead)}
               </tr>
             </thead>
             <tbody>
               {summary.map((s) => (
-                <tr key={s.variant}>
-                  <td className="sticky-col">{s.variant || <span className="muted">{tc.summary.none}</span>}</td>
+                <tr key={s.side}>
+                  <td className="sticky-col">{s.side || <span className="muted">{tc.summary.none}</span>}</td>
                   {s.values.map((v, k) => valueCell(v, k))}
                 </tr>
               ))}
@@ -307,6 +316,8 @@ export function CoveragePage({ today = localToday() }: { today?: DayNumber } = {
                   <th>{tc.table.description}</th>
                   <th>{tc.table.location}</th>
                   <th>{tc.table.project}</th>
+                  <th>{tc.table.category}</th>
+                  <th>{tc.table.side}</th>
                   <th>{tc.table.variant}</th>
                   <th className="n">{tc.table.customerStock}</th>
                   <th className="n">{tc.table.transit}</th>
@@ -326,7 +337,10 @@ export function CoveragePage({ today = localToday() }: { today?: DayNumber } = {
                     <td className="desc">{l.description}</td>
                     <td>{l.location || '—'}</td>
                     <td>{l.project || '—'}</td>
-                    <td>{l.variant ? <span className="chip">{l.variant}</span> : '—'}</td>
+                    <td>{l.category || '—'}</td>
+                    {/* Strana a varianta jen u dílů, které je mají. */}
+                    <td>{l.side && <span className="chip">{l.side}</span>}</td>
+                    <td>{l.variant && <span className="chip">{l.variant}</span>}</td>
                     <td className="n">{formatQuantity(l.customerStock, locale)}</td>
                     <td className="n">{l.transit ? formatQuantity(l.transit, locale) : <span className="muted">0</span>}</td>
                     {stock && (
