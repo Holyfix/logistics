@@ -125,8 +125,15 @@ Filtry: zákazník, projekt, strana (LHD/RHD), kategorie z kmenových dat, hled�
 ### OIL (Open Issue List)
 - ✅ Bod: číslo, problém, opatření, odpovědný, otevřeno, termín, uzavřeno
 - ✅ Zrušení bodu (zůstane v seznamu) a trvalé smazání s potvrzením
-- ✅ Plnění po krocích 0/25/50/75/100 % kliknutím na kolečko (Harvey ball), přesně v detailu bodu
-- ✅ Barva podle stavu: červená po termínu, žlutá rozpracováno, modrá nezahájeno, zelená hotovo, šedá zrušeno
+- ✅ Plnění po krocích OIL (krok platí, až je celý splněný), barevná tlačítka:
+  - 0 % zapsáno (šedá) – víme co, ale ještě ne proč
+  - 25 % problém popsán (červená) – víme co, kde, jak velké a proč (u úkolu cíl)
+  - 50 % opatření určeno (oranžová) – co, kdo, do kdy
+  - 75 % opatření zavedeno (žlutá) – opatření je hotové
+  - 100 % účinnost ověřena (zelená) – máme důkaz, že to funguje; bod se uzavře
+  - v seznamu kolečko (Harvey ball) v barvě kroku, kliknutím o krok dál; v detailu pod tlačítky krátká
+    vysvětlivka aktuálního kroku (pravidlo „krok platí, až je celý splněný“ po najetí myší)
+- ✅ Pruh u řádku a štítek podle stavu: červená po termínu, žlutá rozpracováno, modrá nezahájeno, zelená hotovo, šedá zrušeno
 - ✅ Posun termínu s povinným důvodem: u bodu „posunuto N×“, původní termín a historie (kdo, kdy, z – na, proč)
 - ✅ Komentáře s datem a autorem
 - ✅ Filtry Otevřené / Po termínu / Hotové / Vše, odpovědný (po osobách, bod „A / B“ patří k oběma), hledání; ukazatele otevřené, po termínu, hotovo, posuny

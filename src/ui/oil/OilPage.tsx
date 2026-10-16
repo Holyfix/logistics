@@ -271,15 +271,15 @@ export function OilPage({ today = localToday() }: { today?: DayNumber } = {}) {
                         <button
                           type="button"
                           className="oil-step"
-                          aria-label={`${to.table.progress} ${item.id}: ${item.progress} %, ${to.progressNext}`}
-                          title={`${item.progress} % · ${to.progressNext}`}
+                          aria-label={`${to.table.progress} ${item.id}: ${item.progress} % (${to.steps[item.progress].name}), ${to.progressNext}`}
+                          title={`${to.steps[item.progress].name}: ${to.steps[item.progress].hint} · ${to.progressNext}`}
                           disabled={item.cancelled || item.progress === 100}
                           onClick={(e) => {
                             e.stopPropagation();
                             change(item.id, (i) => withProgress(i, nextProgress(i.progress), today));
                           }}
                         >
-                          <ProgressBall progress={item.progress} status={s} />
+                          <ProgressBall progress={item.progress} />
                           <span>{item.progress} %</span>
                         </button>
                       </td>
@@ -311,12 +311,20 @@ export function OilPage({ today = localToday() }: { today?: DayNumber } = {}) {
           </div>
         )}
         <ul className="cov-legend">
-          {(['overdue', 'progress', 'open', 'done', 'cancelled'] as const).map((s) => (
-            <li key={s}>
-              <ProgressBall progress={s === 'done' ? 100 : s === 'progress' ? 50 : 0} status={s} /> {to.status[s]}
+          <li className="muted">{to.legendSteps}</li>
+          {PROGRESS_STEPS.map((p) => (
+            <li key={p} title={to.steps[p].hint}>
+              <ProgressBall progress={p} /> {p} % {to.steps[p].name}
             </li>
           ))}
+        </ul>
+        <ul className="cov-legend">
           <li className="muted">{to.legend}</li>
+          {(['overdue', 'progress', 'open', 'done', 'cancelled'] as const).map((s) => (
+            <li key={s}>
+              <span className={`oil-chip oil-chip-${s}`}>{to.status[s]}</span>
+            </li>
+          ))}
         </ul>
       </div>
     </section>
@@ -375,13 +383,26 @@ function OilDetail({
         </label>
         <div className="field">
           <span>{td.progress}</span>
-          <div className="segmented" role="group" aria-label={`${td.progress} ${item.id}`}>
+          <div className="oil-steps" role="group" aria-label={`${td.progress} ${item.id}`} title={t.oil.stepRule}>
             {PROGRESS_STEPS.map((p) => (
-              <button key={p} type="button" aria-pressed={item.progress === p} disabled={item.cancelled} onClick={() => change((i) => withProgress(i, p, today))}>
-                {p} %
+              <button
+                key={p}
+                type="button"
+                className={`step-${p}`}
+                aria-pressed={item.progress === p}
+                aria-label={`${t.oil.steps[p].name} ${p} %`}
+                title={`${t.oil.steps[p].name} – ${t.oil.steps[p].hint}. ${t.oil.stepRule}`}
+                disabled={item.cancelled}
+                onClick={() => change((i) => withProgress(i, p, today))}
+              >
+                <b>{p} %</b>
+                <small>{t.oil.steps[p].short}</small>
               </button>
             ))}
           </div>
+          <small className="step-help">
+            <strong>{t.oil.steps[item.progress].name}</strong> – {t.oil.steps[item.progress].hint}
+          </small>
           <small className="muted">
             {td.opened} {dayLabel(item.opened)}
             {item.closed !== null && ` · ${td.closed} ${dayLabel(item.closed)}`}

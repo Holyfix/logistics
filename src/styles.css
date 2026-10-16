@@ -1320,32 +1320,89 @@ button:focus-visible {
 
 .oil-ball-ring {
   fill: var(--surface);
-  stroke: var(--oil-color);
+  stroke: var(--step);
   stroke-width: 2;
 }
 
 .oil-ball-fill {
-  fill: var(--oil-color);
+  fill: var(--step);
 }
 
-.oil-ball-done {
-  --oil-color: var(--good);
+/* Plnění po krocích OIL: zapsáno šedá, problém popsán červená, opatření určeno oranžová, zavedeno žlutá, ověřeno zelená. */
+.step-0 {
+  --step: var(--muted);
+  --step-ink: #ffffff;
 }
 
-.oil-ball-overdue {
-  --oil-color: var(--crit);
+.step-25 {
+  --step: #d03b3b;
+  --step-ink: #ffffff;
 }
 
-.oil-ball-progress {
-  --oil-color: var(--warn);
+.step-50 {
+  --step: #ec7a1c;
+  --step-ink: #ffffff;
 }
 
-.oil-ball-open {
-  --oil-color: var(--accent);
+.step-75 {
+  --step: #f2c12e;
+  --step-ink: #13202a;
 }
 
-.oil-ball-cancelled {
-  --oil-color: var(--muted);
+.step-100 {
+  --step: #0ca30c;
+  --step-ink: #ffffff;
+}
+
+.oil-steps {
+  display: flex;
+  gap: 4px;
+}
+
+.oil-steps button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: 72px;
+  padding: 6px 2px 5px;
+  font: inherit;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-top: 4px solid var(--step);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.oil-steps button b {
+  font: 700 16px/1 var(--font-display);
+}
+
+.oil-steps button small {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.oil-steps button:hover:not(:disabled) {
+  border-color: var(--step);
+}
+
+.oil-steps button[aria-pressed='true'] {
+  color: var(--step-ink);
+  background: var(--step);
+  border-color: var(--step);
+}
+
+.oil-steps button[aria-pressed='true'] small {
+  color: inherit;
+}
+
+.oil-steps button:disabled {
+  opacity: 0.5;
+  cursor: default;
 }
 
 button.oil-step {
@@ -1514,12 +1571,7 @@ button.oil-step:disabled {
   background: var(--negative-bg);
 }
 
-/* Plnění v detailu bodu: pět stejně širokých tlačítek přes celou šířku pole. */
-.oil-detail .segmented {
-  display: flex;
-}
-
-.oil-detail .segmented button {
-  flex: 1 1 0;
-  padding-inline: 4px;
+.oil-detail small.step-help {
+  color: var(--ink-2);
+  line-height: 1.35;
 }
