@@ -46,7 +46,7 @@ const row = (s: ReportSheet, item: string) => {
 describe('šablona mapování po druzích dílu', () => {
   it('jen listy FG, SFG, PG (každý jen se svými sloupci) a Návod', () => {
     expect(sheets.map((s) => s.name)).toEqual(['FG', 'SFG', 'PG', 'Návod']);
-    expect(headers(byName('SFG'))).toEqual(['Item Number', 'Description', 'Project', 'Line', 'Component Coverage']);
+    expect(headers(byName('SFG'))).toEqual(['Item Number', 'Description', 'Project', 'Line']);
     expect(headers(byName('PG'))).toEqual(['Item Number', 'Description', 'Category', 'Component Coverage']);
     expect(headers(byName('FG'))).toEqual(KIND_COLUMNS.FG.map((k) => TEMPLATE_COLUMNS[k].header));
   });
@@ -77,7 +77,7 @@ describe('šablona mapování po druzích dílu', () => {
 
   it('stav sloupce podle druhu a návod', () => {
     expect([columnStatus('variant', 'FG', true), columnStatus('variant', 'FG', false), columnStatus('variant', 'PG', true)]).toEqual(['required', 'optional', 'notNeeded']);
-    expect([columnStatus('line', 'SFG', false), columnStatus('line', 'PG', false), columnStatus('componentCoverage', 'PG', false), columnStatus('componentCoverage', 'SFG', false), columnStatus('componentCoverage', 'FG', false)]).toEqual(['required', 'notNeeded', 'optional', 'optional', 'notNeeded']);
+    expect([columnStatus('line', 'SFG', false), columnStatus('line', 'PG', false), columnStatus('componentCoverage', 'PG', false)]).toEqual(['required', 'notNeeded', 'optional']);
     const lineRow = byName('Návod').data.find((r) => r[0]?.value === 'Line')!;
     expect(lineRow.slice(1, 4).map((c) => c?.value)).toEqual(['povinné', 'povinné', '–']);
   });

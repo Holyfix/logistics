@@ -2,7 +2,6 @@ import { useMemo, useState } from 'react';
 import { COMPONENT_SOON_DAYS, type ComponentLine } from '../../core/components/compute';
 import { dayToIso, weekday, type DayNumber } from '../../core/dates';
 import { formatAmount, formatDayShort, formatOneDecimal, formatQuantity } from '../../core/format';
-import { ITEM_KINDS } from '../../core/masterdata';
 import { useI18n } from '../../i18n/I18nProvider';
 import { ExportButtons, type ExportTable } from '../calloffs/ExportButtons';
 import { useData } from '../data/DataProvider';
@@ -28,28 +27,21 @@ export function ComponentsPage({ today = localToday() }: { today?: DayNumber } =
 
   const [project, setProject] = useState('');
   const [category, setCategory] = useState('');
-  // Druh dílu z mapování; '-' = bez druhu.
-  const [kind, setKind] = useState('');
   const [query, setQuery] = useState('');
   const [onlyShort, setOnlyShort] = useState(false);
 
   const projects = useMemo(() => [...new Set(table?.components.flatMap((c) => c.projects) ?? [])].sort((a, b) => a.localeCompare(b, 'cs')), [table]);
   const categories = useMemo(() => [...new Set(table?.components.flatMap((c) => c.categories) ?? [])].sort((a, b) => a.localeCompare(b, 'cs')), [table]);
-  const kinds = useMemo(() => {
-    const present = new Set(table?.components.map((c) => c.kind || '-'));
-    return [...ITEM_KINDS.filter((k) => present.has(k)), ...(present.has('-') ? ['-'] : [])];
-  }, [table]);
   const lines = useMemo(() => {
     const q = query.trim().toLowerCase();
     return (table?.components ?? []).filter(
       (c) =>
         (!project || c.projects.includes(project)) &&
         (!category || c.categories.includes(category)) &&
-        (!kind || (c.kind || '-') === kind) &&
         (!onlyShort || c.shortDay !== null) &&
         (!q || `${c.item} ${c.description}`.toLowerCase().includes(q)),
     );
-  }, [table, project, category, kind, query, onlyShort]);
+  }, [table, project, category, query, onlyShort]);
 
   // Hotové díly podle filtru komponent: projekt omezí hotové díly na projekt; hledání nebo „jen v záporu“
   // na hotové díly, které vybrané komponenty mají v kusovníku.
@@ -93,6 +85,7 @@ export function ComponentsPage({ today = localToday() }: { today?: DayNumber } =
   const dayLabel = (d: DayNumber) => `${t.calloffs.weekdays[weekday(d) - 1]} ${formatDayShort(dayToIso(d), locale)}`;
   const weekend = (d: DayNumber) => (weekday(d) >= 6 ? ' col-weekend' : '');
   const amount = (v: number, um: string) => formatAmount(v, locale, um);
+  const sourceLabel = (c: ComponentLine) => (c.source === 'P' ? tc.table.purchased : c.source ? tc.table.made : '—');
   const short = table.components.filter((c) => c.shortDay !== null).length;
   const soon = table.components.filter((c) => c.shortDay !== null && c.shortDay < COMPONENT_SOON_DAYS).length;
   const callOffs = state.data?.exports.at(-1);
@@ -126,7 +119,7 @@ export function ComponentsPage({ today = localToday() }: { today?: DayNumber } =
       tc.table.item,
       tc.table.description,
       tc.table.um,
-      tc.table.kind,
+      tc.table.source,
       tc.table.stock,
       tc.table.need,
       tc.table.until,
@@ -139,7 +132,7 @@ export function ComponentsPage({ today = localToday() }: { today?: DayNumber } =
       c.item,
       c.description,
       c.um,
-      c.kind,
+      sourceLabel(c),
       c.stock,
       round(need7(c)),
       coveredText(c),
@@ -222,19 +215,6 @@ export function ComponentsPage({ today = localToday() }: { today?: DayNumber } =
             </select>
           </label>
         )}
-        {kinds.length > 1 && (
-          <label className="field">
-            <span>{tc.filters.kind}</span>
-            <select value={kind} onChange={(e) => setKind(e.target.value)}>
-              <option value="">{tc.filters.all}</option>
-              {kinds.map((k) => (
-                <option key={k} value={k}>
-                  {k === '-' ? tc.filters.noKind : k}
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
         <label className="field field-wide">
           <span>{tc.filters.search}</span>
           <input type="search" value={query} placeholder={tc.filters.searchPlaceholder} onChange={(e) => setQuery(e.target.value)} />
@@ -249,7 +229,6 @@ export function ComponentsPage({ today = localToday() }: { today?: DayNumber } =
           onClick={() => {
             setProject('');
             setCategory('');
-            setKind('');
             setQuery('');
             setOnlyShort(false);
           }}
@@ -289,7 +268,7 @@ export function ComponentsPage({ today = localToday() }: { today?: DayNumber } =
                   <th className="sticky-col">{tc.table.item}</th>
                   <th>{tc.table.description}</th>
                   <th>{tc.table.um}</th>
-                  <th title={tc.table.kindTitle}>{tc.table.kind}</th>
+                  <th>{tc.table.source}</th>
                   <th className="n">{tc.table.stock}</th>
                   <th className="n">{tc.table.need}</th>
                   <th>{tc.table.until}</th>
@@ -313,7 +292,7 @@ export function ComponentsPage({ today = localToday() }: { today?: DayNumber } =
                       {c.description}
                     </td>
                     <td>{c.um}</td>
-                    <td>{c.kind || <span className="muted">—</span>}</td>
+                    <td>{sourceLabel(c)}</td>
                     <td className="n">{c.stock === null ? <span className="muted">—</span> : amount(c.stock, c.um)}</td>
                     <td className="n">{amount(need7(c), c.um)}</td>
                     <td className="cell-until">

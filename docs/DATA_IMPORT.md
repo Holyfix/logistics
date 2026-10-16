@@ -86,7 +86,7 @@ sloupcem Item Type); ostatní listy (Návod) se vynechají. Díl na dvou listech
 | Strana | Side, Řízení; jinak se odvodí ze začátku varianty | ne |
 | Safety Stock, Safety Time | Pojistná zásoba, Pojistná doba | ne |
 | Order Multiple | Balení, Kusů v balení | ne |
-| Component Coverage | Coverage Component, Komponenta | ne; „Ano“ (nebo Y, X, 1) = díl (PG nakupovaný nebo SFG mezivýroba) se sleduje v modulu Komponenty; Druh v Komponentách je z Item Type |
+| Component Coverage | Coverage Component, Komponenta | ne; „Ano“ (nebo Y, X, 1) = komponenta se sleduje v modulu Komponenty |
 | Line | Linka, Výrobní linka | ne; linka, na které se díl vyrábí: `ASSEMBLY`, `FOA`, `SLH`, `IMM` (přijme i Montáž, Assy, Foaming, Slush, Vstřikování) |
 | Category | Kategorie | ne; druh dílu nebo komponenty podle vlastní volby (např. `DP` = door panel, `HB`); filtr Kategorie v Call-offs, Coverage a Komponentách |
 
@@ -94,9 +94,9 @@ Další sloupce (např. Yield Percent, Cost Total) aplikace ignoruje.
 
 - **Šablonu mapování** stáhnete v modulu Data. Má jen listy **FG**, **SFG**, **PG** (a Návod), každý jen se
   sloupci, které aplikace pro daný druh používá: FG (Item Number, Customer Number, Description, Project, Customer,
-  Side, Variant, Category, Line, Order Multiple), SFG (Item Number, Description, Project, Line, Component Coverage), PG (Item Number,
-  Description, Category, Component Coverage). Díly bez druhu se zařadí podle údajů (linka FOA / SLH / IMM → SFG,
-  Component Coverage = Ano → PG, ostatní → FG), díly, které v mapování chybí (z Coverage, odvolávek a kusovníků),
+  Side, Variant, Category, Line, Order Multiple), SFG (Item Number, Description, Project, Line), PG (Item Number,
+  Description, Category, Component Coverage). Díly bez druhu se zařadí podle údajů (Component Coverage = Ano → PG,
+  linka FOA / SLH / IMM → SFG, ostatní → FG), díly, které v mapování chybí (z Coverage, odvolávek a kusovníků),
   jsou na listu FG; po nahrání mají díly druh podle listu. Chybějící údaj zůstane prázdný (co doplnit, ukazuje
   Kontrola mapování). Formátování je jen záhlaví (tmavé = povinný sloupec, světlé = volitelný), aby byl soubor
   rychlý. Sloupce, které aplikace nepoužívá (Type, Safety Stock, Safety Time), šablona neobsahuje. Soubor uložte

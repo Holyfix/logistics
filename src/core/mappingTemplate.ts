@@ -26,7 +26,7 @@ export const TEMPLATE_COLUMNS: Record<TemplateKey, { header: string; width: numb
 /** Sloupce listu podle druhu dílu: jen to, co aplikace u daného druhu používá. */
 export const KIND_COLUMNS: Record<ItemKind, readonly TemplateKey[]> = {
   FG: ['item', 'customerNumber', 'description', 'project', 'customer', 'side', 'variant', 'category', 'line', 'orderMultiple'],
-  SFG: ['item', 'description', 'project', 'line', 'componentCoverage'],
+  SFG: ['item', 'description', 'project', 'line'],
   PG: ['item', 'description', 'category', 'componentCoverage'],
 };
 
@@ -34,15 +34,15 @@ export const KIND_COLUMNS: Record<ItemKind, readonly TemplateKey[]> = {
 const ALL_COLUMNS = Object.keys(TEMPLATE_COLUMNS) as TemplateKey[];
 
 /**
- * List šablony pro díl: druh z mapování. Díl bez druhu se zařadí podle údajů (linka FOA / SLH / IMM → SFG,
- * Component Coverage = Ano → PG, jinak FG), díl, který v mapování chybí (z Coverage, odvolávek, kusovníků), do FG.
+ * List šablony pro díl: druh z mapování. Díl bez druhu se zařadí podle údajů (Component Coverage = Ano → PG,
+ * linka FOA / SLH / IMM → SFG, jinak FG), díl, který v mapování chybí (z Coverage, odvolávek, kusovníků), do FG.
  * Po nahrání šablony má díl druh podle listu, na kterém je.
  */
 export function templateKind(m: MasterItem | undefined): ItemKind {
   if (!m) return 'FG';
   if (m.kind) return m.kind;
-  if (['FOA', 'SLH', 'IMM'].includes(m.line)) return 'SFG';
   if (m.componentCoverage) return 'PG';
+  if (['FOA', 'SLH', 'IMM'].includes(m.line)) return 'SFG';
   return 'FG';
 }
 
