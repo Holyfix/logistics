@@ -30,18 +30,26 @@ export function ComponentsPage({ today = localToday() }: { today?: DayNumber } =
   const [query, setQuery] = useState('');
   const [onlyShort, setOnlyShort] = useState(false);
 
-  const projects = useMemo(() => [...new Set(table?.components.flatMap((c) => c.projects) ?? [])].sort((a, b) => a.localeCompare(b, 'cs')), [table]);
-  const categories = useMemo(() => [...new Set(table?.components.flatMap((c) => c.categories) ?? [])].sort((a, b) => a.localeCompare(b, 'cs')), [table]);
+  // Filtry Projekt → Kategorie podle hotových dílů: kategorie se nabízí jen z hotových dílů vybraného projektu,
+  // komponenta odpovídá, když je v hotovém dílu vybraného projektu i kategorie.
+  const productBy = useMemo(() => new Map((table?.products ?? []).map((p) => [p.item, p])), [table]);
+  const sorted = (values: Iterable<string>) => [...new Set(values)].filter(Boolean).sort((a, b) => a.localeCompare(b, 'cs', { numeric: true }));
+  const used = useMemo(() => [...new Set(table?.components.flatMap((c) => c.products) ?? [])].map((item) => productBy.get(item)!).filter(Boolean), [table, productBy]);
+  const projects = useMemo(() => sorted(used.map((p) => p.project)), [used]);
+  const categories = useMemo(() => sorted(used.filter((p) => !project || p.project === project).map((p) => p.category)), [used, project]);
   const lines = useMemo(() => {
     const q = query.trim().toLowerCase();
+    const inProduct = (item: string) => {
+      const p = productBy.get(item);
+      return !!p && (!project || p.project === project) && (!category || p.category === category);
+    };
     return (table?.components ?? []).filter(
       (c) =>
-        (!project || c.projects.includes(project)) &&
-        (!category || c.categories.includes(category)) &&
+        ((!project && !category) || c.products.some(inProduct)) &&
         (!onlyShort || c.shortDay !== null) &&
         (!q || `${c.item} ${c.description}`.toLowerCase().includes(q)),
     );
-  }, [table, project, category, query, onlyShort]);
+  }, [table, productBy, project, category, query, onlyShort]);
 
   // Hotové díly podle filtru komponent: projekt omezí hotové díly na projekt; hledání nebo „jen v záporu“
   // na hotové díly, které vybrané komponenty mají v kusovníku.
@@ -193,7 +201,14 @@ export function ComponentsPage({ today = localToday() }: { today?: DayNumber } =
       <div className="filters" role="group" aria-label={tc.filters.label}>
         <label className="field">
           <span>{tc.filters.project}</span>
-          <select value={project} onChange={(e) => setProject(e.target.value)}>
+          <select
+            value={project}
+            onChange={(e) => {
+              // Kategorie jiného projektu by v novém výběru nemusela existovat.
+              setProject(e.target.value);
+              setCategory('');
+            }}
+          >
             <option value="">{tc.filters.all}</option>
             {projects.map((p) => (
               <option key={p} value={p}>
@@ -202,7 +217,7 @@ export function ComponentsPage({ today = localToday() }: { today?: DayNumber } =
             ))}
           </select>
         </label>
-        {categories.length > 0 && (
+        {(categories.length > 0 || category !== '') && (
           <label className="field">
             <span>{tc.filters.category}</span>
             <select value={category} onChange={(e) => setCategory(e.target.value)}>

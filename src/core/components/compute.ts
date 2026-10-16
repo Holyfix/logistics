@@ -72,7 +72,7 @@ export interface ComponentLine {
   /** Hotové díly, ve kterých je komponenta. */
   products: string[];
   projects: string[];
-  /** Kategorie komponenty z mapování a kategorie hotových dílů, ve kterých je. */
+  /** Kategorie hotových dílů, ve kterých komponenta je (z mapování). */
   categories: string[];
 }
 
@@ -161,7 +161,8 @@ export function buildComponents({ bom, master, coverage = [], callOffs, stock, t
     const m = masterByItem.get(item);
     return {
       item,
-      description: m?.description || bom.info.get(item)?.description || '',
+      // Popis z mapování; hotový díl, který v mapování není, s popisem z kusovníku (jen aby šel poznat).
+      description: m ? m.description : (bom.info.get(item)?.description ?? ''),
       project: m?.project ?? '',
       category: m?.category ?? '',
       callOffs: callOffQty,
@@ -188,7 +189,8 @@ export function buildComponents({ bom, master, coverage = [], callOffs, stock, t
         const i = bom.info.get(component.item);
         line = {
           item: component.item,
-          description: masterByItem.get(component.item)?.description || i?.description || '',
+          // Sledují se jen díly z mapování (PG): popis jen z mapování.
+          description: masterByItem.get(component.item)?.description ?? '',
           um: i?.um ?? '',
           source: i?.source ?? '',
           stock: stock ? (stock.get(component.item) ?? 0) : null,
@@ -201,7 +203,7 @@ export function buildComponents({ bom, master, coverage = [], callOffs, stock, t
           productionDays: null,
           products: [],
           projects: [],
-          categories: [masterByItem.get(component.item)?.category ?? ''].filter(Boolean),
+          categories: [],
         };
         lines.set(component.item, line);
       }
