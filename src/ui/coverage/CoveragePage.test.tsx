@@ -154,10 +154,10 @@ describe('CoveragePage', () => {
     if (!stock.ok) throw new Error();
     renderWith(<CoveragePage />, { ...state, data: { ...state.data!, stock: { path: 'Stock_1.csv', lastModified: 0, data: stock.value } } });
     const heads = [...lineTable().querySelectorAll('thead th')].map((h) => h.textContent);
-    expect(heads.slice(3, 12)).toEqual(['Destinace', 'Projekt', 'Kategorie', 'Strana', 'Varianta', 'Sklad zákazníka', 'Transit', 'Náš sklad', 'První nepokryté']);
+    expect(heads.slice(3, 9)).toEqual(['Destinace', 'Projekt', 'Sklad zákazníka', 'Transit', 'Náš sklad', 'První nepokryté']);
     const [mapped, unmapped] = bodyRows();
-    expect(cells(mapped!)[10]).toBe('15');
-    expect(cells(unmapped!)[10]).toBe('—');
+    expect(cells(mapped!)[7]).toBe('15');
+    expect(cells(unmapped!)[7]).toBe('—');
     expect(cells(mapped!).slice(-2)).toEqual(['9', '3']);
     fireEvent.click(screen.getByLabelText('Přičíst náš sklad'));
     expect(cells(bodyRows()[0]!).slice(-2)).toEqual(['24', '18']);

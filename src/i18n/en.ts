@@ -511,7 +511,7 @@ export const en: Messages = {
       fileCustomerNumber: 'In the customer file',
       ourStockNote: 'Our stock = sum of positive quantities of the part on locations in zones {zones} from the stock file (full and partial packages together), without external locations with parts already assembled at the customer ({excluded}). With “Add our stock” it is added to every day.',
       ourStockNoExclusions: 'none',
-      note: 'Coverage = balance at the customer without transit at the end of the day, optionally + transit. Negative values are red. Customer numbers use one format without padding zeros (hover to see the number as written in the customer file). The description comes from the mapping; parts without mapping are shown by customer number and the customer file description. Side and variant only for parts that have them.',
+      note: 'Coverage = balance at the customer without transit at the end of the day, optionally + transit. Negative values are red. Customer numbers use one format without padding zeros (hover to see the number as written in the customer file). The description comes from the mapping; parts without mapping are shown by customer number and the customer file description.',
     },
     legend: {
       negative: 'Negative coverage',

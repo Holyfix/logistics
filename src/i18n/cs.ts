@@ -513,7 +513,7 @@ export const cs = {
       fileCustomerNumber: 'V souboru zákazníka',
       ourStockNote: 'Náš sklad = součet kladných množství dílu na lokacích v zónách {zones} ze souboru skladu (plná i neúplná balení dohromady), bez externích lokací s díly už zamontovanými u odběratele ({excluded}). S volbou „Přičíst náš sklad“ se přičte ke všem dnům.',
       ourStockNoExclusions: 'žádné',
-      note: 'Pokrytí = zůstatek u zákazníka bez transitu na konci dne, volitelně + transit. Záporné hodnoty jsou červeně. Číslo zákazníka je v jednotném zápisu bez doplňujících nul (zápis ze souboru zákazníka ukáže najetí myší). Popis je z mapování; díl bez mapování je uvedený číslem zákazníka a popisem ze souboru zákazníka. Strana a varianta jen u dílů, které je mají.',
+      note: 'Pokrytí = zůstatek u zákazníka bez transitu na konci dne, volitelně + transit. Záporné hodnoty jsou červeně. Číslo zákazníka je v jednotném zápisu bez doplňujících nul (zápis ze souboru zákazníka ukáže najetí myší). Popis je z mapování; díl bez mapování je uvedený číslem zákazníka a popisem ze souboru zákazníka.',
     },
     legend: {
       negative: 'Záporné pokrytí',
