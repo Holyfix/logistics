@@ -108,12 +108,11 @@ describe('OilPage', () => {
     expect(row('Chybí obaly')).toBeTruthy();
     expect(screen.queryByText(/málo vozíků/, { selector: 'strong' })).toBeNull();
 
-    // Plnění barevnými tlačítky kroků OIL: 75 % = opatření zavedeno; pod tlačítky kritérium a otázka pro další krok.
+    // Plnění barevnými tlačítky kroků OIL: 75 % = opatření zavedeno; pod tlačítky krátká vysvětlivka.
     fireEvent.click(within(detail).getByRole('button', { name: 'Opatření zavedeno 75 %' }));
     expect(within(detail).getByRole('button', { name: 'Opatření zavedeno 75 %' }).getAttribute('aria-pressed')).toBe('true');
     expect(within(row('Chybí obaly')).getByText('75 %')).toBeTruthy();
-    expect(within(detail).getByText(/Opatření je hotové/)).toBeTruthy();
-    expect(within(detail).getByText('Máme důkaz, že to funguje?')).toBeTruthy();
+    expect(within(detail).getByText(/opatření je hotové/)).toBeTruthy();
     fireEvent.click(within(detail).getByRole('button', { name: 'Zavřít' }));
 
     // Smazání: bez potvrzení se nic nestane, po potvrzení bod zmizí.

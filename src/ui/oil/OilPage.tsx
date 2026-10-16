@@ -383,7 +383,7 @@ function OilDetail({
         </label>
         <div className="field">
           <span>{td.progress}</span>
-          <div className="oil-steps" role="group" aria-label={`${td.progress} ${item.id}`}>
+          <div className="oil-steps" role="group" aria-label={`${td.progress} ${item.id}`} title={t.oil.stepRule}>
             {PROGRESS_STEPS.map((p) => (
               <button
                 key={p}
@@ -391,7 +391,7 @@ function OilDetail({
                 className={`step-${p}`}
                 aria-pressed={item.progress === p}
                 aria-label={`${t.oil.steps[p].name} ${p} %`}
-                title={t.oil.steps[p].hint}
+                title={`${t.oil.steps[p].name} – ${t.oil.steps[p].hint}. ${t.oil.stepRule}`}
                 disabled={item.cancelled}
                 onClick={() => change((i) => withProgress(i, p, today))}
               >
@@ -400,22 +400,9 @@ function OilDetail({
               </button>
             ))}
           </div>
-          {/* Kritérium aktuálního kroku a otázka pro další krok (krok platí, až je celý splněný). */}
           <small className="step-help">
-            <strong>
-              {item.progress} % {t.oil.steps[item.progress].name}:
-            </strong>{' '}
-            {t.oil.steps[item.progress].hint}
+            <strong>{t.oil.steps[item.progress].name}</strong> – {t.oil.steps[item.progress].hint}
           </small>
-          {item.progress < 100 && (
-            <small className="step-help">
-              <strong>
-                {t.oil.stepNext} {nextProgress(item.progress)} %:
-              </strong>{' '}
-              {t.oil.steps[nextProgress(item.progress)].question}
-            </small>
-          )}
-          <small className="muted">{t.oil.stepRule}</small>
           <small className="muted">
             {td.opened} {dayLabel(item.opened)}
             {item.closed !== null && ` · ${td.closed} ${dayLabel(item.closed)}`}
