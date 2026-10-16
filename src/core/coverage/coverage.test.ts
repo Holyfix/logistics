@@ -144,8 +144,8 @@ describe('buildCoverage', () => {
     const t = buildCoverage([source], master.value, { transit: false });
     expect(t.days.map(dayToIso)).toEqual(['2026-10-13', '2026-10-14', '2026-10-16']);
     expect(t.lines[0]).toMatchObject({ item: '900100', project: 'P1', variant: 'LHD HUD', side: 'LHD', description: 'DOOR LHD', values: [10, 0, -9] });
-    // díl bez mapování: číslo zákazníka a projekt ze složky
-    expect(t.lines[1]).toMatchObject({ item: '', project: 'P100', description: 'ASSY DOOR RHD', values: [45, 40, 35] });
+    // díl bez mapování: číslo zákazníka a popis ze souboru (pro identifikaci), projekt prázdný – složka se nepoužije
+    expect(t.lines[1]).toMatchObject({ item: '', project: '', description: 'ASSY DOOR RHD', values: [45, 40, 35] });
   });
 
   it('číslo zákazníka v jednotném zápisu bez doplňujících nul, zápis ze souboru zůstane', () => {
@@ -195,7 +195,7 @@ describe('buildCoverage', () => {
     expect(ids({ query: 'a1234567890 0001' })).toEqual(['900100']);
     expect(ids({ query: 'A12345678900001' })).toEqual(['900100']);
     expect(ids({ query: '      0001' })).toEqual(['900100']);
-    expect(coverageOptions(t)).toEqual({ locations: ['Lokalita A'], projects: ['P1', 'P100'], variants: ['LHD HUD'], categories: [], unmapped: 1 });
+    expect(coverageOptions(t)).toEqual({ locations: ['Lokalita A'], projects: ['P1'], variants: ['LHD HUD'], categories: [], unmapped: 1 });
   });
 
   it('souhrn po variantách', () => {

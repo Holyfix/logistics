@@ -26,15 +26,13 @@ export interface SequencerPlan {
   last: DayNumber;
   /** Destinace (složka souboru coverage), ve kterých díl je. */
   locations: string[];
-  /** Projekty (složka souboru coverage), ve kterých díl je. */
-  projects: string[];
   /** Popis dílu ze souboru coverage. */
   description: string;
 }
 
 export function sequencerPlans(sources: readonly CoverageSource[], master: MasterData | undefined): Map<string, SequencerPlan> {
-  const rows = new Map<string, { days: readonly DayNumber[]; values: number[]; initial: number; location: string; project: string; description: string }[]>();
-  for (const { report, location, project } of sources) {
+  const rows = new Map<string, { days: readonly DayNumber[]; values: number[]; initial: number; location: string; description: string }[]>();
+  for (const { report, location } of sources) {
     if (report.days.length === 0) continue;
     for (const row of report.rows) {
       const m = master?.byCustomerKey.get(row.customerKey) ?? (row.supplierItem ? master?.items.get(row.supplierItem) : undefined);
@@ -42,7 +40,7 @@ export function sequencerPlans(sources: readonly CoverageSource[], master: Maste
       if (!item) continue;
       const values = row.balance.map((b, k) => b + row.transit[k]!);
       const list = rows.get(item) ?? [];
-      list.push({ days: report.days, values, initial: row.customerStock + (row.transit[0] ?? 0), location, project, description: row.description });
+      list.push({ days: report.days, values, initial: row.customerStock + (row.transit[0] ?? 0), location, description: row.description });
       rows.set(item, list);
     }
   }
@@ -58,7 +56,6 @@ export function sequencerPlans(sources: readonly CoverageSource[], master: Maste
       fileDays: [...new Set(list.flatMap((r) => r.days))].sort((x, y) => x - y),
       last: Math.max(...list.map((r) => r.days.at(-1)!)),
       locations: [...new Set(list.map((r) => r.location))],
-      projects: [...new Set(list.map((r) => r.project).filter(Boolean))],
       description: list.find((r) => r.description)?.description ?? '',
     });
   }

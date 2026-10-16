@@ -348,7 +348,7 @@ export function AssemblyPlan({ data, today, now }: { data: PlanningData; today: 
                     <td>
                       {it.side || '—'}
                       <small className="muted cell-note">
-                        {tp.assembly.pack} {formatQuantity(packOf(it, capacity), locale)}
+                        {tp.assembly.pack} {formatQuantity(packOf(it), locale)}
                       </small>
                     </td>
                     <td className="n">{formatQuantity(it.stock, locale)}</td>

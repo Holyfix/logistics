@@ -37,7 +37,7 @@ a Dodavatelé odložené. Modul Kapacity (odvolávky vs. kapacita linek) byl zva
 - **Karta za oblast** (Zákazník, Komponenty, OIL, Odvolávky, Data): barevný pruh podle nejhoršího stavu
   (červená hoří, žlutá pozor, zelená v pořádku), hlavní číslo, malé čítače a 4 nejnaléhavější položky na řádek;
   kliknutím do modulu. Nahoře souhrn: kolik oblastí hoří, pozor, v pořádku
-- ✅ **Karta Data:** staré nebo chybějící soubory a počet dílů k doplnění v mapování (Kontrola mapování v modulu Data)
+- ✅ **Karta Data:** staré nebo chybějící soubory a počet dílů k doplnění v mapování (Kontrola mapování v modulu Data); žlutá, když něco chybí
 - ✅ **Karta Zákazník = pokrytí po projektech:** za každý projekt ze souborů coverage od dneška do kdy je pokrytý
   (poslední den, kdy mají všechny díly zůstatek 0 a víc) a kolik dní – nejdřív bez transitu, pak s transitem;
   „+“ = celý horizont souboru. Červeně projekt pokrytý s transitem méně než 2 dny, žlutě jen bez transitu (čeká na
@@ -104,9 +104,9 @@ Filtry: zákazník, projekt, strana (LHD/RHD), kategorie z kmenových dat, hled�
 - ASSEMBLY (montáž): plán jako zákaznická coverage pro každý projekt; u dílu vlevo kusy po směnách, vpravo coverage
   po dnech (stav u zákazníka + náš sklad + vše naplánované), která se s každým číslem přepočítá; plánovací dny se
   přidávají a ubírají (výchozí dnes a zítra); automatické směny podle zvolené strany (LHD, RHD, obě; HUD patří
-  ke své straně) kryjí první nepokryté dny v rámci kapacity; plán po celých baleních (Order Multiple, jinak 12);
+  ke své straně) kryjí první nepokryté dny v rámci kapacity; plán po celých baleních (Order Multiple z mapování);
   vymazání jednotlivé směny; ruční úpravy kterékoli směny, kapacita směn, pořadí stran
-- Kapacity: kusů za směnu, směny po–pá a kusů v balení pro linku a projekt, začátek směn
+- Kapacity: kusů za směnu a směny po–pá pro linku a projekt, začátek směn (balení je v mapování)
 - Plán se ukládá jako Excel do složky `Plan` (soubor na linku a projekt), dá se sdílet a aplikace ho zase načte
 - Později: FOA, SLH a IMM navázané na plán montáže přes kusovník, plán vs. skutečnost a prostoje (z MES)
 

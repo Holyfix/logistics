@@ -95,7 +95,8 @@ export function buildCoverage(
         // Pořadí řádku zaručí jednoznačný klíč i pro řádky bez čísla zákazníka.
         id: `${source.path}|${index}|${row.customerKey}`,
         location: source.location,
-        project: m?.project || source.project,
+        // Vlastnosti dílu jen z mapování (bez zálohy ze složky); co chybí, hlásí Kontrola mapování.
+        project: m?.project ?? '',
         item: m?.item ?? '',
         customerNumber: customerDisplay(m?.customerNumber || row.customerNumber),
         fileCustomerNumber: row.customerNumber,
@@ -112,7 +113,8 @@ export function buildCoverage(
       });
     }
   }
-  lines.sort((a, b) => a.location.localeCompare(b.location) || a.project.localeCompare(b.project) || (a.item || a.customerNumber).localeCompare(b.item || b.customerNumber, 'en', { numeric: true }));
+  // Díly bez projektu (není v mapování nebo nemá vyplněný projekt) na konec destinace.
+  lines.sort((a, b) => a.location.localeCompare(b.location) || Number(!a.project) - Number(!b.project) || a.project.localeCompare(b.project) || (a.item || a.customerNumber).localeCompare(b.item || b.customerNumber, 'en', { numeric: true }));
   return { days, lines };
 }
 

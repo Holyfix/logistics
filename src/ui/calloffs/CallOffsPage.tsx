@@ -7,6 +7,7 @@ import { CompareView } from './CompareView';
 import { CurrentView } from './CurrentView';
 import { SummaryView } from './SummaryView';
 import { YearExportButton } from './YearExportButton';
+import { MappingNotice } from '../data/MappingPanels';
 
 type Tab = 'current' | 'summary' | 'compare';
 
@@ -97,6 +98,7 @@ export function CallOffsPage() {
           <strong>{exports.length}</strong>
         </p>
       </div>
+      <MappingNotice />
 
       <div className="tabs" role="tablist" aria-label={t.modules.calloffs.title}>
         {(['current', 'summary', 'compare'] as const).map((id) => (

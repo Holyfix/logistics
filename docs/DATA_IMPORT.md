@@ -155,12 +155,12 @@ v Komponentách se bere z Item Mappingu (sloupec Project u hotového dílu).
 | Component Item | Component, Komponenta | ano |
 | Quantity Per | Qty Per, Množství (na 1 ks nadřazeného dílu) | ano |
 | Description, UM, Purchase/Manufacture | Popis, MJ, P/M nebo sloupec s „Purchased“ v názvu, např. „P = Purchased / L = Line manufactured“ (P = nákup, L = výroba) | ne |
-| Project | Projekt; projekt hotového dílu, když ho nemá Item Mapping | ne |
+| Project | Projekt; nepoužívá se – projekt je jen z Item Mappingu | ne |
 
 - **Množství na hotový díl** = součin „Quantity Per“ od hotového dílu dolů; stejná komponenta na víc místech se sečte.
   Rozpad je hrubý: zásoba mezivýrob se neodečítá. „Start Eff“ se nepoužívá.
 - **Které komponenty se zobrazí:** ty, které mají v Item Mappingu ve sloupci „Component Coverage“ hodnotu „Ano“.
-  Když sloupec v mappingu není, zobrazí se všechny nakupované komponenty (P). Mezivýroby tak lze vynechat.
+  Když sloupec v mappingu není, nesleduje se žádná komponenta (Kontrola mapování na to upozorní).
 - **Horizont** je 14 dní od dneška. Pokrytí komponent se počítá **podle odvolávek** (nejnovější export) a našeho
   skladu komponent: stav = náš sklad komponenty − kumulovaná spotřeba (odvolávky hotových dílů × kusovník).
 - Přepínač **„Odečíst náš sklad hotových dílů a mezivýroby“** (výchozí vypnutý): odvolávky se nejdřív pokryjí naším
@@ -192,13 +192,13 @@ V prohlížeči bez přístupu ke složce se soubor stáhne a uloží se ručně
 
 | Soubor | Obsah |
 |---|---|
-| `Plan/Kapacity.xlsx` | list **Linky** (Linka, Projekt, Ks za směnu, Směny po–pá, např. `R O N`, Ks v balení – výchozí 12), list **Destinace** (Destinace, Pokrytí u zákazníka (dny), Transit (h), Příjezd; zatím se v plánu nepoužívá), list **Směny** (Ranní směna od) |
+| `Plan/Kapacity.xlsx` | list **Linky** (Linka, Projekt, Ks za směnu, Směny po–pá, např. `R O N`; starší sloupec Ks v balení se ignoruje), list **Destinace** (Destinace, Pokrytí u zákazníka (dny), Transit (h), Příjezd; zatím se v plánu nepoužívá), list **Směny** (Ranní směna od) |
 | `Plan/<linka>_<projekt>.xlsx`, např. `ASSEMBLY_P100.xlsx` | list **Plán** (Linka, Projekt, Datum, Směna, Pořadí, Strana, Díl, Číslo zákazníka, Popis, Množství; jeden řádek = díl na směně v pořadí výroby), list **Přehled** (díly × směny, jen pro čtení), list **Kapacita směn** (Datum, Směna, Kapacita = ručně zadaná kapacita, Automaticky = `LHD`, `RHD` nebo `LHD+RHD` u směn s automatickým plánem) |
 
 - Jeden soubor na linku a projekt: každou linku plánuje jeden člověk, takže se zápisy nepotkají.
   Když soubor mezitím změnil někdo jiný, aplikace se před přepsáním zeptá.
-- **Díly montáže:** jen díly se souborem coverage; se sloupcem Line v mapování jen díly s Line = `ASSEMBLY`.
-  Projekt z mapování, jinak ze složky souboru coverage. Plán je po projektech (každý projekt má jiný soubor coverage).
+- **Díly montáže:** díly se souborem coverage, které mají v mapování Line = `ASSEMBLY`. Projekt, strana a balení
+  jen z mapování (bez zálohy ze složky nebo popisu). Plán je po projektech.
 - **Plán vypadá jako coverage:** u každého dílu vlevo kusy po směnách plánovacích dnů, vpravo coverage po dnech:
   stav u zákazníka na konci dne podle souboru coverage (jeho sklad + transit − jeho plán) + náš sklad hotového dílu
   (vždy) + **vše naplánované, přičtené do všech dnů** (první nepokrytý den −50 a v plánu 60 ks → 10; kdy vyrobit,
@@ -218,7 +218,7 @@ V prohlížeči bez přístupu ke složce se soubor stáhne a uloží se ručně
   řadí po stranách (LHD a RHD nikdy zároveň); pořadí „LHD → RHD“ = nejdřív LHD, pak přestavba na RHD. Směna začíná
   stranou, kterou skončila předchozí směna (ruční i automatická), jinak LHD; podle toho se rozhoduje i shoda dne
   u volby obě strany.
-- **Balení:** kusy se plánují po celých baleních: Order Multiple z mapování, jinak Ks v balení linky (výchozí 12).
+- **Balení:** kusy se plánují po celých baleních podle Order Multiple z mapování; díl bez balení se nezaokrouhluje.
   Automatický plán zaokrouhluje nahoru (kusy navíc pokryjí další dny) a do kapacity směny dá jen celá balení;
   ručně jde zadat libovolné číslo.
 - **Vymazat směnu:** tlačítko ↺ nad směnou vymaže její kusy i automatický plán (kapacita směny zůstane).

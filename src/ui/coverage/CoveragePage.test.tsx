@@ -109,12 +109,12 @@ describe('CoveragePage', () => {
 
   it('projekt z adresy (odkaz z Dashboardu) nastaví filtr projektu', () => {
     const other: CoverageSource = { ...source, path: 'Coverage/Lokalita B/P200/r.xlsx', location: 'Lokalita B', project: 'P200' };
-    location.hash = '#coverage?project=P200';
+    location.hash = '#coverage?project=P100';
     try {
       renderWith(<CoveragePage />, { ...state, data: { ...state.data!, coverage: [source, other] } });
-      expect((screen.getByLabelText('Projekt') as HTMLSelectElement).value).toBe('P200');
-      // Ze 4 řádků zůstane jen díl bez mapování ze souboru P200 (díl z mapování patří podle mapování k P100).
-      expect(bodyRows()).toHaveLength(1);
+      expect((screen.getByLabelText('Projekt') as HTMLSelectElement).value).toBe('P100');
+      // Ze 4 řádků zůstane díl z mapování (P100) z obou souborů; díly bez mapování nemají projekt (složka se nepoužije).
+      expect(bodyRows()).toHaveLength(2);
     } finally {
       location.hash = '';
     }

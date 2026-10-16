@@ -17,6 +17,7 @@ import { ExportButtons, type ExportTable } from '../calloffs/ExportButtons';
 import { useData } from '../data/DataProvider';
 import { localToday } from '../components/useComponents';
 import { Icon } from '../icons';
+import { MappingNotice } from '../data/MappingPanels';
 
 type RowsMode = 'all' | 'negativeAny' | 'negativeOn';
 
@@ -177,6 +178,7 @@ export function CoveragePage({ today = localToday() }: { today?: DayNumber } = {
           <strong>{new Date(newest).toLocaleString(locale === 'cs' ? 'cs-CZ' : 'en-GB', { dateStyle: 'short', timeStyle: 'short' })}</strong>
         </p>
       </div>
+      <MappingNotice />
 
       <div className="kpis">
         <div className="kpi">

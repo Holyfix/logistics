@@ -19,39 +19,44 @@ const callOffs = (items: string[]) => ({ items, descriptions: items.map((i) => `
 describe('kontrola mapování', () => {
   const m = master(
     [
-      'Item Number;Customer Number;Description;Project;Customer;Side;Category;Order Multiple;Line',
-      '100;A1111111111 0001;DOOR;P1;Z1;LHD;DP;12;ASSEMBLY',
-      '101;A2222222222 0001;PANEL;P1;;RHD;;;ASSEMBLY',
-      '102;;CLIP;P2;Z1;LHD;GB;;IMM',
+      'Item Number;Customer Number;Description;Project;Customer;Side;Category;Order Multiple;Line;Component Coverage',
+      '100;A1111111111 0001;DOOR;P1;Z1;LHD;DP;12;ASSEMBLY;',
+      '101;A2222222222 0001;PANEL;P1;;RHD;;;ASSEMBLY;',
+      '102;;CLIP;P2;Z1;LHD;GB;;IMM;',
+      '103;A3333333333 0001;;P1;Z1;LHD;DP;;;',
     ].join('\n'),
   );
 
-  it('díly bez mapování z Coverage i odvolávek, neúplné údaje a jiný projekt než složka', () => {
-    const check = checkMapping(
-      m,
-      [source('P1', [row('A1111111111 0001'), row('A2222222222 0001'), row('A9999999999 0001', '', 'NEW PART')]), source('P9', [row('A1111111111 0001')])],
-      callOffs(['100', '102', '900', '900X']),
-    );
-    expect(check.missing.map((p) => [p.item || p.customerNumber, p.project, p.sources])).toEqual([
-      ['900', '', ['calloffs']],
-      ['900X', '', ['calloffs']],
+  it('díly bez mapování z Coverage, odvolávek i kusovníku a díly s nevyplněnými údaji', () => {
+    const check = checkMapping(m, {
+      coverage: [source('P1', [row('A1111111111 0001'), row('A2222222222 0001'), row('A3333333333 0001'), row('A9999999999 0001', '', 'NEW PART')])],
+      callOffs: callOffs(['100', '102', '900']),
+      bomParents: ['900', 'FG-X', '100'],
+    });
+    expect(check.missing.map((p) => [p.item || p.customerNumber, p.folder, p.sources])).toEqual([
+      ['900', '', ['calloffs', 'bom']],
       ['A9999999999 0001', 'P1', ['coverage']],
+      ['FG-X', '', ['bom']],
     ]);
-    // 101: chybí zákazník, kategorie a balení (jde do montáže); 102 je jen v odvolávkách – balení se nekontroluje.
-    expect(check.incomplete.map((p) => [p.item, p.missing])).toEqual([['101', ['customer', 'category', 'orderMultiple']]]);
-    expect(check.mismatch).toEqual([{ item: '100', description: 'DOOR', mapping: 'P1', folders: ['P9'] }]);
+    // 101: chybí zákazník, kategorie a balení (jde do montáže); 103: chybí popis a linka (je v Coverage);
+    // 102 není v Coverage – linka a balení se nekontrolují.
+    expect(check.incomplete.map((p) => [p.item, p.missing])).toEqual([
+      ['101', ['customer', 'category', 'orderMultiple']],
+      ['103', ['description', 'line']],
+    ]);
     expect(check.missingColumns).toEqual([]);
     expect(checkCount(check)).toBe(5);
   });
 
-  it('chybějící sloupec se hlásí jednou, ne u každého dílu', () => {
-    const check = checkMapping(master('Item Number;Project\n100;P1'), [], callOffs(['100']));
-    expect(check.missingColumns).toEqual(['customer', 'side', 'category', 'orderMultiple']);
-    expect(check.incomplete).toEqual([]);
+  it('chybějící sloupec se hlásí jednou, ne u každého dílu; Component Coverage jen s kusovníkem', () => {
+    const plain = master('Item Number;Project\n100;P1');
+    expect(checkMapping(plain, { coverage: [], callOffs: callOffs(['100']) }).missingColumns).toEqual(['customer', 'side', 'category', 'description', 'line', 'orderMultiple']);
+    expect(checkMapping(plain, { coverage: [], callOffs: callOffs(['100']), bomParents: ['100'] }).missingColumns).toContain('componentCoverage');
+    expect(checkMapping(plain, { coverage: [], callOffs: callOffs(['100']) }).incomplete).toEqual([]);
   });
 
   it('strana z varianty: bez sloupce Side stačí Variant', () => {
-    const check = checkMapping(master('Item Number;Project;Variant\n100;P1;LHD BASIS\n101;P1;BASIS'), [], callOffs(['100', '101']));
+    const check = checkMapping(master('Item Number;Project;Variant\n100;P1;LHD BASIS\n101;P1;BASIS'), { coverage: [], callOffs: callOffs(['100', '101']) });
     expect(check.missingColumns).not.toContain('side');
     expect(check.incomplete.map((p) => [p.item, p.missing])).toEqual([['101', ['side']]]);
   });
