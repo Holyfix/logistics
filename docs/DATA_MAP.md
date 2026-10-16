@@ -47,13 +47,27 @@ Sloupce Type, Safety Stock a Safety Time se zatím nepoužívají.
 
 ## Kontrola mapování (modul Data)
 
-Kontroluje díly, se kterými aplikace pracuje (soubory Coverage, aktuální export odvolávek, hotové díly z kusovníků):
+Ukazuje přesně, **co v Item_Mapping doplnit a kvůli kterým modulům**.
 
-1. **Díly bez mapování** – číslo zákazníka z Coverage nebo díl z odvolávek či kusovníku, který v mapování není.
-   U dílů z Coverage je jako nápověda složka (projekt).
-2. **Díly s nevyplněnými údaji** – prázdný projekt, zákazník, strana, kategorie nebo popis; linka u dílů z Coverage;
-   balení u dílů s Line = ASSEMBLY.
-3. **Chybějící sloupce** – když v souboru chybí celý sloupec (Component Coverage jen s načteným kusovníkem), hlásí se
-   jednou nahoře, ne u každého dílu.
+**Co který modul potřebuje** (u dílů, se kterými pracuje):
 
-Celou kontrolu lze stáhnout do Excelu. Počet dílů k doplnění ukazuje i dlaždice Data na Dashboardu.
+| Modul | Díly | Sloupce mapování |
+|---|---|---|
+| Coverage (i dlaždice Zákazník) | díly ze souborů Coverage | Project, Variant, Category, Description |
+| Odvolávky | díly z aktuálního exportu | Project, Customer, Side, Category, Description |
+| Plánování | díly z Coverage | Line; u dílů s Line = ASSEMBLY navíc Project, Side, Order Multiple |
+| Komponenty | hotové díly z kusovníků | Project, Category, Description; sloupec Component Coverage (komponenty = Ano) |
+
+Strana se bere ze sloupce Side, jinak z LHD/RHD na začátku Variant – stačí jeden z nich.
+
+**Co kontrola ukazuje:**
+
+1. **Sloupce** – sloupec, který v souboru chybí (a které moduly ho potřebují), Line bez jediného ASSEMBLY u dílů
+   z Coverage (prázdný plán montáže), Component Coverage bez jediného Ano (Komponenty nic nesledují).
+2. **Co chybí po modulech** – tabulka modul × sloupec: počet dílů, u kterých je potřeba údaj doplnit, ✓ v pořádku,
+   · modul údaj nepotřebuje. Kliknutím na modul se seznam dílů vyfiltruje.
+3. **Díly k doplnění** – pro každý díl: celý nový řádek (díl v mapování není; u dílů z Coverage s nápovědou složky),
+   nebo konkrétní sloupce (např. „Balení (Order Multiple)“), a kvůli kterým modulům. Filtr podle modulu.
+
+Celou kontrolu lze stáhnout do Excelu (listy Co doplnit, Po modulech, Sloupce). V modulech Coverage, Odvolávky,
+Plánování a Komponenty je nahoře upozornění jen pro daný modul; dlaždice Data na Dashboardu je žlutá, když něco chybí.

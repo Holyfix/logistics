@@ -178,7 +178,7 @@ export function CoveragePage({ today = localToday() }: { today?: DayNumber } = {
           <strong>{new Date(newest).toLocaleString(locale === 'cs' ? 'cs-CZ' : 'en-GB', { dateStyle: 'short', timeStyle: 'short' })}</strong>
         </p>
       </div>
-      <MappingNotice />
+      <MappingNotice module="coverage" />
 
       <div className="kpis">
         <div className="kpi">
