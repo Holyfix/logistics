@@ -12,6 +12,7 @@ import {
   statusOf,
   updateItem,
   withComment,
+  withoutComment,
   withDue,
   withProgress,
   type OilItem,
@@ -92,6 +93,11 @@ describe('OIL', () => {
   it('odpovědní po osobách', () => {
     expect(ownerNames('A.Novák / B.Dvořák, C.Malá; ')).toEqual(['A.Novák', 'B.Dvořák', 'C.Malá']);
     expect(ownerNames('')).toEqual([]);
+  });
+
+  it('smazání komentáře podle pořadí, ostatní zůstanou', () => {
+    const item = withComment(withComment(withComment(sample(), 'a', 'X', '1'), 'b', 'X', '2'), 'c', 'X', '3');
+    expect(withoutComment(item, 1).comments.map((c) => c.text)).toEqual(['a', 'c']);
   });
 
   it('trvalé smazání odstraní bod i s historií, ostatní zůstanou', () => {

@@ -90,6 +90,22 @@ describe('OilPage', () => {
     fireEvent.change(within(detail).getByLabelText('Přidat komentář'), { target: { value: 'Objednáno u dodavatele' } });
     fireEvent.click(within(detail).getByRole('button', { name: 'Přidat komentář' }));
     expect(within(detail).getByText(/Objednáno u dodavatele/)).toBeTruthy();
+
+    // Komentáře od nejstaršího; smazání křížkem po potvrzení.
+    fireEvent.change(within(detail).getByLabelText('Přidat komentář'), { target: { value: 'Dodávka potvrzena' } });
+    fireEvent.click(within(detail).getByRole('button', { name: 'Přidat komentář' }));
+    const comments = () => [...detail.querySelectorAll('.oil-comment')].map((li) => li.textContent);
+    expect(comments()[0]).toContain('Objednáno u dodavatele');
+    expect(comments()[1]).toContain('Dodávka potvrzena');
+    const confirm = window.confirm;
+    try {
+      window.confirm = () => true;
+      fireEvent.click(within(detail).getByRole('button', { name: 'Smazat komentář 1' }));
+    } finally {
+      window.confirm = confirm;
+    }
+    expect(comments()).toHaveLength(1);
+    expect(comments()[0]).toContain('Dodávka potvrzena');
     expect(localStorage.getItem('logistics-user-name')).toBe('Logistika');
 
     // Nový bod a filtr Hotové.

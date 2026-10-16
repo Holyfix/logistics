@@ -1,5 +1,5 @@
 import { useMemo, type ReactNode } from 'react';
-import { buildCoverage } from '../../core/coverage/compute';
+import { buildCoverage, SHORTAGE_DAYS } from '../../core/coverage/compute';
 import { callOffDigest, componentAlerts, customerAlerts, dataFreshness, oilAlerts, projectCoverage, type Severity } from '../../core/dashboard';
 import { dayToIso, weekday, type DayNumber } from '../../core/dates';
 import { formatDayShort, formatPercent, formatQuantity, formatSigned } from '../../core/format';
@@ -317,46 +317,32 @@ export function DashboardPage({ today = localToday(), now = Date.now() }: { toda
             <table className="table table-data">
               <thead>
                 <tr>
-                  <th>{td.projects.project}</th>
-                  <th>{td.projects.coveredUntil}</th>
-                  <th>{td.projects.firstShort}</th>
-                  <th className="n">{td.projects.missing}</th>
-                  <th className="n">{td.projects.shortParts}</th>
-                  <th>{td.projects.plain}</th>
+                  <th rowSpan={2}>{td.projects.project}</th>
+                  <th colSpan={2}>{td.projects.withTransit}</th>
+                  <th colSpan={2}>{td.projects.withoutTransit}</th>
+                </tr>
+                <tr>
+                  <th>{td.projects.until}</th>
+                  <th className="n">{td.projects.days}</th>
+                  <th>{td.projects.until}</th>
+                  <th className="n">{td.projects.days}</th>
                 </tr>
               </thead>
               <tbody>
                 {projects.map((p) => (
                   <tr key={p.project}>
                     <td>
-                      <Dot tone={p.severity ?? 'ok'} /> <strong>{p.project || td.projects.noProject}</strong>{' '}
-                      <small className="muted">
-                        · {formatQuantity(p.parts, locale)} {td.projects.parts}
-                      </small>
+                      <Dot tone={p.severity ?? 'ok'} /> <strong>{p.project || td.projects.noProject}</strong>
                     </td>
-                    <td>
-                      {p.coveredUntil === null ? (
-                        <span className="cell-short">{td.projects.notToday}</span>
-                      ) : p.firstShort === null ? (
-                        <>
-                          {dayLabel(p.coveredUntil)} <small className="muted">({td.projects.whole})</small>
-                        </>
-                      ) : (
-                        dayLabel(p.coveredUntil)
-                      )}
-                    </td>
-                    <td>{p.firstShort === null ? <span className="muted">—</span> : <span className={p.severity === 'crit' ? 'cell-short' : undefined}>{dayLabel(p.firstShort)}</span>}</td>
-                    <td className="n">{p.firstShort === null ? <span className="muted">—</span> : <strong>{pcs(p.missing)}</strong>}</td>
-                    <td className="n">{p.firstShort === null ? '' : formatQuantity(p.shortParts, locale)}</td>
-                    <td>
-                      {p.firstShortPlain === null ? (
-                        <span className="muted">—</span>
-                      ) : p.firstShortPlain === p.firstShort ? (
-                        <span className="muted">{td.projects.same}</span>
-                      ) : (
-                        dayLabel(p.firstShortPlain)
-                      )}
-                    </td>
+                    {[p.withTransit, p.withoutTransit].flatMap((c, k) => [
+                      <td key={`u${k}`}>{c.until === null ? <span className="cell-short">{td.projects.notCovered}</span> : dayLabel(c.until)}</td>,
+                      <td key={`d${k}`} className="n">
+                        <strong className={c.days < SHORTAGE_DAYS && !c.whole ? 'cell-short' : undefined}>
+                          {formatQuantity(c.days, locale)}
+                          {c.whole && '+'}
+                        </strong>
+                      </td>,
+                    ])}
                   </tr>
                 ))}
               </tbody>

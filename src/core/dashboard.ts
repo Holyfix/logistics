@@ -238,29 +238,27 @@ export function oilAlerts(list: OilList, today: DayNumber): OilAlert[] {
 /** Do kolika dní od dneška se nepokrytý projekt hlásí jako „pozor“ (dál jen pro informaci). */
 export const PROJECT_WARN_DAYS = 7;
 
+/** Pokrytí projektu: poslední pokrytý den a kolik dní od dneška to je. */
+export interface CoverageSpan {
+  /** Poslední den, kdy mají všechny díly projektu zůstatek 0 a víc; null = nepokryto už dnes. */
+  until: DayNumber | null;
+  /** Počet pokrytých dní od dneška (dnes včetně); 0 = nepokryto už dnes. */
+  days: number;
+  /** Pokryto po celý horizont souboru (skutečné pokrytí může být delší). */
+  whole: boolean;
+}
+
 export interface ProjectCoverage {
   project: string;
-  /** Počet dílů projektu v souborech coverage. */
-  parts: number;
-  /** Poslední pokrytý den (s transitem); null = nepokryto už dnes. */
-  coveredUntil: DayNumber | null;
-  /** První nepokrytý den (s transitem); null = pokryto po celý horizont souboru. */
-  firstShort: DayNumber | null;
-  /** Kolik kusů první nepokrytý den chybí (součet za díly projektu). */
-  missing: number;
-  /** Kolik dílů první nepokrytý den chybí. */
-  shortParts: number;
-  /** První nepokrytý den bez transitu; null = bez transitu pokryto po celý horizont. */
-  firstShortPlain: DayNumber | null;
-  /** Poslední den, který soubory projektu obsahují. */
-  horizon: DayNumber | null;
-  /** crit = nepokryto dnes nebo zítra, warn = do 7 dní, info = později, null = pokryto po celý horizont. */
+  withTransit: CoverageSpan;
+  withoutTransit: CoverageSpan;
+  /** Podle pokrytí s transitem: crit = nepokryto dnes nebo zítra, warn = do 7 dní, info = později, null = celý horizont. */
   severity: Severity | null;
 }
 
 /**
- * Pokrytí po projektech od dneška: do kdy je projekt pokrytý (s transitem), první nepokrytý den a kolik kusů ten den
- * chybí (součet záporných zůstatků dílů projektu). `withTransit` a `withoutTransit` jsou stejná data s transitem a bez.
+ * Pokrytí po projektech od dneška: do kdy mají všechny díly projektu zůstatek 0 a víc a kolik dní to je, s transitem
+ * i bez. `withTransit` a `withoutTransit` jsou stejná data (stejné pořadí řádků) s transitem a bez.
  */
 export function projectCoverage(withTransit: CoverageTable, withoutTransit: CoverageTable, today: DayNumber): ProjectCoverage[] {
   const days = withTransit.days;
@@ -268,30 +266,29 @@ export function projectCoverage(withTransit: CoverageTable, withoutTransit: Cove
   if (from === -1) return [];
   const groups = new Map<string, number[]>();
   withTransit.lines.forEach((line, i) => groups.set(line.project, [...(groups.get(line.project) ?? []), i]));
-  const firstOf = (table: CoverageTable, rows: number[]) => {
+
+  const span = (table: CoverageTable, rows: number[]): CoverageSpan => {
     const ks = rows.map((i) => firstShort(table.lines[i]!.values, from)).filter((k): k is number => k !== null);
-    return ks.length ? Math.min(...ks) : null;
+    if (ks.length) {
+      const k = Math.min(...ks);
+      return { until: k > from ? days[k - 1]! : null, days: days[k]! - today, whole: false };
+    }
+    let last = -1;
+    for (const i of rows) table.lines[i]!.values.forEach((v, d) => v !== null && d > last && (last = d));
+    return last >= from ? { until: days[last]!, days: days[last]! - today + 1, whole: true } : { until: null, days: 0, whole: true };
   };
+
   return [...groups.entries()]
     .map(([project, rows]): ProjectCoverage => {
-      const k = firstOf(withTransit, rows);
-      const kPlain = firstOf(withoutTransit, rows);
-      let last = -1;
-      for (const i of rows) withTransit.lines[i]!.values.forEach((v, d) => v !== null && d > last && (last = d));
-      const short = k === null ? [] : rows.map((i) => withTransit.lines[i]!.values[k] ?? 0).filter((v) => v < -1e-9);
-      const day = k === null ? null : days[k]!;
-      const severity: Severity | null = day === null ? null : day < today + SHORTAGE_DAYS ? 'crit' : day < today + PROJECT_WARN_DAYS ? 'warn' : 'info';
-      return {
-        project,
-        parts: rows.length,
-        coveredUntil: k === null ? (last >= from ? days[last]! : null) : k > from ? days[k - 1]! : null,
-        firstShort: day,
-        missing: short.reduce((a, b) => a - b, 0),
-        shortParts: short.length,
-        firstShortPlain: kPlain === null ? null : days[kPlain]!,
-        horizon: last >= 0 ? days[last]! : null,
-        severity,
-      };
+      const withT = span(withTransit, rows);
+      const severity: Severity | null = withT.whole ? null : withT.days < SHORTAGE_DAYS ? 'crit' : withT.days < PROJECT_WARN_DAYS ? 'warn' : 'info';
+      return { project, withTransit: withT, withoutTransit: span(withoutTransit, rows), severity };
     })
-    .sort((a, b) => (a.firstShort ?? Infinity) - (b.firstShort ?? Infinity) || b.missing - a.missing || a.project.localeCompare(b.project, 'cs'));
+    .sort(
+      (a, b) =>
+        Number(a.withTransit.whole) - Number(b.withTransit.whole) ||
+        a.withTransit.days - b.withTransit.days ||
+        a.withoutTransit.days - b.withoutTransit.days ||
+        a.project.localeCompare(b.project, 'cs'),
+    );
 }

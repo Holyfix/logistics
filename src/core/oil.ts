@@ -114,6 +114,11 @@ export function withComment(item: OilItem, text: string, author: string, at: str
   return { ...item, comments: [...item.comments, { at, author, text: text.trim() }] };
 }
 
+/** Bod bez komentáře na daném pořadí (0 = nejstarší). */
+export function withoutComment(item: OilItem, index: number): OilItem {
+  return { ...item, comments: item.comments.filter((_, k) => k !== index) };
+}
+
 // --- Soubor OIL.xlsx ---
 
 const COLUMNS = {

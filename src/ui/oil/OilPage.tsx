@@ -14,6 +14,7 @@ import {
   statusOf,
   updateItem,
   withComment,
+  withoutComment,
   withDue,
   withProgress,
   type OilItem,
@@ -459,12 +460,24 @@ function OilDetail({
             <small className="muted">{td.noComments}</small>
           ) : (
             <ol className="oil-history">
-              {[...item.comments].reverse().map((c, k) => (
-                <li key={k}>
+              {/* Od nejstaršího po nejnovější (nový komentář se přidává dolů); křížek se ukáže po najetí myší. */}
+              {item.comments.map((c, k) => (
+                <li key={k} className="oil-comment">
                   <span className="muted">
                     {c.at} · {c.author || '—'}
                   </span>{' '}
                   {c.text}
+                  <button
+                    type="button"
+                    className="oil-comment-delete"
+                    aria-label={`${td.deleteComment} ${k + 1}`}
+                    title={td.deleteComment}
+                    onClick={() => {
+                      if (window.confirm(td.deleteCommentConfirm)) change((i) => withoutComment(i, k));
+                    }}
+                  >
+                    ×
+                  </button>
                 </li>
               ))}
             </ol>

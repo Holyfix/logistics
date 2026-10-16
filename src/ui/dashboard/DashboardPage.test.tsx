@@ -99,11 +99,9 @@ describe('DashboardPage', () => {
     expect(card('Zákazník').querySelector('.dash-counters')!.textContent).toBe('1 čeká na transit0 později');
     expect(lines('Zákazník')).toEqual(['FG-L P1zítra · 50 ks', 'FG-R P1 · čeká na transitzítra · 30 ks']);
     expect(card('Zákazník').getAttribute('href')).toBe('#coverage');
-    // Pokrytí po projektech: P1 nepokrytý zítra (FG-L 50 ks), bez transitu také zítra (FG-R).
+    // Pokrytí po projektech: P1 pokrytý jen dnes (zítra chybí FG-L i s transitem), bez transitu také.
     const projectRow = screen.getByText('Pokrytí po projektech').closest('.panel')!.querySelector('tbody tr')!;
-    expect(projectRow.textContent).toContain('P1');
-    expect(projectRow.textContent).toContain('zítra');
-    expect(projectRow.textContent).toContain('50 ks');
+    expect([...projectRow.querySelectorAll('td')].map((td) => td.textContent)).toEqual([' P1', 'dnes', '1', 'dnes', '1']);
     // Komponenty bez kusovníku.
     expect(card('Komponenty').textContent).toContain('Kusovník není načtený.');
     // OIL: po termínu, termín do 7 dní, později; hotové ne.
