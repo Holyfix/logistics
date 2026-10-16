@@ -5,8 +5,8 @@ Odkud aplikace bere jednotlivé údaje a jak jsou soubory navázané. Stejné ta
 
 ## Princip
 
-- **Item_Mapping je jediný zdroj vlastností dílu** (projekt, zákazník, strana, varianta, kategorie, popis, linka,
-  balení, sledování komponent). Aplikace je **nedoplňuje odjinud** – ani ze složky Coverage, ani z kusovníku, ani
+- **Item_Mapping je jediný zdroj vlastností dílu** (druh dílu, projekt, kategorie, strana, varianta, popis, linka,
+  balení). Aplikace je **nedoplňuje odjinud** – ani ze složky Coverage, ani z kusovníku, ani
   z popisu. Co se má změnit, mění se jen v mapování.
 - Co v mapování chybí, **ukáže Kontrola mapování** (modul Data) a upozornění nahoře v modulech Coverage, Odvolávky,
   Plánování a Komponenty; dlaždice Data na Dashboardu je pak žlutá.

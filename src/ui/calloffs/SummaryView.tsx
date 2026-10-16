@@ -1,5 +1,5 @@
 import { useMemo, useState, type ReactNode } from 'react';
-import { MISSING_MASTER, type ItemFilter } from '../../core/calloffs/filter';
+import { ITEM_FIELDS, MISSING_MASTER, type ItemField, type ItemFilter } from '../../core/calloffs/filter';
 import type { CallOffExport } from '../../core/calloffs/parse';
 import { summarize, visibleNodes, type SummaryNode } from '../../core/calloffs/summary';
 import { summaryReport } from '../../core/calloffs/summaryReport';
@@ -22,7 +22,7 @@ interface Props {
   filters: ReactNode;
 }
 
-/** Přehled po projektech: Projekt → Kategorie → Strana se součty odvolávek po týdnech. */
+/** Přehled po projektech: Projekt → Kategorie → Strana → Varianta se součty odvolávek po týdnech. */
 export function SummaryView({ current, previous, items, master, filter, filters }: Props) {
   const { t, locale } = useI18n();
   const ts = t.calloffs.summary;
@@ -45,8 +45,8 @@ export function SummaryView({ current, previous, items, master, filter, filters 
   const backlog = tree.reduce((s, n) => s + n.backlog, 0);
   const diff = previous ? tree.reduce((s, n) => s + (n.diff ?? 0), 0) : null;
 
-  const none = [ts.noProject, ts.noCategory, ts.noSide];
-  const label = (n: SummaryNode) => n.label || none[n.level]!;
+  const none: Record<ItemField, string> = { project: ts.noProject, category: ts.noCategory, side: ts.noSide, variant: ts.noVariant };
+  const label = (n: SummaryNode) => n.label || none[n.field];
   const toggle = (key: string) =>
     setCollapsed((c) => {
       const next = new Set(c);
@@ -54,26 +54,29 @@ export function SummaryView({ current, previous, items, master, filter, filters 
       else next.add(key);
       return next;
     });
-  const collapseTo = (level: number) => {
+  // Sbalí uzly zvoleného údaje a dalších (např. „Kategorie“ = vidět projekty a jejich kategorie).
+  const collapseTo = (field: ItemField) => {
+    const from = ITEM_FIELDS.indexOf(field);
     const keys: string[] = [];
-    const walk = (nodes: readonly SummaryNode[]) => nodes.forEach((n) => (n.level >= level && n.children.length ? keys.push(n.key) : null, walk(n.children)));
+    const walk = (nodes: readonly SummaryNode[]) => nodes.forEach((n) => (ITEM_FIELDS.indexOf(n.field) >= from && n.children.length ? keys.push(n.key) : null, walk(n.children)));
     walk(tree);
     setCollapsed(new Set(keys));
   };
 
   const buildExport = (): ExportTable => {
     const out: (string | number | null)[][] = [];
-    const walk = (nodes: readonly SummaryNode[], path: string[]) =>
+    // Každý řádek s údaji své větve (přeskočená strana nebo varianta zůstane prázdná).
+    const walk = (nodes: readonly SummaryNode[], path: Partial<Record<ItemField, string>>) =>
       nodes.forEach((n) => {
-        const p = [...path, label(n)];
-        out.push([p[0] ?? '', n.level >= 1 ? (p[1] ?? '') : '', n.level >= 2 ? (p[2] ?? '') : '', n.items, n.backlog, ...n.values, n.total, n.diff]);
+        const p = { ...path, [n.field]: label(n) };
+        out.push([...ITEM_FIELDS.map((f) => p[f] ?? ''), n.items, n.backlog, ...n.values, n.total, n.diff]);
         walk(n.children, p);
       });
-    walk(tree, []);
+    walk(tree, {});
     return {
       fileName: `${t.calloffs.export.fileName}_${ts.fileName}_CW${current.week}-${current.year}`,
       sheetName: ts.tab,
-      header: [ts.project, ts.category, ts.side, ts.items, t.calloffs.table.backlog, ...periods.map((p) => p.label), t.calloffs.table.total, previous ? `${ts.diff} CW ${previous.week}` : ts.diff],
+      header: [ts.project, ts.category, ts.side, ts.variant, ts.items, t.calloffs.table.backlog, ...periods.map((p) => p.label), t.calloffs.table.total, previous ? `${ts.diff} CW ${previous.week}` : ts.diff],
       rows: out,
     };
   };
@@ -89,10 +92,7 @@ export function SummaryView({ current, previous, items, master, filter, filters 
       .join(' · ');
     const tf = t.calloffs.filters;
     const chosen = [
-      filter.customer ? `${tf.customer}: ${filter.customer === MISSING_MASTER ? tr.missing : filter.customer}` : null,
-      filter.project ? `${tf.project}: ${filter.project}` : null,
-      filter.side ? `${tf.side}: ${filter.side}` : null,
-      filter.category ? `${tf.category}: ${filter.category}` : null,
+      ...ITEM_FIELDS.map((f) => (filter[f] ? `${tf[f]}: ${filter[f] === MISSING_MASTER ? tr.missing : filter[f]}` : null)),
       filter.query.trim() ? `${tr.search}: „${filter.query.trim()}“` : null,
     ].filter(Boolean);
     const sheets = summaryReport(rows, tree, currentRows, periods, master, {
@@ -104,6 +104,7 @@ export function SummaryView({ current, previous, items, master, filter, filters 
       project: ts.project,
       category: ts.category,
       side: ts.side,
+      variant: ts.variant,
       item: tr.item,
       description: tr.description,
       backlog: tr.backlog,
@@ -111,7 +112,7 @@ export function SummaryView({ current, previous, items, master, filter, filters 
       diff: tr.diff,
       diffPercent: tr.diffPercent,
       sum: tr.sum,
-      none: [ts.noProject, ts.noCategory, ts.noSide],
+      none,
       sheetSummary: tr.sheetSummary,
       sheetItems: tr.sheetItems,
     });
@@ -138,14 +139,17 @@ export function SummaryView({ current, previous, items, master, filter, filters 
             </select>
           </label>
           <span className="segmented" role="group" aria-label={ts.depth}>
-            <button type="button" onClick={() => collapseTo(0)}>
+            <button type="button" onClick={() => collapseTo('project')}>
               {ts.depthProjects}
             </button>
-            <button type="button" onClick={() => collapseTo(1)}>
+            <button type="button" onClick={() => collapseTo('category')}>
               {ts.depthCategories}
             </button>
-            <button type="button" onClick={() => setCollapsed(new Set())}>
+            <button type="button" onClick={() => collapseTo('side')}>
               {ts.depthSides}
+            </button>
+            <button type="button" onClick={() => setCollapsed(new Set())}>
+              {ts.depthVariants}
             </button>
           </span>
           <ExportButtons build={buildExport} excel={downloadManagement} excelTitle={ts.report.buttonTitle} />

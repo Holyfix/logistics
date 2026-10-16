@@ -15,6 +15,7 @@ import { formatDayShort, formatQuantity, type Locale } from '../../core/format';
 import type { MasterItem } from '../../core/masterdata';
 import { useI18n } from '../../i18n/I18nProvider';
 import { ExportButtons, type ExportTable } from './ExportButtons';
+import { ItemFieldCells, ItemFieldHeaders, itemFieldValues, useItemFieldLabels } from './ItemFields';
 
 const RANGES: Record<Granularity, PeriodCount[]> = { week: [12, 26, 52, 'all'], day: [15, 30, 60] };
 
@@ -34,6 +35,7 @@ interface Props {
 
 export function CurrentView({ current, previous, items, master, filters }: Props) {
   const { t, locale } = useI18n();
+  const fieldLabels = useItemFieldLabels();
   const [granularity, setGranularity] = useState<Granularity>('week');
   const [range, setRange] = useState<Record<Granularity, PeriodCount>>({ week: DEFAULT_WEEKS, day: 15 });
   const count = range[granularity];
@@ -59,16 +61,13 @@ export function CurrentView({ current, previous, items, master, filters }: Props
       header: [
         t.calloffs.table.item,
         t.calloffs.table.description,
-        t.calloffs.table.customer,
-        t.calloffs.table.project,
-        t.calloffs.table.side,
+        ...fieldLabels,
         t.calloffs.table.backlog,
         ...periods.map((p) => (granularity === 'week' ? p.label : dayToIso(p.start))),
         t.calloffs.table.total,
       ],
       rows: rows.map((r) => {
-        const m = master?.get(r.item);
-        return [r.item, r.description, m?.customer ?? '', m?.project ?? '', m?.side ?? '', r.backlog, ...r.values, r.total];
+        return [r.item, r.description, ...itemFieldValues(master?.get(r.item)), r.backlog, ...r.values, r.total];
       }),
     };
   };
@@ -142,8 +141,7 @@ export function CurrentView({ current, previous, items, master, filters }: Props
                 <tr>
                   <th className="sticky-col">{t.calloffs.table.item}</th>
                   <th>{t.calloffs.table.description}</th>
-                  <th>{t.calloffs.table.project}</th>
-                  <th>{t.calloffs.table.side}</th>
+                  <ItemFieldHeaders />
                   <th className="n">{t.calloffs.table.backlog}</th>
                   {periods.map((p) => (
                     <th key={p.start} className="n">
@@ -162,8 +160,7 @@ export function CurrentView({ current, previous, items, master, filters }: Props
                         <strong>{r.item}</strong>
                       </td>
                       <td className="desc">{r.description}</td>
-                      <td>{m?.project ?? '—'}</td>
-                      <td>{m?.side ? <span className="chip">{m.side}</span> : '—'}</td>
+                      <ItemFieldCells m={m} />
                       <td className="n">{r.backlog ? formatQuantity(r.backlog, locale) : '—'}</td>
                       {r.values.map((v, k) => {
                         const prev = r.previous[k]!;
@@ -191,8 +188,9 @@ export function CurrentView({ current, previous, items, master, filters }: Props
                 <tr>
                   <td className="sticky-col">{t.calloffs.table.sum}</td>
                   <td />
-                  <td />
-                  <td />
+                  {fieldLabels.map((label) => (
+                    <td key={label} />
+                  ))}
                   <td className="n">{formatQuantity(backlog, locale)}</td>
                   {totals.map((v, k) => (
                     <td key={periods[k]!.start} className="n">

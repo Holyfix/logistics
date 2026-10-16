@@ -1,7 +1,7 @@
 // Sešit „Odvolávky od začátku roku“ pro reporting: souhrn po týdnech a tabulky po dílech.
 
 import type { MasterItem } from '../masterdata';
-import { filterItems, type ItemFilter } from './filter';
+import { filterItems, ITEM_FIELDS, type ItemFilter } from './filter';
 import type { CallOffExport } from './parse';
 import { buildYearRows, buildYearWeeks, fulfillment, yearItems, yearTotals, type YearRow } from './year';
 
@@ -27,9 +27,10 @@ export interface YearReportLabels {
   total: string;
   item: string;
   description: string;
-  customer: string;
   project: string;
+  category: string;
   side: string;
+  variant: string;
   notes: readonly string[];
 }
 
@@ -100,16 +101,14 @@ export function buildYearReport(
 
   const itemSheet = (name: string, value: (r: YearRow, k: number) => number | null): ReportSheet => ({
     name,
-    header: [labels.item, labels.description, labels.customer, labels.project, labels.side, ...weekHeader, labels.total],
+    header: [labels.item, labels.description, ...ITEM_FIELDS.map((f) => labels[f]), ...weekHeader, labels.total],
     rows: rows.map((r) => {
       const m = master?.get(r.item);
       const values = weeks.map((_, k) => value(r, k));
       return [
         r.item,
         r.description,
-        m?.customer ?? '',
-        m?.project ?? '',
-        m?.side ?? '',
+        ...ITEM_FIELDS.map((f) => m?.[f] ?? ''),
         ...values,
         values.every((v) => v === null) ? null : sum(values),
       ];

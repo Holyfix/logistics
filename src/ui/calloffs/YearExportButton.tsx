@@ -26,9 +26,10 @@ export function YearExportButton({ exports, master, filter }: Props) {
         total: t.calloffs.table.total,
         item: t.calloffs.table.item,
         description: t.calloffs.table.description,
-        customer: t.calloffs.table.customer,
         project: t.calloffs.table.project,
+        category: t.calloffs.table.category,
         side: t.calloffs.table.side,
+        variant: t.calloffs.table.variant,
       });
       if (report) await downloadXlsxSheets(`${ty.fileName}_${report.year}_CW${report.latest.week}.xlsx`, report.sheets);
     } finally {

@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { EMPTY_FILTER, filterItems, filterOptions, MISSING_MASTER, type ItemFilter } from '../../core/calloffs/filter';
+import { EMPTY_FILTER, filterItems, filterOptions, MISSING_MASTER, setItemFilter, type ItemField, type ItemFilter } from '../../core/calloffs/filter';
 import { useI18n } from '../../i18n/I18nProvider';
 import { Icon } from '../icons';
 import { useData } from '../data/DataProvider';
@@ -22,7 +22,7 @@ export function CallOffsPage() {
   const previous = exports.at(-2);
   const master = state.data?.master?.data.items;
 
-  const options = useMemo(() => (current ? filterOptions(current.items, master) : null), [current, master]);
+  const options = useMemo(() => (current ? filterOptions(current.items, master, filter) : null), [current, master, filter]);
   const items = useMemo(() => (current ? filterItems(current.items, current.descriptions, master, filter) : []), [current, master, filter]);
 
   const head = (
@@ -55,8 +55,8 @@ export function CallOffsPage() {
     );
   }
 
-  const set = (key: keyof ItemFilter) => (value: string) => setFilter((f) => ({ ...f, [key]: value }));
-  const select = (key: 'customer' | 'project' | 'side' | 'category', label: string, values: string[], extra?: { value: string; label: string }) => (
+  const set = (key: ItemField | 'query') => (value: string) => setFilter((f) => setItemFilter(f, key, value));
+  const select = (key: ItemField, label: string, values: string[], extra?: { value: string; label: string }) => (
     <label className="field">
       <span>{label}</span>
       <select value={filter[key]} onChange={(e) => set(key)(e.target.value)} disabled={!master}>
@@ -70,14 +70,16 @@ export function CallOffsPage() {
       </select>
     </label>
   );
+  // Kategorie, strana a varianta se nabídnou, jen když je díly ve výběru mají (nebo je filtr nastavený).
+  const shown = (key: ItemField, values: string[]) => values.length > 0 || filter[key] !== '';
 
   // Filtry jsou v pohledu hned nad tabulkou s díly, aby se nemuselo posouvat na začátek stránky.
   const filters = (
     <div className="filters" role="group" aria-label={t.calloffs.filters.label}>
-      {select('customer', t.calloffs.filters.customer, options.customers, options.missing > 0 && master ? { value: MISSING_MASTER, label: `${t.calloffs.filters.missing} (${options.missing})` } : undefined)}
-      {select('project', t.calloffs.filters.project, options.projects)}
-      {select('side', t.calloffs.filters.side, options.sides)}
-      {options.categories.length > 0 && select('category', t.calloffs.filters.category, options.categories)}
+      {select('project', t.calloffs.filters.project, options.projects, options.missing > 0 && master ? { value: MISSING_MASTER, label: `${t.calloffs.filters.missing} (${options.missing})` } : undefined)}
+      {shown('category', options.categories) && select('category', t.calloffs.filters.category, options.categories)}
+      {shown('side', options.sides) && select('side', t.calloffs.filters.side, options.sides)}
+      {shown('variant', options.variants) && select('variant', t.calloffs.filters.variant, options.variants)}
       <label className="field field-wide">
         <span>{t.calloffs.filters.search}</span>
         <input type="search" value={filter.query} placeholder={t.calloffs.filters.searchPlaceholder} onChange={(e) => set('query')(e.target.value)} />

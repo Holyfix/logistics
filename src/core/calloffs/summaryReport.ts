@@ -1,8 +1,9 @@
-// Report „Přehled po projektech“ do Excelu pro vedení: titulek, barevné záhlaví, strom projekt → kategorie → strana,
+// Report „Přehled po projektech“ do Excelu pro vedení: titulek, barevné záhlaví, strom projekt → kategorie → strana → varianta,
 // čísla s oddělovači, změna proti předchozímu exportu v kusech a v %, součet a list s díly.
 
 import { dayToIso } from '../dates';
 import type { MasterItem } from '../masterdata';
+import { ITEM_FIELDS, type ItemField } from './filter';
 import type { SummaryNode } from './summary';
 import type { CurrentRow, Period } from './views';
 
@@ -47,6 +48,7 @@ export interface ReportTexts {
   project: string;
   category: string;
   side: string;
+  variant: string;
   item: string;
   description: string;
   backlog: string;
@@ -54,7 +56,8 @@ export interface ReportTexts {
   diff: string;
   diffPercent: string;
   sum: string;
-  none: [string, string, string];
+  /** Popisek uzlu bez údaje (bez projektu, bez kategorie …). */
+  none: Record<ItemField, string>;
   sheetSummary: string;
   sheetItems: string;
 }
@@ -121,7 +124,7 @@ export function summaryReport(
   master: ReadonlyMap<string, MasterItem> | undefined,
   texts: ReportTexts,
 ): ReportSheet[] {
-  const label = (n: SummaryNode) => n.label || texts.none[n.level];
+  const label = (n: SummaryNode) => n.label || texts.none[n.field];
   const weeks = periods.map((p) => p.label);
 
   // List 1: strom.
@@ -132,7 +135,7 @@ export function summaryReport(
     {},
   ];
   const treeRows = nodes.map((n) => {
-    const s = levelStyle[n.level]!;
+    const s = levelStyle[Math.min(n.level, 2)]!;
     return [
       // Odsazení se v Excelu projeví jen u buňky zarovnané vlevo.
       { value: label(n), align: 'left' as const, indent: n.level * 2, ...s, ...(n.label ? {} : { textColor: C.muted, fontStyle: 'italic' as const }) },
@@ -172,15 +175,17 @@ export function summaryReport(
   };
 
   // List 2: díly.
-  const field = (item: string, key: 'project' | 'category' | 'side', level: 0 | 1 | 2) => master?.get(item)?.[key] || texts.none[level];
+  const value = (item: string, key: ItemField) => master?.get(item)?.[key] ?? '';
   // Stejné pořadí jako ve stromu: prázdné hodnoty na konec, ostatní abecedně.
-  const by = (key: 'project' | 'category' | 'side') => (a: CurrentRow, b: CurrentRow) => {
-    const x = master?.get(a.item)?.[key] ?? '';
-    const y = master?.get(b.item)?.[key] ?? '';
+  const by = (key: ItemField) => (a: CurrentRow, b: CurrentRow) => {
+    const x = value(a.item, key);
+    const y = value(b.item, key);
     return Number(!x) - Number(!y) || x.localeCompare(y, 'cs', { numeric: true });
   };
-  const sorted = [...rows].sort((a, b) => by('project')(a, b) || by('category')(a, b) || by('side')(a, b) || a.item.localeCompare(b.item, 'en', { numeric: true }));
-  const itemLabels = [texts.project, texts.category, texts.side, texts.item, texts.description, texts.backlog, ...weeks, texts.total, texts.diff, texts.diffPercent];
+  const sorted = [...rows].sort((a, b) => ITEM_FIELDS.reduce((d, key) => d || by(key)(a, b), 0) || a.item.localeCompare(b.item, 'en', { numeric: true }));
+  // Projekt a kategorie bez údaje s popiskem, strana a varianta prázdné (díl je nemá).
+  const shown = (item: string, key: ItemField) => value(item, key) || (key === 'project' || key === 'category' ? texts.none[key] : '');
+  const itemLabels = [texts.project, texts.category, texts.side, texts.variant, texts.item, texts.description, texts.backlog, ...weeks, texts.total, texts.diff, texts.diffPercent];
   const itemRows = sorted.map((r, i) => {
     const s: ReportCell = i % 2 ? { backgroundColor: C.category } : {};
     let diff = 0;
@@ -192,9 +197,7 @@ export function summaryReport(
       base += p;
     });
     return [
-      { value: field(r.item, 'project', 0), ...s },
-      { value: field(r.item, 'category', 1), ...s },
-      { value: field(r.item, 'side', 2), ...s },
+      ...ITEM_FIELDS.map((key) => ({ value: shown(r.item, key), ...s })),
       { value: r.item, fontWeight: 'bold' as const, ...s },
       { value: r.description, ...s },
       num(r.backlog, s),
@@ -207,10 +210,10 @@ export function summaryReport(
   const itemWidth = itemLabels.length;
   const itemsSheet: ReportSheet = {
     name: texts.sheetItems,
-    data: [...titleRows(texts, itemWidth), ...headerRows(itemLabels, periods, 6), ...itemRows],
-    columns: [{ width: 12 }, { width: 12 }, { width: 9 }, { width: 18 }, { width: 42 }, { width: 10 }, ...weeks.map(() => ({ width: 9 })), { width: 11 }, { width: 11 }, { width: 9 }],
+    data: [...titleRows(texts, itemWidth), ...headerRows(itemLabels, periods, 7), ...itemRows],
+    columns: [{ width: 12 }, { width: 12 }, { width: 9 }, { width: 16 }, { width: 18 }, { width: 42 }, { width: 10 }, ...weeks.map(() => ({ width: 9 })), { width: 11 }, { width: 11 }, { width: 9 }],
     stickyRows: 6,
-    stickyColumns: 4,
+    stickyColumns: 5,
   };
   return [summarySheet, itemsSheet];
 }
