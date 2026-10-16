@@ -315,9 +315,6 @@ export function CoveragePage({ today = localToday() }: { today?: DayNumber } = {
                   <th>{tc.table.description}</th>
                   <th>{tc.table.location}</th>
                   <th>{tc.table.project}</th>
-                  <th>{tc.table.category}</th>
-                  <th>{tc.table.side}</th>
-                  <th>{tc.table.variant}</th>
                   <th className="n">{tc.table.customerStock}</th>
                   <th className="n">{tc.table.transit}</th>
                   {stock && <th className="n">{tc.table.ourStock}</th>}
@@ -336,10 +333,6 @@ export function CoveragePage({ today = localToday() }: { today?: DayNumber } = {
                     <td className="desc">{l.description}</td>
                     <td>{l.location || '—'}</td>
                     <td>{l.project || '—'}</td>
-                    <td>{l.category || '—'}</td>
-                    {/* Strana a varianta jen u dílů, které je mají. */}
-                    <td>{l.side && <span className="chip">{l.side}</span>}</td>
-                    <td>{l.variant && <span className="chip">{l.variant}</span>}</td>
                     <td className="n">{formatQuantity(l.customerStock, locale)}</td>
                     <td className="n">{l.transit ? formatQuantity(l.transit, locale) : <span className="muted">0</span>}</td>
                     {stock && (
