@@ -36,19 +36,6 @@ export interface ReportSheet {
   stickyColumns: number;
   /** Zobrazit mřížku (např. u šablony k vyplňování); výchozí bez mřížky. */
   gridLines?: boolean;
-  /** Výběr hodnoty ze seznamu. */
-  lists?: ReportList[];
-}
-
-/** Oblast buněk; řádky i sloupce od 1. */
-export interface ReportRange {
-  from: { row: number; column: number };
-  to: { row: number; column: number };
-}
-
-/** Seznam povolených hodnot pro oblast buněk. */
-export interface ReportList extends ReportRange {
-  values: string[];
 }
 
 export interface ReportTexts {
