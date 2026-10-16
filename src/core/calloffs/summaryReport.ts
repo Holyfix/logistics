@@ -34,6 +34,8 @@ export interface ReportSheet {
   columns: { width: number }[];
   stickyRows: number;
   stickyColumns: number;
+  /** Zobrazit mřížku (např. u šablony k vyplňování); výchozí bez mřížky. */
+  gridLines?: boolean;
 }
 
 export interface ReportTexts {

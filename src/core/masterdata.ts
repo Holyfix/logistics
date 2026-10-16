@@ -232,17 +232,3 @@ export function parseMasterData(table: DataTable): MasterResult {
   const columns = new Set((Object.keys(col) as MasterField[]).filter((key) => col[key] !== -1));
   return { ok: true, value: { items, byCustomerKey, columns, hasComponentColumn: col.componentCoverage !== -1, hasLineColumn: col.line !== -1, issueCount, issues } };
 }
-
-/** Šablona mapování dílů: všechny známé díly, u existujících předvyplněné hodnoty. */
-export function masterDataTemplate(
-  parts: readonly { item: string; description: string }[],
-  existing: Map<string, MasterItem> | undefined,
-): { header: string[]; rows: string[][] } {
-  const header = ['Item Number', 'Item Type', 'Customer Number', 'Description', 'Variant', 'Type', 'Project', 'Customer', 'Side', 'Safety Stock', 'Safety Time', 'Order Multiple', 'Component Coverage', 'Line', 'Category'];
-  const rows = parts.map(({ item, description }) => {
-    const m = existing?.get(item);
-    const n = (v: number | null | undefined) => (v === null || v === undefined ? '' : String(v));
-    return [item, m?.kind ?? '', m?.customerNumber ?? '', m?.description || description, m?.variant ?? '', m?.type ?? '', m?.project ?? '', m?.customer ?? '', m?.side ?? '', n(m?.safetyStock), n(m?.safetyTime), n(m?.orderMultiple), m?.componentCoverage ? 'Ano' : '', m?.line ?? '', m?.category ?? ''];
-  });
-  return { header, rows };
-}

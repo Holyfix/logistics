@@ -2,14 +2,14 @@ import { useMemo } from 'react';
 import { dayToIso } from '../core/dates';
 import { formatDate, formatQuantity } from '../core/format';
 import type { BomData } from '../core/bom';
-import { masterDataTemplate } from '../core/masterdata';
+import { mappingTemplate } from '../core/mappingTemplate';
 import { excludedLocationsIn, STOCK_ZONES, stockByItem, stockItemCount } from '../core/stock';
 import type { DataIssue } from '../core/table';
 import { useI18n } from '../i18n/I18nProvider';
-import { downloadXlsx } from '../platform/download';
+import { downloadReport } from '../platform/download';
 import { useData } from './data/DataProvider';
 import { FolderPicker } from './data/FolderPicker';
-import { DataMapPanel, MappingCheckPanel } from './data/MappingPanels';
+import { DataMapPanel, MappingCheckPanel, useMappingCheck } from './data/MappingPanels';
 
 function IssueList({ issues, count }: { issues: DataIssue[]; count: number }) {
   const { t } = useI18n();
@@ -36,6 +36,7 @@ export function DataPage() {
   const { t, locale } = useI18n();
   const { state, rememberFolder } = useData();
   const data = state.data;
+  const mappingCheck = useMappingCheck();
   const exports = useMemo(() => (data ? [...data.exports].reverse() : []), [data]);
   const current = data?.exports.at(-1);
   const missing = useMemo(
@@ -73,11 +74,12 @@ export function DataPage() {
     };
   }, [data]);
 
+  // Šablona: všechny díly mapování + díly, které v něm chybí (bez mapování díly z aktuálního exportu odvolávek).
   const downloadTemplate = () => {
-    if (!current) return;
-    const parts = current.items.map((item, i) => ({ item, description: current.descriptions[i]! }));
-    const { header, rows } = masterDataTemplate(parts, data?.master?.data.items);
-    void downloadXlsx('Item_Mapping.xlsx', 'Mapping', header, rows);
+    const missingParts = mappingCheck
+      ? mappingCheck.parts.filter((p) => p.notInMapping).map((p) => ({ item: p.item, customerNumber: p.customerNumber, description: p.description }))
+      : (current?.items.map((item, i) => ({ item, customerNumber: '', description: current.descriptions[i] ?? '' })) ?? []);
+    void downloadReport('Item_Mapping.xlsx', mappingTemplate(data?.master?.data, missingParts, t.data.master.templateTexts));
   };
 
   return (
@@ -192,7 +194,7 @@ export function DataPage() {
               <p>{t.data.master.none}</p>
             )}
             {data.master && data.master.data.issueCount > 0 && <IssueList issues={data.master.data.issues} count={data.master.data.issueCount} />}
-            {current && (
+            {(data.master || current) && (
               <>
                 <p className="muted">{t.data.master.templateNote}</p>
                 <div className="actions-row">

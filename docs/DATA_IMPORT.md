@@ -89,7 +89,10 @@ Tabulku udržuje uživatel. Jeden řádek = jeden díl. V Excelu na prvním list
 
 Další sloupce (např. Yield Percent, Cost Total) aplikace ignoruje.
 
-- Šablonu se všemi díly z aktuálního exportu odvolávek stáhnete v modulu Data.
+- **Šablonu mapování** stáhnete v modulu Data: všechny díly z mapování a díly, které v něm chybí (z Coverage,
+  odvolávek a kusovníků). List **Mapping** má buňky obarvené podle druhu dílu (zeleně povinné vyplněné, žlutě
+  povinné k doplnění, šedě nepotřebné, červeně chybí druh), list **Návod** tabulku, co vyplnit pro FG, SFG a PG.
+  Aplikace čte jen první list; soubor uložte jako Item_Mapping.xlsx.
 - Díly bez kmenových dat lze v Call-offs vyfiltrovat volbou „Bez kmenových dat“.
 - **Číslo zákazníka** se pro párování se soubory zákazníka sjednotí: velká písmena, bez mezer;
   u dlouhých čísel začínajících „A“ (15 a více znaků) se mezi prvními 11 a posledními 4 znaky vynechají
