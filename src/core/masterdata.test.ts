@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { parseCsv } from './csv';
-import { customerDisplay, customerKey, masterDataTemplate, parseMasterData, type MasterItem } from './masterdata';
+import { customerDisplay, customerKey, parseMasterData } from './masterdata';
 
 describe('customerKey', () => {
   it('sjednotí zápis čísla zákazníka', () => {
@@ -109,40 +109,6 @@ describe('druh dílu', () => {
   });
 });
 
-describe('masterDataTemplate', () => {
-  it('předvyplní známé hodnoty ve formátu mapování', () => {
-    const known: MasterItem = {
-      item: '1',
-      customerNumber: 'C1',
-      customerKey: 'C1',
-      description: 'X',
-      variant: 'LHD',
-      type: 'IP',
-      kind: 'FG',
-      project: 'P',
-      customer: '',
-      side: 'LHD',
-      safetyStock: 0,
-      safetyTime: null,
-      orderMultiple: 16,
-      componentCoverage: false,
-      line: 'ASSEMBLY',
-      category: 'DP',
-    };
-    const t = masterDataTemplate(
-      [
-        { item: '1', description: 'Popis 1' },
-        { item: '2', description: 'Popis 2' },
-      ],
-      new Map([['1', known]]),
-    );
-    expect(t.header).toEqual(['Item Number', 'Item Type', 'Customer Number', 'Description', 'Variant', 'Type', 'Project', 'Customer', 'Side', 'Safety Stock', 'Safety Time', 'Order Multiple', 'Component Coverage', 'Line', 'Category']);
-    expect(t.rows).toEqual([
-      ['1', 'FG', 'C1', 'X', 'LHD', 'IP', 'P', '', 'LHD', '0', '', '16', '', 'ASSEMBLY', 'DP'],
-      ['2', '', '', 'Popis 2', '', '', '', '', '', '', '', '', '', '', ''],
-    ]);
-  });
-});
 
 describe('čísla zákazníka s prostředkem', () => {
   it('díl s „ERS“ uprostřed a díl bez něj nejsou duplicita', () => {

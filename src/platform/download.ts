@@ -72,7 +72,7 @@ export async function downloadReport(fileName: string, sheets: ReportSheet[]): P
       columns: sheet.columns,
       stickyRowsCount: sheet.stickyRows,
       stickyColumnsCount: sheet.stickyColumns,
-      showGridLines: false,
+      showGridLines: sheet.gridLines ?? false,
       orientation: 'landscape' as const,
     })),
   ).toBlob();
