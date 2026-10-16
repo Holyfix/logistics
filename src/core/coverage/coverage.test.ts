@@ -3,7 +3,7 @@ import { parseCsv } from '../csv';
 import { dayFromParts, dayToIso } from '../dates';
 import { parseMasterData } from '../masterdata';
 import type { Cell } from '../table';
-import { buildCoverage, coverageOptions, EMPTY_COVERAGE_FILTER, filterCoverage, setCoverageFilter, shortage, summarizeBySide, type CoverageLine, type CoverageSource } from './compute';
+import { buildCoverage, coverageOptions, EMPTY_COVERAGE_FILTER, filterCoverage, shortage, summarizeBySide, type CoverageLine, type CoverageSource } from './compute';
 import { parseCoverageWorkbook } from './parse';
 
 const d = (day: number) => new Date(Date.UTC(2026, 9, day));
@@ -240,13 +240,12 @@ describe('navazující filtry', () => {
   it('nabídka podle filtrů před ní; kategorie bez stran nenabídne stranu', () => {
     expect(coverageOptions(t, { ...EMPTY_COVERAGE_FILTER, location: 'L1' })).toMatchObject({ projects: ['P1'], categories: ['DP', 'IP'], sides: ['LHD', 'RHD'], variants: ['SR2'] });
     expect(coverageOptions(t, { ...EMPTY_COVERAGE_FILTER, project: 'P1', category: 'IP' })).toMatchObject({ sides: [], variants: [] });
-    // destinace a projekt nabízí vždy všechny (před nimi nic není / jen destinace)
-    expect(coverageOptions(t, { ...EMPTY_COVERAGE_FILTER, project: 'P1' }).locations).toEqual(['L1', 'L2']);
   });
 
-  it('změna filtru zruší filtry za ním', () => {
-    const f = { ...EMPTY_COVERAGE_FILTER, location: 'L1', project: 'P1', category: 'DP', side: 'LHD', variant: 'SR2' };
-    expect(setCoverageFilter(f, 'project', 'P2')).toMatchObject({ location: 'L1', project: 'P2', category: '', side: '', variant: '' });
-    expect(setCoverageFilter(f, 'query', 'x')).toMatchObject({ variant: 'SR2', query: 'x' });
+  it('i obráceně: kategorie nebo strana zúží destinace a projekty', () => {
+    expect(coverageOptions(t, { ...EMPTY_COVERAGE_FILTER, category: 'HB' })).toMatchObject({ locations: ['L2'], projects: ['P2'], categories: ['DP', 'HB', 'IP'], sides: ['LHD'], variants: [] });
+    expect(coverageOptions(t, { ...EMPTY_COVERAGE_FILTER, side: 'RHD' })).toMatchObject({ locations: ['L1'], projects: ['P1'], categories: ['DP'] });
+    // vybraný projekt nabízí jen svoje destinace
+    expect(coverageOptions(t, { ...EMPTY_COVERAGE_FILTER, project: 'P1' }).locations).toEqual(['L1']);
   });
 });

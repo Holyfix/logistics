@@ -1,5 +1,5 @@
-// Filtrování dílů podle kmenových dat a hledaného textu. Filtry na sebe navazují: Projekt → Kategorie → Strana →
-// Varianta; každý nabízí jen hodnoty dílů, které odpovídají filtrům před ním.
+// Filtrování dílů podle kmenových dat a hledaného textu. Filtry Projekt, Kategorie, Strana a Varianta se ovlivňují
+// navzájem v libovolném pořadí: každý nabízí jen hodnoty dílů, které odpovídají ostatním vybraným filtrům.
 
 import type { MasterItem } from '../masterdata';
 
@@ -21,19 +21,10 @@ export interface ItemFilter {
 
 export const EMPTY_FILTER: ItemFilter = { project: '', category: '', side: '', variant: '', query: '' };
 
-/** Nastaví filtr a zruší filtry za ním (jejich hodnoty by nemusely v novém výběru existovat). */
-export function setItemFilter(filter: ItemFilter, key: ItemField | 'query', value: string): ItemFilter {
-  if (key === 'query') return { ...filter, query: value };
-  const index = ITEM_FIELDS.indexOf(key);
-  const next = { ...filter, [key]: value };
-  for (const later of ITEM_FIELDS.slice(index + 1)) next[later] = '';
-  return next;
-}
-
-/** Díl odpovídá filtrům mapování (bez hledání); `upTo` = jen filtry před tímto údajem. */
-function matches(m: MasterItem | undefined, filter: ItemFilter, upTo: number = ITEM_FIELDS.length): boolean {
-  if (filter.project === MISSING_MASTER) return !m;
-  return ITEM_FIELDS.slice(0, upTo).every((field) => !filter[field] || m?.[field] === filter[field]);
+/** Díl odpovídá filtrům mapování (bez hledání); `except` = bez filtru tohoto údaje (pro jeho nabídku). */
+function matches(m: MasterItem | undefined, filter: ItemFilter, except?: ItemField): boolean {
+  if (filter.project === MISSING_MASTER && except !== 'project') return !m;
+  return ITEM_FIELDS.every((field) => field === except || !filter[field] || m?.[field] === filter[field]);
 }
 
 export function filterItems(
@@ -53,8 +44,8 @@ export function filterItems(
 export type ItemOptions = Record<'projects' | 'categories' | 'sides' | 'variants', string[]> & { missing: number };
 
 /**
- * Hodnoty pro výběr ve filtrech: jen ty, které mají díly v exportu a odpovídají filtrům před nimi (kategorie
- * vybraného projektu, strany vybrané kategorie …). Prázdný seznam = údaj u těchto dílů není (filtr se nezobrazí).
+ * Hodnoty pro výběr ve filtrech: jen ty, které mají díly v exportu a odpovídají ostatním vybraným filtrům (kategorie
+ * vybraného projektu, projekty vybrané kategorie …). Prázdný seznam = údaj u těchto dílů není (filtr se nezobrazí).
  */
 export function filterOptions(items: readonly string[], master: ReadonlyMap<string, MasterItem> | undefined, filter: ItemFilter = EMPTY_FILTER): ItemOptions {
   const sets = ITEM_FIELDS.map(() => new Set<string>());
@@ -66,7 +57,7 @@ export function filterOptions(items: readonly string[], master: ReadonlyMap<stri
       continue;
     }
     ITEM_FIELDS.forEach((field, index) => {
-      if (m[field] && matches(m, { ...filter, project: filter.project === MISSING_MASTER ? '' : filter.project }, index)) sets[index]!.add(m[field]);
+      if (m[field] && matches(m, filter, field)) sets[index]!.add(m[field]);
     });
   }
   const sorted = (s: Set<string>) => [...s].sort((a, b) => a.localeCompare(b, 'cs', { numeric: true }));

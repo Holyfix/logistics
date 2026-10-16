@@ -61,7 +61,7 @@ a Dodavatelé odložené. Modul Kapacity (odvolávky vs. kapacita linek) byl zva
 
 ### Call-offs
 Hlavní údaj je **Discrete Qty** (požadavek na den), kumulativy jsou doplňková informace.
-Filtry na sebe navazují: projekt → kategorie → strana (LHD/RHD) → varianta z kmenových dat (kategorie jen daného projektu, strana a varianta jen tam, kde je díly mají), hledání dílu; díly bez mapování jako volba „Bez kmenových dat“ ve filtru Projekt.
+Filtry projekt, kategorie, strana (LHD/RHD) a varianta z kmenových dat se ovlivňují navzájem v libovolném pořadí (každý nabízí jen hodnoty odpovídající ostatním vybraným filtrům; strana a varianta jen tam, kde je díly mají), hledání dílu; díly bez mapování jako volba „Bez kmenových dat“ ve filtru Projekt.
 - ✅ **Přehled po projektech:** strom Projekt → Kategorie → Strana → Varianta (sloupce Project, Category, Side, Variant v mapování; strana a varianta jen tam, kde je díly mají) se součty po týdnech, nedodáno po termínu, celkem a změna proti předchozímu exportu; rozbalení po úrovních; Excel pro vedení (titulek s exportem, datem a filtry, barevné záhlaví s pondělky týdnů, oddělovače tisíců, změna v ks i v % zeleně/červeně, ukotvené záhlaví, list Přehled ve zvolené úrovni a list Díly se všemi díly) a CSV
 
 - ✅ **Aktuální odvolávky:** nejnovější export po týdnech nebo dnech, nedodáno po termínu,
@@ -73,7 +73,7 @@ Filtry na sebe navazují: projekt → kategorie → strana (LHD/RHD) → variant
 
 ### Coverage
 - ✅ Pokrytí u zákazníka po dnech ze souborů zákazníka (každý zákazník jiný formát, sjednotí se)
-- ✅ Přičtení transitu, filtry záporné kdykoli / ke zvolenému dni; navazující filtry destinace → projekt → kategorie → strana → varianta (strana a varianta jen tam, kde je díly mají), hledání; popis dílu jen z mapování (díl bez mapování s popisem ze souboru zákazníka)
+- ✅ Přičtení transitu, filtry záporné kdykoli / ke zvolenému dni; filtry destinace, projekt, kategorie, strana a varianta, které se ovlivňují navzájem v libovolném pořadí (strana a varianta jen tam, kde je díly mají), hledání; popis dílu jen z mapování (díl bez mapování s popisem ze souboru zákazníka)
 - ✅ Souhrn po stranách (LHD / RHD), export do Excelu a CSV, na rozcestníku chybějící kusy v prvních 2 dnech bez transitu a s transitem
 - ✅ Náš sklad ze souboru Stock (celý sklad po lokacích, sdílený s dalšími moduly)
 - ⏳ Dodatečný transit z naší expedice
@@ -89,7 +89,7 @@ Filtry na sebe navazují: projekt → kategorie → strana (LHD/RHD) → variant
 - ✅ Pokrytí komponent podle odvolávek a našeho skladu komponent (volitelně po odečtu našeho skladu hotových dílů a mezivýroby); „Pokryto do“ (první chybějící komponenta), potřeba 7 dní, zásoba ve dnech výroby
 - ✅ „Zákazník pokryt do“ (rámeček): poslední den, kdy je zákazník pokrytý hotovými díly (jeho sklad + transit podle coverage, se zaškrtnutím i náš sklad hotových dílů); každý hotový díl zvlášť
 - ✅ Poptávka hotových dílů se řídí filtrem komponent (projekt, vybraná komponenta → hotové díly, které ji mají v kusovníku)
-- ✅ Navazující filtry Projekt → Kategorie podle hotových dílů (kategorie jen z hotových dílů vybraného projektu): komponenty v hotových dílech daného projektu a kategorie; hotové díly podle jejich projektu a kategorie
+- ✅ Filtry Projekt a Kategorie podle hotových dílů, navzájem v libovolném pořadí (kategorie jen z hotových dílů vybraného projektu, projekty jen s hotovými díly vybrané kategorie): komponenty v hotových dílech daného projektu a kategorie; hotové díly podle jejich projektu a kategorie
 - ✅ Sledují se všechny nakupované díly (Item Type = PG); popis jen z mapování
 - ⏳ Otevřené nákupní objednávky (pokud jsou v exportu)
 - Shortage list pro ranní poradu

@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { EMPTY_FILTER, filterItems, filterOptions, MISSING_MASTER, setItemFilter, type ItemField, type ItemFilter } from '../../core/calloffs/filter';
+import { EMPTY_FILTER, filterItems, filterOptions, MISSING_MASTER, type ItemField, type ItemFilter } from '../../core/calloffs/filter';
 import { useI18n } from '../../i18n/I18nProvider';
 import { Icon } from '../icons';
 import { useData } from '../data/DataProvider';
@@ -55,7 +55,7 @@ export function CallOffsPage() {
     );
   }
 
-  const set = (key: ItemField | 'query') => (value: string) => setFilter((f) => setItemFilter(f, key, value));
+  const set = (key: ItemField | 'query') => (value: string) => setFilter((f) => ({ ...f, [key]: value }));
   const select = (key: ItemField, label: string, values: string[], extra?: { value: string; label: string }) => (
     <label className="field">
       <span>{label}</span>
