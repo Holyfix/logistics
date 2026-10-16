@@ -60,7 +60,7 @@ export function PlanningPage({ today = localToday(), now = localNow() }: { today
   return (
     <section className="page" aria-labelledby="page-title">
       {head}
-      <MappingNotice />
+      <MappingNotice module="planning" />
       <div className="tabs" role="tablist" aria-label={t.modules.production.title}>
         {tabs.map((id) => (
           <button key={id} type="button" role="tab" className="tab" aria-selected={tab === id} onClick={() => setTab(id)}>

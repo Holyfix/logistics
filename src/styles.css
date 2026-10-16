@@ -1682,28 +1682,6 @@ button.oil-step:disabled {
   border-radius: 6px;
 }
 
-.check-section {
-  border-top: 1px solid var(--grid);
-  padding: 8px 0;
-}
-
-.check-section summary {
-  cursor: pointer;
-  font-weight: 600;
-}
-
-.check-count {
-  display: inline-block;
-  min-width: 22px;
-  margin-left: 6px;
-  padding: 1px 7px;
-  font-size: 12px;
-  text-align: center;
-  color: var(--banner-ink);
-  background: var(--banner-bg);
-  border-radius: 999px;
-}
-
 .panel h3 {
   margin: 14px 0 6px;
   font: 600 14px/1.3 var(--font-display);
@@ -1713,3 +1691,67 @@ button.oil-step:disabled {
   color: inherit;
   font-weight: 600;
 }
+
+/* Kontrola mapování: souhrn po modulech (modul × sloupec) a díly se sloupci k doplnění. */
+.check-columns {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0 0 10px;
+  padding: 0;
+  list-style: none;
+}
+
+.check-matrix td,
+.check-matrix th {
+  text-align: center;
+}
+
+.check-matrix td:first-child,
+.check-matrix th:first-child {
+  text-align: left;
+}
+
+.check-matrix tbody tr {
+  cursor: pointer;
+}
+
+.check-matrix tbody tr:hover td,
+.check-matrix tr.check-selected td {
+  background: var(--accent-soft);
+}
+
+.check-bad {
+  display: inline-block;
+  min-width: 24px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  color: var(--banner-ink);
+  background: var(--banner-bg);
+}
+
+.check-ok {
+  color: var(--good);
+}
+
+.check-chip {
+  display: inline-block;
+  margin: 1px 4px 1px 0;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  white-space: nowrap;
+  color: var(--banner-ink);
+  background: var(--banner-bg);
+}
+
+.check-chip-new {
+  color: #ffffff;
+  background: var(--crit);
+}
+
+.check-parts + .segmented,
+.panel .segmented + .table-scroll {
+  margin-top: 8px;
+}
+

@@ -161,7 +161,7 @@ export function ComponentsPage({ today = localToday() }: { today?: DayNumber } =
           <strong>{callOffs ? `CW ${callOffs.week}/${callOffs.year}` : '—'}</strong>
         </p>
       </div>
-      <MappingNotice />
+      <MappingNotice module="components" />
 
       <div className="kpis">
         <div className="kpi">
