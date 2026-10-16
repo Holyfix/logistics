@@ -73,8 +73,8 @@ Filtry na sebe navazují: projekt → kategorie → strana (LHD/RHD) → variant
 
 ### Coverage
 - ✅ Pokrytí u zákazníka po dnech ze souborů zákazníka (každý zákazník jiný formát, sjednotí se)
-- ✅ Přičtení transitu, filtry záporné kdykoli / ke zvolenému dni, závod, projekt, varianta, kategorie, hledání
-- ✅ Souhrn po variantách, export do Excelu a CSV, na rozcestníku chybějící kusy v prvních 2 dnech bez transitu a s transitem
+- ✅ Přičtení transitu, filtry záporné kdykoli / ke zvolenému dni; navazující filtry destinace → projekt → kategorie → strana → varianta (strana a varianta jen tam, kde je díly mají), hledání; popis dílu jen z mapování (díl bez mapování s popisem ze souboru zákazníka)
+- ✅ Souhrn po stranách (LHD / RHD), export do Excelu a CSV, na rozcestníku chybějící kusy v prvních 2 dnech bez transitu a s transitem
 - ✅ Náš sklad ze souboru Stock (celý sklad po lokacích, sdílený s dalšími moduly)
 - ⏳ Dodatečný transit z naší expedice
 - ✅ Tři formáty souborů zákazníka (Coverage Report Overview, Articles, Bestand); transit se sjednotí

@@ -89,11 +89,11 @@ describe('CoveragePage', () => {
     expect(bodyRows()).toHaveLength(1);
   });
 
-  it('souhrn po variantách', () => {
+  it('souhrn po stranách', () => {
     renderWith(<CoveragePage />);
     const summary = screen.getAllByRole('table')[0]!;
     expect(cells(within(summary).getByText('LHD').closest('tr')!)).toEqual(['LHD', '9', '3']);
-    expect(cells(within(summary).getByText('Bez varianty').closest('tr')!)).toEqual(['Bez varianty', '45', '40']);
+    expect(cells(within(summary).getByText('Bez strany').closest('tr')!)).toEqual(['Bez strany', '45', '40']);
   });
 
   it('filtr destinace ukáže jen díly z vybrané destinace', () => {
@@ -154,10 +154,10 @@ describe('CoveragePage', () => {
     if (!stock.ok) throw new Error();
     renderWith(<CoveragePage />, { ...state, data: { ...state.data!, stock: { path: 'Stock_1.csv', lastModified: 0, data: stock.value } } });
     const heads = [...lineTable().querySelectorAll('thead th')].map((h) => h.textContent);
-    expect(heads.slice(6, 10)).toEqual(['Sklad zákazníka', 'Transit', 'Náš sklad', 'První nepokryté']);
+    expect(heads.slice(3, 12)).toEqual(['Destinace', 'Projekt', 'Kategorie', 'Strana', 'Varianta', 'Sklad zákazníka', 'Transit', 'Náš sklad', 'První nepokryté']);
     const [mapped, unmapped] = bodyRows();
-    expect(cells(mapped!)[8]).toBe('15');
-    expect(cells(unmapped!)[8]).toBe('—');
+    expect(cells(mapped!)[10]).toBe('15');
+    expect(cells(unmapped!)[10]).toBe('—');
     expect(cells(mapped!).slice(-2)).toEqual(['9', '3']);
     fireEvent.click(screen.getByLabelText('Přičíst náš sklad'));
     expect(cells(bodyRows()[0]!).slice(-2)).toEqual(['24', '18']);

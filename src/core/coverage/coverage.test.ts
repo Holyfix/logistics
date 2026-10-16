@@ -3,7 +3,7 @@ import { parseCsv } from '../csv';
 import { dayFromParts, dayToIso } from '../dates';
 import { parseMasterData } from '../masterdata';
 import type { Cell } from '../table';
-import { buildCoverage, coverageOptions, EMPTY_COVERAGE_FILTER, filterCoverage, shortage, summarizeByVariant, type CoverageLine, type CoverageSource } from './compute';
+import { buildCoverage, coverageOptions, EMPTY_COVERAGE_FILTER, filterCoverage, setCoverageFilter, shortage, summarizeBySide, type CoverageLine, type CoverageSource } from './compute';
 import { parseCoverageWorkbook } from './parse';
 
 const d = (day: number) => new Date(Date.UTC(2026, 9, day));
@@ -148,6 +148,12 @@ describe('buildCoverage', () => {
     expect(t.lines[1]).toMatchObject({ item: '', project: '', description: 'ASSY DOOR RHD', values: [45, 40, 35] });
   });
 
+  it('popis jen z mapování: díl v mapování bez popisu ho nemá (ne ze souboru)', () => {
+    const noDesc = parseMasterData(parseCsv('Item Number;Customer Number;Project\n900100;A1234567890  00000001;P1'));
+    if (!noDesc.ok) throw new Error();
+    expect(buildCoverage([source], noDesc.value, { transit: false }).lines[0]!.description).toBe('');
+  });
+
   it('číslo zákazníka v jednotném zápisu bez doplňujících nul, zápis ze souboru zůstane', () => {
     const t = buildCoverage([source], master.value, { transit: false });
     expect(t.lines.map((l) => [l.customerNumber, l.fileCustomerNumber])).toEqual([
@@ -182,7 +188,7 @@ describe('buildCoverage', () => {
     expect(t.lines[0]!.values).toEqual([null, 10, 0, -9]);
   });
 
-  it('filtry: záporné kdykoli a k datu, varianta, hledání', () => {
+  it('filtry: záporné kdykoli a k datu, strana a varianta, hledání', () => {
     const t = buildCoverage([source], master.value, { transit: false });
     const ids = (f: Partial<typeof EMPTY_COVERAGE_FILTER>) => filterCoverage(t, { ...EMPTY_COVERAGE_FILTER, ...f }).map((l) => l.item || l.customerNumber);
     expect(ids({})).toHaveLength(2);
@@ -190,19 +196,20 @@ describe('buildCoverage', () => {
     expect(ids({ rows: { kind: 'negativeOn', day: t.days[1]! } })).toEqual([]);
     expect(ids({ rows: { kind: 'negativeOn', day: t.days[2]! } })).toEqual(['900100']);
     expect(ids({ variant: 'LHD HUD' })).toEqual(['900100']);
+    expect(ids({ side: 'LHD' })).toEqual(['900100']);
     expect(ids({ query: 'rhd' })).toEqual(['A1234567890 0002']);
     // hledá se v jednotném zápisu, bez mezer i podle zápisu ze souboru
     expect(ids({ query: 'a1234567890 0001' })).toEqual(['900100']);
     expect(ids({ query: 'A12345678900001' })).toEqual(['900100']);
     expect(ids({ query: '      0001' })).toEqual(['900100']);
-    expect(coverageOptions(t)).toEqual({ locations: ['Lokalita A'], projects: ['P1'], variants: ['LHD HUD'], categories: [], unmapped: 1 });
+    expect(coverageOptions(t)).toEqual({ locations: ['Lokalita A'], projects: ['P1'], categories: [], sides: ['LHD'], variants: ['LHD HUD'], unmapped: 1 });
   });
 
-  it('souhrn po variantách', () => {
+  it('souhrn po stranách', () => {
     const t = buildCoverage([source], master.value, { transit: false });
-    expect(summarizeByVariant(t.days, t.lines)).toEqual([
-      { variant: 'LHD HUD', values: [10, 0, -9] },
-      { variant: '', values: [45, 40, 35] },
+    expect(summarizeBySide(t.days, t.lines)).toEqual([
+      { side: 'LHD', values: [10, 0, -9] },
+      { side: '', values: [45, 40, 35] },
     ]);
   });
 });
@@ -217,11 +224,29 @@ describe('shortage', () => {
   });
 });
 
-describe('filtr kategorie', () => {
+describe('navazující filtry', () => {
+  const line = (id: string, location: string, project: string, category: string, side = '', variant = '') =>
+    ({ id, location, project, item: id, customerNumber: '', fileCustomerNumber: '', description: '', variant, side, category, customerStock: 0, transit: 0, ourStock: null, firstUncovered: '', uncoveredAt: '', values: [1] }) as CoverageLine;
+  const t = {
+    days: [dayFromParts(2026, 10, 12)!],
+    lines: [line('A', 'L1', 'P1', 'DP', 'LHD', 'SR2'), line('B', 'L1', 'P1', 'DP', 'RHD'), line('C', 'L1', 'P1', 'IP'), line('D', 'L2', 'P2', 'HB', 'LHD')],
+  };
+
   it('díly podle kategorie z mapování', () => {
-    const line = (id: string, category: string) => ({ id, location: 'L', project: 'P', item: id, customerNumber: '', fileCustomerNumber: '', description: '', variant: '', side: '', category, customerStock: 0, transit: 0, ourStock: null, firstUncovered: '', uncoveredAt: '', values: [1] }) as CoverageLine;
-    const t = { days: [dayFromParts(2026, 10, 12)!], lines: [line('A', 'DP'), line('B', 'HB'), line('C', '')] };
-    expect(filterCoverage(t, { ...EMPTY_COVERAGE_FILTER, category: 'HB' }).map((l) => l.item)).toEqual(['B']);
-    expect(coverageOptions(t).categories).toEqual(['DP', 'HB']);
+    expect(filterCoverage(t, { ...EMPTY_COVERAGE_FILTER, category: 'HB' }).map((l) => l.item)).toEqual(['D']);
+    expect(coverageOptions(t).categories).toEqual(['DP', 'HB', 'IP']);
+  });
+
+  it('nabídka podle filtrů před ní; kategorie bez stran nenabídne stranu', () => {
+    expect(coverageOptions(t, { ...EMPTY_COVERAGE_FILTER, location: 'L1' })).toMatchObject({ projects: ['P1'], categories: ['DP', 'IP'], sides: ['LHD', 'RHD'], variants: ['SR2'] });
+    expect(coverageOptions(t, { ...EMPTY_COVERAGE_FILTER, project: 'P1', category: 'IP' })).toMatchObject({ sides: [], variants: [] });
+    // destinace a projekt nabízí vždy všechny (před nimi nic není / jen destinace)
+    expect(coverageOptions(t, { ...EMPTY_COVERAGE_FILTER, project: 'P1' }).locations).toEqual(['L1', 'L2']);
+  });
+
+  it('změna filtru zruší filtry za ním', () => {
+    const f = { ...EMPTY_COVERAGE_FILTER, location: 'L1', project: 'P1', category: 'DP', side: 'LHD', variant: 'SR2' };
+    expect(setCoverageFilter(f, 'project', 'P2')).toMatchObject({ location: 'L1', project: 'P2', category: '', side: '', variant: '' });
+    expect(setCoverageFilter(f, 'query', 'x')).toMatchObject({ variant: 'SR2', query: 'x' });
   });
 });
