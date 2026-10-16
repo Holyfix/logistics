@@ -235,9 +235,6 @@ export function oilAlerts(list: OilList, today: DayNumber): OilAlert[] {
     .sort((a, b) => bySeverity(a, b) || (a.item.due ?? Infinity) - (b.item.due ?? Infinity) || a.item.id - b.item.id);
 }
 
-/** Do kolika dní od dneška se nepokrytý projekt hlásí jako „pozor“ (dál jen pro informaci). */
-export const PROJECT_WARN_DAYS = 7;
-
 /** Pokrytí projektu: poslední pokrytý den a kolik dní od dneška to je. */
 export interface CoverageSpan {
   /** Poslední den, kdy mají všechny díly projektu zůstatek 0 a víc; null = nepokryto už dnes. */
@@ -252,8 +249,8 @@ export interface ProjectCoverage {
   project: string;
   withTransit: CoverageSpan;
   withoutTransit: CoverageSpan;
-  /** Podle pokrytí s transitem: crit = nepokryto dnes nebo zítra, warn = do 7 dní, info = později, null = celý horizont. */
-  severity: Severity | null;
+  /** Podle pokrytí s transitem: crit = pokryto méně než 2 dny (chybí dnes nebo zítra), jinak null. */
+  severity: 'crit' | null;
 }
 
 /**
@@ -281,7 +278,7 @@ export function projectCoverage(withTransit: CoverageTable, withoutTransit: Cove
   return [...groups.entries()]
     .map(([project, rows]): ProjectCoverage => {
       const withT = span(withTransit, rows);
-      const severity: Severity | null = withT.whole ? null : withT.days < SHORTAGE_DAYS ? 'crit' : withT.days < PROJECT_WARN_DAYS ? 'warn' : 'info';
+      const severity = !withT.whole && withT.days < SHORTAGE_DAYS ? 'crit' : null;
       return { project, withTransit: withT, withoutTransit: span(withoutTransit, rows), severity };
     })
     .sort(

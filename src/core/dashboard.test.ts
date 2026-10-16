@@ -101,8 +101,8 @@ describe('pokrytí po projektech', () => {
     const result = projectCoverage(withTransit, withoutTransit, TODAY);
     expect(result.map((r) => [r.project, r.withTransit.until, r.withTransit.days, r.severity])).toEqual([
       ['B', null, 0, 'crit'],
-      ['A', day(15), 2, 'warn'],
-      ['D', day(16), 5, 'warn'],
+      ['A', day(15), 2, null],
+      ['D', day(16), 5, null],
       ['C', day(19), 6, null],
     ]);
     // C: s transitem celý horizont (14.–19. = 6 dní), bez transitu jen dnes.
