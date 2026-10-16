@@ -80,10 +80,8 @@ export interface ComponentTable {
   days: DayNumber[];
   products: ProductDemand[];
   components: ComponentLine[];
-  /** Komponenty se vybírají podle sloupce Component Coverage v mapování (jinak všechny nakupované). */
+  /** Mapování uvádí druh dílu (Item Type); sledují se díly PG, bez druhu se nesleduje nic. */
   byMapping: boolean;
-  /** Označené komponenty, které v žádném kusovníku nejsou. */
-  markedNotInBom: string[];
 }
 
 /**
@@ -174,9 +172,9 @@ export function buildComponents({ bom, master, coverage = [], callOffs, stock, t
     };
   });
 
-  // Sledované komponenty jen podle mapování (Component Coverage = Ano).
-  const byMapping = master?.hasComponentColumn ?? false;
-  const wanted = (item: string) => masterByItem.get(item)?.componentCoverage === true;
+  // Sledované komponenty jen podle mapování: všechny nakupované díly (Item Type = PG).
+  const byMapping = master?.columns.has('kind') ?? false;
+  const wanted = (item: string) => masterByItem.get(item)?.kind === 'PG';
 
   // Průměrná spotřeba pro zásobu: odvolávky za prvních 7 dní ÷ pracovní dny po–pá v nich (o víkendu odvolávky nebývají).
   const workDays = days.slice(0, RESERVE_DAYS).filter((d) => weekday(d) <= 5).length || 1;
@@ -241,7 +239,5 @@ export function buildComponents({ bom, master, coverage = [], callOffs, stock, t
   }
 
   const components = [...lines.values()].sort((a, b) => (a.shortDay ?? Infinity) - (b.shortDay ?? Infinity) || a.item.localeCompare(b.item, 'en', { numeric: true }));
-  const inBom = new Set(bom.info.keys());
-  const markedNotInBom = byMapping ? [...masterByItem.values()].filter((m) => m.componentCoverage && !inBom.has(m.item.toUpperCase())).map((m) => m.item) : [];
-  return { days, products, components, byMapping, markedNotInBom };
+  return { days, products, components, byMapping };
 }

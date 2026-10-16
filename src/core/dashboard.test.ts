@@ -23,7 +23,6 @@ describe('kritické komponenty', () => {
       products: [],
       components: [comp('A', 9), comp('B', 1, 3), comp('C', null), comp('D', 4)],
       byMapping: true,
-      markedNotInBom: [],
     };
     expect(componentAlerts(t).map((a) => [a.item, a.severity, a.day, a.missing, a.customerShortDay])).toEqual([
       ['B', 'crit', TODAY + 1, 7, TODAY + 3],

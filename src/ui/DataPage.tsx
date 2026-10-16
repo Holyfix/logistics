@@ -311,8 +311,8 @@ export function DataPage() {
             )}
             {data.master && (
               <p className="muted">
-                {data.master.data.hasComponentColumn
-                  ? `${t.data.bom.marked}: ${formatQuantity([...data.master.data.items.values()].filter((m) => m.componentCoverage).length, locale)}`
+                {data.master.data.columns.has('kind')
+                  ? `${t.data.bom.marked}: ${formatQuantity([...data.master.data.items.values()].filter((m) => m.kind === 'PG').length, locale)}`
                   : t.data.bom.noColumn}
               </p>
             )}

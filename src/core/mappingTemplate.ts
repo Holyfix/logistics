@@ -6,7 +6,7 @@ import type { ReportCell, ReportSheet } from './calloffs/summaryReport';
 import { KIND_FIELDS, type CheckedField } from './mappingCheck';
 import { customerDisplay, ITEM_KINDS, type ItemKind, type MasterData, type MasterItem } from './masterdata';
 
-type TemplateKey = 'item' | 'customerNumber' | 'description' | 'project' | 'customer' | 'side' | 'variant' | 'category' | 'line' | 'orderMultiple' | 'componentCoverage';
+type TemplateKey = 'item' | 'customerNumber' | 'description' | 'project' | 'category' | 'side' | 'variant' | 'line' | 'orderMultiple';
 
 /** Sloupce šablony: záhlaví a šířka. */
 export const TEMPLATE_COLUMNS: Record<TemplateKey, { header: string; width: number }> = {
@@ -14,27 +14,25 @@ export const TEMPLATE_COLUMNS: Record<TemplateKey, { header: string; width: numb
   customerNumber: { header: 'Customer Number', width: 24 },
   description: { header: 'Description', width: 36 },
   project: { header: 'Project', width: 11 },
-  customer: { header: 'Customer', width: 12 },
+  category: { header: 'Category', width: 14 },
   side: { header: 'Side', width: 8 },
-  variant: { header: 'Variant', width: 13 },
-  category: { header: 'Category', width: 20 },
+  variant: { header: 'Variant', width: 16 },
   line: { header: 'Line', width: 11 },
   orderMultiple: { header: 'Order Multiple', width: 10 },
-  componentCoverage: { header: 'Component Coverage', width: 11 },
 };
 
 /** Sloupce listu podle druhu dílu: jen to, co aplikace u daného druhu používá. */
 export const KIND_COLUMNS: Record<ItemKind, readonly TemplateKey[]> = {
-  FG: ['item', 'customerNumber', 'description', 'project', 'customer', 'side', 'variant', 'category', 'line', 'orderMultiple'],
+  FG: ['item', 'customerNumber', 'description', 'project', 'category', 'side', 'variant', 'line', 'orderMultiple'],
   SFG: ['item', 'description', 'project', 'line'],
-  PG: ['item', 'description', 'category', 'componentCoverage'],
+  PG: ['item', 'description'],
 };
 
 /** Všechny sloupce šablony v pořadí (pro Návod). */
 const ALL_COLUMNS = Object.keys(TEMPLATE_COLUMNS) as TemplateKey[];
 
 /**
- * List šablony pro díl: druh z mapování. Díl bez druhu se zařadí podle údajů (Component Coverage = Ano → PG,
+ * List šablony pro díl: druh z mapování. Díl bez druhu se zařadí podle údajů (dřívější Component Coverage = Ano → PG,
  * linka FOA / SLH / IMM → SFG, jinak FG), díl, který v mapování chybí (z Coverage, odvolávek, kusovníků), do FG.
  * Po nahrání šablony má díl druh podle listu, na kterém je.
  */
@@ -46,13 +44,16 @@ export function templateKind(m: MasterItem | undefined): ItemKind {
   return 'FG';
 }
 
-/** Údaj u druhu dílu: povinný, volitelný, nebo ho druh nepotřebuje (sloupec na listu druhu není). */
+/**
+ * Údaj u druhu dílu: povinný, volitelný, nebo ho druh nepotřebuje (sloupec na listu druhu není). Strana je volitelná
+ * (kontrola ji chce jen v kategoriích dělených na LHD / RHD), balení povinné (kontrola ho chce jen u ASSEMBLY).
+ */
 export type ColumnStatus = 'required' | 'optional' | 'notNeeded';
 
-export function columnStatus(key: TemplateKey, kind: ItemKind, variantProject: boolean): ColumnStatus {
+export function columnStatus(key: TemplateKey, kind: ItemKind): ColumnStatus {
   if (!KIND_COLUMNS[kind].includes(key)) return 'notNeeded';
   if (key === 'item') return 'required';
-  if (key === 'variant') return variantProject ? 'required' : 'optional';
+  if (key === 'side') return 'optional';
   return KIND_FIELDS[kind].includes(key as CheckedField) ? 'required' : 'optional';
 }
 
@@ -72,7 +73,10 @@ export interface TemplateTexts {
   note: string;
   required: string;
   optional: string;
-  variantRequired: string;
+  /** Strana u FG: jen v kategoriích dělených na LHD / RHD. */
+  sideRule: string;
+  /** Balení u FG: jen u linky ASSEMBLY. */
+  packRule: string;
   notNeeded: string;
   /** Poznámka ke sloupci (podle klíče sloupce). */
   columnNotes: Partial<Record<TemplateKey, string>>;
@@ -93,13 +97,11 @@ function valuesOf(m: MasterItem | undefined, part: TemplatePart): Record<Templat
     customerNumber: m?.customerNumber || part.customerNumber,
     description: m?.description || part.description,
     project: m?.project ?? '',
-    customer: m?.customer ?? '',
     side: m?.side ?? '',
     variant: m?.variant ?? '',
     category: m?.category ?? '',
     line: m?.line ?? '',
     orderMultiple: m?.orderMultiple ?? null,
-    componentCoverage: m?.componentCoverage ? 'Ano' : '',
   };
 }
 
@@ -131,8 +133,7 @@ export function mappingTemplate(master: MasterData | undefined, extra: readonly 
 
   const sheets: ReportSheet[] = ITEM_KINDS.map((kind) => {
     const keys = KIND_COLUMNS[kind];
-    // Varianta je u FG volitelná jen mimo projekty s variantami, záhlaví ji proto vede jako povinnou.
-    const optional = (key: TemplateKey) => key !== 'variant' && columnStatus(key, kind, false) === 'optional';
+    const optional = (key: TemplateKey) => columnStatus(key, kind) === 'optional';
     const data = rows.filter((r) => r.kind === kind).map((r) => keys.map((k): ReportCell => ({ ...valueCell(r.values[k]), ...(k === 'item' ? { fontWeight: 'bold' } : {}) })));
     return {
       name: kind,
@@ -149,8 +150,9 @@ export function mappingTemplate(master: MasterData | undefined, extra: readonly 
   const swatch = (cell: ReportCell, text: string): (ReportCell | null)[] => [cell, { value: text, columnSpan: 4 }, null, null, null];
   const guideColumns = ALL_COLUMNS.filter((k) => k !== 'item');
   const statusText = (key: TemplateKey, kind: ItemKind): ReportCell => {
-    if (key === 'variant' && kind === 'FG') return { value: texts.variantRequired, align: 'center', wrap: true };
-    const s = columnStatus(key, kind, false);
+    if (kind === 'FG' && key === 'side') return { value: texts.sideRule, align: 'center', wrap: true };
+    if (kind === 'FG' && key === 'orderMultiple') return { value: texts.packRule, fontWeight: 'bold', align: 'center', wrap: true };
+    const s = columnStatus(key, kind);
     if (s === 'required') return { value: texts.required, fontWeight: 'bold', align: 'center' };
     if (s === 'notNeeded') return { value: texts.notNeeded, backgroundColor: COLORS.notNeeded, textColor: COLORS.muted, align: 'center' };
     return { value: texts.optional, align: 'center' };
@@ -162,7 +164,7 @@ export function mappingTemplate(master: MasterData | undefined, extra: readonly 
       wide({ value: texts.title, fontWeight: 'bold', fontSize: 14, height: 24 }),
       [],
       swatch({ value: 'Item Number', fontWeight: 'bold', textColor: '#FFFFFF', backgroundColor: COLORS.header }, texts.legend.requiredColumn),
-      swatch({ value: 'Component Coverage', fontWeight: 'bold', backgroundColor: COLORS.optionalHeader }, texts.legend.optionalColumn),
+      swatch({ value: 'Variant', fontWeight: 'bold', backgroundColor: COLORS.optionalHeader }, texts.legend.optionalColumn),
       [],
       [th(texts.column), ...ITEM_KINDS.map((k) => th(`${k} – ${texts.kinds[k]}`)), th(texts.note)],
       ...guideColumns.map((k) => [{ value: TEMPLATE_COLUMNS[k].header, fontWeight: 'bold' as const }, ...ITEM_KINDS.map((kind) => statusText(k, kind)), { value: texts.columnNotes[k] ?? '', wrap: true }]),
