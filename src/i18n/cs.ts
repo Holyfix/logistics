@@ -356,7 +356,7 @@ export const cs = {
           missing: 'povinné – chybí, doplnit',
           optional: 'volitelné',
           notNeeded: 'tento druh dílu údaj nepotřebuje',
-          kindMissing: 'chybí druh dílu (Item Type) – vyplňte FG, SFG nebo PG',
+          kindMissing: 'chybí nebo neplatný druh dílu (Item Type) – vyberte FG, SFG nebo PG',
         },
         column: 'Sloupec',
         kinds: { FG: 'hotový výrobek', SFG: 'mezivýroba (WIP)', PG: 'nakupovaný díl' },
@@ -380,7 +380,7 @@ export const cs = {
         },
         footnotes: [
           'Aplikace čte jen první list (Mapping), záhlaví musí zůstat v prvním řádku. List Návod se ignoruje.',
-          'Barvy odpovídají druhu dílu v době stažení. Po změně druhu stáhněte šablonu znovu, nebo se řiďte tabulkou výše.',
+          'Barvy se řídí sloupcem Item Type: po vyplnění nebo změně druhu se řádek obarví sám, i nově přidaný řádek. Druh vyberte ze seznamu (FG, SFG, PG).',
           'Soubor uložte do sdílené složky jako Item_Mapping.xlsx (původní soubor nahraďte).',
         ],
       },

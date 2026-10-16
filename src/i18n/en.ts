@@ -354,7 +354,7 @@ export const en: Messages = {
           missing: 'required – missing, fill in',
           optional: 'optional',
           notNeeded: 'this item type does not need the value',
-          kindMissing: 'item type (Item Type) missing – fill in FG, SFG or PG',
+          kindMissing: 'item type (Item Type) missing or invalid – pick FG, SFG or PG',
         },
         column: 'Column',
         kinds: { FG: 'finished good', SFG: 'semi-finished (WIP)', PG: 'purchased part' },
@@ -378,7 +378,7 @@ export const en: Messages = {
         },
         footnotes: [
           'The app reads only the first sheet (Mapping); the header must stay in the first row. The Guide sheet is ignored.',
-          'Colours reflect the item type at download time. After changing a type download the template again or follow the table above.',
+          'Colours follow the Item Type column: after filling in or changing the type the row is coloured automatically, new rows too. Pick the type from the list (FG, SFG, PG).',
           'Save the file in the shared folder as Item_Mapping.xlsx (replace the original).',
         ],
       },
