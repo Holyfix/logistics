@@ -1,8 +1,10 @@
 // Šablona Item_Mapping k vyplnění: list Mapping (všechny díly mapování a díly, které v něm chybí) s buňkami
 // obarvenými podle druhu dílu (povinné vyplněné / povinné chybí / volitelné / druh nepotřebuje) a list Návod
 // s tabulkou, co vyplnit pro FG, SFG a PG. Aplikace čte jen první list.
+// Barvy jsou podmíněné formátování podle sloupce Item Type: po vyplnění nebo změně druhu se řádek v Excelu
+// obarví sám, i nově přidaný řádek. Item Type se vybírá ze seznamu.
 
-import type { ReportCell, ReportSheet } from './calloffs/summaryReport';
+import type { ReportCell, ReportRule, ReportSheet } from './calloffs/summaryReport';
 import { KIND_FIELDS, type CheckedField } from './mappingCheck';
 import { customerDisplay, ITEM_KINDS, type ItemKind, type MasterData, type MasterItem } from './masterdata';
 
@@ -94,13 +96,56 @@ function valuesOf(m: MasterItem | undefined, part: TemplatePart): Record<Templat
   };
 }
 
+/** Prázdné řádky pod díly, na které se formátování a výběr druhu také vztahují (pro nové díly). */
+export const SPARE_ROWS = 500;
+
+/** Písmeno sloupce šablony (sloupců je méně než 26). */
+const letter = (key: TemplateKey) => String.fromCharCode(65 + TEMPLATE_COLUMNS.findIndex((c) => c.key === key));
+
 /**
- * Šablona mapování: řádky = všechny díly mapování a pak `extra` (díly, které v mapování chybí). Buňky obarvené podle
- * druhu dílu v době stažení (zeleně povinné vyplněné, žlutě povinné prázdné, šedě nepotřebné, červeně chybí druh).
+ * Pravidla podmíněného formátování listu Mapping pro řádky 2…`lastRow` (vzorce pro řádek 2, Excel je posouvá).
+ * Pořadí = přednost: chybějící druh, pak po sloupcích nepotřebné, povinné prázdné, povinné vyplněné.
+ * Varianta je povinná u FG jen v projektu, kde má variantu některý jiný díl.
+ */
+export function templateRules(lastRow: number): ReportRule[] {
+  const A = letter('item');
+  const K = letter('kind');
+  const P = letter('project');
+  const V = letter('variant');
+  const range = (key: TemplateKey) => {
+    const column = TEMPLATE_COLUMNS.findIndex((c) => c.key === key) + 1;
+    return { from: { row: 2, column }, to: { row: lastRow, column } };
+  };
+  const kindIs = (kinds: readonly ItemKind[]) => (kinds.length === 1 ? `$${K}2="${kinds[0]}"` : `OR(${kinds.map((k) => `$${K}2="${k}"`).join(',')})`);
+  const known = ITEM_KINDS.map((k) => `$${K}2<>"${k}"`).join(',');
+  const rules: ReportRule[] = [
+    { ...range('kind'), formula: `AND($${A}2<>"",$${K}2="")`, style: { backgroundColor: COLORS.kindMissing } },
+    { ...range('kind'), formula: `AND($${K}2<>"",${known})`, style: { backgroundColor: COLORS.kindMissing } },
+  ];
+  for (const { key } of TEMPLATE_COLUMNS) {
+    if (key === 'item' || key === 'kind') continue;
+    const x = `${letter(key)}2`;
+    const required = ITEM_KINDS.filter((k) => cellStatus(key, k, true) === 'required');
+    const notNeeded = ITEM_KINDS.filter((k) => cellStatus(key, k, true) === 'notNeeded');
+    if (notNeeded.length) rules.push({ ...range(key), formula: kindIs(notNeeded), style: { backgroundColor: COLORS.notNeeded, textColor: COLORS.muted } });
+    if (!required.length) continue;
+    const missing =
+      key === 'variant'
+        ? `AND(${kindIs(required)},${x}="",$${P}2<>"",COUNTIFS($${P}$2:$${P}$${lastRow},$${P}2,$${V}$2:$${V}$${lastRow},"<>")>0)`
+        : `AND(${kindIs(required)},${x}="")`;
+    rules.push({ ...range(key), formula: missing, style: { backgroundColor: COLORS.missing } });
+    rules.push({ ...range(key), formula: `AND(${kindIs(required)},${x}<>"")`, style: { backgroundColor: COLORS.filled } });
+  }
+  return rules;
+}
+
+/**
+ * Šablona mapování: řádky = všechny díly mapování a pak `extra` (díly, které v mapování chybí). Buňky se obarví
+ * podmíněným formátováním podle druhu dílu (zeleně povinné vyplněné, žlutě povinné prázdné, šedě nepotřebné,
+ * oranžově chybí nebo neplatný druh).
  */
 export function mappingTemplate(master: MasterData | undefined, extra: readonly TemplatePart[], texts: TemplateTexts): ReportSheet[] {
   const items = [...(master?.items.values() ?? [])];
-  const variantProjects = new Set(items.filter((m) => m.project && m.variant).map((m) => m.project));
   const known = new Set(items.map((m) => m.item.toUpperCase()));
   const rows = [
     ...items.map((m) => valuesOf(m, { item: m.item, customerNumber: '', description: '' })),
@@ -111,16 +156,14 @@ export function mappingTemplate(master: MasterData | undefined, extra: readonly 
   const data = rows.map((r) =>
     TEMPLATE_COLUMNS.map((c): ReportCell => {
       const value = r[c.key];
-      const empty = value === null || value === '';
-      const status = cellStatus(c.key, (r.kind as ItemKind | '') || '', variantProjects.has(String(r.project)));
-      const cell: ReportCell = empty ? {} : typeof value === 'number' ? { value, type: Number } : { value: String(value) };
-      if (status === 'key') return { ...cell, fontWeight: 'bold' };
-      if (status === 'kind') return { ...cell, fontWeight: 'bold', align: 'center', ...(empty ? { backgroundColor: COLORS.kindMissing } : {}) };
-      if (status === 'required') return { ...cell, backgroundColor: empty ? COLORS.missing : COLORS.filled };
-      if (status === 'notNeeded') return { ...cell, backgroundColor: COLORS.notNeeded, textColor: COLORS.muted };
+      const cell: ReportCell = value === null || value === '' ? {} : typeof value === 'number' ? { value, type: Number } : { value: String(value) };
+      if (c.key === 'item') return { ...cell, fontWeight: 'bold' };
+      if (c.key === 'kind') return { ...cell, fontWeight: 'bold', align: 'center' };
       return cell;
     }),
   );
+  const lastRow = rows.length + 1 + SPARE_ROWS;
+  const kindColumn = TEMPLATE_COLUMNS.findIndex((c) => c.key === 'kind') + 1;
   const mapping: ReportSheet = {
     name: texts.sheetMapping,
     data: [header, ...data],
@@ -128,6 +171,8 @@ export function mappingTemplate(master: MasterData | undefined, extra: readonly 
     stickyRows: 1,
     stickyColumns: 1,
     gridLines: true,
+    rules: templateRules(lastRow),
+    lists: [{ from: { row: 2, column: kindColumn }, to: { row: lastRow, column: kindColumn }, values: [...ITEM_KINDS] }],
   };
 
   // Návod: legenda barev a tabulka sloupec × druh.

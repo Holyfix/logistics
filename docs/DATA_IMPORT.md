@@ -91,7 +91,9 @@ Další sloupce (např. Yield Percent, Cost Total) aplikace ignoruje.
 
 - **Šablonu mapování** stáhnete v modulu Data: všechny díly z mapování a díly, které v něm chybí (z Coverage,
   odvolávek a kusovníků). List **Mapping** má buňky obarvené podle druhu dílu (zeleně povinné vyplněné, žlutě
-  povinné k doplnění, šedě nepotřebné, červeně chybí druh), list **Návod** tabulku, co vyplnit pro FG, SFG a PG.
+  povinné k doplnění, šedě nepotřebné, oranžově chybí nebo neplatný druh). Barvy jsou podmíněné formátování podle
+  sloupce Item Type, takže se po vyplnění nebo změně druhu obarví řádek sám, i nově přidaný (500 volných řádků pod
+  díly); Item Type se vybírá ze seznamu FG/SFG/PG. List **Návod** má tabulku, co vyplnit pro FG, SFG a PG.
   Aplikace čte jen první list; soubor uložte jako Item_Mapping.xlsx.
 - Díly bez kmenových dat lze v Call-offs vyfiltrovat volbou „Bez kmenových dat“.
 - **Číslo zákazníka** se pro párování se soubory zákazníka sjednotí: velká písmena, bez mezer;

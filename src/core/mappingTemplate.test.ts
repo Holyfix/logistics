@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { parseCsv } from './csv';
 import { parseMasterData } from './masterdata';
-import { cellStatus, mappingTemplate, TEMPLATE_COLUMNS, type TemplateTexts } from './mappingTemplate';
+import { cellStatus, mappingTemplate, SPARE_ROWS, TEMPLATE_COLUMNS, type TemplateTexts } from './mappingTemplate';
 
 const texts: TemplateTexts = {
   sheetMapping: 'Mapping',
@@ -42,16 +42,26 @@ describe('šablona mapování', () => {
     expect(mapping!.gridLines).toBe(true);
   });
 
-  it('barvy podle druhu: povinné vyplněné / chybí, nepotřebné, chybí druh', () => {
-    const fg = row('FG1');
-    expect(fg[col('project')]!.backgroundColor).toBe('#E2EFDA');
-    expect(fg[col('orderMultiple')]!.backgroundColor).toBe('#FFE699');
-    expect(fg[col('componentCoverage')]!.backgroundColor).toBe('#EDEDED');
-    const pg = row('PG1');
-    expect(pg[col('category')]!.backgroundColor).toBe('#FFE699');
-    expect(pg[col('customerNumber')]!.backgroundColor).toBe('#EDEDED');
-    expect(row('X1')[col('kind')]!.backgroundColor).toBe('#F8CBAD');
-    expect(row('X1')[col('project')]!.backgroundColor).toBeUndefined();
+  it('barvy jako podmíněné formátování podle Item Type, i pro prázdné řádky pod díly; druh ze seznamu', () => {
+    const last = 1 + 4 + SPARE_ROWS;
+    expect(mapping!.lists).toEqual([{ from: { row: 2, column: 2 }, to: { row: last, column: 2 }, values: ['FG', 'SFG', 'PG'] }]);
+    // statické buňky bez barev – barvy jsou jen v pravidlech
+    expect(row('FG1').slice(2).every((c) => c?.backgroundColor === undefined)).toBe(true);
+    const rules = mapping!.rules!;
+    expect(rules.every((r) => r.from.row === 2 && r.to.row === last)).toBe(true);
+    const of = (key: string) => rules.filter((r) => r.from.column === col(key) + 1).map((r) => [r.formula, r.style.backgroundColor]);
+    expect(of('kind')).toEqual([
+      ['AND($A2<>"",$B2="")', '#F8CBAD'],
+      ['AND($B2<>"",$B2<>"FG",$B2<>"SFG",$B2<>"PG")', '#F8CBAD'],
+    ]);
+    expect(of('project')).toEqual([
+      ['$B2="PG"', '#EDEDED'],
+      ['AND(OR($B2="FG",$B2="SFG"),E2="")', '#FFE699'],
+      ['AND(OR($B2="FG",$B2="SFG"),E2<>"")', '#E2EFDA'],
+    ]);
+    expect(of('variant')[1]![0]).toBe(`AND($B2="FG",H2="",$E2<>"",COUNTIFS($E$2:$E$${last},$E2,$H$2:$H$${last},"<>")>0)`);
+    expect(of('componentCoverage')).toEqual([['OR($B2="FG",$B2="SFG")', '#EDEDED']]);
+    expect(of('type')).toEqual([]);
   });
 
   it('stav buňky podle druhu a návod', () => {
