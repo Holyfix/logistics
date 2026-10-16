@@ -31,6 +31,7 @@ Odkud aplikace bere jednotlivé údaje a jak jsou soubory navázané. Stejné ta
 
 | Údaj | Sloupec mapování | Když v mapování chybí | Kde se používá |
 |---|---|---|---|
+| Druh dílu | Item Type (FG, SFG, PG) | kontrola podle modulů | Kontrola mapování |
 | Projekt | Project | prázdné (bez projektu) | všechny moduly |
 | Destinace | — (složka Coverage; není vlastnost dílu) | — | Coverage, Plánování |
 | Zákazník | Customer | prázdné | filtry Odvolávek |
@@ -59,6 +60,23 @@ Ukazuje přesně, **co v Item_Mapping doplnit a kvůli kterým modulům**.
 | Komponenty | hotové díly z kusovníků | Project, Category, Description; sloupec Component Coverage (komponenty = Ano) |
 
 Strana se bere ze sloupce Side, jinak z LHD/RHD na začátku Variant – stačí jeden z nich.
+
+**Druh dílu (sloupec Item Type)** určuje, co má být u dílu vyplněné:
+
+| Sloupec | FG (hotový výrobek) | SFG (mezivýroba, WIP) | PG (nakupovaný) |
+|---|---|---|---|
+| Customer Number | ano | – | – |
+| Project | ano | ano | – |
+| Customer | ano | – | – |
+| Side (nebo LHD/RHD ve Variant) | ano | – | – |
+| Variant | jen v projektech s variantami | – | – |
+| Category | ano | – | ano |
+| Description | ano | ano | ano |
+| Line | ano | ano | – |
+| Order Multiple | ano | – | – |
+
+Díly s druhem se kontrolují celé (i ty, které se v načtených datech nepoužívají). Díl bez druhu se kontroluje podle
+modulů, ve kterých je (tabulka výše), a kontrola k němu hlásí chybějící druh.
 
 Jeden řádek mapování = jeden díl; vyplňuje se jen to, co díl potřebuje:
 

@@ -9,6 +9,7 @@ export const MASTER_COLUMNS = {
   description: ['Description', 'Item Description', 'Popis'],
   variant: ['Variant', 'Varianta'],
   type: ['Type', 'Typ'],
+  kind: ['Item Type', 'Druh dílu', 'Druh', 'Kind'],
   project: ['Project', 'Projekt'],
   customer: ['Zákazník', 'Customer'],
   side: ['Strana', 'Side', 'Řízení'],
@@ -25,6 +26,21 @@ const YES = new Set(['ano', 'a', 'yes', 'y', 'x', '1', 'true', 'pravda']);
 
 export const SIDES = ['LHD', 'RHD'] as const;
 
+/** Druh dílu: PG = nakupovaný, SFG = mezivýroba (WIP), FG = hotový výrobek. */
+export const ITEM_KINDS = ['FG', 'SFG', 'PG'] as const;
+export type ItemKind = (typeof ITEM_KINDS)[number];
+
+/** Druh dílu z textu (PG, SFG, FG; připustí i WIP a Purchased/Finished); neznámý text = null, prázdný = ''. */
+export function kindOf(value: string): ItemKind | '' | null {
+  const v = value.trim().toUpperCase();
+  if (!v) return '';
+  if ((ITEM_KINDS as readonly string[]).includes(v)) return v as ItemKind;
+  if (v === 'WIP') return 'SFG';
+  if (v === 'PURCHASED') return 'PG';
+  if (v === 'FINISHED') return 'FG';
+  return null;
+}
+
 /** Strana pro výrobu: LHD nebo RHD podle začátku (např. „RHD HUD“ je RHD); jinak prázdná. */
 export function sideGroup(side: string): string {
   return /^\s*(LHD|RHD)\b/i.exec(side)?.[1]?.toUpperCase() ?? '';
@@ -39,6 +55,8 @@ export interface MasterItem {
   description: string;
   variant: string;
   type: string;
+  /** Druh dílu (PG, SFG, FG); prázdný = neuvedeno. */
+  kind: ItemKind | '';
   project: string;
   customer: string;
   /** LHD / RHD: ze sloupce Strana, jinak ze začátku varianty (např. „LHD HUD“). */
@@ -180,6 +198,8 @@ export function parseMasterData(table: DataTable): MasterResult {
     }
     const customerNumber = text(row, col.customerNumber);
     const number = (c: number) => (c === -1 ? null : cellNumber(row[c]));
+    const kind = kindOf(text(row, col.kind));
+    if (kind === null) issue({ row: rowNo, column: MASTER_COLUMNS.kind[0], value: text(row, col.kind), message: 'unknownKind' });
     const entry: MasterItem = {
       item,
       customerNumber,
@@ -187,6 +207,7 @@ export function parseMasterData(table: DataTable): MasterResult {
       description: text(row, col.description),
       variant,
       type: text(row, col.type),
+      kind: kind ?? '',
       project: text(row, col.project),
       customer: text(row, col.customer),
       side,
@@ -217,11 +238,11 @@ export function masterDataTemplate(
   parts: readonly { item: string; description: string }[],
   existing: Map<string, MasterItem> | undefined,
 ): { header: string[]; rows: string[][] } {
-  const header = ['Item Number', 'Customer Number', 'Description', 'Variant', 'Type', 'Project', 'Safety Stock', 'Safety Time', 'Order Multiple', 'Component Coverage', 'Line', 'Category'];
+  const header = ['Item Number', 'Item Type', 'Customer Number', 'Description', 'Variant', 'Type', 'Project', 'Customer', 'Side', 'Safety Stock', 'Safety Time', 'Order Multiple', 'Component Coverage', 'Line', 'Category'];
   const rows = parts.map(({ item, description }) => {
     const m = existing?.get(item);
     const n = (v: number | null | undefined) => (v === null || v === undefined ? '' : String(v));
-    return [item, m?.customerNumber ?? '', m?.description || description, m?.variant ?? '', m?.type ?? '', m?.project ?? '', n(m?.safetyStock), n(m?.safetyTime), n(m?.orderMultiple), m?.componentCoverage ? 'Ano' : '', m?.line ?? '', m?.category ?? ''];
+    return [item, m?.kind ?? '', m?.customerNumber ?? '', m?.description || description, m?.variant ?? '', m?.type ?? '', m?.project ?? '', m?.customer ?? '', m?.side ?? '', n(m?.safetyStock), n(m?.safetyTime), n(m?.orderMultiple), m?.componentCoverage ? 'Ano' : '', m?.line ?? '', m?.category ?? ''];
   });
   return { header, rows };
 }

@@ -54,6 +54,7 @@ describe('parseMasterData', () => {
       description: 'ASSY DOOR LHD',
       variant: 'LHD HUD',
       type: 'DOOR',
+      kind: '',
       project: 'P100',
       customer: '',
       side: 'LHD',
@@ -98,6 +99,16 @@ describe('parseMasterData', () => {
   });
 });
 
+describe('druh dílu', () => {
+  it('PG, SFG, FG (i WIP); neznámá hodnota je chyba, prázdná neuvedeno', () => {
+    const r = parseMasterData(parseCsv('Item Number;Item Type\nA;fg\nB;WIP\nC;PG\nD;\nE;XYZ'));
+    if (!r.ok) throw new Error();
+    expect(['A', 'B', 'C', 'D', 'E'].map((i) => r.value.items.get(i)!.kind)).toEqual(['FG', 'SFG', 'PG', '', '']);
+    expect(r.value.issues.map((i) => [i.message, i.value])).toEqual([['unknownKind', 'XYZ']]);
+    expect(r.value.columns.has('kind')).toBe(true);
+  });
+});
+
 describe('masterDataTemplate', () => {
   it('předvyplní známé hodnoty ve formátu mapování', () => {
     const known: MasterItem = {
@@ -107,6 +118,7 @@ describe('masterDataTemplate', () => {
       description: 'X',
       variant: 'LHD',
       type: 'IP',
+      kind: 'FG',
       project: 'P',
       customer: '',
       side: 'LHD',
@@ -124,10 +136,10 @@ describe('masterDataTemplate', () => {
       ],
       new Map([['1', known]]),
     );
-    expect(t.header).toEqual(['Item Number', 'Customer Number', 'Description', 'Variant', 'Type', 'Project', 'Safety Stock', 'Safety Time', 'Order Multiple', 'Component Coverage', 'Line', 'Category']);
+    expect(t.header).toEqual(['Item Number', 'Item Type', 'Customer Number', 'Description', 'Variant', 'Type', 'Project', 'Customer', 'Side', 'Safety Stock', 'Safety Time', 'Order Multiple', 'Component Coverage', 'Line', 'Category']);
     expect(t.rows).toEqual([
-      ['1', 'C1', 'X', 'LHD', 'IP', 'P', '0', '', '16', '', 'ASSEMBLY', 'DP'],
-      ['2', '', 'Popis 2', '', '', '', '', '', '', '', '', ''],
+      ['1', 'FG', 'C1', 'X', 'LHD', 'IP', 'P', '', 'LHD', '0', '', '16', '', 'ASSEMBLY', 'DP'],
+      ['2', '', '', 'Popis 2', '', '', '', '', '', '', '', '', '', '', ''],
     ]);
   });
 });

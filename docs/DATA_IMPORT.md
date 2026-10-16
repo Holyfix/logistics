@@ -73,6 +73,7 @@ Tabulku udržuje uživatel. Jeden řádek = jeden díl. V Excelu na prvním list
 | Sloupec | Alternativní názvy | Povinný |
 |---|---|---|
 | Item Number | Díl, Číslo dílu | ano |
+| Item Type | Druh dílu, Druh | ne; `FG` hotový výrobek, `SFG` mezivýroba (WIP, přijme i „WIP“), `PG` nakupovaný díl; podle něj Kontrola mapování určí, co má být u dílu vyplněné |
 | Customer Number | Číslo zákazníka | pro Coverage |
 | Description | Item Description, Popis | ne |
 | Variant | Varianta (např. `LHD`, `LHD HUD`, `RHD`) | ne |

@@ -15,7 +15,7 @@ export interface DataIssue {
   row: number;
   column?: string;
   value?: string;
-  message: 'missingValue' | 'invalidNumber' | 'invalidDate' | 'unknownSide' | 'duplicateItem' | 'duplicateCustomerNumber' | 'weekMismatch';
+  message: 'missingValue' | 'invalidNumber' | 'invalidDate' | 'unknownSide' | 'unknownKind' | 'duplicateItem' | 'duplicateCustomerNumber' | 'weekMismatch';
 }
 
 export const MAX_ISSUES = 100;
