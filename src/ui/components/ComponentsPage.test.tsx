@@ -22,7 +22,7 @@ const bom = parseBom([
   ['Parent', 'FG-2', 'PANEL RHD', null, 'EA', 'L'],
   ['1', 'RESIN', 'RESIN', 0.5, 'KG', 'P'],
 ]);
-const master = parseMasterData(parseCsv('Item Number;Project;Component Coverage\nFG-1;P1;\nFG-2;P2;\nCLIP-1;;Ano\nRESIN;;Ano\nSUB-1;;'));
+const master = parseMasterData(parseCsv('Item Number;Item Type;Project;Component Coverage\nFG-1;FG;P1;\nFG-2;FG;P2;\nCLIP-1;PG;;Ano\nRESIN;;;Ano\nSUB-1;SFG;;'));
 const stock = parseStock(parseCsv('Item Number;Location;Zone ID;Qty On Hand - Inv Detail\nCLIP-1;A-01;PURCH;30\nRESIN;B-01;PURCH;100'));
 if (!bom.ok || !master.ok || !stock.ok) throw new Error();
 const callOffs = {
@@ -74,7 +74,9 @@ describe('ComponentsPage', () => {
     const [clip, resin] = rows(0);
     // spona: sklad 30, potřeba 10, 10, 20 → 20, 10, −10; pokryto do středy; zásoba 30 ÷ (40 za 5 dní výroby v prvních 7 dnech) = 3,75
     // bez souboru coverage sklad a transit u zákazníka neznáme → Zákazník pokryt do „—“
-    expect(cells(clip!).slice(0, 8)).toEqual(['CLIP-1', 'CLIP', 'EA', 'nákup', '30', '40', 'St 14. 10.zásoba 3,8 dne výroby', '—']);
+    expect(cells(clip!).slice(0, 8)).toEqual(['CLIP-1', 'CLIP', 'EA', 'PG', '30', '40', 'St 14. 10.zásoba 3,8 dne výroby', '—']);
+    // druh jen z mapování: pryskyřice ho nemá
+    expect(cells(resin!)[3]).toBe('—');
     expect(cells(clip!).slice(8, 11)).toEqual(['20', '10', '-10']);
     expect(clip!.querySelectorAll('td')[10]!.className).toContain('cell-negative');
     expect(clip!.querySelectorAll('td.cell-customer')).toHaveLength(0);
@@ -85,6 +87,22 @@ describe('ComponentsPage', () => {
     // pořadí ukazatelů: v záporu do 2 dnů, v záporu do 14 dní, …
     const kpis = [...document.querySelectorAll('.kpi')].map((k) => `${k.querySelector('.kpi-label')!.textContent}=${k.querySelector('.kpi-value')!.textContent}`);
     expect(kpis.slice(0, 2)).toEqual(['V záporu do 2 dnů=0', 'V záporu do 14 dní=1']);
+  });
+
+  it('sledovaná mezivýroba (SFG) a filtr podle druhu', () => {
+    const withSfg = parseMasterData(parseCsv('Item Number;Item Type;Project;Component Coverage\nFG-1;FG;P1;\nFG-2;FG;P2;\nCLIP-1;PG;;Ano\nRESIN;PG;;Ano\nSUB-1;SFG;;Ano'));
+    if (!withSfg.ok) throw new Error();
+    renderWith(<ComponentsPage today={day(13)} />, { ...state, data: { ...state.data!, master: { path: 'Item_Mapping.csv', data: withSfg.value } } });
+    // SUB-1 bez skladu: potřeba 5, 5, 10 (1× na FG-1) → v záporu hned
+    const sub = rows(0).find((r) => cells(r)[0] === 'SUB-1')!;
+    expect(cells(sub).slice(0, 4)).toEqual(['SUB-1', 'INTERMEDIATE', 'EA', 'SFG']);
+    expect(cells(sub).slice(8, 11)).toEqual(['-5', '-10', '-20']);
+    const select = screen.getByLabelText('Druh') as HTMLSelectElement;
+    expect([...select.options].map((o) => o.textContent)).toEqual(['Vše', 'SFG', 'PG']);
+    fireEvent.change(select, { target: { value: 'SFG' } });
+    expect(rows(0).map((r) => cells(r)[0])).toEqual(['SUB-1']);
+    fireEvent.change(select, { target: { value: 'PG' } });
+    expect(rows(0).map((r) => cells(r)[0]).sort()).toEqual(['CLIP-1', 'RESIN']);
   });
 
   it('potřeba výroby hotových dílů z odvolávek', () => {

@@ -7,7 +7,7 @@ import type { CallOffExport } from '../calloffs/parse';
 import type { CoverageSource } from '../coverage/compute';
 import { weekday, type DayNumber } from '../dates';
 import { callOffDemand, customerNeed, sequencerPlans } from '../demand';
-import type { MasterData } from '../masterdata';
+import type { ItemKind, MasterData } from '../masterdata';
 
 /** Horizont pokrytí komponent ve dnech (od dneška). */
 export const COMPONENT_DAYS = 14;
@@ -48,8 +48,8 @@ export interface ComponentLine {
   item: string;
   description: string;
   um: string;
-  /** P = nakupovaný, L/M = vyráběný. */
-  source: string;
+  /** Druh dílu z mapování (SFG = mezivýroba, PG = nakupovaný); prázdné = neuvedeno. */
+  kind: ItemKind | '';
   /** Náš sklad; null, když soubor skladu není načtený. */
   stock: number | null;
   /** Potřeba komponenty po dnech: potřeba výroby hotových dílů podle odvolávek × kusovník (po odečtu mezivýroby). */
@@ -192,7 +192,7 @@ export function buildComponents({ bom, master, coverage = [], callOffs, stock, t
           item: component.item,
           description: masterByItem.get(component.item)?.description || i?.description || '',
           um: i?.um ?? '',
-          source: i?.source ?? '',
+          kind: masterByItem.get(component.item)?.kind ?? '',
           stock: stock ? (stock.get(component.item) ?? 0) : null,
           usage: days.map(() => 0),
           balance: [],

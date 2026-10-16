@@ -74,6 +74,7 @@ Strana se bere ze sloupce Side, jinak z LHD/RHD na začátku Variant – stačí
 | Description | ano | ano | ano |
 | Line | ano | ano | – |
 | Order Multiple | ano | – | – |
+| Component Coverage | – | volitelně | volitelně |
 
 Díly s druhem se kontrolují celé (i ty, které se v načtených datech nepoužívají). Díl bez druhu se kontroluje podle
 modulů, ve kterých je (tabulka výše), a kontrola k němu hlásí chybějící druh.
@@ -84,7 +85,8 @@ Jeden řádek mapování = jeden díl; vyplňuje se jen to, co díl potřebuje:
 - **Order Multiple** – jen u hotových výrobků do montáže (Line = ASSEMBLY).
 - **Customer Number** – jen u dílů, které jsou v souborech Coverage (hotové výrobky); podle něj se Coverage spojí
   s dílem. U komponent a mezivýrob zůstává prázdné.
-- **Component Coverage** – jen u komponent, které se mají sledovat (Ano).
+- **Component Coverage** – jen u nakupovaných dílů (PG) a mezivýroby (SFG), které se mají sledovat v Komponentách
+  (Ano). Komponenty zobrazují druh dílu (SFG / PG) z Item Type a dají se podle něj filtrovat.
 
 **Co kontrola ukazuje:**
 
