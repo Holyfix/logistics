@@ -230,10 +230,10 @@ export const cs = {
       module: 'Modul',
       notInMapping: 'Díl chybí v mapování',
       total: 'Dílů k doplnění',
-      matrixNote: 'Číslo = počet dílů, u kterých je potřeba údaj doplnit; ✓ = v pořádku; · = modul údaj nepotřebuje. Kliknutím na modul se seznam dílů vyfiltruje.',
+      matrixNote: 'Číslo = počet dílů, u kterých je potřeba údaj doplnit; ✓ = v pořádku; · = modul údaj nepotřebuje. Kliknutím na modul se rozbalí seznam jeho dílů. Varianta se vyžaduje jen v projektech, kde ji má v mapování aspoň jeden díl; balení jen u dílů montáže (Line = ASSEMBLY); číslo zákazníka jen u dílů ze souborů Coverage (bez něj se díl s Coverage nespojí).',
       moduleNames: { coverage: 'Coverage', calloffs: 'Odvolávky', planning: 'Plánování', components: 'Komponenty' },
       moduleNotes: {
-        coverage: 'díly ze souborů Coverage; i dlaždice Zákazník',
+        coverage: 'díly ze souborů Coverage; i dlaždice Zákazník; varianta jen v projektech s variantami',
         calloffs: 'díly z aktuálního exportu odvolávek',
         planning: 'díly z Coverage; montáž = Line ASSEMBLY',
         components: 'hotové díly z kusovníků',

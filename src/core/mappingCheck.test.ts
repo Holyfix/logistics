@@ -89,6 +89,17 @@ describe('kontrola mapování po modulech', () => {
     ]);
   });
 
+  it('varianta jen u projektů, které varianty používají', () => {
+    const mm = master(
+      [HEADER, '200;A5555555555 0001;DOOR;PV;Z;LHD;LHD BASIS;DP;;IMM;', '201;A6666666666 0001;DOOR;PV;Z;LHD;;DP;;IMM;', '202;A7777777777 0001;DOOR;PX;Z;LHD;;DP;;IMM;'].join('\n'),
+    );
+    const c = checkMapping(mm, { coverage: [source('L', [row('A5555555555 0001'), row('A6666666666 0001'), row('A7777777777 0001')])], callOffs: undefined });
+    // 201 je v projektu PV, kde má variantu jiný díl → chybí; 202 v projektu PX bez variant → nevadí
+    expect(c.parts.map((p) => [p.item, p.fields.map((f) => f.field)])).toEqual([['201', ['variant']]]);
+    // bez sloupce Variant se nic nehlásí
+    expect(checkMapping(master('Item Number;Project;Description;Category\n100;P1;A;K'), { coverage: [source('L', [row('X', '100')])], callOffs: undefined }).columns.map((x) => x.column)).not.toContain('variant');
+  });
+
   it('strana z varianty: bez sloupce Side stačí Variant', () => {
     const c = checkMapping(master('Item Number;Project;Variant;Description;Customer;Category\n100;P1;LHD BASIS;A;Z;K\n101;P1;BASIS;B;Z;K'), { coverage: [], callOffs: callOffs(['100', '101']) });
     expect(c.columns).toEqual([]);

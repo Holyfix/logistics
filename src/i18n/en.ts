@@ -228,10 +228,10 @@ export const en: Messages = {
       module: 'Module',
       notInMapping: 'Part not in mapping',
       total: 'Parts to complete',
-      matrixNote: 'Number = parts where the value has to be added; ✓ = fine; · = the module does not need the value. Click a module to filter the parts list.',
+      matrixNote: 'Number = parts where the value has to be added; ✓ = fine; · = the module does not need the value. Click a module to open its parts list. Variant is required only in projects where at least one part has it in the mapping; pack size only for assembly parts (Line = ASSEMBLY); customer number only for parts from Coverage files (without it the part is not joined with Coverage).',
       moduleNames: { coverage: 'Coverage', calloffs: 'Call-offs', planning: 'Planning', components: 'Components' },
       moduleNotes: {
-        coverage: 'parts from Coverage files; also the Customer tile',
+        coverage: 'parts from Coverage files; also the Customer tile; variant only in projects with variants',
         calloffs: 'parts from the current call-off export',
         planning: 'parts from Coverage; assembly = Line ASSEMBLY',
         components: 'finished parts from BOMs',

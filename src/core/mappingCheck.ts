@@ -15,7 +15,8 @@ export type CheckedField = (typeof CHECKED_FIELDS)[number];
 export type CheckedColumn = CheckedField | 'componentCoverage';
 
 /**
- * Co který modul potřebuje u dílů, se kterými pracuje: Coverage díly ze souborů Coverage (i dlaždice Zákazník),
+ * Co který modul potřebuje u dílů, se kterými pracuje: Coverage díly ze souborů Coverage (i dlaždice Zákazník;
+ * varianta jen u projektů, kde ji v mapování má aspoň jeden díl),
  * Odvolávky díly z aktuálního exportu, Plánování díly z Coverage (Line u všech; projekt, strana a balení u dílů
  * s Line = ASSEMBLY), Komponenty hotové díly z kusovníků.
  */
@@ -136,6 +137,9 @@ export function checkMapping(master: MasterData, { coverage, callOffs, bomParent
   const modulesOf = (contexts: Set<Context>): CheckModule[] =>
     CHECK_MODULES.filter((mod) => (mod === 'coverage' || mod === 'planning' ? contexts.has('coverage') : mod === 'calloffs' ? contexts.has('calloffs') : contexts.has('bom')));
 
+  // Varianta je potřeba jen v projektech, které varianty používají (aspoň jeden díl projektu ji má vyplněnou).
+  const variantProjects = new Set([...master.items.values()].filter((m) => m.project && m.variant).map((m) => m.project));
+
   const parts: PartIssue[] = [];
   for (const u of unmapped.values()) {
     const { contexts, ...rest } = u;
@@ -145,7 +149,7 @@ export function checkMapping(master: MasterData, { coverage, callOffs, bomParent
     const needs = new Map<CheckedField, CheckModule[]>();
     const need = (mod: CheckModule, fields: readonly CheckedField[]) => fields.forEach((f) => needs.set(f, [...(needs.get(f) ?? []), mod]));
     if (contexts.has('coverage')) {
-      need('coverage', MODULE_FIELDS.coverage);
+      need('coverage', MODULE_FIELDS.coverage.filter((f) => f !== 'variant' || variantProjects.has(m.project)));
       need('planning', m.line === ASSEMBLY ? MODULE_FIELDS.planning : ['line']);
     }
     if (contexts.has('calloffs')) need('calloffs', MODULE_FIELDS.calloffs);
@@ -164,7 +168,8 @@ export function checkMapping(master: MasterData, { coverage, callOffs, bomParent
 
   // Sloupce: chybí v souboru, nebo v nich není nic označené.
   const columns: ColumnIssue[] = [];
-  for (const field of CHECKED_FIELDS) {
+  // Variant je nepovinný sloupec (jen pro projekty s variantami), jeho chybění se nehlásí.
+  for (const field of CHECKED_FIELDS.filter((f) => f !== 'variant')) {
     const modules = CHECK_MODULES.filter((mod) => active[mod] && MODULE_FIELDS[mod].includes(field));
     if (modules.length && !has(field)) columns.push({ column: field, kind: 'missing', modules });
   }

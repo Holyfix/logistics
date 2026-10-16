@@ -50,6 +50,8 @@ export function MappingCheckPanel() {
   const tc = t.data.check;
   const check = useMappingCheck();
   const [module, setModule] = useState<CheckModule | ''>('');
+  // Seznam dílů je sbalený; rozbalí se kliknutím na nadpis nebo na modul v souhrnu.
+  const [partsOpen, setPartsOpen] = useState(false);
 
   const field = (f: CheckedField) => `${tc.fieldNames[f]} (${tc.columnNames[f]})`;
   const fill = (p: PartIssue) => (p.notInMapping ? tc.newRow : p.fields.map((f) => field(f.field)).join(', '));
@@ -113,7 +115,11 @@ export function MappingCheckPanel() {
                 const s = c.modules[m];
                 const cell = (n: number) => (n > 0 ? <b className="check-bad">{formatQuantity(n, locale)}</b> : <span className="check-ok">✓</span>);
                 return (
-                  <tr key={m} className={module === m ? 'check-selected' : undefined} onClick={() => setModule(module === m ? '' : m)}>
+                  <tr key={m} className={module === m ? 'check-selected' : undefined} onClick={() => {
+                      setModule(module === m ? '' : m);
+                      setPartsOpen(true);
+                    }}
+                  >
                     <td>
                       <strong>{tc.moduleNames[m]}</strong>
                       <small className="muted cell-note">{tc.moduleNotes[m]}</small>
@@ -134,9 +140,12 @@ export function MappingCheckPanel() {
         <p className="muted">{tc.matrixNote}</p>
 
         {c.parts.length > 0 && (
-          <>
-            <h3>{tc.partsHeading}</h3>
-            <div className="segmented" role="group" aria-label={tc.module}>
+          <details className="check-parts-box" open={partsOpen} onToggle={(e) => setPartsOpen(e.currentTarget.open)}>
+            <summary>
+              {tc.partsHeading} ({formatQuantity(module ? c.modules[module].parts : c.parts.length, locale)}
+              {module && ` · ${tc.moduleNames[module]}`})
+            </summary>
+            <div className="segmented check-filter" role="group" aria-label={tc.module}>
               <button type="button" aria-pressed={module === ''} onClick={() => setModule('')}>
                 {tc.all} ({formatQuantity(c.parts.length, locale)})
               </button>
@@ -188,7 +197,7 @@ export function MappingCheckPanel() {
               </table>
             </div>
             {shown.length > SHOWN_ROWS && <p className="muted">{tc.more.replace('{n}', formatQuantity(shown.length - SHOWN_ROWS, locale))}</p>}
-          </>
+          </details>
         )}
         <div className="actions-row">
           <button type="button" className="button" onClick={() => download(c)}>
