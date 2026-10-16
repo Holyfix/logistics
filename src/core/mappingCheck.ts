@@ -1,6 +1,8 @@
 // Kontrola mapování: vlastnosti dílů se berou jen z Item_Mapping (bez záloh). Co má být u dílu vyplněné, určuje druh
 // dílu (Item Type: FG hotový výrobek, SFG mezivýroba, PG nakupovaný); díl bez druhu se kontroluje podle modulů, ve
-// kterých je. Pro každý díl ukáže, co doplnit (celý řádek, nebo které sloupce) a kvůli kterým modulům / podle druhu.
+// kterých je. Strana se vyžaduje jen tam, kde se díly kategorie projektu dělí na LHD / RHD; varianta se nekontroluje
+// (použije se, je-li vyplněná). Pro každý díl ukáže, co doplnit (celý řádek, nebo které sloupce) a kvůli kterým
+// modulům / podle druhu.
 
 import type { CallOffExport } from './calloffs/parse';
 import type { CoverageSource } from './coverage/compute';
@@ -10,28 +12,30 @@ export const CHECK_MODULES = ['coverage', 'calloffs', 'planning', 'components'] 
 export type CheckModule = (typeof CHECK_MODULES)[number];
 
 /** Kontrolované sloupce mapování. */
-export const CHECKED_FIELDS = ['kind', 'customerNumber', 'project', 'customer', 'side', 'variant', 'category', 'description', 'line', 'orderMultiple'] as const;
+export const CHECKED_FIELDS = ['kind', 'customerNumber', 'project', 'category', 'side', 'description', 'line', 'orderMultiple'] as const;
 export type CheckedField = (typeof CHECKED_FIELDS)[number];
-export type CheckedColumn = CheckedField | 'componentCoverage';
 
 /**
  * Co který modul potřebuje u dílů, se kterými pracuje: Coverage díly ze souborů Coverage (i dlaždice Zákazník),
- * Odvolávky díly z aktuálního exportu, Plánování díly z Coverage (Line u všech; projekt, strana a balení u dílů
- * s Line = ASSEMBLY), Komponenty hotové díly z kusovníků. Varianta jen v projektech, kde ji má aspoň jeden díl.
+ * Odvolávky díly z aktuálního exportu, Plánování díly z Coverage (Line u všech; projekt, popis, strana a balení u dílů
+ * s Line = ASSEMBLY), Komponenty hotové díly z kusovníků. Strana jen tam, kde se díly kategorie dělí na LHD / RHD.
  */
 export const MODULE_FIELDS: Record<CheckModule, readonly CheckedField[]> = {
-  coverage: ['project', 'variant', 'category', 'description'],
-  calloffs: ['project', 'customer', 'side', 'category', 'description'],
-  planning: ['line', 'project', 'side', 'orderMultiple'],
+  coverage: ['project', 'category', 'side', 'description'],
+  calloffs: ['project', 'category', 'side', 'description'],
+  planning: ['line', 'project', 'side', 'description', 'orderMultiple'],
   components: ['project', 'category', 'description'],
 };
 
-/** Co má být vyplněné podle druhu dílu (varianta jen v projektech s variantami). */
+/** Co má být vyplněné podle druhu dílu (strana jen v kategoriích dělených na LHD / RHD, balení jen u ASSEMBLY). */
 export const KIND_FIELDS: Record<ItemKind, readonly CheckedField[]> = {
-  FG: ['customerNumber', 'project', 'customer', 'side', 'variant', 'category', 'description', 'line', 'orderMultiple'],
+  FG: ['customerNumber', 'project', 'category', 'side', 'description', 'line', 'orderMultiple'],
   SFG: ['project', 'description', 'line'],
-  PG: ['category', 'description'],
+  PG: ['description'],
 };
+
+/** Klíč kategorie projektu pro pravidlo strany. */
+const sideGroup = (m: MasterItem) => (m.project && m.category ? `${m.project}|${m.category}` : '');
 
 export interface FieldIssue {
   field: CheckedField;
@@ -60,9 +64,9 @@ export interface PartIssue {
   modules: CheckModule[];
 }
 
-/** Sloupec, který v souboru chybí, nebo v něm není nic označené (Line bez ASSEMBLY, Component Coverage bez Ano). */
+/** Sloupec, který v souboru chybí, nebo v něm není nic označené (Line bez ASSEMBLY). */
 export interface ColumnIssue {
-  column: CheckedColumn;
+  column: CheckedField;
   kind: 'missing' | 'noneMarked';
   modules: CheckModule[];
   /** Druhy dílů, u kterých je sloupec povinný. */
@@ -165,8 +169,8 @@ export function checkMapping(master: MasterData, { coverage, callOffs, bomParent
   const modulesOf = (contexts: Set<Context>): CheckModule[] =>
     CHECK_MODULES.filter((mod) => (mod === 'coverage' || mod === 'planning' ? contexts.has('coverage') : mod === 'calloffs' ? contexts.has('calloffs') : contexts.has('bom')));
 
-  // Varianta je potřeba jen v projektech, které varianty používají (aspoň jeden díl projektu ji má vyplněnou).
-  const variantProjects = new Set([...master.items.values()].filter((m) => m.project && m.variant).map((m) => m.project));
+  // Strana je potřeba jen v kategoriích projektu, kde ji má aspoň jeden díl (díly se dělí na LHD / RHD).
+  const sideGroups = new Set([...master.items.values()].filter((m) => m.side).map(sideGroup).filter(Boolean));
 
   const parts: PartIssue[] = [];
   for (const { contexts, ...u } of unmapped.values()) {
@@ -187,7 +191,8 @@ export function checkMapping(master: MasterData, { coverage, callOffs, bomParent
     // Povinné údaje: podle druhu, bez druhu podle modulů.
     const required = new Set<CheckedField>(m.kind ? KIND_FIELDS[m.kind] : byModule.keys());
     if (hasKind && !m.kind && partModules.length) required.add('kind');
-    if (!variantProjects.has(m.project)) required.delete('variant');
+    if (!sideGroups.has(sideGroup(m))) required.delete('side');
+    if (m.line !== ASSEMBLY) required.delete('orderMultiple');
 
     const fields = CHECKED_FIELDS.flatMap((field): FieldIssue[] => {
       if (!required.has(field) || !has(field) || !isEmpty(m, field)) return [];
@@ -216,17 +221,13 @@ export function checkMapping(master: MasterData, { coverage, callOffs, bomParent
   const kindsInMapping = ITEM_KINDS.filter((k) => [...master.items.values()].some((m) => m.kind === k));
   const columns: ColumnIssue[] = [];
   if (!hasKind) columns.push({ column: 'kind', kind: 'missing', modules: [], kinds: [] });
-  for (const field of CHECKED_FIELDS.filter((f) => f !== 'variant' && f !== 'kind')) {
+  for (const field of CHECKED_FIELDS.filter((f) => f !== 'kind' && f !== 'side')) {
     const modules = CHECK_MODULES.filter((mod) => active[mod] && MODULE_FIELDS[mod].includes(field));
     const kinds = kindsInMapping.filter((k) => KIND_FIELDS[k].includes(field));
     if ((modules.length || kinds.length) && !has(field)) columns.push({ column: field, kind: 'missing', modules, kinds });
   }
   if (active.planning && has('line') && ![...mapped.values()].some(({ m, contexts }) => contexts.has('coverage') && m.line === ASSEMBLY)) {
     columns.push({ column: 'line', kind: 'noneMarked', modules: ['planning'], kinds: [] });
-  }
-  if (active.components) {
-    if (!has('componentCoverage')) columns.push({ column: 'componentCoverage', kind: 'missing', modules: ['components'], kinds: [] });
-    else if (![...master.items.values()].some((m) => m.componentCoverage)) columns.push({ column: 'componentCoverage', kind: 'noneMarked', modules: ['components'], kinds: [] });
   }
 
   const count = (list: readonly PartIssue[], include: (f: FieldIssue) => boolean) => {

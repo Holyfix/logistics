@@ -320,11 +320,6 @@ export function ComponentsPage({ today = localToday() }: { today?: DayNumber } =
             </table>
           </div>
         )}
-        {table.markedNotInBom.length > 0 && (
-          <p className="muted">
-            {tc.table.markedNotInBom}: {table.markedNotInBom.join(', ')}
-          </p>
-        )}
         <ul className="cov-legend">
           <li>
             <i className="swatch swatch-negative" /> {tc.legend.negative}

@@ -30,7 +30,7 @@ const callOffs = {
 } as unknown as CallOffExport;
 
 const mapping = (extra = '') =>
-  parseMasterData(parseCsv(`Item Number;Customer Number;Description;Project${extra ? ';Component Coverage' : ''}\nFG-1;C1;PANEL LHD;P1${extra ? ';' : ''}\nCLIP-1;;CLIP;${extra ? ';Ano' : ''}\nSUB-1;;INTERMEDIATE;${extra ? ';' : ''}`));
+  parseMasterData(parseCsv(`Item Number;Customer Number;Description;Project${extra ? ';Item Type' : ''}\nFG-1;C1;PANEL LHD;P1${extra ? ';FG' : ''}\nCLIP-1;;CLIP;${extra ? ';PG' : ''}\nSUB-1;;INTERMEDIATE;${extra ? ';SFG' : ''}`));
 
 describe('buildComponents', () => {
   it('potřeba z odvolávek od dneška, bez souboru sekvencéra stejná i pro Zákazník pokryt do', () => {
@@ -47,13 +47,13 @@ describe('buildComponents', () => {
     expect(fg2!.production.slice(0, 3)).toEqual([0, 2, 0]);
   });
 
-  it('bez sloupce Component Coverage se nesleduje nic (bez zálohy z kusovníku); spotřeba × kusovník a pokrytí ze skladu', () => {
+  it('bez druhu dílu (Item Type) se nesleduje nic (bez zálohy z kusovníku); spotřeba × kusovník a pokrytí ze skladu', () => {
     const none = mapping();
     if (!none.ok) throw new Error();
     const empty = buildComponents({ bom: bom.value, master: none.value, callOffs, stock: new Map([['CLIP-1', 40]]), today });
     expect(empty.byMapping).toBe(false);
     expect(empty.components).toEqual([]);
-    const m = parseMasterData(parseCsv('Item Number;Customer Number;Description;Project;Component Coverage\nFG-1;C1;PANEL LHD;P1;\nCLIP-1;;CLIP;;Ano\nRESIN;;RESIN;;Ano'));
+    const m = parseMasterData(parseCsv('Item Number;Customer Number;Description;Project;Item Type\nFG-1;C1;PANEL LHD;P1;FG\nCLIP-1;;CLIP;;PG\nRESIN;;RESIN;;PG'));
     if (!m.ok) throw new Error();
     const t = buildComponents({ bom: bom.value, master: m.value, callOffs, stock: new Map([['CLIP-1', 40]]), today });
     // bez skladu hotových dílů je potřeba výroby stejná jako odvolávky
@@ -70,14 +70,13 @@ describe('buildComponents', () => {
     expect(t.components[0]!.usage[0]).toBe(5);
   });
 
-  it('se sloupcem Component Coverage jen označené; mezivýroba bez označení se nezobrazí', () => {
+  it('sledují se všechny nakupované díly (PG); mezivýroba (SFG) se nezobrazí', () => {
     const m = mapping('x');
     if (!m.ok) throw new Error();
     const t = buildComponents({ bom: bom.value, master: m.value, callOffs, stock: undefined, today });
     expect(t.byMapping).toBe(true);
     expect(t.components.map((c) => c.item)).toEqual(['CLIP-1']);
     expect(t.components[0]!.stock).toBeNull();
-    expect(t.markedNotInBom).toEqual([]);
   });
 });
 
@@ -93,7 +92,7 @@ describe('odečet našeho skladu hotových dílů a mezivýroby', () => {
   if (!tree.ok) throw new Error();
   const workdays = Array.from({ length: 14 }, (_, k) => monday + k).filter((d) => (d - monday) % 7 < 5);
   const calls = { items: ['A'], offsets: Int32Array.from([0, workdays.length]), days: Int32Array.from(workdays), qty: Float64Array.from(workdays.map(() => 100)) } as unknown as CallOffExport;
-  const m = parseMasterData(parseCsv('Item Number;Component Coverage\nK;Ano\nS;Ano'));
+  const m = parseMasterData(parseCsv('Item Number;Item Type\nK;PG\nS;SFG'));
   if (!m.ok) throw new Error();
   const stock = new Map([['A', 150], ['S', 100], ['K', 400]]);
   const net = buildComponents({ bom: tree.value, master: m.value, callOffs: calls, stock, today: monday, netOwnStock: true });
@@ -109,8 +108,8 @@ describe('odečet našeho skladu hotových dílů a mezivýroby', () => {
     // zásoba podle odvolávek za prvních 7 dní (5 dní výroby po 200 ks) → 2 dny
     expect(k.avgDaily).toBe(200);
     expect(k.productionDays).toBe(2);
-    // mezivýroba: potřeba na její úrovni, vlastní sklad 100
-    expect(net.components.find((c) => c.item === 'S')!.usage.slice(0, 3)).toEqual([0, 50, 100]);
+    // mezivýroba (SFG) se nesleduje
+    expect(net.components.map((c) => c.item)).toEqual(['K']);
   });
 
   it('bez odečtu skladu: K se spotřebuje už od pondělí a chybí ve středu', () => {
@@ -133,7 +132,7 @@ describe('Zákazník pokryt do: sklad a transit u zákazníka podle souboru cove
   if (!tree.ok) throw new Error();
   const workdays = Array.from({ length: 14 }, (_, k) => monday + k).filter((d) => (d - monday) % 7 < 5);
   const calls = { items: ['A'], offsets: Int32Array.from([0, workdays.length]), days: Int32Array.from(workdays), qty: Float64Array.from(workdays.map(() => 100)) } as unknown as CallOffExport;
-  const m = parseMasterData(parseCsv('Item Number;Customer Number;Component Coverage\nA;CA;\nK;;Ano'));
+  const m = parseMasterData(parseCsv('Item Number;Customer Number;Item Type\nA;CA;FG\nK;;PG'));
   if (!m.ok) throw new Error();
   const sequencer = (days: number[], balance: number[], transit: number[], stock: number): CoverageSource => ({
     path: 'Coverage/X/P/r.xlsx',
@@ -198,7 +197,7 @@ describe('Zákazník pokryt do: sklad a transit u zákazníka podle souboru cove
       ['Parent', 'B', 'B', null, 'EA', 'L'],
       ['1', 'K', 'K', 1, 'EA', 'P'],
     ]);
-    const mm = parseMasterData(parseCsv('Item Number;Customer Number;Component Coverage\nA;CA;\nB;CB;\nK;;Ano'));
+    const mm = parseMasterData(parseCsv('Item Number;Customer Number;Item Type\nA;CA;FG\nB;CB;FG\nK;;PG'));
     if (!two.ok || !mm.ok) throw new Error();
     const seq = sequencer([monday, monday + 1, monday + 2, monday + 3], [10, 10, 10, -5], [0, 0, 0, 0], 10);
     const rowB = { ...seq.report.rows[0]!, customerNumber: 'CB', customerKey: 'CB', balance: [5, -1, -1, -1] };
@@ -220,7 +219,7 @@ describe('kategorie komponent', () => {
       ['.1', 'K', 'PART', 1, 'EA', 'P'],
     ]);
     if (!tree.ok) throw new Error();
-    const m = parseMasterData(parseCsv('Item Number;Component Coverage;Category\nA;;DP\nB;;HB\nK;Ano;CLIP'));
+    const m = parseMasterData(parseCsv('Item Number;Item Type;Category\nA;FG;DP\nB;FG;HB\nK;PG;CLIP'));
     if (!m.ok) throw new Error();
     const t = buildComponents({ bom: tree.value, master: m.value, callOffs: undefined, stock: undefined, today: monday });
     expect(t.products.map((p) => [p.item, p.category])).toEqual([

@@ -13,7 +13,8 @@ const texts: TemplateTexts = {
   note: 'Pozn.',
   required: 'povinné',
   optional: 'volitelné',
-  variantRequired: 'var',
+  sideRule: 'strana',
+  packRule: 'ASSEMBLY',
   notNeeded: '–',
   columnNotes: {},
   footnotes: ['F'],
@@ -47,7 +48,7 @@ describe('šablona mapování po druzích dílu', () => {
   it('jen listy FG, SFG, PG (každý jen se svými sloupci) a Návod', () => {
     expect(sheets.map((s) => s.name)).toEqual(['FG', 'SFG', 'PG', 'Návod']);
     expect(headers(byName('SFG'))).toEqual(['Item Number', 'Description', 'Project', 'Line']);
-    expect(headers(byName('PG'))).toEqual(['Item Number', 'Description', 'Category', 'Component Coverage']);
+    expect(headers(byName('PG'))).toEqual(['Item Number', 'Description']);
     expect(headers(byName('FG'))).toEqual(KIND_COLUMNS.FG.map((k) => TEMPLATE_COLUMNS[k].header));
   });
 
@@ -63,8 +64,9 @@ describe('šablona mapování po druzích dílu', () => {
     const fg = row(byName('FG'), 'FG1');
     expect(fg['Order Multiple']).toEqual({});
     expect(byName('FG').data.slice(1).flat().every((c) => c?.backgroundColor === undefined)).toBe(true);
-    expect(byName('PG').data[0]!.map((c) => c?.backgroundColor)).toEqual(['#1D5C9E', '#1D5C9E', '#1D5C9E', '#BDD7EE']);
-    expect(byName('FG').data[0]!.every((c) => c?.backgroundColor === '#1D5C9E')).toBe(true);
+    expect(byName('PG').data[0]!.map((c) => c?.backgroundColor)).toEqual(['#1D5C9E', '#1D5C9E']);
+    // u FG volitelné jen strana a varianta
+    expect(byName('FG').data[0]!.filter((c) => c?.backgroundColor === '#BDD7EE').map((c) => c?.value)).toEqual(['Side', 'Variant']);
   });
 
   it('prázdné listy druhů zůstanou se záhlavím', () => {
@@ -76,8 +78,10 @@ describe('šablona mapování po druzích dílu', () => {
   });
 
   it('stav sloupce podle druhu a návod', () => {
-    expect([columnStatus('variant', 'FG', true), columnStatus('variant', 'FG', false), columnStatus('variant', 'PG', true)]).toEqual(['required', 'optional', 'notNeeded']);
-    expect([columnStatus('line', 'SFG', false), columnStatus('line', 'PG', false), columnStatus('componentCoverage', 'PG', false)]).toEqual(['required', 'notNeeded', 'optional']);
+    expect([columnStatus('variant', 'FG'), columnStatus('side', 'FG'), columnStatus('orderMultiple', 'FG'), columnStatus('variant', 'PG')]).toEqual(['optional', 'optional', 'required', 'notNeeded']);
+    expect([columnStatus('line', 'SFG'), columnStatus('line', 'PG'), columnStatus('category', 'PG'), columnStatus('category', 'FG')]).toEqual(['required', 'notNeeded', 'notNeeded', 'required']);
+    const sideRow = byName('Návod').data.find((r) => r[0]?.value === 'Side')!;
+    expect(sideRow.slice(1, 4).map((c) => c?.value)).toEqual(['strana', '–', '–']);
     const lineRow = byName('Návod').data.find((r) => r[0]?.value === 'Line')!;
     expect(lineRow.slice(1, 4).map((c) => c?.value)).toEqual(['povinné', 'povinné', '–']);
   });
@@ -88,7 +92,8 @@ describe('šablona mapování po druzích dílu', () => {
     if (!back.ok) throw new Error();
     expect(Object.fromEntries([...back.value.items.values()].map((m) => [m.item, m.kind]))).toEqual({ FG1: 'FG', FG2: 'FG', FG3: 'FG', X1: 'FG', NEW: 'FG', SFG1: 'SFG', X2: 'SFG', PG1: 'PG', X3: 'PG' });
     const kinded = [...master.value.items.values()].filter((m) => m.kind);
-    const fields = (m: MasterItem) => ({ ...m, type: '', safetyStock: null, safetyTime: null });
+    // šablona nepřenáší sloupce, které aplikace nepoužívá
+    const fields = (m: MasterItem) => ({ ...m, type: '', safetyStock: null, safetyTime: null, customer: '', componentCoverage: false });
     expect(kinded.map((m) => fields(back.value.items.get(m.item)!))).toEqual(kinded.map(fields));
     expect(back.value.issues).toEqual([]);
   });

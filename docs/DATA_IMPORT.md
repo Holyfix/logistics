@@ -77,29 +77,28 @@ sloupcem Item Type); ostatní listy (Návod) se vynechají. Díl na dvou listech
 |---|---|---|
 | Item Number | Díl, Číslo dílu | ano |
 | Item Type | Druh dílu, Druh | ne; `FG` hotový výrobek, `SFG` mezivýroba (WIP, přijme i „WIP“), `PG` nakupovaný díl; podle něj Kontrola mapování určí, co má být u dílu vyplněné |
-| Customer Number | Číslo zákazníka | pro Coverage |
-| Description | Item Description, Popis | ne |
-| Variant | Varianta (např. `LHD`, `LHD HUD`, `RHD`) | ne |
-| Type | Typ | ne |
-| Project | Projekt | ne |
-| Zákazník | Customer | ne |
-| Strana | Side, Řízení; jinak se odvodí ze začátku varianty | ne |
-| Safety Stock, Safety Time | Pojistná zásoba, Pojistná doba | ne |
-| Order Multiple | Balení, Kusů v balení | ne |
-| Component Coverage | Coverage Component, Komponenta | ne; „Ano“ (nebo Y, X, 1) = komponenta se sleduje v modulu Komponenty |
-| Line | Linka, Výrobní linka | ne; linka, na které se díl vyrábí: `ASSEMBLY`, `FOA`, `SLH`, `IMM` (přijme i Montáž, Assy, Foaming, Slush, Vstřikování) |
-| Category | Kategorie | ne; druh dílu nebo komponenty podle vlastní volby (např. `DP` = door panel, `HB`); filtr Kategorie v Call-offs, Coverage a Komponentách |
+| Customer Number | Číslo zákazníka | u FG |
+| Description | Item Description, Popis | ano |
+| Project | Projekt | u FG a SFG |
+| Category | Kategorie | u FG; kategorie hotového dílu (např. `DP` = door panel, `IP`); filtry a přehledy, v Komponentách kategorie hotových dílů, ve kterých komponenta je |
+| Strana | Side, Řízení; jinak se odvodí ze začátku varianty | u FG jen v kategoriích projektu, které se dělí na LHD / RHD |
+| Variant | Varianta | ne; jen u dílů, které je potřeba rozlišit (např. `SR1 Heating`), zapisuje se bez strany |
+| Line | Linka, Výrobní linka | u FG a SFG; linka, na které se díl vyrábí: `ASSEMBLY`, `FOA`, `SLH`, `IMM` (přijme i Montáž, Assy, Foaming, Slush, Vstřikování) |
+| Order Multiple | Balení, Kusů v balení | u FG s linkou ASSEMBLY |
 
-Další sloupce (např. Yield Percent, Cost Total) aplikace ignoruje.
+Modul Komponenty sleduje všechny nakupované díly (Item Type = PG). Další sloupce (např. Customer, Component Coverage,
+Type, Safety Stock, Yield Percent) aplikace nepoužívá; Component Coverage = Ano jen pomůže zařadit díl bez druhu
+do šablony na list PG.
 
 - **Šablonu mapování** stáhnete v modulu Data. Má jen listy **FG**, **SFG**, **PG** (a Návod), každý jen se
-  sloupci, které aplikace pro daný druh používá: FG (Item Number, Customer Number, Description, Project, Customer,
-  Side, Variant, Category, Line, Order Multiple), SFG (Item Number, Description, Project, Line), PG (Item Number,
-  Description, Category, Component Coverage). Díly bez druhu se zařadí podle údajů (Component Coverage = Ano → PG,
-  linka FOA / SLH / IMM → SFG, ostatní → FG), díly, které v mapování chybí (z Coverage, odvolávek a kusovníků),
+  sloupci, které aplikace pro daný druh používá: FG (Item Number, Customer Number, Description, Project, Category,
+  Side, Variant, Line, Order Multiple), SFG (Item Number, Description, Project, Line), PG (Item Number,
+  Description). Díly bez druhu se zařadí podle údajů (linka FOA / SLH / IMM → SFG, dřívější Component Coverage =
+  Ano → PG, ostatní → FG), díly, které v mapování chybí (z Coverage, odvolávek a kusovníků),
   jsou na listu FG; po nahrání mají díly druh podle listu. Chybějící údaj zůstane prázdný (co doplnit, ukazuje
   Kontrola mapování). Formátování je jen záhlaví (tmavé = povinný sloupec, světlé = volitelný), aby byl soubor
-  rychlý. Sloupce, které aplikace nepoužívá (Type, Safety Stock, Safety Time), šablona neobsahuje. Soubor uložte
+  rychlý. Sloupce, které aplikace nepoužívá (Customer, Component Coverage, Type, Safety Stock, Safety Time), šablona
+  neobsahuje. Soubor uložte
   jako Item_Mapping.xlsx.
 - Díly bez kmenových dat lze v Call-offs vyfiltrovat volbou „Bez kmenových dat“.
 - **Číslo zákazníka** se pro párování se soubory zákazníka sjednotí: velká písmena, bez mezer;

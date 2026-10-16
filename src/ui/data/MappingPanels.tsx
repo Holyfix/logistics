@@ -39,7 +39,7 @@ export function useMappingCheck(): MappingCheck | null {
 /** Text problému se sloupcem: chybí v souboru (a kdo ho potřebuje), nebo v něm není nic označené. */
 function columnText(t: Messages, c: ColumnIssue): string {
   const tc = t.data.check;
-  if (c.kind === 'noneMarked') return c.column === 'line' ? tc.noneAssembly : tc.noneComponent;
+  if (c.kind === 'noneMarked') return tc.noneAssembly;
   if (c.column === 'kind') return tc.kindMissing;
   const who = [...c.modules.map((m) => tc.moduleNames[m]), ...c.kinds.map((k) => tc.kindParts.replace('{kind}', k))].join(', ');
   return tc.columnMissing.replace('{modules}', who);

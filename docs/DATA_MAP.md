@@ -20,7 +20,7 @@ Odkud aplikace bere jednotlivé údaje a jak jsou soubory navázané. Stejné ta
 
 | Soubor | Co se z něj bere | Napojení |
 |---|---|---|
-| Item_Mapping | číslo zákazníka, popis, projekt, zákazník, strana, varianta, kategorie, linka, balení, sledování komponent | hlavní číselník dílů |
+| Item_Mapping | druh dílu (list FG / SFG / PG), číslo zákazníka, popis, projekt, kategorie, strana, varianta, linka, balení | hlavní číselník dílů |
 | Coverage (`Coverage/Destinace/Projekt/`) | zásoba u zákazníka a transit po dnech, destinace ze jména složky | číslo zákazníka → Customer Number |
 | Odvolávky | požadavky po týdnech, odesláno, popis | Item Number |
 | Sklad | množství na lokacích | Item Number |
@@ -34,17 +34,16 @@ Odkud aplikace bere jednotlivé údaje a jak jsou soubory navázané. Stejné ta
 | Druh dílu | Item Type (FG, SFG, PG) | kontrola podle modulů | Kontrola mapování |
 | Projekt | Project | prázdné (bez projektu) | všechny moduly |
 | Destinace | — (složka Coverage; není vlastnost dílu) | — | Coverage, Plánování |
-| Zákazník | Customer | prázdné | filtry Odvolávek |
-| Strana | Side, jinak LHD/RHD na začátku Variant | prázdné | Odvolávky, Plánování |
-| Varianta | Variant | prázdné | souhrn v Coverage |
+| Strana | Side (jen kategorie dělené na LHD / RHD), jinak LHD/RHD na začátku Variant | prázdné (díl bez strany) | Odvolávky, Coverage, Plánování |
+| Varianta | Variant (jen díly, které je potřeba rozlišit) | prázdné (díl bez varianty) | Odvolávky, Coverage, Plánování |
 | Kategorie | Category | prázdné | filtry, přehled Odvolávek |
 | Popis | Description | prázdné; díl bez mapování ukáže text ze souboru, jen aby šel poznat | všechny moduly |
 | Číslo zákazníka | Customer Number | díl se nespojí s Coverage; díl bez mapování ukáže zápis ze souboru | Coverage, Plánování |
 | Balení | Order Multiple | plán se nezaokrouhluje na balení | Plánování |
 | Montážní díly | Line = ASSEMBLY | díl není v plánu montáže | Plánování |
-| Sledované komponenty | Component Coverage = Ano | komponenta se nesleduje | Komponenty |
+| Sledované komponenty | Item Type = PG (list PG) | díl se nesleduje | Komponenty |
 
-Sloupce Type, Safety Stock a Safety Time se zatím nepoužívají.
+Sloupce Customer, Component Coverage, Type, Safety Stock a Safety Time se nepoužívají.
 
 ## Kontrola mapování (modul Data)
 
@@ -54,12 +53,13 @@ Ukazuje přesně, **co v Item_Mapping doplnit a kvůli kterým modulům**.
 
 | Modul | Díly | Sloupce mapování |
 |---|---|---|
-| Coverage (i dlaždice Zákazník) | díly ze souborů Coverage | Project, Category, Description; Variant jen v projektech, kde ji má aspoň jeden díl |
-| Odvolávky | díly z aktuálního exportu | Project, Customer, Side, Category, Description |
-| Plánování | díly z Coverage | Line; u dílů s Line = ASSEMBLY navíc Project, Side, Order Multiple |
-| Komponenty | hotové díly z kusovníků | Project, Category, Description; sloupec Component Coverage (komponenty = Ano) |
+| Coverage (i dlaždice Zákazník) | díly ze souborů Coverage | Project, Category, Side*, Description |
+| Odvolávky | díly z aktuálního exportu | Project, Category, Side*, Description |
+| Plánování | díly z Coverage | Line; u dílů s Line = ASSEMBLY navíc Project, Side*, Description, Order Multiple |
+| Komponenty | hotové díly z kusovníků | Project, Category, Description; sledují se všechny díly PG |
 
-Strana se bere ze sloupce Side, jinak z LHD/RHD na začátku Variant – stačí jeden z nich.
+\* Strana jen v kategoriích projektu, které se dělí na LHD / RHD (aspoň jeden díl kategorie projektu stranu má).
+Bere se ze sloupce Side, jinak z LHD/RHD na začátku Variant. Varianta se nekontroluje – použije se, je-li vyplněná.
 
 **Druh dílu (sloupec Item Type)** určuje, co má být u dílu vyplněné:
 
@@ -67,29 +67,28 @@ Strana se bere ze sloupce Side, jinak z LHD/RHD na začátku Variant – stačí
 |---|---|---|---|
 | Customer Number | ano | – | – |
 | Project | ano | ano | – |
-| Customer | ano | – | – |
-| Side (nebo LHD/RHD ve Variant) | ano | – | – |
-| Variant | jen v projektech s variantami | – | – |
-| Category | ano | – | ano |
+| Category | ano | – | – |
+| Side (nebo LHD/RHD ve Variant) | jen v kategoriích dělených na LHD / RHD | – | – |
+| Variant | volitelně (nekontroluje se) | – | – |
 | Description | ano | ano | ano |
 | Line | ano | ano | – |
-| Order Multiple | ano | – | – |
+| Order Multiple | u linky ASSEMBLY | – | – |
 
 Díly s druhem se kontrolují celé (i ty, které se v načtených datech nepoužívají). Díl bez druhu se kontroluje podle
 modulů, ve kterých je (tabulka výše), a kontrola k němu hlásí chybějící druh.
 
 Jeden řádek mapování = jeden díl; vyplňuje se jen to, co díl potřebuje:
 
-- **Variant** – jen u projektů, které varianty používají (vyžaduje se, jakmile ji v projektu má aspoň jeden díl).
+- **Side** – jen v kategoriích projektu, kde se díly dělí na LHD / RHD (např. DP ano, IP ne).
+- **Variant** – jen u dílů, které je potřeba rozlišit (např. SR1 / SR2 Heating); zapisuje se bez strany.
 - **Order Multiple** – jen u hotových výrobků do montáže (Line = ASSEMBLY).
-- **Customer Number** – jen u dílů, které jsou v souborech Coverage (hotové výrobky); podle něj se Coverage spojí
-  s dílem. U komponent a mezivýrob zůstává prázdné.
-- **Component Coverage** – jen u komponent, které se mají sledovat (Ano).
+- **Customer Number** – u všech hotových výrobků (FG); podle něj se Coverage spojí s dílem. U komponent
+  a mezivýrob zůstává prázdné.
 
 **Co kontrola ukazuje:**
 
 1. **Sloupce** – sloupec, který v souboru chybí (a které moduly ho potřebují), Line bez jediného ASSEMBLY u dílů
-   z Coverage (prázdný plán montáže), Component Coverage bez jediného Ano (Komponenty nic nesledují).
+   z Coverage (prázdný plán montáže).
 2. **Co chybí po modulech** – tabulka modul × sloupec: počet dílů, u kterých je potřeba údaj doplnit, ✓ v pořádku,
    · modul údaj nepotřebuje. Kliknutím na modul se seznam dílů vyfiltruje.
 3. **Díly k doplnění** – pro každý díl: celý nový řádek (díl v mapování není; u dílů z Coverage s nápovědou složky),

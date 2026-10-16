@@ -22,7 +22,7 @@ const bom = parseBom([
   ['Parent', 'FG-2', 'PANEL RHD', null, 'EA', 'L'],
   ['1', 'RESIN', 'RESIN', 0.5, 'KG', 'P'],
 ]);
-const master = parseMasterData(parseCsv('Item Number;Project;Component Coverage\nFG-1;P1;\nFG-2;P2;\nCLIP-1;;Ano\nRESIN;;Ano\nSUB-1;;'));
+const master = parseMasterData(parseCsv('Item Number;Item Type;Project\nFG-1;FG;P1\nFG-2;FG;P2\nCLIP-1;PG;\nRESIN;PG;\nSUB-1;SFG;'));
 const stock = parseStock(parseCsv('Item Number;Location;Zone ID;Qty On Hand - Inv Detail\nCLIP-1;A-01;PURCH;30\nRESIN;B-01;PURCH;100'));
 if (!bom.ok || !master.ok || !stock.ok) throw new Error();
 const callOffs = {
