@@ -1755,3 +1755,17 @@ button.oil-step:disabled {
   margin-top: 8px;
 }
 
+
+/* Seznam dílů k doplnění: sbalitelný, nadpis jako h3; filtr modulů jen tak široký jako tlačítka. */
+.check-parts-box > summary {
+  margin: 14px 0 8px;
+  font: 600 14px/1.3 var(--font-display);
+  cursor: pointer;
+}
+
+.segmented.check-filter {
+  display: flex;
+  width: fit-content;
+  max-width: 100%;
+  flex-wrap: wrap;
+}

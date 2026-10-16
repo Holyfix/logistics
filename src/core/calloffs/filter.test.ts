@@ -4,7 +4,7 @@ import { EMPTY_FILTER, filterItems, filterOptions, MISSING_MASTER } from './filt
 
 const m = (item: string, customer: string, project: string, side: string, category = ''): [string, MasterItem] => [
   item,
-  { item, customerNumber: '', customerKey: '', description: '', variant: '', type: '', customer, project, side, safetyStock: null, safetyTime: null, orderMultiple: null, componentCoverage: false, line: '', category },
+  { item, customerNumber: '', customerKey: '', description: '', variant: '', type: '', kind: '', customer, project, side, safetyStock: null, safetyTime: null, orderMultiple: null, componentCoverage: false, line: '', category },
 ];
 const master = new Map([m('1', 'A', 'P100', 'LHD', 'DP'), m('2', 'A', 'P200', 'RHD', 'DP'), m('3', 'B', 'P300', 'LHD', 'HB')]);
 const items = ['1', '2', '3', '4'];

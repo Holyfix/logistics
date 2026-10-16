@@ -31,6 +31,7 @@ Odkud aplikace bere jednotlivé údaje a jak jsou soubory navázané. Stejné ta
 
 | Údaj | Sloupec mapování | Když v mapování chybí | Kde se používá |
 |---|---|---|---|
+| Druh dílu | Item Type (FG, SFG, PG) | kontrola podle modulů | Kontrola mapování |
 | Projekt | Project | prázdné (bez projektu) | všechny moduly |
 | Destinace | — (složka Coverage; není vlastnost dílu) | — | Coverage, Plánování |
 | Zákazník | Customer | prázdné | filtry Odvolávek |
@@ -53,12 +54,37 @@ Ukazuje přesně, **co v Item_Mapping doplnit a kvůli kterým modulům**.
 
 | Modul | Díly | Sloupce mapování |
 |---|---|---|
-| Coverage (i dlaždice Zákazník) | díly ze souborů Coverage | Project, Variant, Category, Description |
+| Coverage (i dlaždice Zákazník) | díly ze souborů Coverage | Project, Category, Description; Variant jen v projektech, kde ji má aspoň jeden díl |
 | Odvolávky | díly z aktuálního exportu | Project, Customer, Side, Category, Description |
 | Plánování | díly z Coverage | Line; u dílů s Line = ASSEMBLY navíc Project, Side, Order Multiple |
 | Komponenty | hotové díly z kusovníků | Project, Category, Description; sloupec Component Coverage (komponenty = Ano) |
 
 Strana se bere ze sloupce Side, jinak z LHD/RHD na začátku Variant – stačí jeden z nich.
+
+**Druh dílu (sloupec Item Type)** určuje, co má být u dílu vyplněné:
+
+| Sloupec | FG (hotový výrobek) | SFG (mezivýroba, WIP) | PG (nakupovaný) |
+|---|---|---|---|
+| Customer Number | ano | – | – |
+| Project | ano | ano | – |
+| Customer | ano | – | – |
+| Side (nebo LHD/RHD ve Variant) | ano | – | – |
+| Variant | jen v projektech s variantami | – | – |
+| Category | ano | – | ano |
+| Description | ano | ano | ano |
+| Line | ano | ano | – |
+| Order Multiple | ano | – | – |
+
+Díly s druhem se kontrolují celé (i ty, které se v načtených datech nepoužívají). Díl bez druhu se kontroluje podle
+modulů, ve kterých je (tabulka výše), a kontrola k němu hlásí chybějící druh.
+
+Jeden řádek mapování = jeden díl; vyplňuje se jen to, co díl potřebuje:
+
+- **Variant** – jen u projektů, které varianty používají (vyžaduje se, jakmile ji v projektu má aspoň jeden díl).
+- **Order Multiple** – jen u hotových výrobků do montáže (Line = ASSEMBLY).
+- **Customer Number** – jen u dílů, které jsou v souborech Coverage (hotové výrobky); podle něj se Coverage spojí
+  s dílem. U komponent a mezivýrob zůstává prázdné.
+- **Component Coverage** – jen u komponent, které se mají sledovat (Ano).
 
 **Co kontrola ukazuje:**
 
