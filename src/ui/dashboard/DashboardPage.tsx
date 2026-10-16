@@ -234,7 +234,7 @@ export function DashboardPage({ today = localToday(), now = Date.now() }: { toda
       title: td.data.title,
       icon: 'data',
       href: '#data',
-      tone: stale.length ? 'warn' : 'ok',
+      tone: stale.length || mappingIssues ? 'warn' : 'ok',
       value: stale.length,
       label: td.data.main,
       counters: mapping ? [{ value: mappingIssues, label: td.data.mapping }] : [],

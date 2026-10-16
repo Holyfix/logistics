@@ -164,7 +164,7 @@ export function buildComponents({ bom, master, coverage = [], callOffs, stock, t
     return {
       item,
       description: m?.description || bom.info.get(item)?.description || '',
-      project: m?.project || bom.info.get(item)?.project || '',
+      project: m?.project ?? '',
       category: m?.category ?? '',
       callOffs: callOffQty,
       production: days.map(() => 0),
@@ -174,8 +174,9 @@ export function buildComponents({ bom, master, coverage = [], callOffs, stock, t
     };
   });
 
+  // Sledované komponenty jen podle mapování (Component Coverage = Ano).
   const byMapping = master?.hasComponentColumn ?? false;
-  const wanted = (item: string) => (byMapping ? masterByItem.get(item)?.componentCoverage === true : bom.info.get(item)?.source === 'P');
+  const wanted = (item: string) => masterByItem.get(item)?.componentCoverage === true;
 
   // Průměrná spotřeba pro zásobu: odvolávky za prvních 7 dní ÷ pracovní dny po–pá v nich (o víkendu odvolávky nebývají).
   const workDays = days.slice(0, RESERVE_DAYS).filter((d) => weekday(d) <= 5).length || 1;

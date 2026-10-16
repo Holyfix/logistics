@@ -43,12 +43,12 @@ export function DataPage() {
     [current, data],
   );
 
-  // Projekty hotových dílů v kusovníku podle mapování, např. „P100 (40), bez projektu (16)“.
+  // Projekty hotových dílů v kusovníku jen podle mapování, např. „P100 (40), bez projektu (16)“.
   const projectOf = useMemo(() => new Map([...(data?.master?.data.items.values() ?? [])].map((m) => [m.item.toUpperCase(), m.project])), [data]);
   const bomProjects = (bom: BomData) => {
     const counts = new Map<string, number>();
     for (const parent of bom.parents.keys()) {
-      const project = projectOf.get(parent) || bom.info.get(parent)?.project || '';
+      const project = projectOf.get(parent) ?? '';
       counts.set(project, (counts.get(project) ?? 0) + 1);
     }
     return [...counts]

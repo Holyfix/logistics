@@ -1708,3 +1708,8 @@ button.oil-step:disabled {
   margin: 14px 0 6px;
   font: 600 14px/1.3 var(--font-display);
 }
+
+.mapping-notice a {
+  color: inherit;
+  font-weight: 600;
+}

@@ -50,22 +50,17 @@ export interface AssemblyInputs {
   today: DayNumber;
 }
 
-/** Strana ze slova LHD nebo RHD v popisu (když ji mapování neuvádí). */
-function sideFromText(text: string): string {
-  return /\b(LHD|RHD)\b/.exec(text.toUpperCase())?.[1] ?? '';
-}
-
 /**
- * Hotové díly pro montáž: jen díly se souborem coverage (podle sloupce Line = ASSEMBLY v mapování, bez sloupce
- * všechny díly ze souborů coverage). Projekt z mapování, jinak ze složky souboru coverage. Stav u zákazníka po dnech
- * podle souboru (za koncem souboru zůstává poslední stav).
+ * Hotové díly pro montáž: díly se souborem coverage, které mají v mapování Line = ASSEMBLY. Projekt, strana a balení
+ * jen z mapování (co chybí, hlásí Kontrola mapování). Stav u zákazníka po dnech podle souboru (za koncem souboru
+ * zůstává poslední stav).
  */
 export function assemblyItems({ master, coverage = [], callOffs, stock, today }: AssemblyInputs): AssemblyData {
   const plans = sequencerPlans(coverage, master);
   const masterByItem = new Map([...(master?.items.values() ?? [])].map((m) => [m.item.toUpperCase(), m]));
   const callOffText = new Map((callOffs?.items ?? []).map((item, i) => [item.toUpperCase(), callOffs!.descriptions[i] ?? '']));
 
-  const candidates = master?.hasLineColumn ? [...plans.keys()].filter((item) => masterByItem.get(item)?.line === ASSEMBLY) : [...plans.keys()];
+  const candidates = [...plans.keys()].filter((item) => masterByItem.get(item)?.line === ASSEMBLY);
   const last = Math.max(today + DEFAULT_COVERAGE_DAYS - 1, ...candidates.map((item) => plans.get(item)!.last));
   const days = Array.from({ length: Math.min(MAX_COVERAGE_DAYS, last - today + 1) }, (_, k) => today + k);
 
@@ -77,8 +72,8 @@ export function assemblyItems({ master, coverage = [], callOffs, stock, today }:
       item: m?.item ?? item,
       customerNumber: m?.customerNumber ? customerDisplay(m.customerNumber) : '',
       description,
-      side: m?.side || sideFromText(description),
-      project: m?.project || plan.projects[0] || '',
+      side: m?.side ?? '',
+      project: m?.project ?? '',
       location: plan.locations[0] ?? '',
       stock: Math.max(0, stock?.get(item) ?? 0),
       pack: m?.orderMultiple && m.orderMultiple >= 1 ? Math.round(m.orderMultiple) : 0,
@@ -96,9 +91,9 @@ export function slotCapacity(slot: ShiftSlot, line: LineCapacity, overrides: Rea
   return weekday(slot.day) <= 5 && line.shifts.includes(slot.code) ? line.perShift : 0;
 }
 
-/** Kusů v balení dílu: z mapování, jinak balení linky (nejméně 1). */
-export function packOf(item: PlanItem, line: LineCapacity): number {
-  return Math.max(1, item.pack || line.pack);
+/** Kusů v balení dílu z mapování (Order Multiple); bez údaje 1 (plán se nezaokrouhluje, hlásí Kontrola mapování). */
+export function packOf(item: PlanItem): number {
+  return Math.max(1, item.pack);
 }
 
 /** Množství zaokrouhlené nahoru na celá balení. */

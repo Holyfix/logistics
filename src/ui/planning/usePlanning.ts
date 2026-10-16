@@ -80,7 +80,7 @@ export function usePlanning(today: DayNumber): PlanningData | null {
           items: list,
           capacity,
           plan,
-          result: autoPlan(list, items.days, plan.cells, plan.auto, slots, (slot) => slotCapacity(slot, capacity, plan.capacity), (it) => packOf(it, capacity)),
+          result: autoPlan(list, items.days, plan.cells, plan.auto, slots, (slot) => slotCapacity(slot, capacity, plan.capacity), packOf),
           saved,
           dirty: draft !== undefined,
         };

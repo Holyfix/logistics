@@ -7,6 +7,7 @@ import { ExportButtons, type ExportTable } from '../calloffs/ExportButtons';
 import { useData } from '../data/DataProvider';
 import { Icon } from '../icons';
 import { localToday, useComponents } from './useComponents';
+import { MappingNotice } from '../data/MappingPanels';
 
 /** Za kolik prvních dnů se ukazuje potřeba komponenty. */
 const NEED_DAYS = 7;
@@ -160,6 +161,7 @@ export function ComponentsPage({ today = localToday() }: { today?: DayNumber } =
           <strong>{callOffs ? `CW ${callOffs.week}/${callOffs.year}` : '—'}</strong>
         </p>
       </div>
+      <MappingNotice />
 
       <div className="kpis">
         <div className="kpi">

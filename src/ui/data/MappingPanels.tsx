@@ -12,7 +12,13 @@ const SHOWN_ROWS = 50;
 export function useMappingCheck(): MappingCheck | null {
   const { state } = useData();
   const data = state.data;
-  return useMemo(() => (data?.master ? checkMapping(data.master.data, data.coverage, data.exports.at(-1)) : null), [data]);
+  return useMemo(
+    () =>
+      data?.master
+        ? checkMapping(data.master.data, { coverage: data.coverage, callOffs: data.exports.at(-1), bomParents: data.boms.flatMap((b) => [...b.data.parents.keys()]) })
+        : null,
+    [data],
+  );
 }
 
 function Section({ title, count, note, header, rows }: { title: string; count: number; note: string; header: string[]; rows: ReactNode[][] }) {
@@ -49,7 +55,7 @@ function Section({ title, count, note, header, rows }: { title: string; count: n
   );
 }
 
-/** Kontrola mapování: díly bez mapování, s nevyplněnými údaji a s jiným projektem, než je složka Coverage. */
+/** Kontrola mapování: díly bez mapování a díly s nevyplněnými údaji (aplikace je nedoplňuje odjinud). */
 export function MappingCheckPanel() {
   const { t } = useI18n();
   const tc = t.data.check;
@@ -57,16 +63,12 @@ export function MappingCheckPanel() {
 
   const tables = (c: MappingCheck) => ({
     missing: {
-      header: [tc.item, tc.customerNumber, tc.description, tc.folderProject, tc.sources],
-      rows: c.missing.map((p) => [p.item, p.customerNumber, p.description, p.project, p.sources.map((s) => tc.sourceNames[s]).join(', ')]),
+      header: [tc.item, tc.customerNumber, tc.description, tc.folder, tc.sources],
+      rows: c.missing.map((p) => [p.item, p.customerNumber, p.description, p.folder, p.sources.map((s) => tc.sourceNames[s]).join(', ')]),
     },
     incomplete: {
       header: [tc.item, tc.description, tc.project, tc.fields],
       rows: c.incomplete.map((p) => [p.item, p.description, p.project, p.missing.map((f) => tc.fieldNames[f]).join(', ')]),
-    },
-    mismatch: {
-      header: [tc.item, tc.description, tc.mapping, tc.folders],
-      rows: c.mismatch.map((p) => [p.item, p.description, p.mapping, p.folders.join(', ')]),
     },
   });
 
@@ -75,7 +77,6 @@ export function MappingCheckPanel() {
     void downloadXlsxSheets(`${tc.fileName}.xlsx`, [
       { name: tc.missing, header: x.missing.header, rows: x.missing.rows },
       { name: tc.incomplete, header: x.incomplete.header, rows: x.incomplete.rows },
-      { name: tc.mismatch, header: x.mismatch.header, rows: x.mismatch.rows },
     ]);
   };
 
@@ -102,7 +103,6 @@ export function MappingCheckPanel() {
                   <>
                     <Section title={tc.missing} count={check.missing.length} note={tc.missingNote} {...x.missing} />
                     <Section title={tc.incomplete} count={check.incomplete.length} note={tc.incompleteNote} {...x.incomplete} />
-                    <Section title={tc.mismatch} count={check.mismatch.length} note={tc.mismatchNote} {...x.mismatch} />
                   </>
                 );
               })()}
@@ -156,5 +156,27 @@ export function DataMapPanel() {
       <h3>{tm.fieldsHeading}</h3>
       {table([tm.field, tm.source, tm.fallback, tm.usage], tm.fields)}
     </div>
+  );
+}
+
+/** Upozornění v modulu: v mapování chybí údaje u dílů (aplikace je nedoplňuje odjinud); odkaz na Kontrolu mapování. */
+export function MappingNotice() {
+  const { t, locale } = useI18n();
+  const { state } = useData();
+  const check = useMappingCheck();
+  if (!state.data) return null;
+  const n = check ? checkCount(check) : 0;
+  const columns = check?.missingColumns.length ?? 0;
+  if (check && n === 0 && columns === 0) return null;
+  const tc = t.data.check;
+  return (
+    <p className="banner-inline mapping-notice" role="status">
+      {check === null
+        ? tc.noMaster
+        : n > 0
+          ? tc.notice.replace('{n}', formatQuantity(n, locale))
+          : `${tc.columns}: ${check.missingColumns.map((f) => tc.fieldNames[f]).join(', ')}.`}{' '}
+      <a href="#data">{tc.noticeLink} →</a>
+    </p>
   );
 }

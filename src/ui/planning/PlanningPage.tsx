@@ -12,6 +12,7 @@ import { CapacityPage } from './CapacityPage';
 import { usePlanningDrafts, type PlanningTab } from './PlanningProvider';
 import { formatModified } from './SaveStatus';
 import { localNow, usePlanning, type PlanningData } from './usePlanning';
+import { MappingNotice } from '../data/MappingPanels';
 
 const sum = (values: readonly number[]) => values.reduce((a, b) => a + b, 0);
 
@@ -59,6 +60,7 @@ export function PlanningPage({ today = localToday(), now = localNow() }: { today
   return (
     <section className="page" aria-labelledby="page-title">
       {head}
+      <MappingNotice />
       <div className="tabs" role="tablist" aria-label={t.modules.production.title}>
         {tabs.map((id) => (
           <button key={id} type="button" role="tab" className="tab" aria-selected={tab === id} onClick={() => setTab(id)}>

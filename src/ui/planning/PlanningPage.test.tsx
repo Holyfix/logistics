@@ -11,7 +11,7 @@ import { PlanningPage } from './PlanningPage';
 import { PlanningProvider } from './PlanningProvider';
 
 const day = (n: number) => dayFromParts(2026, 10, n)!;
-const master = parseMasterData(parseCsv('Item Number;Customer Number;Project;Variant;Line\nFG-L;A1234567890  00001234;P1;LHD;ASSEMBLY\nFG-R;;P1;RHD;Montáž\nK1;;;;'));
+const master = parseMasterData(parseCsv('Item Number;Customer Number;Project;Variant;Line;Order Multiple\nFG-L;A1234567890  00001234;P1;LHD;ASSEMBLY;12\nFG-R;;P1;RHD;Montáž;12\nK1;;;;;'));
 const stock = parseStock(parseCsv('Item Number;Location;Zone ID;Qty On Hand - Inv Detail\nFG-L;A-01;SALE;20'));
 if (!master.ok || !stock.ok) throw new Error();
 // Coverage od sekvencéra (stav u zákazníka vč. transitu): FG-L chybí od čt 15. 10. 80 ks, FG-R od pá 16. 10. 30 ks.
@@ -52,7 +52,7 @@ const state: DataState = {
     planSettings: {
       path: 'Plan/Kapacity.xlsx',
       lastModified: 0,
-      settings: { firstShiftStart: 360, lines: [{ line: 'ASSEMBLY', project: 'P1', perShift: 100, shifts: ['R', 'O', 'N'], pack: 12 }], destinations: [] },
+      settings: { firstShiftStart: 360, lines: [{ line: 'ASSEMBLY', project: 'P1', perShift: 100, shifts: ['R', 'O', 'N'] }], destinations: [] },
     },
     oil: null,
     failed: [],
@@ -179,7 +179,7 @@ describe('PlanningPage', () => {
     fireEvent.click(screen.getByRole('tab', { name: /Kapacity/ }));
     fireEvent.change(input('Ks za směnu ASSEMBLY P1'), { target: { value: '120' } });
     expect(screen.getByRole('tab', { name: 'Kapacity •' })).toBeTruthy();
-    fireEvent.change(input('Ks v balení ASSEMBLY P1'), { target: { value: '16' } });
-    expect(input('Ks v balení ASSEMBLY P1').value).toBe('16');
+    // Balení je jen v mapování (Order Multiple), v kapacitách linky už není.
+    expect(screen.queryByRole('textbox', { name: 'Ks v balení ASSEMBLY P1' })).toBeNull();
   });
 });

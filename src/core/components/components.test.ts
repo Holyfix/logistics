@@ -47,11 +47,15 @@ describe('buildComponents', () => {
     expect(fg2!.production.slice(0, 3)).toEqual([0, 2, 0]);
   });
 
-  it('bez sloupce v mapování: nakupované komponenty; spotřeba × kusovník a pokrytí ze skladu', () => {
-    const m = mapping();
+  it('bez sloupce Component Coverage se nesleduje nic (bez zálohy z kusovníku); spotřeba × kusovník a pokrytí ze skladu', () => {
+    const none = mapping();
+    if (!none.ok) throw new Error();
+    const empty = buildComponents({ bom: bom.value, master: none.value, callOffs, stock: new Map([['CLIP-1', 40]]), today });
+    expect(empty.byMapping).toBe(false);
+    expect(empty.components).toEqual([]);
+    const m = parseMasterData(parseCsv('Item Number;Customer Number;Description;Project;Component Coverage\nFG-1;C1;PANEL LHD;P1;\nCLIP-1;;CLIP;;Ano\nRESIN;;RESIN;;Ano'));
     if (!m.ok) throw new Error();
     const t = buildComponents({ bom: bom.value, master: m.value, callOffs, stock: new Map([['CLIP-1', 40]]), today });
-    expect(t.byMapping).toBe(false);
     // bez skladu hotových dílů je potřeba výroby stejná jako odvolávky
     expect(t.components.map((c) => c.item)).toEqual(['RESIN', 'CLIP-1']);
     const clip = t.components[1]!;
@@ -194,7 +198,7 @@ describe('Zákazník pokryt do: sklad a transit u zákazníka podle souboru cove
       ['Parent', 'B', 'B', null, 'EA', 'L'],
       ['1', 'K', 'K', 1, 'EA', 'P'],
     ]);
-    const mm = parseMasterData(parseCsv('Item Number;Customer Number\nA;CA\nB;CB'));
+    const mm = parseMasterData(parseCsv('Item Number;Customer Number;Component Coverage\nA;CA;\nB;CB;\nK;;Ano'));
     if (!two.ok || !mm.ok) throw new Error();
     const seq = sequencer([monday, monday + 1, monday + 2, monday + 3], [10, 10, 10, -5], [0, 0, 0, 0], 10);
     const rowB = { ...seq.report.rows[0]!, customerNumber: 'CB', customerKey: 'CB', balance: [5, -1, -1, -1] };
