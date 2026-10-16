@@ -3,7 +3,7 @@ import { parseCsv } from './csv';
 import { parseCallOffExport, type CallOffExport } from './calloffs/parse';
 import type { ComponentLine, ComponentTable } from './components/compute';
 import type { CoverageLine, CoverageTable } from './coverage/compute';
-import { callOffDigest, componentAlerts, customerAlerts, dataFreshness, oilAlerts } from './dashboard';
+import { callOffDigest, componentAlerts, customerAlerts, dataFreshness, oilAlerts, projectCoverage } from './dashboard';
 import { addItem, emptyOil, updateItem } from './oil';
 import { dayFromParts } from './dates';
 
@@ -83,6 +83,32 @@ describe('změny v odvolávkách', () => {
       ['B', 'info', -25, 1],
     ]);
     expect(callOffDigest(cur, undefined)).toMatchObject({ previous: null, changes: 0, alerts: [] });
+  });
+});
+
+describe('pokrytí po projektech', () => {
+  it('do kdy je projekt pokrytý, první nepokrytý den a kolik kusů ten den chybí; bez transitu zvlášť', () => {
+    const p = (project: string, l: CoverageLine): CoverageLine => ({ ...l, project });
+    // Dny 13., 14. (dnes), 15., 16., 19.
+    const withTransit = table([
+      p('A', line('a1', [5, 5, 5, -3, -8])),
+      p('A', line('a2', [5, 5, 4, -2, null])),
+      p('A', line('a3', [1, 1, 1, 1, -1])),
+      p('B', line('b1', [9, -1, -4, -4, -4])),
+      p('C', line('c1', [-5, 2, 2, 2, 2])),
+      p('D', line('d1', [1, 1, 1, 1, -1])),
+    ]);
+    const withoutTransit = table(withTransit.lines.map((l) => (l.project === 'C' ? { ...l, values: [-5, 2, -1, -1, -1] } : l)));
+    const result = projectCoverage(withTransit, withoutTransit, TODAY);
+    expect(result.map((r) => [r.project, r.coveredUntil, r.firstShort, r.missing, r.shortParts, r.severity])).toEqual([
+      ['B', null, day(14), 1, 1, 'crit'],
+      ['A', day(15), day(16), 5, 2, 'warn'],
+      ['D', day(16), day(19), 1, 1, 'warn'],
+      ['C', day(19), null, 0, 0, null],
+    ]);
+    const c = result.find((r) => r.project === 'C')!;
+    expect(c).toMatchObject({ parts: 1, firstShortPlain: day(15), horizon: day(19) });
+    expect(result.find((r) => r.project === 'A')!.parts).toBe(3);
   });
 });
 

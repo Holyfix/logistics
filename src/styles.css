@@ -1575,3 +1575,12 @@ button.oil-step:disabled {
   color: var(--ink-2);
   line-height: 1.35;
 }
+
+/* Dashboard: pokrytí po projektech pod kartami. */
+.dash-projects {
+  margin-top: 12px;
+}
+
+.dash-projects td .dot {
+  margin-right: 4px;
+}

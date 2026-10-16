@@ -1,6 +1,6 @@
 import { useMemo, type ReactNode } from 'react';
 import { buildCoverage } from '../../core/coverage/compute';
-import { callOffDigest, componentAlerts, customerAlerts, dataFreshness, oilAlerts, type Severity } from '../../core/dashboard';
+import { callOffDigest, componentAlerts, customerAlerts, dataFreshness, oilAlerts, projectCoverage, type Severity } from '../../core/dashboard';
 import { dayToIso, weekday, type DayNumber } from '../../core/dates';
 import { formatDayShort, formatPercent, formatQuantity, formatSigned } from '../../core/format';
 import { useI18n } from '../../i18n/I18nProvider';
@@ -56,11 +56,13 @@ export function DashboardPage({ today = localToday(), now = Date.now() }: { toda
   const oilDraft = useOilDraftList();
   const oilList = oilDraft ?? data?.oil?.list ?? null;
 
-  const customer = useMemo(() => {
+  const coverage = useMemo(() => {
     if (!data?.coverage.length) return null;
     const master = data.master?.data;
-    return customerAlerts(buildCoverage(data.coverage, master, { transit: true }), buildCoverage(data.coverage, master, { transit: false }), today);
-  }, [data, today]);
+    return { withTransit: buildCoverage(data.coverage, master, { transit: true }), withoutTransit: buildCoverage(data.coverage, master, { transit: false }) };
+  }, [data]);
+  const customer = useMemo(() => (coverage ? customerAlerts(coverage.withTransit, coverage.withoutTransit, today) : null), [coverage, today]);
+  const projects = useMemo(() => (coverage ? projectCoverage(coverage.withTransit, coverage.withoutTransit, today) : null), [coverage, today]);
   const componentList = useMemo(() => (components ? componentAlerts(components) : null), [components]);
   const oil = useMemo(() => (oilList ? oilAlerts(oilList, today) : null), [oilList, today]);
   const calloffs = useMemo(() => {
@@ -304,6 +306,65 @@ export function DashboardPage({ today = localToday(), now = Date.now() }: { toda
           </a>
         ))}
       </div>
+
+      {projects && projects.length > 0 && (
+        <div className="panel dash-projects">
+          <div className="panel-head">
+            <h2>{td.projects.title}</h2>
+            <span className="muted">{td.projects.sub}</span>
+          </div>
+          <div className="table-scroll">
+            <table className="table table-data">
+              <thead>
+                <tr>
+                  <th>{td.projects.project}</th>
+                  <th>{td.projects.coveredUntil}</th>
+                  <th>{td.projects.firstShort}</th>
+                  <th className="n">{td.projects.missing}</th>
+                  <th className="n">{td.projects.shortParts}</th>
+                  <th>{td.projects.plain}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {projects.map((p) => (
+                  <tr key={p.project}>
+                    <td>
+                      <Dot tone={p.severity ?? 'ok'} /> <strong>{p.project || td.projects.noProject}</strong>{' '}
+                      <small className="muted">
+                        · {formatQuantity(p.parts, locale)} {td.projects.parts}
+                      </small>
+                    </td>
+                    <td>
+                      {p.coveredUntil === null ? (
+                        <span className="cell-short">{td.projects.notToday}</span>
+                      ) : p.firstShort === null ? (
+                        <>
+                          {dayLabel(p.coveredUntil)} <small className="muted">({td.projects.whole})</small>
+                        </>
+                      ) : (
+                        dayLabel(p.coveredUntil)
+                      )}
+                    </td>
+                    <td>{p.firstShort === null ? <span className="muted">—</span> : <span className={p.severity === 'crit' ? 'cell-short' : undefined}>{dayLabel(p.firstShort)}</span>}</td>
+                    <td className="n">{p.firstShort === null ? <span className="muted">—</span> : <strong>{pcs(p.missing)}</strong>}</td>
+                    <td className="n">{p.firstShort === null ? '' : formatQuantity(p.shortParts, locale)}</td>
+                    <td>
+                      {p.firstShortPlain === null ? (
+                        <span className="muted">—</span>
+                      ) : p.firstShortPlain === p.firstShort ? (
+                        <span className="muted">{td.projects.same}</span>
+                      ) : (
+                        dayLabel(p.firstShortPlain)
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="muted">{td.projects.note}</p>
+        </div>
+      )}
     </section>
   );
 }
