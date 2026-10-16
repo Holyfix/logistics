@@ -89,7 +89,8 @@ Filtry na sebe navazují: projekt → kategorie → strana (LHD/RHD) → variant
 - ✅ Pokrytí komponent podle odvolávek a našeho skladu komponent (volitelně po odečtu našeho skladu hotových dílů a mezivýroby); „Pokryto do“ (první chybějící komponenta), potřeba 7 dní, zásoba ve dnech výroby
 - ✅ „Zákazník pokryt do“ (rámeček): poslední den, kdy je zákazník pokrytý hotovými díly (jeho sklad + transit podle coverage, se zaškrtnutím i náš sklad hotových dílů); každý hotový díl zvlášť
 - ✅ Poptávka hotových dílů se řídí filtrem komponent (projekt, vybraná komponenta → hotové díly, které ji mají v kusovníku)
-- ✅ Filtr Kategorie: komponenty dané kategorie (z mapování) a komponenty ve výrobcích dané kategorie; hotové díly podle jejich kategorie
+- ✅ Navazující filtry Projekt → Kategorie podle hotových dílů (kategorie jen z hotových dílů vybraného projektu): komponenty v hotových dílech daného projektu a kategorie; hotové díly podle jejich projektu a kategorie
+- ✅ Sledují se všechny nakupované díly (Item Type = PG); popis jen z mapování
 - ⏳ Otevřené nákupní objednávky (pokud jsou v exportu)
 - Shortage list pro ranní poradu
 

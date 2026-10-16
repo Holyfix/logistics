@@ -22,7 +22,9 @@ const bom = parseBom([
   ['Parent', 'FG-2', 'PANEL RHD', null, 'EA', 'L'],
   ['1', 'RESIN', 'RESIN', 0.5, 'KG', 'P'],
 ]);
-const master = parseMasterData(parseCsv('Item Number;Item Type;Project\nFG-1;FG;P1\nFG-2;FG;P2\nCLIP-1;PG;\nRESIN;PG;\nSUB-1;SFG;'));
+const master = parseMasterData(
+  parseCsv('Item Number;Item Type;Description;Project;Category\nFG-1;FG;PANEL LHD;P1;DP\nFG-2;FG;PANEL RHD;P2;HB\nCLIP-1;PG;CLIP;;\nRESIN;PG;RESIN;;\nSUB-1;SFG;INTERMEDIATE;P1;'),
+);
 const stock = parseStock(parseCsv('Item Number;Location;Zone ID;Qty On Hand - Inv Detail\nCLIP-1;A-01;PURCH;30\nRESIN;B-01;PURCH;100'));
 if (!bom.ok || !master.ok || !stock.ok) throw new Error();
 const callOffs = {
@@ -162,6 +164,21 @@ describe('ComponentsPage', () => {
     // projekt a komponenta dohromady
     fireEvent.change(screen.getByLabelText('Projekt'), { target: { value: 'P1' } });
     expect(shown()).toEqual(['FG-1']);
+  });
+
+  it('navazující filtry Projekt → Kategorie podle hotových dílů', () => {
+    renderWith(<ComponentsPage today={day(13)} />);
+    const options = () => [...(screen.getByLabelText('Kategorie') as HTMLSelectElement).options].map((o) => o.value);
+    expect(options()).toEqual(['', 'DP', 'HB']);
+    fireEvent.change(screen.getByLabelText('Projekt'), { target: { value: 'P2' } });
+    // P2 má jen hotový díl FG-2 (HB) a v něm jen RESIN
+    expect(options()).toEqual(['', 'HB']);
+    expect(rows(0).map((r) => cells(r)[0])).toEqual(['RESIN']);
+    fireEvent.change(screen.getByLabelText('Kategorie'), { target: { value: 'HB' } });
+    // změna projektu zruší kategorii
+    fireEvent.change(screen.getByLabelText('Projekt'), { target: { value: 'P1' } });
+    expect((screen.getByLabelText('Kategorie') as HTMLSelectElement).value).toBe('');
+    expect(rows(0).map((r) => cells(r)[0]).sort()).toEqual(['CLIP-1', 'RESIN']);
   });
 
   it('filtr jen v záporu a hledání', () => {

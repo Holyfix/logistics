@@ -209,7 +209,7 @@ describe('Zákazník pokryt do: sklad a transit u zákazníka podle souboru cove
 });
 
 describe('kategorie komponent', () => {
-  it('kategorie komponenty z mapování a kategorie hotových dílů, ve kterých je', () => {
+  it('kategorie hotových dílů, ve kterých komponenta je', () => {
     const monday = dayFromParts(2026, 10, 12)!;
     const tree = parseBom([
       ['Level', 'Component Item', 'Description', 'Quantity Per', 'UM', 'Purchase/Manufacture'],
@@ -226,6 +226,7 @@ describe('kategorie komponent', () => {
       ['A', 'DP'],
       ['B', 'HB'],
     ]);
-    expect(t.components.find((c) => c.item === 'K')!.categories).toEqual(['CLIP', 'DP', 'HB']);
+    // jen kategorie hotových dílů (vlastní kategorie komponenty se nepoužívá)
+    expect(t.components.find((c) => c.item === 'K')!.categories).toEqual(['DP', 'HB']);
   });
 });
