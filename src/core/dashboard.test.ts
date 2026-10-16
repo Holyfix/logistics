@@ -3,7 +3,7 @@ import { parseCsv } from './csv';
 import { parseCallOffExport, type CallOffExport } from './calloffs/parse';
 import type { ComponentLine, ComponentTable } from './components/compute';
 import type { CoverageLine, CoverageTable } from './coverage/compute';
-import { callOffDigest, componentAlerts, customerAlerts, dataFreshness, oilAlerts, projectCoverage } from './dashboard';
+import { callOffDigest, componentAlerts, dataFreshness, oilAlerts, projectCoverage } from './dashboard';
 import { addItem, emptyOil, updateItem } from './oil';
 import { dayFromParts } from './dates';
 
@@ -13,30 +13,6 @@ const TODAY = day(14);
 const line = (id: string, values: (number | null)[]): CoverageLine =>
   ({ id, item: id, customerNumber: `C-${id}`, description: '', project: 'P1', location: 'L', values }) as CoverageLine;
 const table = (lines: CoverageLine[]): CoverageTable => ({ days: [day(13), day(14), day(15), day(16), day(19)], lines });
-
-describe('kritické díly u zákazníka', () => {
-  it('od dneška: i s transitem dnes/zítra = hoří, jen bez transitu = čeká na transit, později = informace', () => {
-    const withTransit = table([
-      line('A', [-5, -10, -20, -20, -20]), // včerejšek se nepočítá, chybí od dneška
-      line('B', [5, 5, 5, -30, -30]), // s transitem až v pátek
-      line('C', [5, 5, 5, 5, 5]),
-      line('D', [5, 5, 5, 5, 5]),
-    ]);
-    const withoutTransit = table([
-      line('A', [-5, -10, -20, -20, -20]),
-      line('B', [5, 5, -40, -40, -40]), // bez transitu zítra
-      line('C', [5, 5, 5, 5, -1]), // bez transitu až později → nic
-      line('D', [5, 5, 5, 5, 5]),
-    ]);
-    const alerts = customerAlerts(withTransit, withoutTransit, TODAY);
-    expect(alerts.map((a) => [a.item, a.severity, a.day, a.missing, a.transitOnly])).toEqual([
-      ['A', 'crit', day(14), 10, false],
-      ['B', 'warn', day(15), 40, true],
-    ]);
-    const later = customerAlerts(table([line('E', [5, 5, 5, -3, -3])]), table([line('E', [5, 5, 5, -3, -3])]), TODAY);
-    expect(later.map((a) => [a.severity, a.day, a.missing])).toEqual([['info', day(16), 3]]);
-  });
-});
 
 describe('kritické komponenty', () => {
   it('do 2 dnů hoří, do týdne pozor, později informace; zákazník pokryt do', () => {
@@ -99,11 +75,12 @@ describe('pokrytí po projektech', () => {
     ]);
     const withoutTransit = table(withTransit.lines.map((l) => (l.project === 'C' ? { ...l, values: [-5, 2, -1, -1, -1] } : l)));
     const result = projectCoverage(withTransit, withoutTransit, TODAY);
+    // Řazení podle pokrytí bez transitu; C chybí bez transitu zítra → čeká na transit.
     expect(result.map((r) => [r.project, r.withTransit.until, r.withTransit.days, r.severity])).toEqual([
       ['B', null, 0, 'crit'],
+      ['C', day(19), 6, 'warn'],
       ['A', day(15), 2, null],
       ['D', day(16), 5, null],
-      ['C', day(19), 6, null],
     ]);
     // C: s transitem celý horizont (14.–19. = 6 dní), bez transitu jen dnes.
     expect(result.find((r) => r.project === 'C')).toMatchObject({ withTransit: { whole: true }, withoutTransit: { until: day(14), days: 1, whole: false } });

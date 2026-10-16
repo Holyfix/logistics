@@ -37,9 +37,10 @@ a Dodavatelé odložené. Modul Kapacity (odvolávky vs. kapacita linek) byl zva
 - **Karta za oblast** (Zákazník, Komponenty, OIL, Odvolávky, Data): barevný pruh podle nejhoršího stavu
   (červená hoří, žlutá pozor, zelená v pořádku), hlavní číslo, malé čítače a 4 nejnaléhavější položky na řádek;
   kliknutím do modulu. Nahoře souhrn: kolik oblastí hoří, pozor, v pořádku
-- ✅ **Pokrytí po projektech** (pod kartami): za každý projekt ze souborů coverage od dneška do kdy je pokrytý
-  (poslední den, kdy mají všechny díly zůstatek 0 a víc) a kolik dní to je, s transitem i bez; „+“ = celý horizont
-  souboru (vysvětlení po najetí myší); červená tečka = pokryto méně než 2 dny, jinak zelená
+- ✅ **Karta Zákazník = pokrytí po projektech:** za každý projekt ze souborů coverage od dneška do kdy je pokrytý
+  (poslední den, kdy mají všechny díly zůstatek 0 a víc) a kolik dní – nejdřív bez transitu, pak s transitem;
+  „+“ = celý horizont souboru. Červeně projekt pokrytý s transitem méně než 2 dny, žlutě jen bez transitu (čeká na
+  transit). Hlavička karty vede do Coverage, klik na projekt otevře Coverage s filtrem projektu (`#coverage?project=…`)
 - ✅ **Kritické díly u zákazníka** (coverage od dneška): hoří = chybí i s transitem dnes nebo zítra, pozor = dnes
   nebo zítra chybí jen bez transitu (čeká na transit), pro informaci = chybí s transitem později
 - ✅ **Kritické komponenty** (podle odvolávek a našeho skladu): hoří = dojdou do 2 dnů, pozor = do 7 dnů,

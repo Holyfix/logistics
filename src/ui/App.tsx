@@ -17,9 +17,9 @@ import { findModule, type ModuleDef } from './modules';
 
 export const APP_NAME = 'Logistics';
 
-/** Adresa #calloffs otevře modul, cokoli jiného rozcestník. */
+/** Adresa #calloffs otevře modul, cokoli jiného rozcestník. Za „?“ mohou být parametry modulu (#coverage?project=P1). */
 function moduleFromHash(hash: string): ModuleDef | undefined {
-  return findModule(hash.replace(/^#/, ''));
+  return findModule(hash.replace(/^#/, '').split('?')[0]!);
 }
 
 export function App() {

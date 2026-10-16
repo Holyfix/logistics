@@ -27,6 +27,11 @@ function isNegative(v: number | null | undefined): boolean {
 }
 
 
+/** Projekt z adresy #coverage?project=P1 (odkaz z Dashboardu); jinak prázdný. */
+function projectFromHash(): string {
+  return new URLSearchParams(location.hash.split('?')[1] ?? '').get('project') ?? '';
+}
+
 export function CoveragePage({ today = localToday() }: { today?: DayNumber } = {}) {
   const { t, locale } = useI18n();
   const tc = t.coverage;
@@ -39,7 +44,7 @@ export function CoveragePage({ today = localToday() }: { today?: DayNumber } = {
 
   const [transit, setTransit] = useState(true);
   const [ourStock, setOurStock] = useState(false);
-  const [filter, setFilter] = useState<Omit<CoverageFilter, 'rows'>>(EMPTY_COVERAGE_FILTER);
+  const [filter, setFilter] = useState<Omit<CoverageFilter, 'rows'>>(() => ({ ...EMPTY_COVERAGE_FILTER, project: projectFromHash() }));
   const [rowsMode, setRowsMode] = useState<RowsMode>('all');
   const [day, setDay] = useState<DayNumber | null>(null);
 
