@@ -55,8 +55,13 @@ export interface MasterItem {
   category: string;
 }
 
+/** Sloupec mapování (klíč z MASTER_COLUMNS). */
+export type MasterField = keyof typeof MASTER_COLUMNS;
+
 export interface MasterData {
   items: Map<string, MasterItem>;
+  /** Sloupce, které soubor mapování obsahuje. */
+  columns: ReadonlySet<MasterField>;
   /** Díly podle normalizovaného čísla zákazníka. */
   byCustomerKey: Map<string, MasterItem>;
   /** Mapování má sloupec Component Coverage (jinak se v Komponentách zobrazí všechny nakupované komponenty). */
@@ -203,7 +208,8 @@ export function parseMasterData(table: DataTable): MasterResult {
     }
   });
 
-  return { ok: true, value: { items, byCustomerKey, hasComponentColumn: col.componentCoverage !== -1, hasLineColumn: col.line !== -1, issueCount, issues } };
+  const columns = new Set((Object.keys(col) as MasterField[]).filter((key) => col[key] !== -1));
+  return { ok: true, value: { items, byCustomerKey, columns, hasComponentColumn: col.componentCoverage !== -1, hasLineColumn: col.line !== -1, issueCount, issues } };
 }
 
 /** Šablona mapování dílů: všechny známé díly, u existujících předvyplněné hodnoty. */

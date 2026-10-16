@@ -8,6 +8,8 @@ import { localToday, useComponents } from '../components/useComponents';
 import { useData } from '../data/DataProvider';
 import { Icon, type IconName } from '../icons';
 import { useOilDraftList } from '../oil/OilProvider';
+import { useMappingCheck } from '../data/MappingPanels';
+import { checkCount } from '../../core/mappingCheck';
 
 /** Kolik nejnaléhavějších položek ukazuje karta. */
 const CARD_LINES = 4;
@@ -56,6 +58,8 @@ export function DashboardPage({ today = localToday(), now = Date.now() }: { toda
   const data = state.data;
   const components = useComponents(today);
   const oilDraft = useOilDraftList();
+  const mapping = useMappingCheck();
+  const mappingIssues = mapping ? checkCount(mapping) : 0;
   const oilList = oilDraft ?? data?.oil?.list ?? null;
 
   const coverage = useMemo(() => {
@@ -233,17 +237,34 @@ export function DashboardPage({ today = localToday(), now = Date.now() }: { toda
       tone: stale.length ? 'warn' : 'ok',
       value: stale.length,
       label: td.data.main,
-      counters: [],
-      lines: stale.map((f) => ({
-        key: `${f.kind}|${f.label}`,
-        tone: 'warn' as const,
-        text: (
-          <>
-            <strong>{td.data.kinds[f.kind]}</strong> {f.label}
-          </>
-        ),
-        value: f.missing ? td.data.missing : `${td.data.stale} · ${f.week ? `CW ${f.week.week}` : ago(f.modified)}`,
-      })),
+      counters: mapping ? [{ value: mappingIssues, label: td.data.mapping }] : [],
+      lines: [
+        ...stale.map((f) => ({
+          key: `${f.kind}|${f.label}`,
+          tone: 'warn' as const,
+          text: (
+            <>
+              <strong>{td.data.kinds[f.kind]}</strong> {f.label}
+            </>
+          ),
+          value: f.missing ? td.data.missing : `${td.data.stale} · ${f.week ? `CW ${f.week.week}` : ago(f.modified)}`,
+        })),
+        // Kontrola mapování: kolik dílů doplnit v Item_Mapping (detail v modulu Data).
+        ...(mappingIssues
+          ? [
+              {
+                key: 'mapping',
+                tone: 'info' as const,
+                text: (
+                  <>
+                    <strong>{td.data.kinds.master}</strong> {td.data.mappingLine}
+                  </>
+                ),
+                value: `${formatQuantity(mappingIssues, locale)} ${t.data.check.parts}`,
+              },
+            ]
+          : []),
+      ],
       empty: '',
     },
   ];

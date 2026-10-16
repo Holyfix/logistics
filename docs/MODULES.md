@@ -37,6 +37,7 @@ a Dodavatelé odložené. Modul Kapacity (odvolávky vs. kapacita linek) byl zva
 - **Karta za oblast** (Zákazník, Komponenty, OIL, Odvolávky, Data): barevný pruh podle nejhoršího stavu
   (červená hoří, žlutá pozor, zelená v pořádku), hlavní číslo, malé čítače a 4 nejnaléhavější položky na řádek;
   kliknutím do modulu. Nahoře souhrn: kolik oblastí hoří, pozor, v pořádku
+- ✅ **Karta Data:** staré nebo chybějící soubory a počet dílů k doplnění v mapování (Kontrola mapování v modulu Data)
 - ✅ **Karta Zákazník = pokrytí po projektech:** za každý projekt ze souborů coverage od dneška do kdy je pokrytý
   (poslední den, kdy mají všechny díly zůstatek 0 a víc) a kolik dní – nejdřív bez transitu, pak s transitem;
   „+“ = celý horizont souboru. Červeně projekt pokrytý s transitem méně než 2 dny, žlutě jen bez transitu (čeká na
