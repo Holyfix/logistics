@@ -22,6 +22,7 @@ const texts: ReportTexts = {
   project: 'Projekt',
   category: 'Kategorie',
   side: 'Strana',
+  variant: 'Varianta',
   item: 'Díl',
   description: 'Popis',
   backlog: 'Po termínu',
@@ -29,7 +30,7 @@ const texts: ReportTexts = {
   diff: 'Změna ks',
   diffPercent: 'Změna %',
   sum: 'Celkem',
-  none: ['bez projektu', 'bez kategorie', 'bez strany'],
+  none: { project: 'bez projektu', category: 'bez kategorie', side: 'bez strany', variant: 'bez varianty' },
   sheetSummary: 'Přehled',
   sheetItems: 'Díly',
 };
@@ -80,16 +81,17 @@ describe('report přehledu pro vedení', () => {
     expect(values(s!.data[6])?.slice(5)).toEqual(['—', '—']);
   });
 
-  it('list dílů seřazený podle projektu, kategorie, strany a dílu', () => {
+  it('list dílů seřazený podle projektu, kategorie, strany, varianty a dílu', () => {
     expect(items!.name).toBe('Díly');
-    expect(values(items!.data[4])?.slice(0, 6)).toEqual(['Projekt', 'Kategorie', 'Strana', 'Díl', 'Popis', 'Po termínu']);
-    expect(items!.data.slice(6).map((r) => values(r)?.slice(0, 4))).toEqual([
-      ['P1', 'DP', 'LHD', '1'],
-      ['P1', 'DP', 'RHD', '2'],
-      ['P2', 'HB', 'LHD', '3'],
-      ['bez projektu', 'bez kategorie', 'bez strany', '9'],
+    expect(values(items!.data[4])?.slice(0, 7)).toEqual(['Projekt', 'Kategorie', 'Strana', 'Varianta', 'Díl', 'Popis', 'Po termínu']);
+    // strana a varianta prázdné, když je díl nemá
+    expect(items!.data.slice(6).map((r) => values(r)?.slice(0, 5))).toEqual([
+      ['P1', 'DP', 'LHD', '', '1'],
+      ['P1', 'DP', 'RHD', '', '2'],
+      ['P2', 'HB', 'LHD', '', '3'],
+      ['bez projektu', 'bez kategorie', '', '', '9'],
     ]);
-    expect(values(items!.data[6])?.slice(5)).toEqual([4, 10, 20, 30, 10, 0.5]);
-    expect(items!.stickyColumns).toBe(4);
+    expect(values(items!.data[6])?.slice(6)).toEqual([4, 10, 20, 30, 10, 0.5]);
+    expect(items!.stickyColumns).toBe(5);
   });
 });

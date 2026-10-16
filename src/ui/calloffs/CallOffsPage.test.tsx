@@ -15,7 +15,7 @@ function exportOf(name: string, lines: string[]): CallOffExport {
 
 const cw41 = exportOf('Odvolavky_CW41.csv', ['1001,DOOR LH,12.10.2026,100', '1002,IP RHD,13.10.2026,50']);
 const cw42 = exportOf('Odvolavky_CW42.csv', ['1001,DOOR LH,12.10.2026,150', '1002,IP RHD,13.10.2026,50', '1003,GLOVEBOX,19.10.2026,7']);
-const master = parseMasterData(parseCsv('Item Number;Zákazník;Projekt;Strana\n1001;Zákazník A;P100;LHD\n1002;Zákazník B;P300;RHD'));
+const master = parseMasterData(parseCsv('Item Number;Projekt;Kategorie;Strana;Varianta\n1001;P100;DP;LHD;SR2\n1002;P300;DP;RHD;'));
 if (!master.ok) throw new Error();
 
 const state: DataState = {
@@ -59,9 +59,24 @@ describe('CallOffsPage', () => {
     expect(rows.some((r) => r.textContent?.includes('1001'))).toBe(false);
 
     fireEvent.change(screen.getByLabelText('Strana'), { target: { value: '' } });
-    fireEvent.change(screen.getByLabelText('Zákazník'), { target: { value: '__missing__' } });
+    fireEvent.change(screen.getByLabelText('Projekt'), { target: { value: '__missing__' } });
     rows = within(screen.getByRole('table')).getAllByRole('row');
     expect(rows.filter((r) => r.closest('tbody')).map((r) => r.querySelector('strong')?.textContent)).toEqual(['1003']);
+    // zákazník už se nenabízí
+    expect(screen.queryByLabelText('Zákazník')).toBeNull();
+  });
+
+  it('navazující filtry: varianta jen tam, kde ji díly mají', () => {
+    renderPage(state);
+    expect(screen.getByLabelText('Varianta')).toBeTruthy();
+    fireEvent.change(screen.getByLabelText('Projekt'), { target: { value: 'P300' } });
+    expect(screen.queryByLabelText('Varianta')).toBeNull();
+    const side = screen.getByLabelText('Strana') as HTMLSelectElement;
+    expect([...side.options].map((o) => o.value)).toEqual(['', 'RHD']);
+    // změna projektu zruší výběr kategorie
+    fireEvent.change(screen.getByLabelText('Kategorie'), { target: { value: 'DP' } });
+    fireEvent.change(screen.getByLabelText('Projekt'), { target: { value: 'P100' } });
+    expect((screen.getByLabelText('Kategorie') as HTMLSelectElement).value).toBe('');
   });
 
   it('ukáže celý horizont exportu', () => {
@@ -131,16 +146,19 @@ describe('CallOffsPage', () => {
     expect(screen.getByRole('link', { name: 'Vybrat složku s exporty' }).getAttribute('href')).toBe('#data');
   });
 
-  it('přehled po projektech: projekt → kategorie → strana se součty po týdnech', () => {
+  it('přehled po projektech: projekt → kategorie → strana → varianta se součty po týdnech', () => {
     renderPage(state);
     fireEvent.click(screen.getByRole('tab', { name: 'Přehled po projektech' }));
     const table = screen.getByRole('table');
     const rows = [...table.querySelectorAll('tbody tr')].map((tr) => [...tr.querySelectorAll('td')].slice(0, 4).map((td) => td.textContent));
-    expect(rows.slice(0, 3)).toEqual([
+    expect(rows.slice(0, 4)).toEqual([
       ['▾P100 · 1 dílů', '—', '150', '0'],
-      ['▾bez kategorie · 1 dílů', '—', '150', '0'],
-      ['LHD · 1 dílů', '—', '150', '0'],
+      ['▾DP · 1 dílů', '—', '150', '0'],
+      ['▾LHD · 1 dílů', '—', '150', '0'],
+      ['SR2 · 1 dílů', '—', '150', '0'],
     ]);
+    // P300 bez varianty: strana je poslední úroveň
+    expect(rows.map((r) => r[0])).toContain('RHD · 1 dílů');
     expect(rows.map((r) => r[0])).toContain('▾bez projektu · 1 dílů');
     // Změna proti CW 41 u projektu P100: +50.
     expect(table.querySelector('tbody tr')!.lastElementChild!.textContent).toBe('+50');

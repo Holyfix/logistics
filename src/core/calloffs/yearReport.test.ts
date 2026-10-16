@@ -25,9 +25,10 @@ const labels: YearReportLabels = {
   total: 'Celkem',
   item: 'Díl',
   description: 'Popis',
-  customer: 'Zákazník',
   project: 'Projekt',
+  category: 'Kategorie',
   side: 'Strana',
+  variant: 'Varianta',
   notes: ['Poznámka'],
 };
 
@@ -59,22 +60,23 @@ describe('buildYearReport', () => {
   it('listy po dílech', () => {
     expect(demand!.name).toBe('Požadováno');
     expect(demand!.rows).toEqual([
-      ['A', '', '', '', '', 100, 80, 60, 240],
-      ['B', '', '', '', '', 10, 0, 0, 10],
+      ['A', '', '', '', '', '', 100, 80, 60, 240],
+      ['B', '', '', '', '', '', 10, 0, 0, 10],
     ]);
     // Díl B v exportu CW52 chybí, odeslané množství neznáme.
-    expect(shipped!.rows.map((r) => r.slice(5))).toEqual([
+    expect(shipped!.rows.map((r) => r.slice(6))).toEqual([
       [90, null, null, 90],
       [null, null, null, null],
     ]);
-    expect(difference!.rows[0]!.slice(5)).toEqual([-10, null, null, -10]);
+    expect(difference!.rows[0]!.slice(6)).toEqual([-10, null, null, -10]);
   });
 
   it('respektuje filtr a kmenová data', () => {
-    const master = parseMasterData(parseCsv('Item Number;Zákazník;Projekt;Strana\nA;Zákazník A;P1;LHD'));
+    const master = parseMasterData(parseCsv('Item Number;Projekt;Kategorie;Strana;Varianta\nA;P1;DP;LHD;SR2'));
     if (!master.ok) throw new Error();
     const filtered = buildYearReport([cw51, cw52], master.value.items, { ...EMPTY_FILTER, side: 'LHD' }, labels)!;
-    expect(filtered.sheets[1]!.rows.map((r) => r.slice(0, 5))).toEqual([['A', '', 'Zákazník A', 'P1', 'LHD']]);
+    expect(filtered.sheets[1]!.header.slice(0, 6)).toEqual(['Díl', 'Popis', 'Projekt', 'Kategorie', 'Strana', 'Varianta']);
+    expect(filtered.sheets[1]!.rows.map((r) => r.slice(0, 6))).toEqual([['A', '', 'P1', 'DP', 'LHD', 'SR2']]);
   });
 
   it('bez exportů nic', () => {

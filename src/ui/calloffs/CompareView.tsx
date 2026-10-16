@@ -7,6 +7,7 @@ import { formatPercent, formatQuantity, formatSigned } from '../../core/format';
 import type { MasterItem } from '../../core/masterdata';
 import { useI18n } from '../../i18n/I18nProvider';
 import { ExportButtons, type ExportTable } from './ExportButtons';
+import { ItemFieldCells, ItemFieldHeaders, itemFieldValues, useItemFieldLabels } from './ItemFields';
 
 const RANGES: PeriodCount[] = [12, 26, 'all'];
 /** Od jaké změny proti předchozímu exportu se buňka matice zvýrazní (v %). */
@@ -26,6 +27,7 @@ interface Props {
 
 export function CompareView({ exports, filter, master, filters }: Props) {
   const { t, locale } = useI18n();
+  const fieldLabels = useItemFieldLabels();
   const tc = t.calloffs.compare;
   const [olderDay, setOlderDay] = useState(exports.at(-2)?.exportDay);
   const [newerDay, setNewerDay] = useState(exports.at(-1)?.exportDay);
@@ -121,10 +123,7 @@ export function CompareView({ exports, filter, master, filters }: Props) {
   const labelA = exportName(older);
   const labelB = exportName(newer);
   const fileBase = `${tc.fileName}_CW${older.week}-${older.year}_CW${newer.week}-${newer.year}`;
-  const masterCols = (item: string) => {
-    const m = master?.get(item);
-    return [m?.customer ?? '', m?.project ?? '', m?.side ?? ''];
-  };
+  const masterCols = (item: string) => itemFieldValues(master?.get(item));
 
   const buildSummaryExport = (): ExportTable => ({
     fileName: `${fileBase}_${tc.week.toLowerCase()}`,
@@ -138,7 +137,7 @@ export function CompareView({ exports, filter, master, filters }: Props) {
     ],
   });
 
-  const itemHeader = [t.calloffs.table.item, t.calloffs.table.description, t.calloffs.table.customer, t.calloffs.table.project, t.calloffs.table.side];
+  const itemHeader = [t.calloffs.table.item, t.calloffs.table.description, ...fieldLabels];
   const buildItemsExport = (): ExportTable =>
     view === 'total'
       ? {
@@ -305,8 +304,7 @@ export function CompareView({ exports, filter, master, filters }: Props) {
                 <tr>
                   <th className="sticky-col">{t.calloffs.table.item}</th>
                   <th>{t.calloffs.table.description}</th>
-                  <th>{t.calloffs.table.project}</th>
-                  <th>{t.calloffs.table.side}</th>
+                  <ItemFieldHeaders />
                   {view === 'total' ? (
                     <>
                       <th className="n">{labelA}</th>
@@ -335,8 +333,7 @@ export function CompareView({ exports, filter, master, filters }: Props) {
                         <strong>{r.item}</strong>
                       </td>
                       <td className="desc">{r.description}</td>
-                      <td>{m?.project ?? '—'}</td>
-                      <td>{m?.side ? <span className="chip">{m.side}</span> : '—'}</td>
+                      <ItemFieldCells m={m} />
                       {view === 'total' ? (
                         <>
                           <td className="n">{formatQuantity(r.olderTotal, locale)}</td>
