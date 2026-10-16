@@ -1575,3 +1575,69 @@ button.oil-step:disabled {
   color: var(--ink-2);
   line-height: 1.35;
 }
+
+/* Dashboard: pokrytí po projektech pod kartami. */
+.dash-projects {
+  margin-top: 12px;
+  width: fit-content;
+  max-width: 100%;
+}
+
+.dash-projects > p {
+  max-width: 460px;
+}
+
+.dash-projects td .dot {
+  margin-right: 4px;
+}
+
+/* OIL: komentář se smaže křížkem, který se ukáže po najetí myší (na dotykových zařízeních je vidět stále). */
+.oil-comment {
+  position: relative;
+  padding-right: 22px;
+}
+
+.oil-comment-delete {
+  position: absolute;
+  top: -1px;
+  right: 0;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  font: 600 15px/1 var(--font-body);
+  color: var(--crit);
+  background: none;
+  border: 0;
+  border-radius: 4px;
+  cursor: pointer;
+  opacity: 0;
+}
+
+.oil-comment:hover .oil-comment-delete,
+.oil-comment-delete:focus-visible {
+  opacity: 1;
+}
+
+.oil-comment-delete:hover {
+  background: var(--negative-bg);
+}
+
+@media (hover: none) {
+  .oil-comment-delete {
+    opacity: 0.6;
+  }
+}
+
+.dash-projects table {
+  width: auto;
+}
+
+.dash-projects th,
+.dash-projects td {
+  padding-inline: 14px;
+}
+
+.dash-projects thead tr:first-child th[colspan] {
+  text-align: center;
+  border-bottom: 1px solid var(--line);
+}

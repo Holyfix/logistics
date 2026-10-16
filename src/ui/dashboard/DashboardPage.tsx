@@ -1,6 +1,6 @@
 import { useMemo, type ReactNode } from 'react';
-import { buildCoverage } from '../../core/coverage/compute';
-import { callOffDigest, componentAlerts, customerAlerts, dataFreshness, oilAlerts, type Severity } from '../../core/dashboard';
+import { buildCoverage, SHORTAGE_DAYS } from '../../core/coverage/compute';
+import { callOffDigest, componentAlerts, customerAlerts, dataFreshness, oilAlerts, projectCoverage, type Severity } from '../../core/dashboard';
 import { dayToIso, weekday, type DayNumber } from '../../core/dates';
 import { formatDayShort, formatPercent, formatQuantity, formatSigned } from '../../core/format';
 import { useI18n } from '../../i18n/I18nProvider';
@@ -56,11 +56,13 @@ export function DashboardPage({ today = localToday(), now = Date.now() }: { toda
   const oilDraft = useOilDraftList();
   const oilList = oilDraft ?? data?.oil?.list ?? null;
 
-  const customer = useMemo(() => {
+  const coverage = useMemo(() => {
     if (!data?.coverage.length) return null;
     const master = data.master?.data;
-    return customerAlerts(buildCoverage(data.coverage, master, { transit: true }), buildCoverage(data.coverage, master, { transit: false }), today);
-  }, [data, today]);
+    return { withTransit: buildCoverage(data.coverage, master, { transit: true }), withoutTransit: buildCoverage(data.coverage, master, { transit: false }) };
+  }, [data]);
+  const customer = useMemo(() => (coverage ? customerAlerts(coverage.withTransit, coverage.withoutTransit, today) : null), [coverage, today]);
+  const projects = useMemo(() => (coverage ? projectCoverage(coverage.withTransit, coverage.withoutTransit, today) : null), [coverage, today]);
   const componentList = useMemo(() => (components ? componentAlerts(components) : null), [components]);
   const oil = useMemo(() => (oilList ? oilAlerts(oilList, today) : null), [oilList, today]);
   const calloffs = useMemo(() => {
@@ -304,6 +306,51 @@ export function DashboardPage({ today = localToday(), now = Date.now() }: { toda
           </a>
         ))}
       </div>
+
+      {projects && projects.length > 0 && (
+        <div className="panel dash-projects">
+          <div className="panel-head">
+            <h2>{td.projects.title}</h2>
+            <span className="muted">{td.projects.sub}</span>
+          </div>
+          <div className="table-scroll">
+            <table className="table table-data">
+              <thead>
+                <tr>
+                  <th rowSpan={2}>{td.projects.project}</th>
+                  <th colSpan={2}>{td.projects.withTransit}</th>
+                  <th colSpan={2}>{td.projects.withoutTransit}</th>
+                </tr>
+                <tr>
+                  <th>{td.projects.until}</th>
+                  <th className="n">{td.projects.days}</th>
+                  <th>{td.projects.until}</th>
+                  <th className="n">{td.projects.days}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {projects.map((p) => (
+                  <tr key={p.project}>
+                    <td>
+                      <Dot tone={p.severity ?? 'ok'} /> <strong>{p.project || td.projects.noProject}</strong>
+                    </td>
+                    {[p.withTransit, p.withoutTransit].flatMap((c, k) => [
+                      <td key={`u${k}`}>{c.until === null ? <span className="cell-short">{td.projects.notCovered}</span> : dayLabel(c.until)}</td>,
+                      <td key={`d${k}`} className="n">
+                        <strong className={c.days < SHORTAGE_DAYS && !c.whole ? 'cell-short' : undefined}>
+                          {formatQuantity(c.days, locale)}
+                          {c.whole && '+'}
+                        </strong>
+                      </td>,
+                    ])}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="muted">{td.projects.note}</p>
+        </div>
+      )}
     </section>
   );
 }

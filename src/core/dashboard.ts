@@ -234,3 +234,58 @@ export function oilAlerts(list: OilList, today: DayNumber): OilAlert[] {
     })
     .sort((a, b) => bySeverity(a, b) || (a.item.due ?? Infinity) - (b.item.due ?? Infinity) || a.item.id - b.item.id);
 }
+
+/** Pokrytí projektu: poslední pokrytý den a kolik dní od dneška to je. */
+export interface CoverageSpan {
+  /** Poslední den, kdy mají všechny díly projektu zůstatek 0 a víc; null = nepokryto už dnes. */
+  until: DayNumber | null;
+  /** Počet pokrytých dní od dneška (dnes včetně); 0 = nepokryto už dnes. */
+  days: number;
+  /** Pokryto po celý horizont souboru (skutečné pokrytí může být delší). */
+  whole: boolean;
+}
+
+export interface ProjectCoverage {
+  project: string;
+  withTransit: CoverageSpan;
+  withoutTransit: CoverageSpan;
+  /** Podle pokrytí s transitem: crit = pokryto méně než 2 dny (chybí dnes nebo zítra), jinak null. */
+  severity: 'crit' | null;
+}
+
+/**
+ * Pokrytí po projektech od dneška: do kdy mají všechny díly projektu zůstatek 0 a víc a kolik dní to je, s transitem
+ * i bez. `withTransit` a `withoutTransit` jsou stejná data (stejné pořadí řádků) s transitem a bez.
+ */
+export function projectCoverage(withTransit: CoverageTable, withoutTransit: CoverageTable, today: DayNumber): ProjectCoverage[] {
+  const days = withTransit.days;
+  const from = days.findIndex((d) => d >= today);
+  if (from === -1) return [];
+  const groups = new Map<string, number[]>();
+  withTransit.lines.forEach((line, i) => groups.set(line.project, [...(groups.get(line.project) ?? []), i]));
+
+  const span = (table: CoverageTable, rows: number[]): CoverageSpan => {
+    const ks = rows.map((i) => firstShort(table.lines[i]!.values, from)).filter((k): k is number => k !== null);
+    if (ks.length) {
+      const k = Math.min(...ks);
+      return { until: k > from ? days[k - 1]! : null, days: days[k]! - today, whole: false };
+    }
+    let last = -1;
+    for (const i of rows) table.lines[i]!.values.forEach((v, d) => v !== null && d > last && (last = d));
+    return last >= from ? { until: days[last]!, days: days[last]! - today + 1, whole: true } : { until: null, days: 0, whole: true };
+  };
+
+  return [...groups.entries()]
+    .map(([project, rows]): ProjectCoverage => {
+      const withT = span(withTransit, rows);
+      const severity = !withT.whole && withT.days < SHORTAGE_DAYS ? 'crit' : null;
+      return { project, withTransit: withT, withoutTransit: span(withoutTransit, rows), severity };
+    })
+    .sort(
+      (a, b) =>
+        Number(a.withTransit.whole) - Number(b.withTransit.whole) ||
+        a.withTransit.days - b.withTransit.days ||
+        a.withoutTransit.days - b.withoutTransit.days ||
+        a.project.localeCompare(b.project, 'cs'),
+    );
+}

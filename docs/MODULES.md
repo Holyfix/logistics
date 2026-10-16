@@ -37,6 +37,9 @@ a Dodavatelé odložené. Modul Kapacity (odvolávky vs. kapacita linek) byl zva
 - **Karta za oblast** (Zákazník, Komponenty, OIL, Odvolávky, Data): barevný pruh podle nejhoršího stavu
   (červená hoří, žlutá pozor, zelená v pořádku), hlavní číslo, malé čítače a 4 nejnaléhavější položky na řádek;
   kliknutím do modulu. Nahoře souhrn: kolik oblastí hoří, pozor, v pořádku
+- ✅ **Pokrytí po projektech** (pod kartami): za každý projekt ze souborů coverage od dneška do kdy je pokrytý
+  (poslední den, kdy mají všechny díly zůstatek 0 a víc) a kolik dní to je, s transitem i bez; „+“ = celý horizont
+  souboru; červená tečka = pokryto méně než 2 dny, jinak zelená
 - ✅ **Kritické díly u zákazníka** (coverage od dneška): hoří = chybí i s transitem dnes nebo zítra, pozor = dnes
   nebo zítra chybí jen bez transitu (čeká na transit), pro informaci = chybí s transitem později
 - ✅ **Kritické komponenty** (podle odvolávek a našeho skladu): hoří = dojdou do 2 dnů, pozor = do 7 dnů,
@@ -135,7 +138,7 @@ Filtry: zákazník, projekt, strana (LHD/RHD), kategorie z kmenových dat, hled�
     vysvětlivka aktuálního kroku (pravidlo „krok platí, až je celý splněný“ po najetí myší)
 - ✅ Pruh u řádku a štítek podle stavu: červená po termínu, žlutá rozpracováno, modrá nezahájeno, zelená hotovo, šedá zrušeno
 - ✅ Posun termínu s povinným důvodem: u bodu „posunuto N×“, původní termín a historie (kdo, kdy, z – na, proč)
-- ✅ Komentáře s datem a autorem
+- ✅ Komentáře s datem a autorem, od nejstaršího po nejnovější; smazání křížkem po najetí myší (s potvrzením)
 - ✅ Filtry Otevřené / Po termínu / Hotové / Vše, odpovědný (po osobách, bod „A / B“ patří k oběma), hledání; ukazatele otevřené, po termínu, hotovo, posuny
 - ✅ Uložení do `OIL/OIL.xlsx` ve sdílené složce (listy OIL, Komentáře, Posuny termínu)
 - ⏳ Živá společná editace (po přechodu na Firebase)
