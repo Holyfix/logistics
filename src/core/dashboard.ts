@@ -16,48 +16,9 @@ export const bySeverity = (a: { severity: Severity }, b: { severity: Severity })
 /** Do kolika dní od dneška se chybějící komponenta hlásí jako „pozor“ (dál jen pro informaci). */
 export const COMPONENT_WARN_DAYS = 7;
 
-export interface CustomerAlert {
-  id: string;
-  item: string;
-  customerNumber: string;
-  description: string;
-  project: string;
-  location: string;
-  /** První den, kdy u zákazníka chybí (s transitem; u „čeká na transit“ bez transitu). */
-  day: DayNumber;
-  /** Kolik kusů ten den chybí. */
-  missing: number;
-  /** Chybí jen bez transitu: s transitem je zákazník v nejbližších dnech pokrytý. */
-  transitOnly: boolean;
-  severity: Severity;
-}
-
 function firstShort(values: readonly (number | null)[], from: number): number | null {
   for (let k = from; k < values.length; k++) if ((values[k] ?? 0) < -1e-9) return k;
   return null;
-}
-
-/**
- * Díly, kterým u zákazníka chybí kusy (od dneška): crit = i s transitem dnes nebo zítra, warn = dnes nebo zítra jen
- * bez transitu (čeká na transit), info = s transitem později v horizontu souboru. `withTransit` a `withoutTransit` jsou
- * stejná data (stejné pořadí řádků) s transitem a bez něj.
- */
-export function customerAlerts(withTransit: CoverageTable, withoutTransit: CoverageTable, today: DayNumber): CustomerAlert[] {
-  const days = withTransit.days;
-  const from = days.findIndex((d) => d >= today);
-  if (from === -1) return [];
-  const soon = (k: number) => days[k]! < today + SHORTAGE_DAYS;
-  const alerts: CustomerAlert[] = [];
-  withTransit.lines.forEach((line, i) => {
-    const plain = withoutTransit.lines[i]!;
-    const k = firstShort(line.values, from);
-    const kPlain = firstShort(plain.values, from);
-    const base = { id: line.id, item: line.item, customerNumber: line.customerNumber, description: line.description, project: line.project, location: line.location };
-    if (k !== null && soon(k)) alerts.push({ ...base, day: days[k]!, missing: -line.values[k]!, transitOnly: false, severity: 'crit' });
-    else if (kPlain !== null && soon(kPlain)) alerts.push({ ...base, day: days[kPlain]!, missing: -plain.values[kPlain]!, transitOnly: true, severity: 'warn' });
-    else if (k !== null) alerts.push({ ...base, day: days[k]!, missing: -line.values[k]!, transitOnly: false, severity: 'info' });
-  });
-  return alerts.sort((a, b) => bySeverity(a, b) || a.day - b.day || b.missing - a.missing);
 }
 
 export interface ComponentAlert {
@@ -249,8 +210,11 @@ export interface ProjectCoverage {
   project: string;
   withTransit: CoverageSpan;
   withoutTransit: CoverageSpan;
-  /** Podle pokrytí s transitem: crit = pokryto méně než 2 dny (chybí dnes nebo zítra), jinak null. */
-  severity: 'crit' | null;
+  /**
+   * crit = s transitem pokryto méně než 2 dny (chybí dnes nebo zítra), warn = méně než 2 dny jen bez transitu
+   * (čeká na transit), null = v pořádku.
+   */
+  severity: 'crit' | 'warn' | null;
 }
 
 /**
@@ -278,14 +242,16 @@ export function projectCoverage(withTransit: CoverageTable, withoutTransit: Cove
   return [...groups.entries()]
     .map(([project, rows]): ProjectCoverage => {
       const withT = span(withTransit, rows);
-      const severity = !withT.whole && withT.days < SHORTAGE_DAYS ? 'crit' : null;
-      return { project, withTransit: withT, withoutTransit: span(withoutTransit, rows), severity };
+      const plain = span(withoutTransit, rows);
+      const short = (c: CoverageSpan) => !c.whole && c.days < SHORTAGE_DAYS;
+      const severity = short(withT) ? 'crit' : short(plain) ? 'warn' : null;
+      return { project, withTransit: withT, withoutTransit: plain, severity };
     })
     .sort(
       (a, b) =>
-        Number(a.withTransit.whole) - Number(b.withTransit.whole) ||
-        a.withTransit.days - b.withTransit.days ||
+        Number(a.withoutTransit.whole) - Number(b.withoutTransit.whole) ||
         a.withoutTransit.days - b.withoutTransit.days ||
+        a.withTransit.days - b.withTransit.days ||
         a.project.localeCompare(b.project, 'cs'),
     );
 }

@@ -1,6 +1,6 @@
 import { useMemo, type ReactNode } from 'react';
 import { buildCoverage, SHORTAGE_DAYS } from '../../core/coverage/compute';
-import { callOffDigest, componentAlerts, customerAlerts, dataFreshness, oilAlerts, projectCoverage, type Severity } from '../../core/dashboard';
+import { callOffDigest, componentAlerts, dataFreshness, oilAlerts, projectCoverage, type CoverageSpan, type ProjectCoverage, type Severity } from '../../core/dashboard';
 import { dayToIso, weekday, type DayNumber } from '../../core/dates';
 import { formatDayShort, formatPercent, formatQuantity, formatSigned } from '../../core/format';
 import { useI18n } from '../../i18n/I18nProvider';
@@ -42,6 +42,8 @@ interface Card {
   label: string;
   counters: { value: number; label: string }[];
   lines: Line[];
+  /** Pokrytí po projektech místo řádků; každý projekt je odkaz do Coverage s filtrem projektu. */
+  projects?: ProjectCoverage[];
   /** Text místo čísla, když data chybí. */
   empty: string;
 }
@@ -61,7 +63,6 @@ export function DashboardPage({ today = localToday(), now = Date.now() }: { toda
     const master = data.master?.data;
     return { withTransit: buildCoverage(data.coverage, master, { transit: true }), withoutTransit: buildCoverage(data.coverage, master, { transit: false }) };
   }, [data]);
-  const customer = useMemo(() => (coverage ? customerAlerts(coverage.withTransit, coverage.withoutTransit, today) : null), [coverage, today]);
   const projects = useMemo(() => (coverage ? projectCoverage(coverage.withTransit, coverage.withoutTransit, today) : null), [coverage, today]);
   const componentList = useMemo(() => (components ? componentAlerts(components) : null), [components]);
   const oil = useMemo(() => (oilList ? oilAlerts(oilList, today) : null), [oilList, today]);
@@ -120,6 +121,16 @@ export function DashboardPage({ today = localToday(), now = Date.now() }: { toda
     return formatDayShort(`${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`, locale);
   };
   const count = (list: readonly { severity: Severity }[] | null, s: Severity) => (list ?? []).filter((a) => a.severity === s).length;
+  /** Pokryto do + počet dní (červeně méně než 2 dny; „+“ = celý horizont souboru). */
+  const span = (c: CoverageSpan) => (
+    <>
+      <span className={c.until === null ? 'cell-short' : undefined}>{c.until === null ? td.customer.notCovered : dayLabel(c.until)}</span>{' '}
+      <b className={!c.whole && c.days < SHORTAGE_DAYS ? 'cell-short' : undefined} title={c.whole ? td.customer.whole : undefined}>
+        {formatQuantity(c.days, locale)}
+        {c.whole && '+'}
+      </b>
+    </>
+  );
   const stale = freshness.filter((f) => f.stale);
 
   const cards: Card[] = [
@@ -128,23 +139,17 @@ export function DashboardPage({ today = localToday(), now = Date.now() }: { toda
       title: td.customer.title,
       icon: 'coverage',
       href: '#coverage',
-      tone: worstOf(customer),
-      value: customer ? count(customer, 'crit') : null,
+      tone: projects ? worstOf(projects.flatMap((p) => (p.severity ? [{ severity: p.severity }] : []))) : 'warn',
+      value: projects ? projects.filter((p) => p.severity === 'crit').length : null,
       label: td.customer.main,
-      counters: [
-        { value: count(customer, 'warn'), label: td.customer.transit },
-        { value: count(customer, 'info'), label: td.customer.later },
-      ],
-      lines: (customer ?? []).map((a) => ({
-        key: a.id,
-        tone: a.severity,
-        text: (
-          <>
-            <strong>{a.item || a.customerNumber}</strong> {[a.project, a.transitOnly ? td.customer.transit : ''].filter(Boolean).join(' · ')}
-          </>
-        ),
-        value: `${dayLabel(a.day)} · ${pcs(a.missing)}`,
-      })),
+      counters: projects
+        ? [
+            { value: projects.filter((p) => p.severity === 'warn').length, label: td.customer.transit },
+            { value: projects.length, label: td.customer.projects },
+          ]
+        : [],
+      lines: [],
+      ...(projects ? { projects } : {}),
       empty: td.customer.none,
     },
     {
@@ -259,7 +264,46 @@ export function DashboardPage({ today = localToday(), now = Date.now() }: { toda
       </div>
 
       <div className="dash-cards">
-        {cards.map((card) => (
+        {cards.map((card) =>
+          card.projects ? (
+            // Karta s odkazy uvnitř: hlavička a čísla vedou do modulu, každý projekt do Coverage s filtrem projektu.
+            <div key={card.id} className={`dash-card dash-${card.tone}`}>
+              <a className="dash-card-hit" href={card.href}>
+                <span className="dash-card-head">
+                  <span className="dash-card-title">
+                    <Icon name={card.icon} /> {card.title}
+                  </span>
+                  <Dot tone={card.tone} />
+                </span>
+                <span className="dash-main">
+                  <b>{formatQuantity(card.value ?? 0, locale)}</b> <span>{card.label}</span>
+                </span>
+                <span className="dash-counters">
+                  {card.counters.map((c) => (
+                    <span key={c.label}>
+                      <b>{formatQuantity(c.value, locale)}</b> {c.label}
+                    </span>
+                  ))}
+                </span>
+              </a>
+              <div className="dash-projects" role="table" aria-label={td.customer.title}>
+                <div className="dash-projects-head" role="row">
+                  <span role="columnheader">{td.customer.project}</span>
+                  <span role="columnheader">{td.customer.withoutTransit}</span>
+                  <span role="columnheader">{td.customer.withTransit}</span>
+                </div>
+                {card.projects.map((p) => (
+                  <a key={p.project} className="dash-projects-row" role="row" href={p.project ? `#coverage?project=${encodeURIComponent(p.project)}` : '#coverage'}>
+                    <span role="cell">
+                      <Dot tone={p.severity ?? 'ok'} /> <strong>{p.project || td.customer.noProject}</strong>
+                    </span>
+                    <span role="cell">{span(p.withoutTransit)}</span>
+                    <span role="cell">{span(p.withTransit)}</span>
+                  </a>
+                ))}
+              </div>
+            </div>
+          ) : (
           <a key={card.id} className={`dash-card dash-${card.tone}`} href={card.href}>
             <span className="dash-card-head">
               <span className="dash-card-title">
@@ -304,51 +348,10 @@ export function DashboardPage({ today = localToday(), now = Date.now() }: { toda
               </>
             )}
           </a>
-        ))}
+          ),
+        )}
       </div>
 
-      {projects && projects.length > 0 && (
-        <div className="panel dash-projects">
-          <div className="panel-head">
-            <h2>{td.projects.title}</h2>
-          </div>
-          <div className="table-scroll">
-            <table className="table table-data">
-              <thead>
-                <tr>
-                  <th rowSpan={2}>{td.projects.project}</th>
-                  <th colSpan={2}>{td.projects.withTransit}</th>
-                  <th colSpan={2}>{td.projects.withoutTransit}</th>
-                </tr>
-                <tr>
-                  <th>{td.projects.until}</th>
-                  <th className="n">{td.projects.days}</th>
-                  <th>{td.projects.until}</th>
-                  <th className="n">{td.projects.days}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {projects.map((p) => (
-                  <tr key={p.project}>
-                    <td>
-                      <Dot tone={p.severity ?? 'ok'} /> <strong>{p.project || td.projects.noProject}</strong>
-                    </td>
-                    {[p.withTransit, p.withoutTransit].flatMap((c, k) => [
-                      <td key={`u${k}`}>{c.until === null ? <span className="cell-short">{td.projects.notCovered}</span> : dayLabel(c.until)}</td>,
-                      <td key={`d${k}`} className="n" title={c.whole ? td.projects.whole : undefined}>
-                        <strong className={c.days < SHORTAGE_DAYS && !c.whole ? 'cell-short' : undefined}>
-                          {formatQuantity(c.days, locale)}
-                          {c.whole && '+'}
-                        </strong>
-                      </td>,
-                    ])}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
     </section>
   );
 }

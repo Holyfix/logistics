@@ -107,6 +107,19 @@ describe('CoveragePage', () => {
     expect(bodyRows().map((r) => r.querySelectorAll('td')[3]!.textContent)).toEqual(['Lokalita A', 'Lokalita A']);
   });
 
+  it('projekt z adresy (odkaz z Dashboardu) nastaví filtr projektu', () => {
+    const other: CoverageSource = { ...source, path: 'Coverage/Lokalita B/P200/r.xlsx', location: 'Lokalita B', project: 'P200' };
+    location.hash = '#coverage?project=P200';
+    try {
+      renderWith(<CoveragePage />, { ...state, data: { ...state.data!, coverage: [source, other] } });
+      expect((screen.getByLabelText('Projekt') as HTMLSelectElement).value).toBe('P200');
+      // Ze 4 řádků zůstane jen díl bez mapování ze souboru P200 (díl z mapování patří podle mapování k P100).
+      expect(bodyRows()).toHaveLength(1);
+    } finally {
+      location.hash = '';
+    }
+  });
+
   it('víkend, hranice 2 dnů a den prvního nepokrytí se stavem 0 nebo víc', () => {
     const day = (n: number) => dayFromParts(2026, 10, n)!;
     const report: CoverageReport = {

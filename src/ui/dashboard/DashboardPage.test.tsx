@@ -93,15 +93,15 @@ describe('DashboardPage', () => {
         </DataProvider>
       </I18nProvider>,
     );
-    // Zákazník: FG-L chybí zítra i s transitem (hoří), FG-R jen bez transitu.
-    expect(card('Zákazník').className).toContain('dash-crit');
-    expect(card('Zákazník').querySelector('.dash-main')!.textContent).toBe('1 dílů chybí dnes nebo zítra');
-    expect(card('Zákazník').querySelector('.dash-counters')!.textContent).toBe('1 čeká na transit0 později');
-    expect(lines('Zákazník')).toEqual(['FG-L P1zítra · 50 ks', 'FG-R P1 · čeká na transitzítra · 30 ks']);
-    expect(card('Zákazník').getAttribute('href')).toBe('#coverage');
-    // Pokrytí po projektech: P1 pokrytý jen dnes (zítra chybí FG-L i s transitem), bez transitu také.
-    const projectRow = screen.getByText('Pokrytí po projektech').closest('.panel')!.querySelector('tbody tr')!;
-    expect([...projectRow.querySelectorAll('td')].map((td) => td.textContent)).toEqual([' P1', 'dnes', '1', 'dnes', '1']);
+    // Zákazník = pokrytí po projektech: P1 pokrytý jen dnes (zítra chybí FG-L i s transitem) → hoří.
+    const customer = screen.getByRole('table', { name: 'Zákazník' }).closest('.dash-card')!;
+    expect(customer.className).toContain('dash-crit');
+    expect(customer.querySelector('.dash-main')!.textContent).toBe('1 projektů pokryto méně než 2 dny');
+    expect(customer.querySelector('.dash-counters')!.textContent).toBe('0 čeká na transit1 projektů');
+    expect(customer.querySelector('.dash-card-hit')!.getAttribute('href')).toBe('#coverage');
+    const project = customer.querySelector('.dash-projects-row')!;
+    expect(project.getAttribute('href')).toBe('#coverage?project=P1');
+    expect([...project.querySelectorAll('[role=cell]')].map((c) => c.textContent)).toEqual([' P1', 'dnes 1', 'dnes 1']);
     // Komponenty bez kusovníku.
     expect(card('Komponenty').textContent).toContain('Kusovník není načtený.');
     // OIL: po termínu, termín do 7 dní, později; hotové ne.
