@@ -30,12 +30,13 @@ export function ComponentsPage({ today = localToday() }: { today?: DayNumber } =
   const [query, setQuery] = useState('');
   const [onlyShort, setOnlyShort] = useState(false);
 
-  // Filtry Projekt → Kategorie podle hotových dílů: kategorie se nabízí jen z hotových dílů vybraného projektu,
-  // komponenta odpovídá, když je v hotovém dílu vybraného projektu i kategorie.
+  // Filtry Projekt a Kategorie podle hotových dílů, navzájem v libovolném pořadí: kategorie se nabízí jen z hotových
+  // dílů vybraného projektu a projekty jen s hotovými díly vybrané kategorie; komponenta odpovídá, když je v hotovém
+  // dílu vybraného projektu i kategorie.
   const productBy = useMemo(() => new Map((table?.products ?? []).map((p) => [p.item, p])), [table]);
   const sorted = (values: Iterable<string>) => [...new Set(values)].filter(Boolean).sort((a, b) => a.localeCompare(b, 'cs', { numeric: true }));
   const used = useMemo(() => [...new Set(table?.components.flatMap((c) => c.products) ?? [])].map((item) => productBy.get(item)!).filter(Boolean), [table, productBy]);
-  const projects = useMemo(() => sorted(used.map((p) => p.project)), [used]);
+  const projects = useMemo(() => sorted(used.filter((p) => !category || p.category === category).map((p) => p.project)), [used, category]);
   const categories = useMemo(() => sorted(used.filter((p) => !project || p.project === project).map((p) => p.category)), [used, project]);
   const lines = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -201,14 +202,7 @@ export function ComponentsPage({ today = localToday() }: { today?: DayNumber } =
       <div className="filters" role="group" aria-label={tc.filters.label}>
         <label className="field">
           <span>{tc.filters.project}</span>
-          <select
-            value={project}
-            onChange={(e) => {
-              // Kategorie jiného projektu by v novém výběru nemusela existovat.
-              setProject(e.target.value);
-              setCategory('');
-            }}
-          >
+          <select value={project} onChange={(e) => setProject(e.target.value)}>
             <option value="">{tc.filters.all}</option>
             {projects.map((p) => (
               <option key={p} value={p}>

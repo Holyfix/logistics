@@ -73,10 +73,13 @@ describe('CallOffsPage', () => {
     expect(screen.queryByLabelText('Varianta')).toBeNull();
     const side = screen.getByLabelText('Strana') as HTMLSelectElement;
     expect([...side.options].map((o) => o.value)).toEqual(['', 'RHD']);
-    // změna projektu zruší výběr kategorie
-    fireEvent.change(screen.getByLabelText('Kategorie'), { target: { value: 'DP' } });
-    fireEvent.change(screen.getByLabelText('Projekt'), { target: { value: 'P100' } });
-    expect((screen.getByLabelText('Kategorie') as HTMLSelectElement).value).toBe('');
+  });
+
+  it('filtry i obráceně: vybraná varianta zúží projekty', () => {
+    renderPage(state);
+    fireEvent.change(screen.getByLabelText('Varianta'), { target: { value: 'SR2' } });
+    const projects = [...(screen.getByLabelText('Projekt') as HTMLSelectElement).options].map((o) => o.value);
+    expect(projects).toEqual(['', 'P100', '__missing__']);
   });
 
   it('ukáže celý horizont exportu', () => {

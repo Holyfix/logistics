@@ -55,7 +55,7 @@ export interface CoverageTable {
 
 export type RowFilter = { kind: 'all' } | { kind: 'negativeAny' } | { kind: 'negativeOn'; day: DayNumber };
 
-/** Filtry podle dílu v pořadí, ve kterém na sebe navazují: Destinace → Projekt → Kategorie → Strana → Varianta. */
+/** Filtry podle dílu (ovlivňují se navzájem v libovolném pořadí): Destinace, Projekt, Kategorie, Strana, Varianta. */
 export const COVERAGE_FIELDS = ['location', 'project', 'category', 'side', 'variant'] as const;
 export type CoverageField = (typeof COVERAGE_FIELDS)[number];
 
@@ -63,17 +63,9 @@ export type CoverageFilter = Record<CoverageField, string> & { query: string; ro
 
 export const EMPTY_COVERAGE_FILTER: CoverageFilter = { location: '', project: '', category: '', side: '', variant: '', query: '', rows: { kind: 'all' } };
 
-/** Nastaví filtr a zruší filtry za ním (jejich hodnoty by v novém výběru nemusely existovat). */
-export function setCoverageFilter<F extends Omit<CoverageFilter, 'rows'>>(filter: F, key: CoverageField | 'query', value: string): F {
-  if (key === 'query') return { ...filter, query: value };
-  const next = { ...filter, [key]: value };
-  for (const later of COVERAGE_FIELDS.slice(COVERAGE_FIELDS.indexOf(key) + 1)) next[later] = '';
-  return next;
-}
-
-/** Řádek odpovídá filtrům podle dílu; `upTo` = jen filtry před tímto údajem. */
-function matches(line: CoverageLine, filter: Omit<CoverageFilter, 'rows'>, upTo: number = COVERAGE_FIELDS.length): boolean {
-  return COVERAGE_FIELDS.slice(0, upTo).every((field) => !filter[field] || line[field] === filter[field]);
+/** Řádek odpovídá filtrům podle dílu; `except` = bez filtru tohoto údaje (pro jeho nabídku). */
+function matches(line: CoverageLine, filter: Omit<CoverageFilter, 'rows'>, except?: CoverageField): boolean {
+  return COVERAGE_FIELDS.every((field) => field === except || !filter[field] || line[field] === filter[field]);
 }
 
 /** Hodnota pro dny mezi dny souboru: platí poslední známý stav (např. víkend bez poptávky). */
@@ -146,12 +138,12 @@ export function filterCoverage(table: CoverageTable, filter: CoverageFilter): Co
 }
 
 /**
- * Hodnoty pro výběr ve filtrech: jen ty, které odpovídají filtrům před nimi (projekty destinace, kategorie projektu,
- * strany kategorie …). Prázdný seznam = díly ve výběru údaj nemají (filtr se nezobrazí).
+ * Hodnoty pro výběr ve filtrech: jen ty, které odpovídají ostatním vybraným filtrům (projekty destinace, kategorie
+ * projektu, projekty kategorie …). Prázdný seznam = díly ve výběru údaj nemají (filtr se nezobrazí).
  */
 export function coverageOptions(table: CoverageTable, filter: Omit<CoverageFilter, 'rows'> = EMPTY_COVERAGE_FILTER) {
   const sorted = (values: string[]) => [...new Set(values.filter(Boolean))].sort((a, b) => a.localeCompare(b, 'cs', { numeric: true }));
-  const of = (field: CoverageField) => sorted(table.lines.filter((l) => matches(l, filter, COVERAGE_FIELDS.indexOf(field))).map((l) => l[field]));
+  const of = (field: CoverageField) => sorted(table.lines.filter((l) => matches(l, filter, field)).map((l) => l[field]));
   return {
     locations: of('location'),
     projects: of('project'),

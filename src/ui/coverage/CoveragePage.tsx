@@ -4,7 +4,6 @@ import {
   coverageOptions,
   EMPTY_COVERAGE_FILTER,
   filterCoverage,
-  setCoverageFilter,
   SHORTAGE_DAYS,
   shortage,
   summarizeBySide,
@@ -94,7 +93,7 @@ export function CoveragePage({ today = localToday() }: { today?: DayNumber } = {
   }
 
   const newest = Math.max(...sources.map((s) => s.lastModified));
-  const set = (key: CoverageField | 'query') => (value: string) => setFilter((f) => setCoverageFilter(f, key, value));
+  const set = (key: CoverageField | 'query') => (value: string) => setFilter((f) => ({ ...f, [key]: value }));
   // Kategorie, strana a varianta se nabídnou, jen když je díly ve výběru mají (nebo je filtr nastavený).
   const shown = (key: CoverageField, values: string[]) => values.length > 0 || filter[key] !== '';
   const select = (key: CoverageField, label: string, values: string[]) => (

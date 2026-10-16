@@ -166,7 +166,7 @@ describe('ComponentsPage', () => {
     expect(shown()).toEqual(['FG-1']);
   });
 
-  it('navazující filtry Projekt → Kategorie podle hotových dílů', () => {
+  it('navazující filtry Projekt a Kategorie podle hotových dílů', () => {
     renderWith(<ComponentsPage today={day(13)} />);
     const options = () => [...(screen.getByLabelText('Kategorie') as HTMLSelectElement).options].map((o) => o.value);
     expect(options()).toEqual(['', 'DP', 'HB']);
@@ -174,10 +174,10 @@ describe('ComponentsPage', () => {
     // P2 má jen hotový díl FG-2 (HB) a v něm jen RESIN
     expect(options()).toEqual(['', 'HB']);
     expect(rows(0).map((r) => cells(r)[0])).toEqual(['RESIN']);
-    fireEvent.change(screen.getByLabelText('Kategorie'), { target: { value: 'HB' } });
-    // změna projektu zruší kategorii
-    fireEvent.change(screen.getByLabelText('Projekt'), { target: { value: 'P1' } });
-    expect((screen.getByLabelText('Kategorie') as HTMLSelectElement).value).toBe('');
+    // i obráceně: kategorie DP nabídne jen projekt P1
+    fireEvent.change(screen.getByLabelText('Projekt'), { target: { value: '' } });
+    fireEvent.change(screen.getByLabelText('Kategorie'), { target: { value: 'DP' } });
+    expect([...(screen.getByLabelText('Projekt') as HTMLSelectElement).options].map((o) => o.value)).toEqual(['', 'P1']);
     expect(rows(0).map((r) => cells(r)[0]).sort()).toEqual(['CLIP-1', 'RESIN']);
   });
 
