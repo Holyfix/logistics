@@ -109,7 +109,7 @@ export function DataProvider({ children, initial }: { children: ReactNode; initi
     const current = source.current;
     if (current?.kind !== 'handle') {
       downloadBlob(path.split('/').pop()!, await build());
-      return { status: 'downloaded' };
+      return { status: 'downloaded', path };
     }
     // Oprávnění se musí vyžádat hned po kliknutí, dřív než se soubor sestaví.
     if (!(await requestWrite(current.handle))) return { status: 'denied' };

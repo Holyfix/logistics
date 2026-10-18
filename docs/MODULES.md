@@ -12,7 +12,7 @@ Pořadí skupin na rozcestníku (karty se čtou shora dolů po sloupcích):
 | Skupina | Modul | Otázka, na kterou odpovídá | Stav |
 |---|---|---|---|
 | Přehledy | **Dashboard** | Co je dnes potřeba řešit? | Fáze 6, první verze hotová |
-| Přehledy | **KPI** | Jak se nám daří v čase? | Fáze 8 |
+| Přehledy | **KPI** | Jak se nám daří v čase? (SQCDP) | Fáze 8 (probíhá), písmena a denní zápis hotové |
 | Zákazníci | **Call-offs** | Co zákazníci chtějí a jak se to mění? | Fáze 3, aktuální odvolávky hotové |
 | Zákazníci | **Coverage** | Vystačí díly u zákazníka? Pokrytí na jednotlivé dny | Fáze 4 (probíhá) |
 | Zákazníci | **Expedice a dodávky** (OTD outbound) | Dodáváme zákazníkům včas? | Později |
@@ -53,12 +53,26 @@ a Dodavatelé odložené. Modul Kapacity (odvolávky vs. kapacita linek) byl zva
 - ✅ **Čerstvost dat:** sklad a coverage starší než 24 hodin, odvolávky z minulého týdne nebo chybějící soubor
 - ⏳ Plnění plánu a prostoje za včerejšek, na kolik dní vystačí obaly (až budou moduly)
 
-### KPI
-- Vývoj ukazatelů po týdnech a měsících, cílové hodnoty a trend
-- Návrh sady: stabilita odvolávek, plnění plánu (%), prostoje celkem a kvůli materiálu (h),
-  počet kritických dílů, průměrné pokrytí ve dnech
-- Smysl dává, až budou data za několik týdnů
-
+### KPI (SQCDP)
+- Tři karty: **Přehled** (písmena a grafy, později opatření), **Zápis dne**, **Ukazatele a cíle**
+- ✅ **Písmena S, Q, C, D, P** (bezpečnost, kvalita, náklady, dodávky, lidé) jako kalendář měsíce: každé políčko
+  písmena je den. Barví se jen den: zelená v cíli, žlutá varování, červená za červenou hranicí, šedá = pracovní den
+  bez zápisu. Víkend se barví jen, když je zapsaný (někdy se pracuje). Stav dne písmena = nejhorší z jeho ukazatelů
+- ✅ **Pruh měsíců L–P** pod písmenem: barva měsíce podle podílu zelených dní ze zapsaných (90 % a víc zelená,
+  75 % a víc žlutá, jinak červená); kliknutím se měsíc otevře
+- ✅ **Zápis dne** (vlastní karta): tlačítko Zapsat nabídne předchozí pracovní den (v pondělí pátek), kliknutím
+  na políčko v přehledu se otevře zápis jiného dne; nabídnou se i nezapsané pracovní dny za posledních 30 dní.
+  Ukazatele s kategoriemi (S skoronehody, Q reklamace) mají pole pro každou kategorii (podklad pro Paretův graf).
+  Stav se počítá už při psaní. Některé hodnoty aplikace předvyplní z dat (chybí u zákazníka z Coverage, kritické
+  komponenty, body OIL po termínu); lze je přepsat
+- ✅ **Ukazatele a cíle** se upravují v aplikaci: písmeno, název, jednotka, cíl, červená za, zda je lepší víc
+  nebo méně, zdroj předvyplnění, kategorie
+- ✅ Uložení do `KPI/KPI.xlsx` ve sdílené složce; rozcestník ukáže, kolik písmen bylo červených v posledním zapsaném dni
+- ✅ **Grafy pod písmeny:** pod S a Q Paretův graf kategorií za zobrazený měsíc nebo od začátku roku (součet
+  událostí za kategorii, ukazatel bez kategorií svým součtem, např. úrazy; sloupce sestupně, kumulativní čára
+  a hranice 80 %). Pod C, D a P denní sloupce posledních 7 zapsaných dní vybraného ukazatele písmene, obarvené
+  podle stavu, s přerušovanou čarou cíle
+- ⏳ Propojení s OIL: písmeno u bodu OIL, seznam otevřených opatření, založení bodu z červeného dne
 ### Call-offs
 Hlavní údaj je **Discrete Qty** (požadavek na den), kumulativy jsou doplňková informace.
 Filtry projekt, kategorie, strana (LHD/RHD) a varianta z kmenových dat se ovlivňují navzájem v libovolném pořadí (každý nabízí jen hodnoty odpovídající ostatním vybraným filtrům; strana a varianta jen tam, kde je díly mají), hledání dílu; díly bez mapování jako volba „Bez kmenových dat“ ve filtru Projekt.
@@ -152,5 +166,5 @@ Filtry projekt, kategorie, strana (LHD/RHD) a varianta z kmenových dat se ovliv
 
 ## Zápis dat
 
-Plánování a OIL už do sdílené složky zapisují (`Plan/`, `OIL/OIL.xlsx`); Obaly a později Mimořádné přepravy přibudou. Bez serveru se záznamy ukládají
+Plánování, OIL a KPI už do sdílené složky zapisují (`Plan/`, `OIL/OIL.xlsx`, `KPI/KPI.xlsx`); Obaly a později Mimořádné přepravy přibudou. Bez serveru se záznamy ukládají
 jako malé samostatné soubory do sdílené složky (návrh v [ADR 0003](adr/0003-zapis-do-sdilene-slozky.md)).

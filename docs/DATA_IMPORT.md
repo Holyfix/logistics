@@ -17,6 +17,7 @@ Soubory se rozpoznají podle názvu (nezáleží na velikosti písmen ani diakri
 | Kusovník (BOM) | název začíná „MBOM“ / „BOM“ / „Kusovník“, nebo leží ve složce `BOM` / `Kusovník` | XLSX nebo CSV |
 | Plánování: kapacity a plány linek | leží ve složce `Plan` (nebo `Plán`); `Kapacity.xlsx` = kapacity, ostatní = plány | XLSX (zapisuje aplikace) |
 | OIL (Open Issue List) | leží ve složce `OIL`, nebo název začíná „OIL“; platí nejnovější soubor | XLSX (zapisuje aplikace) |
+| KPI (SQCDP) | leží ve složce `KPI`, nebo název začíná „KPI“; platí nejnovější soubor | XLSX (zapisuje aplikace) |
 
 Doporučená struktura (složka se v aplikaci vybírá celá, podsložky se prohledají):
 
@@ -30,6 +31,7 @@ Logistics/
 ├── Objednávky/           později: Příjem (otevřené nákupní objednávky)
 ├── Plan/                 Plánování: Kapacity.xlsx a plány linek (ASSEMBLY_<projekt>.xlsx), zapisuje aplikace
 ├── OIL/                  OIL.xlsx (Open Issue List), zapisuje aplikace
+├── KPI/                  KPI.xlsx (ukazatele SQCDP a denní zápisy), zapisuje aplikace
 └── Obaly/                později: Obaly
 ```
 
@@ -258,6 +260,22 @@ před přepsáním zeptá; jeho změny by se přepsáním ztratily.
   plnění 0–100 (zaokrouhlí se na nejbližší krok). Uloží se pak do `OIL/OIL.xlsx`.
 - **Smazat trvale** odstraní bod i s komentáři a posuny (po potvrzení, do souboru se zapíše uložením). Zrušený
   bod naopak v seznamu zůstává.
+
+## KPI (složka KPI)
+
+Soubor `KPI/KPI.xlsx` **vytváří aplikace** tlačítkem Uložit den nebo Uložit ukazatele v modulu KPI. Bez souboru
+aplikace nabídne úvodní sadu ukazatelů. Když soubor mezitím změnil někdo jiný, aplikace se před přepsáním zeptá.
+
+| List | Obsah |
+|---|---|
+| **Ukazatele** | ID, Písmeno (S, Q, C, D, P), Ukazatel, Jednotka, Cíl, Červená za, Lepší je (více / méně), Zdroj, Kategorie (oddělené „; “) |
+| **Hodnoty** | Datum, ID, Ukazatel, Kategorie, Hodnota (u ukazatele s kategoriemi řádek za každou kategorii) |
+| **Dny** | Datum, Zapsal, Kdy – které dny jsou zapsané |
+
+- **Stav dne:** v cíli = zelená; horší než cíl, ale ne za červenou hranicí = žlutá; za hranicí = červená.
+  Prázdná „Červená za“ znamená, že ukazatel nikdy nezčervená (jen žlutá).
+- **Zdroj** předvyplní hodnotu z dat: `coverageShortage` (kusy chybějící u zákazníka v prvních 2 dnech, s transitem),
+  `componentsShort` (komponenty, které dojdou do 2 dnů), `oilOverdue` (body OIL po termínu); `manual` = jen ruční zápis.
 
 ## Testovací data
 
