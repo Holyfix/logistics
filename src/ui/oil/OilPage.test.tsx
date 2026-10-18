@@ -27,8 +27,9 @@ const state: DataState = {
       lastModified: 0,
       list: {
         items: [
-          { id: 1, problem: 'Chybí obaly', action: 'Objednat', owner: 'Logistika', opened: day(1), due: day(10), progress: 50, cancelled: false, closed: null, comments: [], shifts: [] },
-          { id: 2, problem: 'Hotová věc', action: '', owner: 'Kvalita', opened: day(1), due: day(5), progress: 100, cancelled: false, closed: day(5), comments: [], shifts: [] },
+          { id: 1, problem: 'Chybí obaly', action: 'Objednat', owner: 'Logistika', opened: day(1), due: day(10), progress: 50, cancelled: false, closed: null, comments: [], shifts: [], letter: null, kpi: null },
+          { id: 2, problem: 'Hotová věc', action: '', owner: 'Kvalita', opened: day(1), due: day(5), progress: 100, cancelled: false, closed: day(5), comments: [], shifts: [], letter: null, kpi: null },
+          { id: 3, problem: 'Chybí u zákazníka: 31 ks', action: '', owner: 'Novák', opened: day(6), due: day(28), progress: 0, cancelled: false, closed: null, comments: [], shifts: [], letter: 'D', kpi: '2026-10-06 d_customer' },
         ],
       },
     },
@@ -62,7 +63,7 @@ describe('OilPage', () => {
 
   it('body podle stavu, plnění kliknutím, posun termínu s důvodem a komentář', () => {
     renderPage();
-    expect(kpi('Otevřené body')).toBe('1');
+    expect(kpi('Otevřené body')).toBe('2');
     expect(kpi('Po termínu')).toBe('1');
     // Výchozí filtr Otevřené: hotový bod není vidět.
     expect(screen.queryByText('Hotová věc')).toBeNull();
@@ -111,7 +112,7 @@ describe('OilPage', () => {
 
     // Nový bod a filtr Hotové.
     fireEvent.click(screen.getByRole('button', { name: '+ Nový bod' }));
-    expect(screen.getByRole('group', { name: 'Detail bodu 3' })).toBeTruthy();
+    expect(screen.getByRole('group', { name: 'Detail bodu 4' })).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Hotové' }));
     expect(row('Hotová věc').className).toContain('oil-done');
   });
@@ -146,5 +147,26 @@ describe('OilPage', () => {
     }
     expect(screen.queryByText('Hotová věc')).toBeNull();
     expect(screen.getAllByText('Neuložené změny').length).toBeGreaterThan(0);
+  });
+
+  it('písmeno SQCDP: sloupec, filtr, výběr v detailu; #oil?open=3 otevře bod', () => {
+    location.hash = '#oil?open=3';
+    renderPage();
+    location.hash = '';
+    const detail = screen.getByRole('group', { name: 'Detail bodu 3' });
+    expect(within(detail).getByText(/z KPI · Út 6\. 10\. · d_customer/)).toBeTruthy();
+    const letters = within(detail).getByRole('group', { name: 'Písmeno SQCDP' });
+    expect(within(letters).getByRole('button', { name: 'D' }).getAttribute('aria-pressed')).toBe('true');
+    expect(row('Chybí u zákazníka: 31 ks').querySelector('.oil-letter')!.textContent).toBe('D');
+    fireEvent.change(screen.getByLabelText('Písmeno'), { target: { value: 'D' } });
+    fireEvent.click(within(screen.getByRole('group', { name: 'Detail bodu 3' })).getByRole('button', { name: 'Zavřít' }));
+    expect(screen.queryByText('Chybí obaly')).toBeNull();
+    fireEvent.change(screen.getByLabelText('Písmeno'), { target: { value: 'none' } });
+    expect(screen.getByText('Chybí obaly')).toBeTruthy();
+    expect(screen.queryByText('Chybí u zákazníka: 31 ks')).toBeNull();
+    // písmeno u ručního bodu
+    fireEvent.click(row('Chybí obaly'));
+    fireEvent.click(within(screen.getByRole('group', { name: 'Písmeno SQCDP' })).getByRole('button', { name: 'Q' }));
+    expect(row('Chybí obaly').querySelector('.oil-letter')!.textContent).toBe('Q');
   });
 });

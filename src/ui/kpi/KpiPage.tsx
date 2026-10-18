@@ -12,6 +12,7 @@ import {
   entryOf,
   kpiSheets,
   kpiStatus,
+  kpiValue,
   LETTERS,
   monthDays,
   monthSummary,
@@ -29,16 +30,17 @@ import {
   type KpiStatus,
   type Letter,
 } from '../../core/kpi';
-import { stamp } from '../../core/oil';
+import { addItem, emptyOil, kpiSourceKey, stamp } from '../../core/oil';
 import { useI18n } from '../../i18n/I18nProvider';
 import { xlsxBlob } from '../../platform/download';
 import { localToday, useComponents } from '../components/useComponents';
 import { useData } from '../data/DataProvider';
 import { Icon } from '../icons';
-import { useOilDraftList } from '../oil/OilProvider';
+import { useOilDraft, useOilDraftList } from '../oil/OilProvider';
 import { SaveStatus, useSaveFlow } from '../planning/SaveStatus';
 import { shapeCells } from './letterShapes';
-import { dayIssues, LetterDays, ParetoChart, targetText } from './KpiCharts';
+import { KpiActionList, openActions, openOilItem } from './KpiActions';
+import { dayIssues, formatValue, LetterDays, ParetoChart, targetText } from './KpiCharts';
 
 const KPI_FILE = 'KPI/KPI.xlsx';
 const NAME_KEY = 'logistics-user-name';
@@ -118,6 +120,7 @@ export function KpiPage({ today = localToday() }: { today?: DayNumber } = {}) {
   const [tab, setTab] = useState<Tab>('overview');
   const [period, setPeriod] = useState<Period>('year');
   const auto = useAutoValues(today);
+  const { draft: oilDraft, setDraft: setOilDraft } = useOilDraft();
 
   const head = (
     <div className="page-head module-head">
@@ -198,6 +201,20 @@ export function KpiPage({ today = localToday() }: { today?: DayNumber } = {}) {
   const removeDay = () => {
     if (window.confirm(tk.entry.removeConfirm.replace('{day}', dayLabel(day)))) void save(withoutEntry(kpi, day));
   };
+  const oilList = oilDraft ?? data.oil?.list ?? emptyOil();
+  const actions = openActions(oilList.items, today);
+  // Nový bod OIL z ukazatele mimo cíl: písmeno, problém (hodnota, den, cíl) a zdroj; doplní se v modulu OIL.
+  const addOil = (def: KpiDef, value: number) => {
+    const unit = def.unit ? ` ${def.unit}` : '';
+    const parts = def.categories.flatMap((c) => {
+      const v = entry?.values[categoryKey(def, c)] ?? 0;
+      return v ? [`${c} ${formatValue(v, locale)}`] : [];
+    });
+    const problem = `${def.name}: ${formatValue(value, locale)}${unit}${parts.length ? ` – ${parts.join(', ')}` : ''} (${dayLabel(day)}, ${targetText(def, tk.targetText)})`;
+    const result = addItem(oilList, today, { letter: def.letter, problem, kpi: kpiSourceKey(day, def.id) });
+    setOilDraft(result.list);
+    openOilItem(result.id);
+  };
   const changeDef = (id: string, change: (d: KpiDef) => KpiDef) => setDefsDraft(updateDef(kpi, id, change).defs);
 
   const shiftMonth = (by: number) =>
@@ -270,7 +287,7 @@ export function KpiPage({ today = localToday() }: { today?: DayNumber } = {}) {
 
           <div className="kpi-letters">
             {LETTERS.map((letter) => (
-              <LetterCard key={letter} letter={letter} kpi={kpi} month={month} today={today} todayMonth={todayMonth} onPick={openDay} onMonth={setMonth} />
+              <LetterCard key={letter} letter={letter} kpi={kpi} month={month} today={today} todayMonth={todayMonth} actions={actions.filter((a) => a.letter === letter).length} onPick={openDay} onMonth={setMonth} />
             ))}
           </div>
 
@@ -295,6 +312,8 @@ export function KpiPage({ today = localToday() }: { today?: DayNumber } = {}) {
               );
             })}
           </div>
+
+          <KpiActionList items={actions} today={today} />
         </>
       )}
 
@@ -364,6 +383,7 @@ export function KpiPage({ today = localToday() }: { today?: DayNumber } = {}) {
                   <th>{tk.entry.target}</th>
                   <th>{tk.entry.value}</th>
                   <th>{tk.entry.status}</th>
+                  <th>{tk.entry.oil}</th>
                 </tr>
               </thead>
               {LETTERS.map((letter) => {
@@ -372,12 +392,13 @@ export function KpiPage({ today = localToday() }: { today?: DayNumber } = {}) {
                 return (
                   <tbody key={letter}>
                     <tr className="kpi-group">
-                      <td colSpan={5}>
+                      <td colSpan={6}>
                         {letter} – {tk.letters[letter]}
                       </td>
                     </tr>
                     {defs.map((def) => {
                       const value = currentValue(def);
+                      const stored = kpiValue(entry, def);
                       return (
                         <tr key={def.id}>
                           <td>
@@ -407,6 +428,21 @@ export function KpiPage({ today = localToday() }: { today?: DayNumber } = {}) {
                             </div>
                           </td>
                           <td>{dot(value === null ? null : kpiStatus(def, value))}</td>
+                          <td className="kpi-oil">
+                            {/* Bod OIL se zakládá z uložené hodnoty mimo cíl; existující body k ukazateli a dni jako odkazy. */}
+                            {stored !== null && kpiStatus(def, stored) !== 'green' && (
+                              <button type="button" className="button button-small" disabled={edited !== null} title={edited !== null ? tk.entry.saveFirst : tk.entry.addOilTitle} onClick={() => addOil(def, stored)}>
+                                {tk.entry.addOil}
+                              </button>
+                            )}
+                            {oilList.items
+                              .filter((i) => i.kpi === kpiSourceKey(day, def.id))
+                              .map((i) => (
+                                <a key={i.id} href={`#oil?open=${i.id}`}>
+                                  {tk.entry.point.replace('{id}', String(i.id))}
+                                </a>
+                              ))}
+                          </td>
                         </tr>
                       );
                     })}
@@ -531,12 +567,14 @@ interface LetterCardProps {
   month: Month;
   today: DayNumber;
   todayMonth: Month;
+  /** Počet otevřených opatření (bodů OIL) k písmenu. */
+  actions: number;
   onPick: (day: DayNumber) => void;
   onMonth: (month: Month) => void;
 }
 
 /** Písmeno jako kalendář měsíce a pod ním pruh měsíců roku. */
-function LetterCard({ letter, kpi, month, today, todayMonth, onPick, onMonth }: LetterCardProps) {
+function LetterCard({ letter, kpi, month, today, todayMonth, actions, onPick, onMonth }: LetterCardProps) {
   const { t, locale } = useI18n();
   const tk = t.kpi;
   const days = monthDays(month.year, month.month);
@@ -587,7 +625,15 @@ function LetterCard({ letter, kpi, month, today, todayMonth, onPick, onMonth }: 
           );
         })}
       </div>
-      <p className="kpi-caption">{summary.days ? tk.inTarget.replace('{green}', String(summary.green)).replace('{days}', String(summary.days)) : tk.noDays}</p>
+      <p className="kpi-caption">
+        {summary.days ? tk.inTarget.replace('{green}', String(summary.green)).replace('{days}', String(summary.days)) : tk.noDays}
+        {actions > 0 && (
+          <>
+            {' · '}
+            <strong>{tk.actionsCount.replace('{n}', String(actions))}</strong>
+          </>
+        )}
+      </p>
     </div>
   );
 }

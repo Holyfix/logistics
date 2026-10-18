@@ -6,7 +6,9 @@ import {
   nextProgress,
   oilSheets,
   originalDue,
+  kpiSourceKey,
   ownerNames,
+  parseKpiSource,
   parseOilWorkbook,
   removeItem,
   statusOf,
@@ -37,6 +39,24 @@ describe('OIL', () => {
     const b = addItem(a.list, TODAY);
     expect([a.id, b.id]).toEqual([1, 2]);
     expect(b.list.items[1]).toMatchObject({ opened: TODAY, due: null, progress: 0, cancelled: false, closed: null });
+  });
+
+  it('bod z KPI: písmeno a zdroj (den a ukazatel) se uloží do souboru a zase načtou', () => {
+    const key = kpiSourceKey(day(6), 'd_customer');
+    expect(key).toBe('2026-10-06 d_customer');
+    expect(parseKpiSource(key)).toEqual({ day: day(6), kpiId: 'd_customer' });
+    expect(parseKpiSource(null)).toBeNull();
+    const a = addItem(emptyOil(), TODAY, { letter: 'D', problem: 'Chybí u zákazníka: 31 ks', kpi: key });
+    const b = addItem(a.list, TODAY);
+    expect(a.list.items[0]).toMatchObject({ letter: 'D', problem: 'Chybí u zákazníka: 31 ks', kpi: key, opened: TODAY });
+    const back = parseOilWorkbook(toSheets(oilSheets(b.list, TODAY)));
+    expect(back.ok && back.value.items.map((i) => [i.letter, i.kpi])).toEqual([
+      ['D', key],
+      [null, null],
+    ]);
+    // starší soubor bez sloupců SQCDP a Zdroj KPI
+    const old = parseOilWorkbook([{ name: 'OIL', data: [['Číslo', 'Problém', 'Termín', 'Plnění (%)'], [1, 'X', null, 0]] }]);
+    expect(old.ok && old.value.items[0]).toMatchObject({ letter: null, kpi: null });
   });
 
   it('stav podle plnění a termínu', () => {
@@ -80,7 +100,7 @@ describe('OIL', () => {
 
     const sheets = oilSheets(list, TODAY);
     expect(sheets.map((s) => s.name)).toEqual(['OIL', 'Komentáře', 'Posuny termínu']);
-    expect(sheets[0]!.rows[0]).toEqual([1, 'Chybí obaly', 'Objednat', 'Logistika', '01.10.2026', '16.10.2026', '10.10.2026', 1, 75, 'Rozpracováno', null, 'Objednáno']);
+    expect(sheets[0]!.rows[0]).toEqual([1, 'Chybí obaly', 'Objednat', 'Logistika', '01.10.2026', '16.10.2026', '10.10.2026', 1, 75, 'Rozpracováno', null, 'Objednáno', null, null]);
     expect(sheets[0]!.rows.map((r) => r[9])).toEqual(['Rozpracováno', 'Hotovo', 'Zrušeno']);
     expect(parseOilWorkbook(toSheets(sheets))).toEqual({ ok: true, value: list });
   });

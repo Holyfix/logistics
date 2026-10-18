@@ -12,7 +12,7 @@ const PLOT_H = H - M.top - M.bottom;
 const LABEL_MAX = 22;
 
 const short = (text: string) => (text.length > LABEL_MAX ? `${text.slice(0, LABEL_MAX - 1)}…` : text);
-const formatValue = (value: number, locale: Locale) => (Number.isInteger(value) ? formatQuantity(value, locale) : formatOneDecimal(value, locale));
+export const formatValue = (value: number, locale: Locale) => (Number.isInteger(value) ? formatQuantity(value, locale) : formatOneDecimal(value, locale));
 
 /** Osa hodnot: 0, polovina a maximum (celá čísla, když to jde). */
 function ticksOf(max: number): number[] {

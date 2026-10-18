@@ -74,7 +74,11 @@ a Dodavatelé odložené. Modul Kapacity (odvolávky vs. kapacita linek) byl zva
   a hranice 80 %). Pod C, D a P všechny ukazatele písmene za posledních 7 zapsaných dní: řádek = ukazatel
   (s cílem a červenou hranicí), políčko = den s hodnotou obarvené podle stavu; klik otevře zápis dne.
   Popisek dne v písmenu vyjmenuje ukazatele, které den obarvily, s hodnotou
-- ⏳ Propojení s OIL: písmeno u bodu OIL, seznam otevřených opatření, založení bodu z červeného dne
+- ✅ **Opatření SQCDP** pod grafy: otevřené body OIL s písmenem (nejdřív po termínu, pak podle termínu); klik otevře
+  bod v OIL. U každého písmene počet otevřených opatření
+- ✅ **„+ OIL“ v Zápisu dne** u uloženého ukazatele mimo cíl (žlutá i červená): založí v OIL bod s písmenem,
+  předvyplněným problémem (hodnota, den, cíl) a zdrojem (den a ukazatel) a otevře ho; existující body k ukazateli
+  a dni jsou u ukazatele jako odkazy
 ### Call-offs
 Hlavní údaj je **Discrete Qty** (požadavek na den), kumulativy jsou doplňková informace.
 Filtry projekt, kategorie, strana (LHD/RHD) a varianta z kmenových dat se ovlivňují navzájem v libovolném pořadí (každý nabízí jen hodnoty odpovídající ostatním vybraným filtrům; strana a varianta jen tam, kde je díly mají), hledání dílu; díly bez mapování jako volba „Bez kmenových dat“ ve filtru Projekt.
@@ -159,6 +163,9 @@ Filtry projekt, kategorie, strana (LHD/RHD) a varianta z kmenových dat se ovliv
 - ✅ Posun termínu s povinným důvodem: u bodu „posunuto N×“, původní termín a historie (kdo, kdy, z – na, proč)
 - ✅ Komentáře s datem a autorem, od nejstaršího po nejnovější; smazání křížkem po najetí myší (s potvrzením)
 - ✅ Filtry Otevřené / Po termínu / Hotové / Vše, odpovědný (po osobách, bod „A / B“ patří k oběma), hledání; ukazatele otevřené, po termínu, hotovo, posuny
+- ✅ **Písmeno SQCDP** (nepovinné): výběr v detailu bodu, sloupec a filtr v seznamu (i „bez písmene“); bod založený
+  z KPI má písmeno, problém a zdroj předvyplněné a v detailu „z KPI · den · ukazatel“. Body s písmenem jsou v KPI
+  jako Opatření SQCDP. Adresa `#oil?open=N` otevře bod N
 - ✅ Uložení do `OIL/OIL.xlsx` ve sdílené složce (listy OIL, Komentáře, Posuny termínu)
 - ⏳ Živá společná editace (po přechodu na Firebase)
 

@@ -147,6 +147,31 @@ describe('KpiPage', () => {
     expect(screen.getByRole('heading', { level: 2, name: /Zápis za den Pá 2\. 10\./ })).toBeTruthy();
   });
 
+  it('+ OIL u ukazatele mimo cíl založí bod s písmenem; opatření pod grafy a u písmene', () => {
+    renderPage();
+    expect(screen.getByText('Žádná otevřená opatření s písmenem SQCDP.')).toBeTruthy();
+    fireEvent.click(cell('S', 2));
+    const row = (name: string) => screen.getByLabelText(name).closest('tr')!;
+    // jen uložené hodnoty mimo cíl
+    expect(row('Skoronehody a nálezy BOZP: Skoronehoda').querySelector('.kpi-oil button')).toBeNull();
+    const add = row('Úrazy v logistice').querySelector('.kpi-oil button') as HTMLButtonElement;
+    expect(add.textContent).toBe('+ OIL');
+    // neuložená změna: nejdřív uložit den
+    fireEvent.change(screen.getByLabelText('Úrazy v logistice'), { target: { value: '2' } });
+    expect(add.disabled).toBe(true);
+    fireEvent.change(screen.getByLabelText('Úrazy v logistice'), { target: { value: '1' } });
+    fireEvent.click(screen.getByRole('tab', { name: 'Přehled' }));
+    fireEvent.click(cell('S', 2));
+    fireEvent.click(row('Úrazy v logistice').querySelector('.kpi-oil button')!);
+    expect(location.hash).toBe('#oil?open=1');
+    expect(row('Úrazy v logistice').querySelector('.kpi-oil a')!.textContent).toBe('bod 1');
+    fireEvent.click(screen.getByRole('tab', { name: 'Přehled' }));
+    const actions = document.querySelector('.kpi-actions tbody tr')!;
+    expect([...actions.querySelectorAll('td')].slice(0, 3).map((td) => td.textContent)).toEqual(['S', '1', 'Úrazy v logistice: 1 počet (Pá 2. 10., ≤ 0 · červená nad 0)']);
+    expect(document.querySelector('.kpi-card .kpi-caption')!.textContent).toContain('1 opatření');
+    location.hash = '';
+  });
+
   it('bez souboru KPI: úvodní sada ukazatelů', () => {
     renderPage(null);
     fireEvent.click(screen.getByRole('tab', { name: 'Zápis dne' }));
