@@ -29,11 +29,18 @@ const stock = parseStock(parseCsv('Item Number;Location;Zone ID;Qty On Hand - In
 if (!bom.ok || !master.ok || !stock.ok) throw new Error();
 const callOffs = {
   items: ['FG-1'],
+  descriptions: [''],
   offsets: Int32Array.from([0, 3]),
   days: Int32Array.from([day(13), day(14), day(15)]),
   qty: Float64Array.from([5, 5, 10]),
+  backlog: Float64Array.from([0]),
+  cumShipped: Float64Array.from([0]),
+  hasCumShipped: false,
   week: 42,
   year: 2026,
+  firstDay: day(13),
+  lastDay: day(15),
+  exportDay: day(12),
 } as unknown as CallOffExport;
 
 const state: DataState = {
