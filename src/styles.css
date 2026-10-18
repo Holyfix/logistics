@@ -1828,7 +1828,7 @@ button.oil-step:disabled {
 }
 
 .kpi-month {
-  width: 19px;
+  width: 18px;
   height: 18px;
   padding: 0;
   border: 1px solid transparent;
@@ -1877,10 +1877,12 @@ button.oil-step:disabled {
   background: var(--surface-2);
 }
 
-/* Měsíce leží těsně vedle sebe: zvolený se orámuje uvnitř, aby rámeček nepřekrýval sousedy. */
+/* Zvolený měsíc: rámeček vně políčka a odsazení od sousedů o jeho šířku, aby je nepřekrýval. */
 .kpi-selected {
-  border-color: var(--accent);
-  box-shadow: inset 0 0 0 1px var(--accent);
+  margin: 0 3px;
+  box-shadow:
+    0 0 0 1px var(--surface),
+    0 0 0 3px var(--accent);
 }
 
 .kpi-caption {
