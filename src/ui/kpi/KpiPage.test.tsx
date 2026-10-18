@@ -59,7 +59,7 @@ describe('KpiPage', () => {
 
   it('písmena SQCDP v pořadí, dny podle zápisu', () => {
     renderPage();
-    expect([...document.querySelectorAll('.kpi-letter')].map((l) => l.textContent)).toEqual(['S', 'Q', 'C', 'D', 'P']);
+    expect([...document.querySelectorAll('.kpi-card:not(.kpi-chart-card) .kpi-letter')].map((l) => l.textContent)).toEqual(['S', 'Q', 'C', 'D', 'P']);
     expect(cell('S', 1).className).toContain('kpi-green');
     expect(cell('S', 2).className).toContain('kpi-red');
     expect(cell('S', 3).className).toContain('kpi-none'); // sobota
@@ -114,6 +114,19 @@ describe('KpiPage', () => {
     expect(months[10]!.className).toContain('kpi-future');
     fireEvent.click(screen.getByRole('button', { name: 'Předchozí měsíc' }));
     expect(screen.getByText('Září 2026')).toBeTruthy();
+  });
+
+  it('pod písmeny Paretovy grafy za zvolené období', () => {
+    renderPage();
+    const charts = [...document.querySelectorAll('.kpi-chart-card')];
+    expect(charts.map((c) => c.querySelector('h3')!.textContent)).toEqual(['S Pareto · Leden–říjen 2026', 'Q Pareto · Leden–říjen 2026', 'C Pareto · Leden–říjen 2026', 'D Pareto · Leden–říjen 2026', 'P Pareto · Leden–říjen 2026']);
+    // S: 1 den s úrazem (mimo cíl), Q: žádná reklamace
+    expect(charts[0]!.querySelector('title')!.textContent).toBe('Úrazy v logistice: dní mimo cíl 1, kumulativně 100 %');
+    expect(charts[1]!.textContent).toContain('Za období žádné události ani dny mimo cíl.');
+    fireEvent.click(screen.getByRole('button', { name: 'Měsíc' }));
+    expect(charts[0]!.querySelector('h3')!.textContent).toBe('S Pareto · Říjen 2026');
+    fireEvent.click(screen.getByRole('button', { name: 'Předchozí měsíc' }));
+    expect(document.querySelector('.kpi-chart-card')!.textContent).toContain('Za období žádné události');
   });
 
   it('bez souboru KPI: úvodní sada ukazatelů', () => {

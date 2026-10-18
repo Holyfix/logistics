@@ -161,6 +161,46 @@ export function monthSummary(data: KpiData, letter: Letter, year: number, month:
   return { days: statuses.length, green, status: statuses.length === 0 ? null : share >= MONTH_GREEN ? 'green' : share >= MONTH_YELLOW ? 'yellow' : 'red' };
 }
 
+/** Sloupec Paretova grafu: kategorie (součet událostí) nebo ukazatel bez kategorií (počet dní mimo cíl). */
+export interface ParetoBar {
+  key: string;
+  label: string;
+  value: number;
+  kind: 'events' | 'days';
+  /** Kumulativní podíl včetně tohoto sloupce (0–1). */
+  cumulative: number;
+}
+
+/**
+ * Pareto písmene za období from–to (včetně): ukazatel s kategoriemi přispívá součtem hodnot za každou kategorii,
+ * ukazatel bez kategorií počtem zapsaných dní mimo cíl. Jen nenulové sloupce, seřazené sestupně.
+ */
+export function paretoOf(data: KpiData, letter: Letter, from: DayNumber, to: DayNumber): ParetoBar[] {
+  const entries = data.entries.filter((e) => e.day >= from && e.day <= to);
+  const bars: Omit<ParetoBar, 'cumulative'>[] = [];
+  for (const def of data.defs.filter((d) => d.letter === letter)) {
+    if (def.categories.length) {
+      for (const c of def.categories) {
+        const key = categoryKey(def, c);
+        bars.push({ key, label: c, value: entries.reduce((sum, e) => sum + (e.values[key] ?? 0), 0), kind: 'events' });
+      }
+    } else {
+      const days = entries.filter((e) => {
+        const v = kpiValue(e, def);
+        return v !== null && kpiStatus(def, v) !== 'green';
+      }).length;
+      bars.push({ key: def.id, label: def.name, value: days, kind: 'days' });
+    }
+  }
+  const sorted = bars.filter((b) => b.value > 0).sort((a, b) => b.value - a.value);
+  const total = sorted.reduce((sum, b) => sum + b.value, 0);
+  let running = 0;
+  return sorted.map((b) => {
+    running += b.value;
+    return { ...b, cumulative: running / total };
+  });
+}
+
 /** Den, který se na ranní poradě zapisuje: předchozí pracovní den (v pondělí pátek). */
 export function previousWorkday(today: DayNumber): DayNumber {
   let day = today - 1;

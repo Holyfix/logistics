@@ -541,6 +541,18 @@ export const cs = {
     dayTitle: { green: 'v cíli', yellow: 'upozornění', red: 'mimo cíl', missing: 'nezapsaný pracovní den', none: 'bez zápisu', future: 'budoucí den' },
     write: 'Zapsat {day}',
     tabs: { overview: 'Přehled', entry: 'Zápis dne', defs: 'Ukazatele a cíle' },
+    pareto: {
+      title: 'Pareto',
+      period: 'Období grafů',
+      month: 'Měsíc',
+      year: 'Od začátku roku',
+      empty: 'Za období žádné události ani dny mimo cíl.',
+      events: '{label}: událostí {value}, kumulativně {share} %',
+      days: '{label}: dní mimo cíl {value}, kumulativně {share} %',
+      legendEvents: 'události',
+      legendDays: 'dny mimo cíl',
+      legendCumulative: 'kumulativně %',
+    },
     entry: {
       heading: 'Zápis za den',
       missing: 'Nezapsané pracovní dny:',

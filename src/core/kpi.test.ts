@@ -8,6 +8,7 @@ import {
   kpiStatus,
   kpiValue,
   monthSummary,
+  paretoOf,
   parseKpiWorkbook,
   previousWorkday,
   withEntry,
@@ -97,5 +98,25 @@ describe('soubor KPI.xlsx', () => {
 
   it('soubor bez potřebných sloupců', () => {
     expect(parseKpiWorkbook([{ name: 'List1', data: [['A', 'B']] }])).toMatchObject({ ok: false, error: 'missingColumns' });
+  });
+});
+
+describe('Pareto', () => {
+  it('kategorie sčítá, ukazatel bez kategorií počítá dny mimo cíl; sestupně s kumulací', () => {
+    let data: KpiData = {
+      defs: [def({ id: 'q', letter: 'Q', name: 'Reklamace', categories: ['Záměna', 'Obal', 'Etiketa'] }), def({ id: 'late', letter: 'Q', name: 'Pozdě', target: 0, red: 5 })],
+      entries: [],
+    };
+    data = withEntry(data, { day: day(1), author: '', at: '', values: { 'q|Záměna': 1, 'q|Obal': 3, late: 2 } });
+    data = withEntry(data, { day: day(2), author: '', at: '', values: { 'q|Záměna': 2, late: 0 } });
+    data = withEntry(data, { day: day(20), author: '', at: '', values: { 'q|Záměna': 9 } });
+    const bars = paretoOf(data, 'Q', day(1), day(10));
+    expect(bars.map((b) => [b.label, b.value, b.kind])).toEqual([
+      ['Záměna', 3, 'events'],
+      ['Obal', 3, 'events'],
+      ['Pozdě', 1, 'days'],
+    ]);
+    expect(bars.map((b) => Math.round(b.cumulative * 100))).toEqual([43, 86, 100]);
+    expect(paretoOf(data, 'S', day(1), day(31))).toEqual([]);
   });
 });

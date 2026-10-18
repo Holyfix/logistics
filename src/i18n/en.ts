@@ -539,6 +539,18 @@ export const en: Messages = {
     dayTitle: { green: 'on target', yellow: 'warning', red: 'off target', missing: 'working day not recorded', none: 'no record', future: 'future day' },
     write: 'Record {day}',
     tabs: { overview: 'Overview', entry: 'Daily record', defs: 'KPIs and targets' },
+    pareto: {
+      title: 'Pareto',
+      period: 'Chart period',
+      month: 'Month',
+      year: 'Year to date',
+      empty: 'No events or off-target days in the period.',
+      events: '{label}: {value} events, cumulative {share} %',
+      days: '{label}: {value} days off target, cumulative {share} %',
+      legendEvents: 'events',
+      legendDays: 'days off target',
+      legendCumulative: 'cumulative %',
+    },
     entry: {
       heading: 'Daily record',
       missing: 'Working days not recorded:',

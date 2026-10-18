@@ -1961,3 +1961,85 @@ button.oil-step:disabled {
   display: flex;
   gap: 8px;
 }
+
+.kpi-chart {
+  margin: 0;
+}
+
+.kpi-chart svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.kpi-chart-grid {
+  stroke: var(--line);
+  stroke-width: 1;
+}
+
+.kpi-chart-80 {
+  stroke: var(--muted);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+}
+
+.kpi-chart-axis,
+.kpi-chart-label {
+  font: 500 9px var(--font-display);
+  fill: var(--muted);
+}
+
+.kpi-chart-label {
+  fill: var(--ink-2);
+}
+
+.kpi-chart-value {
+  font: 700 10px var(--font-display);
+  fill: var(--ink);
+}
+
+.kpi-chart-events {
+  fill: var(--accent);
+  background: var(--accent);
+}
+
+.kpi-chart-days {
+  fill: #d8404b;
+  background: #d8404b;
+}
+
+.kpi-chart-line {
+  fill: none;
+  stroke: #f2a536;
+  stroke-width: 2;
+}
+
+.kpi-chart-dot {
+  fill: #f2a536;
+}
+
+.kpi-chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px 12px;
+  margin-top: 4px;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.kpi-chart-legend-line {
+  display: inline-block;
+  width: 14px;
+  height: 2px;
+  margin-bottom: 3px;
+  background: #f2a536;
+  vertical-align: middle;
+}
+
+.kpi-chart-empty {
+  margin: 40px 0;
+  text-align: center;
+  font-size: 13px;
+}

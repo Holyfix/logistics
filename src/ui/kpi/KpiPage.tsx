@@ -15,6 +15,7 @@ import {
   LETTERS,
   monthDays,
   monthSummary,
+  paretoOf,
   previousWorkday,
   removeDef,
   updateDef,
@@ -36,6 +37,7 @@ import { Icon } from '../icons';
 import { useOilDraftList } from '../oil/OilProvider';
 import { SaveStatus, useSaveFlow } from '../planning/SaveStatus';
 import { shapeCells } from './letterShapes';
+import { ParetoChart } from './ParetoChart';
 
 const KPI_FILE = 'KPI/KPI.xlsx';
 const NAME_KEY = 'logistics-user-name';
@@ -43,6 +45,7 @@ const NAME_KEY = 'logistics-user-name';
 const MISSING_LOOKBACK = 30;
 
 type Tab = 'overview' | 'entry' | 'defs';
+type Period = 'month' | 'year';
 
 function readName(): string {
   try {
@@ -108,6 +111,7 @@ export function KpiPage({ today = localToday() }: { today?: DayNumber } = {}) {
   const [edited, setEdited] = useState<Record<string, string> | null>(null);
   const [name, setName] = useState(readName);
   const [tab, setTab] = useState<Tab>('overview');
+  const [period, setPeriod] = useState<Period>('year');
   const auto = useAutoValues(today);
 
   const head = (
@@ -197,6 +201,10 @@ export function KpiPage({ today = localToday() }: { today?: DayNumber } = {}) {
       return { year: Math.floor(index / 12), month: (index % 12) + 1 };
     });
   const todayMonth = monthOf(today);
+  // Období Paretových grafů: zobrazený měsíc, nebo od ledna do konce zobrazeného měsíce.
+  const monthRange = monthDays(month.year, month.month);
+  const range = { from: period === 'month' ? monthRange[0]! : monthDays(month.year, 1)[0]!, to: monthRange[monthRange.length - 1]! };
+  const periodText = period === 'month' || month.month === 1 ? `${tk.monthNames[month.month - 1]} ${month.year}` : `${tk.monthNames[0]}–${tk.monthNames[month.month - 1]!.toLowerCase()} ${month.year}`;
   const openDay = (d: DayNumber) => {
     pickDay(d);
     setMonth(monthOf(d));
@@ -251,11 +259,29 @@ export function KpiPage({ today = localToday() }: { today?: DayNumber } = {}) {
                 </li>
               ))}
             </ul>
+            <span className="segmented" role="group" aria-label={tk.pareto.period}>
+              {(['month', 'year'] as const).map((p) => (
+                <button key={p} type="button" aria-pressed={period === p} onClick={() => setPeriod(p)}>
+                  {tk.pareto[p]}
+                </button>
+              ))}
+            </span>
           </div>
 
           <div className="kpi-letters">
             {LETTERS.map((letter) => (
               <LetterCard key={letter} letter={letter} kpi={kpi} month={month} today={today} todayMonth={todayMonth} onPick={openDay} onMonth={setMonth} />
+            ))}
+          </div>
+
+          <div className="kpi-letters">
+            {LETTERS.map((letter) => (
+              <div key={letter} className="kpi-card kpi-chart-card">
+                <h3>
+                  <span className="kpi-letter">{letter}</span> {tk.pareto.title} · {periodText}
+                </h3>
+                <ParetoChart bars={paretoOf(kpi, letter, range.from, range.to)} label={`${letter} ${tk.letters[letter]} – ${tk.pareto.title} ${periodText}`} />
+              </div>
             ))}
           </div>
         </>
