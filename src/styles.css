@@ -2171,3 +2171,14 @@ button.oil-step:disabled {
   margin-left: 8px;
   font-size: 12px;
 }
+
+/* Dashboard na rozcestníku: kolik oblastí hoří a kolik je pozor. */
+.hub-dash {
+  gap: 12px;
+}
+
+.hub-dash > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
