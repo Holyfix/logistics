@@ -39,6 +39,10 @@ import { shapeCells } from './letterShapes';
 
 const KPI_FILE = 'KPI/KPI.xlsx';
 const NAME_KEY = 'logistics-user-name';
+/** Kolik dní zpátky se nabízejí nezapsané pracovní dny. */
+const MISSING_LOOKBACK = 30;
+
+type Tab = 'overview' | 'entry' | 'defs';
 
 function readName(): string {
   try {
@@ -103,6 +107,7 @@ export function KpiPage({ today = localToday() }: { today?: DayNumber } = {}) {
   const [day, setDay] = useState<DayNumber>(() => previousWorkday(today));
   const [edited, setEdited] = useState<Record<string, string> | null>(null);
   const [name, setName] = useState(readName);
+  const [tab, setTab] = useState<Tab>('overview');
   const auto = useAutoValues(today);
 
   const head = (
@@ -192,7 +197,14 @@ export function KpiPage({ today = localToday() }: { today?: DayNumber } = {}) {
       return { year: Math.floor(index / 12), month: (index % 12) + 1 };
     });
   const todayMonth = monthOf(today);
-  const dirty = defsDraft !== null || edited !== null;
+  const openDay = (d: DayNumber) => {
+    pickDay(d);
+    setMonth(monthOf(d));
+    setTab('entry');
+  };
+  // Pracovní dny za posledních 30 dní bez zápisu (až od prvního zápisu).
+  const missing: DayNumber[] = [];
+  for (let d = today - MISSING_LOOKBACK; d < today; d++) if (dayState(kpi, 'S', d, today) === 'missing') missing.push(d);
 
   const targetText = (def: KpiDef) => {
     const target = (def.higherIsBetter ? tk.targetText.higher : tk.targetText.lower).replace('{target}', String(def.target));
@@ -205,267 +217,273 @@ export function KpiPage({ today = localToday() }: { today?: DayNumber } = {}) {
     <section className="page" aria-labelledby="page-title">
       {head}
 
-      <div className="filters" role="group" aria-label={tk.entry.heading}>
-        <div className="kpi-monthnav">
-          <button type="button" className="button" aria-label={tk.prevMonth} onClick={() => shiftMonth(-1)}>
-            ‹
+      <div className="tabs" role="tablist" aria-label={t.modules.kpi.title}>
+        {(['overview', 'entry', 'defs'] as const).map((id) => (
+          <button key={id} type="button" role="tab" className="tab" aria-selected={tab === id} onClick={() => setTab(id)}>
+            {tk.tabs[id]}
           </button>
-          <strong>
-            {tk.monthNames[month.month - 1]} {month.year}
-          </strong>
-          <button type="button" className="button" aria-label={tk.nextMonth} onClick={() => shiftMonth(1)}>
-            ›
-          </button>
-        </div>
-        <ul className="kpi-legend">
-          {(['green', 'yellow', 'red', 'missing'] as const).map((s) => (
-            <li key={s}>
-              <i className={`kpi-swatch kpi-${s}`} /> {tk.legend[s]}
-            </li>
-          ))}
-        </ul>
-        <span className="filters-break" role="presentation" />
-        <button
-          type="button"
-          className="button button-primary"
-          onClick={() => {
-            const d = previousWorkday(today);
-            pickDay(d);
-            setMonth(monthOf(d));
-            document.getElementById('kpi-entry')?.scrollIntoView?.({ behavior: 'smooth' });
-          }}
-        >
-          {tk.write.replace('{day}', dayLabel(previousWorkday(today)))}
-        </button>
-      </div>
-
-      <div className="kpi-letters">
-        {LETTERS.map((letter) => (
-          <LetterCard
-            key={letter}
-            letter={letter}
-            kpi={kpi}
-            month={month}
-            today={today}
-            todayMonth={todayMonth}
-            selected={day}
-            onPick={(d) => {
-              pickDay(d);
-              document.getElementById('kpi-entry')?.scrollIntoView?.({ behavior: 'smooth' });
-            }}
-            onMonth={setMonth}
-          />
         ))}
+        <span className="tabs-actions">
+          <button type="button" className="button button-primary" onClick={() => openDay(previousWorkday(today))}>
+            {tk.write.replace('{day}', dayLabel(previousWorkday(today)))}
+          </button>
+        </span>
       </div>
 
-      <div className="panel" id="kpi-entry">
-        <div className="panel-head">
-          <h2>
-            {tk.entry.heading} {dayLabel(day)}
-          </h2>
-          <label className="inline-field">
-            <span>{tk.entry.day}</span>
-            <input
-              type="date"
-              value={dayToIso(day)}
-              max={dayToIso(today)}
-              onChange={(e) => {
-                const d = parseDay(e.target.value);
-                if (d !== null) {
-                  pickDay(d);
-                  setMonth(monthOf(d));
-                }
-              }}
-            />
-          </label>
-          <label className="inline-field">
-            <span>{tk.entry.you}</span>
-            <input
-              value={name}
-              placeholder={tk.entry.youPlaceholder}
-              onChange={(e) => {
-                setName(e.target.value);
-                saveName(e.target.value.trim());
-              }}
-            />
-          </label>
-          <span className="panel-actions">
-            {entry && (
-              <button type="button" className="link-button" disabled={flow.busy} onClick={removeDay}>
-                {tk.entry.remove}
+      {tab === 'overview' && (
+        <>
+          <div className="filters" role="group" aria-label={tk.tabs.overview}>
+            <div className="kpi-monthnav">
+              <button type="button" className="button" aria-label={tk.prevMonth} onClick={() => shiftMonth(-1)}>
+                ‹
               </button>
-            )}
-            <button type="button" className="button button-primary" disabled={flow.busy} onClick={saveDay}>
-              {tk.entry.save}
-            </button>
-          </span>
+              <strong>
+                {tk.monthNames[month.month - 1]} {month.year}
+              </strong>
+              <button type="button" className="button" aria-label={tk.nextMonth} onClick={() => shiftMonth(1)}>
+                ›
+              </button>
+            </div>
+            <ul className="kpi-legend">
+              {(['green', 'yellow', 'red', 'missing'] as const).map((s) => (
+                <li key={s}>
+                  <i className={`kpi-swatch kpi-${s}`} /> {tk.legend[s]}
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div className="kpi-letters">
+            {LETTERS.map((letter) => (
+              <LetterCard key={letter} letter={letter} kpi={kpi} month={month} today={today} todayMonth={todayMonth} onPick={openDay} onMonth={setMonth} />
+            ))}
+          </div>
+        </>
+      )}
+
+      {tab === 'entry' && (
+        <div className="panel">
+          <div className="panel-head">
+            <h2>
+              {tk.entry.heading} {dayLabel(day)}
+            </h2>
+            <label className="inline-field">
+              <span>{tk.entry.day}</span>
+              <input
+                type="date"
+                value={dayToIso(day)}
+                max={dayToIso(today)}
+                onChange={(e) => {
+                  const d = parseDay(e.target.value);
+                  if (d !== null) {
+                    pickDay(d);
+                    setMonth(monthOf(d));
+                  }
+                }}
+              />
+            </label>
+            <label className="inline-field">
+              <span>{tk.entry.you}</span>
+              <input
+                value={name}
+                placeholder={tk.entry.youPlaceholder}
+                onChange={(e) => {
+                  setName(e.target.value);
+                  saveName(e.target.value.trim());
+                }}
+              />
+            </label>
+            <span className="panel-actions">
+              {entry && (
+                <button type="button" className="link-button" disabled={flow.busy} onClick={removeDay}>
+                  {tk.entry.remove}
+                </button>
+              )}
+              <button type="button" className="button button-primary" disabled={flow.busy} onClick={saveDay}>
+                {tk.entry.save}
+              </button>
+            </span>
+          </div>
+          <p className="muted">
+            {entry ? tk.entry.entered.replace('{author}', entry.author).replace('{at}', entry.at) : tk.entry.notEntered}{' '}
+            <SaveStatus dirty={edited !== null} saved={data.kpi ? { path: data.kpi.path, lastModified: data.kpi.lastModified } : null} message={flow.message} />
+          </p>
+          {missing.length > 0 && (
+            <p className="kpi-missing-days">
+              <span className="muted">{tk.entry.missing}</span>
+              {missing.map((d) => (
+                <button key={d} type="button" className={`chip${d === day ? ' chip-accent' : ''}`} onClick={() => pickDay(d)}>
+                  {dayLabel(d)}
+                </button>
+              ))}
+            </p>
+          )}
+          <div className="table-scroll">
+            <table className="table kpi-entry">
+              <thead>
+                <tr>
+                  <th>{tk.entry.kpi}</th>
+                  <th>{tk.defs.source}</th>
+                  <th>{tk.entry.target}</th>
+                  <th>{tk.entry.value}</th>
+                  <th>{tk.entry.status}</th>
+                </tr>
+              </thead>
+              {LETTERS.map((letter) => {
+                const defs = kpi.defs.filter((d) => d.letter === letter);
+                if (!defs.length) return null;
+                return (
+                  <tbody key={letter}>
+                    <tr className="kpi-group">
+                      <td colSpan={5}>
+                        {letter} – {tk.letters[letter]}
+                      </td>
+                    </tr>
+                    {defs.map((def) => {
+                      const value = currentValue(def);
+                      return (
+                        <tr key={def.id}>
+                          <td>
+                            {def.name}
+                            {def.unit && <small className="muted"> ({def.unit})</small>}
+                          </td>
+                          <td>
+                            <span className={`chip${def.source === 'manual' ? '' : ' chip-accent'}`} title={def.source === 'manual' ? undefined : tk.entry.autoTitle}>
+                              {tk.sources[def.source]}
+                            </span>
+                          </td>
+                          <td className="muted">{targetText(def)}</td>
+                          <td>
+                            <div className="kpi-inputs">
+                              {inputKeys(def).map((key, k) => (
+                                <label key={key} className={def.categories.length ? 'kpi-cat' : undefined}>
+                                  {def.categories.length > 0 && <span>{def.categories[k]}</span>}
+                                  <input
+                                    className="kpi-input"
+                                    inputMode="decimal"
+                                    aria-label={def.categories.length ? `${def.name}: ${def.categories[k]}` : def.name}
+                                    value={valueOf(def, key)}
+                                    onChange={(e) => setValue(key, e.target.value)}
+                                  />
+                                </label>
+                              ))}
+                            </div>
+                          </td>
+                          <td>{dot(value === null ? null : kpiStatus(def, value))}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                );
+              })}
+            </table>
+          </div>
+          <p className="muted">{tk.entry.note}</p>
         </div>
-        <p className="muted">
-          {entry ? tk.entry.entered.replace('{author}', entry.author).replace('{at}', entry.at) : tk.entry.notEntered}{' '}
-          <SaveStatus dirty={dirty} saved={data.kpi ? { path: data.kpi.path, lastModified: data.kpi.lastModified } : null} message={flow.message} />
-        </p>
-        <div className="table-scroll">
-          <table className="table kpi-entry">
-            <thead>
-              <tr>
-                <th>{tk.entry.kpi}</th>
-                <th>{tk.defs.source}</th>
-                <th>{tk.entry.target}</th>
-                <th>{tk.entry.value}</th>
-                <th>{tk.entry.status}</th>
-              </tr>
-            </thead>
-            {LETTERS.map((letter) => {
-              const defs = kpi.defs.filter((d) => d.letter === letter);
-              if (!defs.length) return null;
-              return (
-                <tbody key={letter}>
-                  <tr className="kpi-group">
-                    <td colSpan={5}>
-                      {letter} – {tk.letters[letter]}
+      )}
+
+      {tab === 'defs' && (
+        <div className="panel kpi-defs">
+          <div className="panel-head">
+            <h2>{tk.defs.heading}</h2>
+            <SaveStatus dirty={defsDraft !== null} saved={data.kpi ? { path: data.kpi.path, lastModified: data.kpi.lastModified } : null} message={flow.message} />
+          </div>
+          <p className="muted">{tk.defs.note}</p>
+          <div className="table-scroll">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>{tk.defs.letter}</th>
+                  <th>{tk.defs.name}</th>
+                  <th>{tk.defs.unit}</th>
+                  <th>{tk.defs.target}</th>
+                  <th>{tk.defs.red}</th>
+                  <th>{tk.defs.better}</th>
+                  <th>{tk.defs.source}</th>
+                  <th>{tk.defs.categories}</th>
+                  <th />
+                </tr>
+              </thead>
+              <tbody>
+                {kpi.defs.map((def) => (
+                  <tr key={def.id}>
+                    <td>
+                      <select aria-label={tk.defs.letter} value={def.letter} onChange={(e) => changeDef(def.id, (d) => ({ ...d, letter: e.target.value as Letter }))}>
+                        {LETTERS.map((l) => (
+                          <option key={l} value={l}>
+                            {l}
+                          </option>
+                        ))}
+                      </select>
+                    </td>
+                    <td>
+                      <input aria-label={tk.defs.name} value={def.name} onChange={(e) => changeDef(def.id, (d) => ({ ...d, name: e.target.value }))} />
+                    </td>
+                    <td>
+                      <input className="kpi-input" aria-label={tk.defs.unit} value={def.unit} onChange={(e) => changeDef(def.id, (d) => ({ ...d, unit: e.target.value }))} />
+                    </td>
+                    <td>
+                      <input className="kpi-input" inputMode="decimal" aria-label={tk.defs.target} value={def.target} onChange={(e) => changeDef(def.id, (d) => ({ ...d, target: numberOf(e.target.value) ?? 0 }))} />
+                    </td>
+                    <td>
+                      <input className="kpi-input" inputMode="decimal" aria-label={tk.defs.red} value={def.red ?? ''} onChange={(e) => changeDef(def.id, (d) => ({ ...d, red: numberOf(e.target.value) }))} />
+                    </td>
+                    <td>
+                      <select aria-label={tk.defs.better} value={def.higherIsBetter ? 'higher' : 'lower'} onChange={(e) => changeDef(def.id, (d) => ({ ...d, higherIsBetter: e.target.value === 'higher' }))}>
+                        <option value="lower">{tk.defs.lower}</option>
+                        <option value="higher">{tk.defs.higher}</option>
+                      </select>
+                    </td>
+                    <td>
+                      <select aria-label={tk.defs.source} value={def.source} onChange={(e) => changeDef(def.id, (d) => ({ ...d, source: e.target.value as KpiSource }))}>
+                        {KPI_SOURCES.map((s) => (
+                          <option key={s} value={s}>
+                            {tk.sources[s]}
+                          </option>
+                        ))}
+                      </select>
+                    </td>
+                    <td>
+                      <input
+                        aria-label={tk.defs.categories}
+                        defaultValue={def.categories.join('; ')}
+                        onBlur={(e) =>
+                          changeDef(def.id, (d) => ({
+                            ...d,
+                            categories: e.target.value
+                              .split(';')
+                              .map((c) => c.trim())
+                              .filter(Boolean),
+                          }))
+                        }
+                      />
+                    </td>
+                    <td>
+                      <button
+                        type="button"
+                        className="link-button"
+                        onClick={() => {
+                          if (window.confirm(tk.defs.removeConfirm.replace('{name}', def.name))) setDefsDraft(removeDef(kpi, def.id).defs);
+                        }}
+                      >
+                        {tk.defs.remove}
+                      </button>
                     </td>
                   </tr>
-                  {defs.map((def) => {
-                    const value = currentValue(def);
-                    return (
-                      <tr key={def.id}>
-                        <td>
-                          {def.name}
-                          {def.unit && <small className="muted"> ({def.unit})</small>}
-                        </td>
-                        <td>
-                          <span className={`chip${def.source === 'manual' ? '' : ' chip-accent'}`} title={def.source === 'manual' ? undefined : tk.entry.autoTitle}>
-                            {tk.sources[def.source]}
-                          </span>
-                        </td>
-                        <td className="muted">{targetText(def)}</td>
-                        <td>
-                          <div className="kpi-inputs">
-                            {inputKeys(def).map((key, k) => (
-                              <label key={key} className={def.categories.length ? 'kpi-cat' : undefined}>
-                                {def.categories.length > 0 && <span>{def.categories[k]}</span>}
-                                <input
-                                  className="kpi-input"
-                                  inputMode="decimal"
-                                  aria-label={def.categories.length ? `${def.name}: ${def.categories[k]}` : def.name}
-                                  value={valueOf(def, key)}
-                                  onChange={(e) => setValue(key, e.target.value)}
-                                />
-                              </label>
-                            ))}
-                          </div>
-                        </td>
-                        <td>{dot(value === null ? null : kpiStatus(def, value))}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              );
-            })}
-          </table>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="kpi-defs-actions">
+            <button type="button" className="button" onClick={() => setDefsDraft(addDef(kpi, 'S', tk.defs.newName).defs)}>
+              {tk.defs.add}
+            </button>
+            <button type="button" className="button button-primary" disabled={flow.busy || defsDraft === null} onClick={() => void save(kpi)}>
+              {tk.defs.save}
+            </button>
+          </p>
         </div>
-        <p className="muted">{tk.entry.note}</p>
-      </div>
-
-      <details className="panel kpi-defs">
-        <summary>
-          <h2>{tk.defs.heading}</h2>
-        </summary>
-        <p className="muted">{tk.defs.note}</p>
-        <div className="table-scroll">
-          <table className="table">
-            <thead>
-              <tr>
-                <th>{tk.defs.letter}</th>
-                <th>{tk.defs.name}</th>
-                <th>{tk.defs.unit}</th>
-                <th>{tk.defs.target}</th>
-                <th>{tk.defs.red}</th>
-                <th>{tk.defs.better}</th>
-                <th>{tk.defs.source}</th>
-                <th>{tk.defs.categories}</th>
-                <th />
-              </tr>
-            </thead>
-            <tbody>
-              {kpi.defs.map((def) => (
-                <tr key={def.id}>
-                  <td>
-                    <select aria-label={tk.defs.letter} value={def.letter} onChange={(e) => changeDef(def.id, (d) => ({ ...d, letter: e.target.value as Letter }))}>
-                      {LETTERS.map((l) => (
-                        <option key={l} value={l}>
-                          {l}
-                        </option>
-                      ))}
-                    </select>
-                  </td>
-                  <td>
-                    <input aria-label={tk.defs.name} value={def.name} onChange={(e) => changeDef(def.id, (d) => ({ ...d, name: e.target.value }))} />
-                  </td>
-                  <td>
-                    <input className="kpi-input" aria-label={tk.defs.unit} value={def.unit} onChange={(e) => changeDef(def.id, (d) => ({ ...d, unit: e.target.value }))} />
-                  </td>
-                  <td>
-                    <input className="kpi-input" inputMode="decimal" aria-label={tk.defs.target} value={def.target} onChange={(e) => changeDef(def.id, (d) => ({ ...d, target: numberOf(e.target.value) ?? 0 }))} />
-                  </td>
-                  <td>
-                    <input className="kpi-input" inputMode="decimal" aria-label={tk.defs.red} value={def.red ?? ''} onChange={(e) => changeDef(def.id, (d) => ({ ...d, red: numberOf(e.target.value) }))} />
-                  </td>
-                  <td>
-                    <select aria-label={tk.defs.better} value={def.higherIsBetter ? 'higher' : 'lower'} onChange={(e) => changeDef(def.id, (d) => ({ ...d, higherIsBetter: e.target.value === 'higher' }))}>
-                      <option value="lower">{tk.defs.lower}</option>
-                      <option value="higher">{tk.defs.higher}</option>
-                    </select>
-                  </td>
-                  <td>
-                    <select aria-label={tk.defs.source} value={def.source} onChange={(e) => changeDef(def.id, (d) => ({ ...d, source: e.target.value as KpiSource }))}>
-                      {KPI_SOURCES.map((s) => (
-                        <option key={s} value={s}>
-                          {tk.sources[s]}
-                        </option>
-                      ))}
-                    </select>
-                  </td>
-                  <td>
-                    <input
-                      aria-label={tk.defs.categories}
-                      defaultValue={def.categories.join('; ')}
-                      onBlur={(e) =>
-                        changeDef(def.id, (d) => ({
-                          ...d,
-                          categories: e.target.value
-                            .split(';')
-                            .map((c) => c.trim())
-                            .filter(Boolean),
-                        }))
-                      }
-                    />
-                  </td>
-                  <td>
-                    <button
-                      type="button"
-                      className="link-button"
-                      onClick={() => {
-                        if (window.confirm(tk.defs.removeConfirm.replace('{name}', def.name))) setDefsDraft(removeDef(kpi, def.id).defs);
-                      }}
-                    >
-                      {tk.defs.remove}
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <p className="kpi-defs-actions">
-          <button type="button" className="button" onClick={() => setDefsDraft(addDef(kpi, 'S', tk.defs.newName).defs)}>
-            {tk.defs.add}
-          </button>
-          <button type="button" className="button button-primary" disabled={flow.busy || defsDraft === null} onClick={() => void save(kpi)}>
-            {tk.defs.save}
-          </button>
-        </p>
-      </details>
+      )}
     </section>
   );
 }
@@ -476,13 +494,12 @@ interface LetterCardProps {
   month: Month;
   today: DayNumber;
   todayMonth: Month;
-  selected: DayNumber;
   onPick: (day: DayNumber) => void;
   onMonth: (month: Month) => void;
 }
 
 /** Písmeno jako kalendář měsíce a pod ním pruh měsíců roku. */
-function LetterCard({ letter, kpi, month, today, todayMonth, selected, onPick, onMonth }: LetterCardProps) {
+function LetterCard({ letter, kpi, month, today, todayMonth, onPick, onMonth }: LetterCardProps) {
   const { t } = useI18n();
   const tk = t.kpi;
   const days = monthDays(month.year, month.month);
@@ -503,7 +520,7 @@ function LetterCard({ letter, kpi, month, today, todayMonth, selected, onPick, o
             <button
               key={k}
               type="button"
-              className={`kpi-cell kpi-${state}${d === selected ? ' kpi-selected' : ''}`}
+              className={`kpi-cell kpi-${state}`}
               style={style}
               title={`${dayToIso(d)} – ${tk.dayTitle[state]}`}
               disabled={d > today}

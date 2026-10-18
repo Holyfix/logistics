@@ -1945,12 +1945,16 @@ button.oil-step:disabled {
   color: var(--accent);
 }
 
-.kpi-defs > summary {
-  cursor: pointer;
+.kpi-missing-days {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
 }
 
-.kpi-defs > summary h2 {
-  display: inline;
+.kpi-missing-days .chip {
+  border: 1px solid var(--line);
+  cursor: pointer;
 }
 
 .kpi-defs-actions {

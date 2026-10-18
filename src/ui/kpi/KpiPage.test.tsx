@@ -70,8 +70,19 @@ describe('KpiPage', () => {
     expect(screen.getAllByText('v cíli 1 z 2 dní')[0]).toBeTruthy();
   });
 
+  it('karty: přehled, zápis dne, ukazatele a cíle', () => {
+    renderPage();
+    expect(screen.getAllByRole('tab').map((t) => t.textContent)).toEqual(['Přehled', 'Zápis dne', 'Ukazatele a cíle']);
+    expect(screen.queryByLabelText('Úrazy v logistice')).toBeNull();
+    fireEvent.click(screen.getByRole('tab', { name: 'Ukazatele a cíle' }));
+    expect(screen.getByRole('button', { name: '+ Ukazatel' })).toBeTruthy();
+    expect(document.querySelector('.kpi-letters')).toBeNull();
+  });
+
   it('zápis nabízí předchozí pracovní den, stav se počítá při psaní', () => {
     renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'Zapsat Po 5. 10.' }));
+    expect(screen.getByRole('tab', { name: 'Zápis dne' }).getAttribute('aria-selected')).toBe('true');
     expect(screen.getByRole('heading', { level: 2, name: /Zápis za den Po 5\. 10\./ })).toBeTruthy();
     expect(screen.getByText(/Den zatím není zapsaný/)).toBeTruthy();
     const injuries = screen.getByLabelText('Úrazy v logistice') as HTMLInputElement;
@@ -82,9 +93,11 @@ describe('KpiPage', () => {
     expect(row.querySelector('.kpi-dot')!.className).toContain('kpi-red');
     // kategorie: pole pro každou kategorii
     expect(screen.getByLabelText('Logistické reklamace: Záměna dílu')).toBeTruthy();
+    // nezapsané pracovní dny od prvního zápisu (víkend se nenabízí)
+    expect([...document.querySelectorAll('.kpi-missing-days button')].map((b) => b.textContent)).toEqual(['Po 5. 10.']);
   });
 
-  it('kliknutí na den otevře jeho zápis', () => {
+  it('kliknutí na den otevře jeho zápis v kartě Zápis dne', () => {
     renderPage();
     fireEvent.click(cell('Q', 2));
     expect(screen.getByRole('heading', { level: 2, name: /Zápis za den Pá 2\. 10\./ })).toBeTruthy();
@@ -105,7 +118,9 @@ describe('KpiPage', () => {
 
   it('bez souboru KPI: úvodní sada ukazatelů', () => {
     renderPage(null);
+    fireEvent.click(screen.getByRole('tab', { name: 'Zápis dne' }));
     expect(screen.getByLabelText('Chybí u zákazníka v prvních 2 dnech')).toBeTruthy();
+    fireEvent.click(screen.getByRole('tab', { name: 'Přehled' }));
     expect(cell('S', 1).className).toContain('kpi-none');
   });
 });

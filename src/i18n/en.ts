@@ -538,8 +538,10 @@ export const en: Messages = {
     legend: { green: 'on target', yellow: 'warning', red: 'off target', missing: 'not recorded' },
     dayTitle: { green: 'on target', yellow: 'warning', red: 'off target', missing: 'working day not recorded', none: 'no record', future: 'future day' },
     write: 'Record {day}',
+    tabs: { overview: 'Overview', entry: 'Daily record', defs: 'KPIs and targets' },
     entry: {
       heading: 'Daily record',
+      missing: 'Working days not recorded:',
       day: 'Day',
       you: 'Recorded by',
       youPlaceholder: 'Your name',

@@ -540,8 +540,10 @@ export const cs = {
     legend: { green: 'v cíli', yellow: 'upozornění', red: 'mimo cíl', missing: 'nezapsáno' },
     dayTitle: { green: 'v cíli', yellow: 'upozornění', red: 'mimo cíl', missing: 'nezapsaný pracovní den', none: 'bez zápisu', future: 'budoucí den' },
     write: 'Zapsat {day}',
+    tabs: { overview: 'Přehled', entry: 'Zápis dne', defs: 'Ukazatele a cíle' },
     entry: {
       heading: 'Zápis za den',
+      missing: 'Nezapsané pracovní dny:',
       day: 'Den',
       you: 'Zapsal',
       youPlaceholder: 'Vaše jméno',
