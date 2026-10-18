@@ -2075,3 +2075,29 @@ button.oil-step:disabled {
   text-align: center;
   font-size: 13px;
 }
+
+/* Písmena SQCDP na rozcestníku: barevné písmo podle stavu předchozího pracovního dne. */
+.hub-kpi {
+  gap: 4px;
+}
+
+.hub-kpi-letter {
+  font: 700 18px/1 var(--font-display);
+  color: var(--muted);
+  opacity: 0.55;
+}
+
+.hub-kpi-green {
+  color: #4f9a26;
+  opacity: 1;
+}
+
+.hub-kpi-yellow {
+  color: #d89a00;
+  opacity: 1;
+}
+
+.hub-kpi-red {
+  color: #d8404b;
+  opacity: 1;
+}

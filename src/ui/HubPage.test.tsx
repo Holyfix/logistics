@@ -8,6 +8,9 @@ import { HubPage } from './HubPage';
 import { OilProvider } from './oil/OilProvider';
 import type { OilList } from '../core/oil';
 import { dayFromParts } from '../core/dates';
+import { defaultKpis, previousWorkday, withEntry, type KpiData } from '../core/kpi';
+import { cs } from '../i18n/cs';
+import { localToday } from './components/useComponents';
 
 function exportOf(name: string, lines: string[]): CallOffExport {
   const r = parseCallOffExport(parseCsv(['Item Number,Date,Discrete Qty', ...lines].join('\n')), name);
@@ -18,14 +21,14 @@ function exportOf(name: string, lines: string[]): CallOffExport {
 const cw41 = exportOf('Odvolavky_CW41.csv', ['1001,12.10.2026,100', '1002,13.10.2026,50']);
 const cw42 = exportOf('Odvolavky_CW42.csv', ['1001,12.10.2026,150', '1002,13.10.2026,50']);
 
-function renderHub(exports: CallOffExport[] | null, oil: OilList | null = null) {
+function renderHub(exports: CallOffExport[] | null, oil: OilList | null = null, kpi: KpiData | null = null) {
   localStorage.setItem('logistics-locale', 'cs');
   const state: DataState = {
     status: exports ? 'ready' : 'noFolder',
     folderName: 'data',
     progress: null,
     error: '',
-    data: exports ? { folderName: 'data', exports, master: null, coverage: [], stock: null, boms: [], plans: [], planSettings: null, oil: oil && { path: 'OIL/OIL.xlsx', lastModified: 0, list: oil }, kpi: null, failed: [], loadedAt: 0 } : null,
+    data: exports ? { folderName: 'data', exports, master: null, coverage: [], stock: null, boms: [], plans: [], planSettings: null, oil: oil && { path: 'OIL/OIL.xlsx', lastModified: 0, list: oil }, kpi: kpi && { path: 'KPI/KPI.xlsx', lastModified: 0, data: kpi }, failed: [], loadedAt: 0 } : null,
   };
   return render(
     <I18nProvider>
@@ -64,6 +67,21 @@ describe('HubPage', () => {
     expect(metric.textContent).toBe('1 po termínu');
     expect(metric.querySelector('.dot-crit')).not.toBeNull();
     expect(metric.getAttribute('title')).toBe('OIL: 1 po termínu, 1 termín do 7 dní, 3 otevřených');
+  });
+
+  it('u KPI písmena SQCDP obarvená podle předchozího pracovního dne', () => {
+    const day = previousWorkday(localToday());
+    const kpi = withEntry(defaultKpis(cs.kpi.defaults), { day, author: '', at: '', values: { s_injury: 1, 'q_claims|Záměna dílu': 0, d_customer: 5 } });
+    renderHub([cw42], null, kpi);
+    const badges = [...screen.getByRole('link', { name: /KPI/ }).querySelectorAll('.hub-kpi-letter')];
+    expect(badges.map((b) => b.textContent)).toEqual(['S', 'Q', 'C', 'D', 'P']);
+    expect(badges.map((b) => b.className.replace('hub-kpi-letter ', ''))).toEqual(['hub-kpi-red', 'hub-kpi-green', 'hub-kpi-none', 'hub-kpi-yellow', 'hub-kpi-none']);
+  });
+
+  it('u KPI bez zápisu jsou písmena šedá', () => {
+    renderHub([cw42]);
+    const badges = [...screen.getByRole('link', { name: /KPI/ }).querySelectorAll('.hub-kpi-letter')];
+    expect(badges.every((b) => b.className.includes('hub-kpi-none'))).toBe(true);
   });
 
   it('bez dat číslo nezobrazí', () => {

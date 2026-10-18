@@ -68,7 +68,7 @@ a Dodavatelé odložené. Modul Kapacity (odvolávky vs. kapacita linek) byl zva
   komponenty, body OIL po termínu); lze je přepsat
 - ✅ **Ukazatele a cíle** se upravují v aplikaci: písmeno, název, jednotka, cíl, červená za, zda je lepší víc
   nebo méně, zdroj předvyplnění, kategorie
-- ✅ Uložení do `KPI/KPI.xlsx` ve sdílené složce; rozcestník ukáže, kolik písmen bylo červených v posledním zapsaném dni
+- ✅ Uložení do `KPI/KPI.xlsx` ve sdílené složce; na rozcestníku jsou písmena SQCDP obarvená podle předchozího pracovního dne (nezapsaný den = bez barvy)
 - ✅ **Grafy pod písmeny:** pod S a Q Paretův graf kategorií za zobrazený měsíc nebo od začátku roku (součet
   událostí za kategorii, ukazatel bez kategorií svým součtem, např. úrazy; sloupce sestupně, kumulativní čára
   a hranice 80 %). Pod C, D a P denní sloupce posledních 7 zapsaných dní vybraného ukazatele písmene, obarvené
