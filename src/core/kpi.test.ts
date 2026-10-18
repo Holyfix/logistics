@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { dayFromParts } from './dates';
 import {
   addDef,
+  dailyBars,
   dayState,
   defaultKpis,
   kpiSheets,
@@ -101,8 +102,8 @@ describe('soubor KPI.xlsx', () => {
   });
 });
 
-describe('Pareto', () => {
-  it('kategorie sčítá, ukazatel bez kategorií počítá dny mimo cíl; sestupně s kumulací', () => {
+describe('grafy', () => {
+  it('Pareto: kategorie i ukazatel bez kategorií sčítá, sestupně s kumulací', () => {
     let data: KpiData = {
       defs: [def({ id: 'q', letter: 'Q', name: 'Reklamace', categories: ['Záměna', 'Obal', 'Etiketa'] }), def({ id: 'late', letter: 'Q', name: 'Pozdě', target: 0, red: 5 })],
       entries: [],
@@ -111,12 +112,25 @@ describe('Pareto', () => {
     data = withEntry(data, { day: day(2), author: '', at: '', values: { 'q|Záměna': 2, late: 0 } });
     data = withEntry(data, { day: day(20), author: '', at: '', values: { 'q|Záměna': 9 } });
     const bars = paretoOf(data, 'Q', day(1), day(10));
-    expect(bars.map((b) => [b.label, b.value, b.kind])).toEqual([
-      ['Záměna', 3, 'events'],
-      ['Obal', 3, 'events'],
-      ['Pozdě', 1, 'days'],
+    expect(bars.map((b) => [b.label, b.value])).toEqual([
+      ['Záměna', 3],
+      ['Obal', 3],
+      ['Pozdě', 2],
     ]);
-    expect(bars.map((b) => Math.round(b.cumulative * 100))).toEqual([43, 86, 100]);
+    expect(bars.map((b) => Math.round(b.cumulative * 100))).toEqual([38, 75, 100]);
     expect(paretoOf(data, 'S', day(1), day(31))).toEqual([]);
+  });
+
+  it('denní sloupce: posledních N zapsaných dní ukazatele se stavem', () => {
+    const d = def({ id: 'c', letter: 'C', target: 0, red: 10 });
+    let data: KpiData = { defs: [d], entries: [] };
+    for (const [n, v] of [[1, 0], [2, 5], [5, 12], [6, 0], [7, 3]] as const) data = withEntry(data, { day: day(n), author: '', at: '', values: { c: v } });
+    data = withEntry(data, { day: day(8), author: '', at: '', values: {} });
+    expect(dailyBars(data, d, day(6), 3)).toEqual([
+      { day: day(2), value: 5, status: 'yellow' },
+      { day: day(5), value: 12, status: 'red' },
+      { day: day(6), value: 0, status: 'green' },
+    ]);
+    expect(dailyBars(data, d, day(31), 7)).toHaveLength(5);
   });
 });

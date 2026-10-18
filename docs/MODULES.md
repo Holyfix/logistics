@@ -54,7 +54,7 @@ a Dodavatelé odložené. Modul Kapacity (odvolávky vs. kapacita linek) byl zva
 - ⏳ Plnění plánu a prostoje za včerejšek, na kolik dní vystačí obaly (až budou moduly)
 
 ### KPI (SQCDP)
-- Tři karty: **Přehled** (písmena a Paretovy grafy, později opatření), **Zápis dne**, **Ukazatele a cíle**
+- Tři karty: **Přehled** (písmena a grafy, později opatření), **Zápis dne**, **Ukazatele a cíle**
 - ✅ **Písmena S, Q, C, D, P** (bezpečnost, kvalita, náklady, dodávky, lidé) jako kalendář měsíce: každé políčko
   písmena je den. Barví se jen den: zelená v cíli, žlutá varování, červená za červenou hranicí, šedá = pracovní den
   bez zápisu. Víkend se barví jen, když je zapsaný (někdy se pracuje). Stav dne písmena = nejhorší z jeho ukazatelů
@@ -68,9 +68,10 @@ a Dodavatelé odložené. Modul Kapacity (odvolávky vs. kapacita linek) byl zva
 - ✅ **Ukazatele a cíle** se upravují v aplikaci: písmeno, název, jednotka, cíl, červená za, zda je lepší víc
   nebo méně, zdroj předvyplnění, kategorie
 - ✅ Uložení do `KPI/KPI.xlsx` ve sdílené složce; rozcestník ukáže, kolik písmen bylo červených v posledním zapsaném dni
-- ✅ **Paretovy grafy pod písmeny** za zobrazený měsíc nebo od začátku roku: ukazatel s kategoriemi přispívá
-  počtem událostí v každé kategorii (S skoronehody, Q reklamace), ukazatel bez kategorií počtem dní mimo cíl.
-  Sloupce sestupně, čára kumulativního podílu a hranice 80 %
+- ✅ **Grafy pod písmeny:** pod S a Q Paretův graf kategorií za zobrazený měsíc nebo od začátku roku (součet
+  událostí za kategorii, ukazatel bez kategorií svým součtem, např. úrazy; sloupce sestupně, kumulativní čára
+  a hranice 80 %). Pod C, D a P denní sloupce posledních 7 zapsaných dní vybraného ukazatele písmene, obarvené
+  podle stavu, s přerušovanou čarou cíle
 - ⏳ Propojení s OIL: písmeno u bodu OIL, seznam otevřených opatření, založení bodu z červeného dne
 ### Call-offs
 Hlavní údaj je **Discrete Qty** (požadavek na den), kumulativy jsou doplňková informace.

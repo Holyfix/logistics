@@ -7,6 +7,7 @@ import { formatDayShort } from '../../core/format';
 import {
   addDef,
   categoryKey,
+  dailyBars,
   dayState,
   defaultKpis,
   entryOf,
@@ -37,7 +38,7 @@ import { Icon } from '../icons';
 import { useOilDraftList } from '../oil/OilProvider';
 import { SaveStatus, useSaveFlow } from '../planning/SaveStatus';
 import { shapeCells } from './letterShapes';
-import { ParetoChart } from './ParetoChart';
+import { DailyChart, ParetoChart } from './KpiCharts';
 
 const KPI_FILE = 'KPI/KPI.xlsx';
 const NAME_KEY = 'logistics-user-name';
@@ -46,6 +47,10 @@ const MISSING_LOOKBACK = 30;
 
 type Tab = 'overview' | 'entry' | 'defs';
 type Period = 'month' | 'year';
+
+/** Písmena s Paretovým grafem kategorií; ostatní mají denní sloupce ukazatele. */
+const PARETO_LETTERS: readonly Letter[] = ['S', 'Q'];
+const DAILY_COUNT = 7;
 
 function readName(): string {
   try {
@@ -112,6 +117,7 @@ export function KpiPage({ today = localToday() }: { today?: DayNumber } = {}) {
   const [name, setName] = useState(readName);
   const [tab, setTab] = useState<Tab>('overview');
   const [period, setPeriod] = useState<Period>('year');
+  const [chartDef, setChartDef] = useState<Partial<Record<Letter, string>>>({});
   const auto = useAutoValues(today);
 
   const head = (
@@ -259,10 +265,10 @@ export function KpiPage({ today = localToday() }: { today?: DayNumber } = {}) {
                 </li>
               ))}
             </ul>
-            <span className="segmented" role="group" aria-label={tk.pareto.period}>
+            <span className="segmented" role="group" aria-label={tk.charts.period}>
               {(['month', 'year'] as const).map((p) => (
                 <button key={p} type="button" aria-pressed={period === p} onClick={() => setPeriod(p)}>
-                  {tk.pareto[p]}
+                  {tk.charts[p]}
                 </button>
               ))}
             </span>
@@ -275,14 +281,37 @@ export function KpiPage({ today = localToday() }: { today?: DayNumber } = {}) {
           </div>
 
           <div className="kpi-letters">
-            {LETTERS.map((letter) => (
-              <div key={letter} className="kpi-card kpi-chart-card">
-                <h3>
-                  <span className="kpi-letter">{letter}</span> {tk.pareto.title} · {periodText}
-                </h3>
-                <ParetoChart bars={paretoOf(kpi, letter, range.from, range.to)} label={`${letter} ${tk.letters[letter]} – ${tk.pareto.title} ${periodText}`} />
-              </div>
-            ))}
+            {LETTERS.map((letter) => {
+              if (PARETO_LETTERS.includes(letter))
+                return (
+                  <div key={letter} className="kpi-card kpi-chart-card">
+                    <h3>
+                      <span className="kpi-letter">{letter}</span> {tk.charts.pareto} · {periodText}
+                    </h3>
+                    <ParetoChart bars={paretoOf(kpi, letter, range.from, range.to)} label={`${letter} ${tk.letters[letter]} – ${tk.charts.pareto} ${periodText}`} />
+                  </div>
+                );
+              const defs = kpi.defs.filter((d) => d.letter === letter);
+              const def = defs.find((d) => d.id === chartDef[letter]) ?? defs[0];
+              return (
+                <div key={letter} className="kpi-card kpi-chart-card">
+                  <h3>
+                    <span className="kpi-letter">{letter}</span> {tk.charts.last}
+                  </h3>
+                  {def && defs.length > 1 && (
+                    <select className="kpi-chart-select" aria-label={`${tk.charts.kpi} ${letter}`} value={def.id} onChange={(e) => setChartDef((c) => ({ ...c, [letter]: e.target.value }))}>
+                      {defs.map((d) => (
+                        <option key={d.id} value={d.id}>
+                          {d.name}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                  {def && defs.length === 1 && <p className="kpi-chart-name">{def.name}</p>}
+                  {def ? <DailyChart def={def} bars={dailyBars(kpi, def, range.to, DAILY_COUNT)} label={`${letter} – ${def.name}`} /> : <p className="kpi-chart-empty muted">{tk.charts.dailyEmpty}</p>}
+                </div>
+              );
+            })}
           </div>
         </>
       )}

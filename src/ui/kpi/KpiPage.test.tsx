@@ -11,8 +11,8 @@ import { KpiPage } from './KpiPage';
 const day = (n: number) => dayFromParts(2026, 10, n)!;
 
 let kpi: KpiData = defaultKpis(cs.kpi.defaults);
-kpi = withEntry(kpi, { day: day(1), author: 'Novák', at: '2.10.2026 7:30', values: { s_injury: 0, 'q_claims|Záměna dílu': 0 } });
-kpi = withEntry(kpi, { day: day(2), author: 'Novák', at: '5.10.2026 7:30', values: { s_injury: 1, 'q_claims|Záměna dílu': 0 } });
+kpi = withEntry(kpi, { day: day(1), author: 'Novák', at: '2.10.2026 7:30', values: { s_injury: 0, 'q_claims|Záměna dílu': 0, c_premium: 0 } });
+kpi = withEntry(kpi, { day: day(2), author: 'Novák', at: '5.10.2026 7:30', values: { s_injury: 1, 'q_claims|Záměna dílu': 0, c_premium: 6000 } });
 
 const state = (data: KpiData | null): DataState => ({
   status: 'ready',
@@ -116,17 +116,30 @@ describe('KpiPage', () => {
     expect(screen.getByText('Září 2026')).toBeTruthy();
   });
 
-  it('pod písmeny Paretovy grafy za zvolené období', () => {
+  it('pod S a Q Pareto kategorií za období, pod C, D, P denní sloupce ukazatele', () => {
     renderPage();
-    const charts = [...document.querySelectorAll('.kpi-chart-card')];
-    expect(charts.map((c) => c.querySelector('h3')!.textContent)).toEqual(['S Pareto · Leden–říjen 2026', 'Q Pareto · Leden–říjen 2026', 'C Pareto · Leden–říjen 2026', 'D Pareto · Leden–říjen 2026', 'P Pareto · Leden–říjen 2026']);
-    // S: 1 den s úrazem (mimo cíl), Q: žádná reklamace
-    expect(charts[0]!.querySelector('title')!.textContent).toBe('Úrazy v logistice: dní mimo cíl 1, kumulativně 100 %');
-    expect(charts[1]!.textContent).toContain('Za období žádné události ani dny mimo cíl.');
+    const charts = () => [...document.querySelectorAll('.kpi-chart-card')];
+    expect(charts().map((c) => c.querySelector('h3')!.textContent)).toEqual([
+      'S Pareto · Leden–říjen 2026',
+      'Q Pareto · Leden–říjen 2026',
+      'C posledních 7 zapsaných dní',
+      'D posledních 7 zapsaných dní',
+      'P posledních 7 zapsaných dní',
+    ]);
+    // S: 1 úraz; Q: žádná reklamace
+    expect(charts()[0]!.querySelector('title')!.textContent).toBe('Úrazy v logistice: 1, kumulativně 100 %');
+    expect(charts()[1]!.textContent).toContain('Za období žádné události.');
     fireEvent.click(screen.getByRole('button', { name: 'Měsíc' }));
-    expect(charts[0]!.querySelector('h3')!.textContent).toBe('S Pareto · Říjen 2026');
-    fireEvent.click(screen.getByRole('button', { name: 'Předchozí měsíc' }));
-    expect(document.querySelector('.kpi-chart-card')!.textContent).toContain('Za období žádné události');
+    expect(charts()[0]!.querySelector('h3')!.textContent).toBe('S Pareto · Říjen 2026');
+    // D: výběr ukazatele; zapsané dny bez hodnoty ukazatele se nekreslí
+    const select = screen.getByLabelText('Ukazatel v grafu D') as HTMLSelectElement;
+    expect(select.value).toBe('d_customer');
+    expect(charts()[3]!.textContent).toContain('Zatím žádné zapsané dny.');
+    fireEvent.change(select, { target: { value: 'd_premium' } });
+    expect(select.value).toBe('d_premium');
+    // C má jediný ukazatel: název místo výběru, sloupce obarvené podle stavu
+    expect(charts()[2]!.querySelector('.kpi-chart-name')!.textContent).toBe('Náklady na mimořádné přepravy');
+    expect([...charts()[2]!.querySelectorAll('rect')].map((r) => r.getAttribute('class'))).toEqual(['kpi-chart-bar kpi-green', 'kpi-chart-bar kpi-red']);
   });
 
   it('bez souboru KPI: úvodní sada ukazatelů', () => {

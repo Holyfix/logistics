@@ -161,44 +161,52 @@ export function monthSummary(data: KpiData, letter: Letter, year: number, month:
   return { days: statuses.length, green, status: statuses.length === 0 ? null : share >= MONTH_GREEN ? 'green' : share >= MONTH_YELLOW ? 'yellow' : 'red' };
 }
 
-/** Sloupec Paretova grafu: kategorie (součet událostí) nebo ukazatel bez kategorií (počet dní mimo cíl). */
+/** Sloupec Paretova grafu: kategorie ukazatele, nebo ukazatel bez kategorií (součet hodnot = počet událostí). */
 export interface ParetoBar {
   key: string;
   label: string;
   value: number;
-  kind: 'events' | 'days';
   /** Kumulativní podíl včetně tohoto sloupce (0–1). */
   cumulative: number;
 }
 
 /**
- * Pareto písmene za období from–to (včetně): ukazatel s kategoriemi přispívá součtem hodnot za každou kategorii,
- * ukazatel bez kategorií počtem zapsaných dní mimo cíl. Jen nenulové sloupce, seřazené sestupně.
+ * Pareto písmene za období from–to (včetně): ukazatel s kategoriemi přispívá součtem za každou kategorii,
+ * ukazatel bez kategorií svým součtem (např. úrazy). Jen nenulové sloupce, seřazené sestupně.
  */
 export function paretoOf(data: KpiData, letter: Letter, from: DayNumber, to: DayNumber): ParetoBar[] {
   const entries = data.entries.filter((e) => e.day >= from && e.day <= to);
-  const bars: Omit<ParetoBar, 'cumulative'>[] = [];
-  for (const def of data.defs.filter((d) => d.letter === letter)) {
-    if (def.categories.length) {
-      for (const c of def.categories) {
-        const key = categoryKey(def, c);
-        bars.push({ key, label: c, value: entries.reduce((sum, e) => sum + (e.values[key] ?? 0), 0), kind: 'events' });
-      }
-    } else {
-      const days = entries.filter((e) => {
-        const v = kpiValue(e, def);
-        return v !== null && kpiStatus(def, v) !== 'green';
-      }).length;
-      bars.push({ key: def.id, label: def.name, value: days, kind: 'days' });
-    }
-  }
+  const sum = (key: string) => entries.reduce((total, e) => total + (e.values[key] ?? 0), 0);
+  const bars = data.defs
+    .filter((d) => d.letter === letter)
+    .flatMap((def) => (def.categories.length ? def.categories.map((c) => ({ key: categoryKey(def, c), label: c })) : [{ key: def.id, label: def.name }]))
+    .map((b) => ({ ...b, value: sum(b.key) }));
   const sorted = bars.filter((b) => b.value > 0).sort((a, b) => b.value - a.value);
-  const total = sorted.reduce((sum, b) => sum + b.value, 0);
+  const total = sorted.reduce((t, b) => t + b.value, 0);
   let running = 0;
   return sorted.map((b) => {
     running += b.value;
     return { ...b, cumulative: running / total };
   });
+}
+
+/** Denní hodnota ukazatele se stavem. */
+export interface DailyBar {
+  day: DayNumber;
+  value: number;
+  status: KpiStatus;
+}
+
+/** Posledních `count` zapsaných dní ukazatele do dne `to` (včetně), od nejstaršího. */
+export function dailyBars(data: KpiData, def: KpiDef, to: DayNumber, count: number): DailyBar[] {
+  const bars: DailyBar[] = [];
+  for (const entry of [...data.entries].filter((e) => e.day <= to).sort((a, b) => b.day - a.day)) {
+    const value = kpiValue(entry, def);
+    if (value === null) continue;
+    bars.push({ day: entry.day, value, status: kpiStatus(def, value) });
+    if (bars.length === count) break;
+  }
+  return bars.reverse();
 }
 
 /** Den, který se na ranní poradě zapisuje: předchozí pracovní den (v pondělí pátek). */

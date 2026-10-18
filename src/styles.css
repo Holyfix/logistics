@@ -1999,24 +1999,48 @@ button.oil-step:disabled {
   fill: var(--ink);
 }
 
-.kpi-chart-events {
-  fill: var(--accent);
-  background: var(--accent);
+.kpi-chart-bar {
+  fill: var(--kpi);
 }
 
-.kpi-chart-days {
-  fill: #d8404b;
-  background: #d8404b;
+.kpi-chart-events {
+  fill: var(--ink-2);
+  background: var(--ink-2);
+}
+
+.kpi-chart-target {
+  stroke: var(--ink);
+  stroke-width: 1.2;
+  stroke-dasharray: 4 3;
+}
+
+.kpi-chart-legend-target {
+  display: inline-block;
+  width: 14px;
+  margin-bottom: 3px;
+  border-top: 1.5px dashed var(--ink);
+  vertical-align: middle;
+}
+
+.kpi-chart-select {
+  width: 100%;
+  margin-bottom: 4px;
+}
+
+.kpi-chart-name {
+  margin: 0 0 4px;
+  font-size: 13px;
+  color: var(--ink-2);
 }
 
 .kpi-chart-line {
   fill: none;
-  stroke: #f2a536;
+  stroke: var(--accent);
   stroke-width: 2;
 }
 
 .kpi-chart-dot {
-  fill: #f2a536;
+  fill: var(--accent);
 }
 
 .kpi-chart-legend {
@@ -2034,7 +2058,7 @@ button.oil-step:disabled {
   width: 14px;
   height: 2px;
   margin-bottom: 3px;
-  background: #f2a536;
+  background: var(--accent);
   vertical-align: middle;
 }
 
