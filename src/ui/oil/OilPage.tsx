@@ -3,6 +3,7 @@ import { dayToIso, parseDay, weekday, type DayNumber } from '../../core/dates';
 import { formatDayShort, formatQuantity } from '../../core/format';
 import {
   addItem,
+  parseKpiSource,
   emptyOil,
   nextProgress,
   oilSheets,
@@ -21,6 +22,7 @@ import {
   type OilList,
   type OilStatus,
 } from '../../core/oil';
+import { LETTERS, type Letter } from '../../core/kpi';
 import { useI18n } from '../../i18n/I18nProvider';
 import { xlsxBlob } from '../../platform/download';
 import { localToday } from '../components/useComponents';
@@ -34,6 +36,12 @@ const OIL_FILE = 'OIL/OIL.xlsx';
 const NAME_KEY = 'logistics-user-name';
 
 type Filter = 'open' | 'overdue' | 'done' | 'all';
+
+/** Bod z adresy #oil?open=5 (odkaz z KPI); jinak žádný. */
+function openFromHash(): number | null {
+  const id = Number(new URLSearchParams(location.hash.split('?')[1] ?? '').get('open'));
+  return Number.isInteger(id) && id > 0 ? id : null;
+}
 
 function readName(): string {
   try {
@@ -68,7 +76,8 @@ export function OilPage({ today = localToday() }: { today?: DayNumber } = {}) {
   const [owner, setOwner] = useState('');
   const [query, setQuery] = useState('');
   const [name, setName] = useState(readName);
-  const [openId, setOpenId] = useState<number | null>(null);
+  const [openId, setOpenId] = useState<number | null>(openFromHash);
+  const [letter, setLetter] = useState<Letter | 'none' | ''>('');
 
   // Odpovědní po osobách: bod „A / B“ patří k A i k B.
   const owners = useMemo(() => [...new Set(list.items.flatMap((i) => ownerNames(i.owner)))].sort((a, b) => a.localeCompare(b, 'cs')), [list]);
@@ -142,6 +151,7 @@ export function OilPage({ today = localToday() }: { today?: DayNumber } = {}) {
       if (filter === 'overdue' && s !== 'overdue') return false;
       if (filter === 'done' && s !== 'done') return false;
       if (owner && !ownerNames(i.owner).includes(owner)) return false;
+      if (letter && (i.letter ?? 'none') !== letter) return false;
       return !q || `${i.id} ${i.problem} ${i.action}`.toLowerCase().includes(q);
     })
     .sort((a, b) => ORDER[status(a)] - ORDER[status(b)] || (a.due ?? Infinity) - (b.due ?? Infinity) || a.id - b.id);
@@ -170,6 +180,18 @@ export function OilPage({ today = localToday() }: { today?: DayNumber } = {}) {
                 {o}
               </option>
             ))}
+          </select>
+        </label>
+        <label className="inline-field">
+          <span>{to.letter}</span>
+          <select value={letter} onChange={(e) => setLetter(e.target.value as Letter | 'none' | '')}>
+            <option value="">{to.allLetters}</option>
+            {LETTERS.map((l) => (
+              <option key={l} value={l}>
+                {l} – {t.kpi.letters[l]}
+              </option>
+            ))}
+            <option value="none">{to.noLetter}</option>
           </select>
         </label>
         <label className="inline-field">
@@ -230,6 +252,7 @@ export function OilPage({ today = localToday() }: { today?: DayNumber } = {}) {
               <thead>
                 <tr>
                   <th className="n">{to.table.id}</th>
+                  <th className="oil-letter">{to.table.letter}</th>
                   <th>{to.table.problem}</th>
                   <th>{to.table.owner}</th>
                   <th>{to.table.due}</th>
@@ -246,6 +269,9 @@ export function OilPage({ today = localToday() }: { today?: DayNumber } = {}) {
                     <tr key={item.id} className={`oil-row oil-${s}${expanded ? ' oil-row-open' : ''}`} onClick={() => setOpenId(expanded ? null : item.id)}>
                       <td className="n">
                         <strong>{item.id}</strong>
+                      </td>
+                      <td className="oil-letter" title={item.letter ? t.kpi.letters[item.letter] : undefined}>
+                        {item.letter ?? ''}
                       </td>
                       {/* V seznamu jen první odstavec problému a nejvýš 2 řádky textu; celý text v detailu a po najetí myší. */}
                       <td className="oil-text">
@@ -291,7 +317,7 @@ export function OilPage({ today = localToday() }: { today?: DayNumber } = {}) {
                     </tr>,
                     expanded && (
                       <tr key={`${item.id}-detail`} className={`oil-detail-row oil-${s}`}>
-                        <td colSpan={7}>
+                        <td colSpan={8}>
                           <OilDetail
                             item={item}
                             today={today}
@@ -361,9 +387,27 @@ function OilDetail({
   const isShift = item.due !== null;
   const canDue = newDue !== null && newDue !== item.due && (!isShift || (reason.trim() !== '' && name !== ''));
   const first = originalDue(item);
+  const kpiDefs = useData().state.data?.kpi?.data.defs;
+  const source = parseKpiSource(item.kpi);
 
   return (
     <div className="oil-detail" role="group" aria-label={`${td.label} ${item.id}`}>
+      <div className="oil-detail-letter">
+        <span className="field-label">{td.letter}</span>
+        <span className="segmented" role="group" aria-label={td.letter}>
+          {([null, ...LETTERS] as const).map((l) => (
+            <button key={l ?? 'none'} type="button" aria-pressed={item.letter === l} title={l ? t.kpi.letters[l] : t.oil.noLetter} onClick={() => change((i) => ({ ...i, letter: l }))}>
+              {l ?? '—'}
+            </button>
+          ))}
+        </span>
+        {source && (
+          <small className="muted">
+            {td.fromKpi.replace('{day}', dayLabel(source.day))}
+            {` · ${kpiDefs?.find((d) => d.id === source.kpiId)?.name ?? source.kpiId}`}
+          </small>
+        )}
+      </div>
       <div className="oil-detail-grid">
         <label className="field">
           <span>{td.problem}</span>

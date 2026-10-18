@@ -2,7 +2,8 @@
 // Ukládá se jako Excel do složky OIL ve sdílené složce (list bodů, komentáře a historie posunů termínu).
 
 import { findColumn } from './csv';
-import { dayToIso, type DayNumber } from './dates';
+import { dayToIso, parseDay, type DayNumber } from './dates';
+import { LETTERS, type Letter } from './kpi';
 import { cellDay, cellNumber, cellText, type Cell } from './table';
 
 export const PROGRESS_STEPS = [0, 25, 50, 75, 100] as const;
@@ -39,6 +40,10 @@ export interface OilItem {
   closed: DayNumber | null;
   comments: OilComment[];
   shifts: OilShift[];
+  /** Písmeno SQCDP, ke kterému bod patří (opatření z KPI); null = bez vazby na KPI. */
+  letter: Letter | null;
+  /** Zdroj v KPI: den a ukazatel („2026-10-06 d_customer“), ze kterého bod vznikl. */
+  kpi: string | null;
 }
 
 export interface OilList {
@@ -67,14 +72,23 @@ export function stamp(date: Date): string {
   return `${date.getDate()}.${date.getMonth() + 1}.${date.getFullYear()} ${date.getHours()}:${String(date.getMinutes()).padStart(2, '0')}`;
 }
 
-export function addItem(list: OilList, today: DayNumber): { list: OilList; id: number } {
+/** Nový bod; z KPI s předvyplněným písmenem, problémem a zdrojem. */
+export function addItem(list: OilList, today: DayNumber, init: Partial<Pick<OilItem, 'problem' | 'letter' | 'kpi'>> = {}): { list: OilList; id: number } {
   const id = Math.max(0, ...list.items.map((i) => i.id)) + 1;
-  const item: OilItem = { id, problem: '', action: '', owner: '', opened: today, due: null, progress: 0, cancelled: false, closed: null, comments: [], shifts: [] };
+  const item: OilItem = { id, problem: '', action: '', owner: '', opened: today, due: null, progress: 0, cancelled: false, closed: null, comments: [], shifts: [], letter: null, kpi: null, ...init };
   return { list: { items: [...list.items, item] }, id };
 }
 
 export function updateItem(list: OilList, id: number, change: (item: OilItem) => OilItem): OilList {
   return { items: list.items.map((i) => (i.id === id ? change(i) : i)) };
+}
+
+/** Zdroj bodu v KPI: den a ukazatel. */
+export const kpiSourceKey = (day: DayNumber, kpiId: string) => `${dayToIso(day)} ${kpiId}`;
+
+export function parseKpiSource(key: string | null): { day: DayNumber; kpiId: string } | null {
+  const day = key ? parseDay(key.slice(0, 10)) : null;
+  return day === null ? null : { day, kpiId: key!.slice(11) };
 }
 
 /** Jednotliví odpovědní z pole Odpovědný („A / B“, „A, B“ nebo „A; B“). */
@@ -137,6 +151,8 @@ const COLUMNS = {
   from: ['Z', 'From'],
   to: ['Na', 'To'],
   reason: ['Důvod', 'Reason'],
+  letter: ['SQCDP', 'Písmeno', 'Letter'],
+  kpi: ['Zdroj KPI', 'KPI source'],
 } as const;
 
 const STATUS_TEXT: Record<OilStatus, string> = { done: 'Hotovo', cancelled: 'Zrušeno', overdue: 'Po termínu', progress: 'Rozpracováno', open: 'Nezahájeno' };
@@ -159,7 +175,7 @@ export function oilSheets(list: OilList, today: DayNumber): OilSheet[] {
   return [
     {
       name: 'OIL',
-      header: [COLUMNS.id[0], COLUMNS.problem[0], COLUMNS.action[0], COLUMNS.owner[0], COLUMNS.opened[0], COLUMNS.due[0], 'Původní termín', 'Posunů termínu', COLUMNS.progress[0], COLUMNS.status[0], COLUMNS.closed[0], 'Poslední komentář'],
+      header: [COLUMNS.id[0], COLUMNS.problem[0], COLUMNS.action[0], COLUMNS.owner[0], COLUMNS.opened[0], COLUMNS.due[0], 'Původní termín', 'Posunů termínu', COLUMNS.progress[0], COLUMNS.status[0], COLUMNS.closed[0], 'Poslední komentář', COLUMNS.letter[0], COLUMNS.kpi[0]],
       rows: items.map((i) => [
         i.id,
         i.problem,
@@ -173,6 +189,8 @@ export function oilSheets(list: OilList, today: DayNumber): OilSheet[] {
         STATUS_TEXT[statusOf(i, today)],
         formatDate(i.closed),
         i.comments.at(-1)?.text ?? null,
+        i.letter,
+        i.kpi,
       ]),
     },
     {
@@ -222,6 +240,8 @@ export function parseOilWorkbook(sheets: readonly { name: string; data: Cell[][]
   const openedC = col(COLUMNS.opened);
   const statusC = col(COLUMNS.status);
   const closedC = col(COLUMNS.closed);
+  const letterC = col(COLUMNS.letter);
+  const kpiC = col(COLUMNS.kpi);
 
   const items = new Map<number, OilItem>();
   for (const row of main.rows) {
@@ -241,6 +261,8 @@ export function parseOilWorkbook(sheets: readonly { name: string; data: Cell[][]
       closed: progress === 100 ? ((closedC === -1 ? null : cellDay(row[closedC])) ?? opened) : null,
       comments: [],
       shifts: [],
+      letter: (LETTERS as readonly string[]).includes(text(letterC, row).toUpperCase()) ? (text(letterC, row).toUpperCase() as Letter) : null,
+      kpi: text(kpiC, row) || null,
     });
   }
 

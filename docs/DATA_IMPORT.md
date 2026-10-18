@@ -245,7 +245,7 @@ před přepsáním zeptá; jeho změny by se přepsáním ztratily.
 
 | List | Obsah |
 |---|---|
-| **OIL** | Číslo, Problém, Opatření, Odpovědný, Otevřeno, Termín, Původní termín, Posunů termínu, Plnění (%), Stav, Uzavřeno, Poslední komentář |
+| **OIL** | Číslo, Problém, Opatření, Odpovědný, Otevřeno, Termín, Původní termín, Posunů termínu, Plnění (%), Stav, Uzavřeno, Poslední komentář, SQCDP, Zdroj KPI |
 | **Komentáře** | Číslo, Kdy, Kdo, Komentář |
 | **Posuny termínu** | Číslo, Kdy, Kdo, Z, Na, Důvod |
 
@@ -255,6 +255,9 @@ před přepsáním zeptá; jeho změny by se přepsáním ztratily.
 - **Posun termínu:** první termín se jen nastaví, každá další změna je posun s povinným důvodem, kdo a kdy;
   Původní termín a Posunů termínu jsou z historie.
 - **Kdo:** jméno, které si uživatel vyplní v modulu OIL (pamatuje si ho prohlížeč).
+- **SQCDP** (nepovinné): písmeno S, Q, C, D nebo P – bod je opatřením k danému písmenu KPI. **Zdroj KPI:** den a ukazatel
+  (`2026-10-06 d_customer`), ze kterého bod vznikl tlačítkem „+ OIL“. Starší soubor bez těchto sloupců se načte, body
+  budou bez písmene.
 - **Převod jiného OIL:** stačí sešit s listem, který má aspoň sloupce Číslo, Problém, Termín a Plnění (%);
   ostatní sloupce a listy Komentáře a Posuny termínu jsou volitelné, sloupce navíc se ignorují. Datum jako datum Excelu nebo `dd.mm.rrrr`,
   plnění 0–100 (zaokrouhlí se na nejbližší krok). Uloží se pak do `OIL/OIL.xlsx`.

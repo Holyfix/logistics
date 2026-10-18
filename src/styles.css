@@ -2119,3 +2119,55 @@ button.oil-step:disabled {
   color: #d8404b;
   opacity: 1;
 }
+
+/* OIL: písmeno SQCDP v seznamu a v detailu bodu. */
+.oil-table .oil-letter {
+  width: 1%;
+  text-align: center;
+}
+
+.oil-table td.oil-letter {
+  font: 800 15px/1 var(--font-display);
+  color: var(--ink);
+}
+
+.oil-detail-letter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin-bottom: 12px;
+}
+
+.field-label {
+  font: 600 11px/1 var(--font-display);
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.oil-detail-letter .segmented button {
+  min-width: 34px;
+  padding: 6px 10px;
+}
+
+/* KPI: opatření (body OIL) pod grafy a „+ OIL“ v zápisu dne. */
+.kpi-actions {
+  margin-top: 16px;
+}
+
+.kpi-action-progress {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.kpi-oil {
+  white-space: nowrap;
+}
+
+.kpi-oil a {
+  margin-left: 8px;
+  font-size: 12px;
+}
