@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { bomParts } from '../../core/bom';
 import { formatQuantity } from '../../core/format';
 import {
   CHECK_MODULES,
@@ -30,7 +31,7 @@ export function useMappingCheck(): MappingCheck | null {
   return useMemo(
     () =>
       data?.master
-        ? checkMapping(data.master.data, { coverage: data.coverage, callOffs: data.exports.at(-1), bomParents: data.boms.flatMap((b) => [...b.data.parents.keys()]) })
+        ? checkMapping(data.master.data, { coverage: data.coverage, callOffs: data.exports.at(-1), bomParts: bomParts(data.boms.map((b) => b.data)) })
         : null,
     [data],
   );
@@ -75,7 +76,7 @@ export function MappingCheckPanel() {
   const why = (p: PartIssue, f: FieldIssue) =>
     [f.modules.length ? `${tc.neededBy}: ${modules(f.modules)}` : '', f.byKind ? tc.byKind.replace('{kind}', p.kind) : ''].filter(Boolean).join(' · ');
   const matches = (p: PartIssue, f: PartFilter) =>
-    !f || (f === 'none' ? !p.notInMapping && !p.kind : (ITEM_KINDS as readonly string[]).includes(f) ? p.kind === f : p.modules.includes(f as CheckModule));
+    !f || (f === 'none' ? !p.notInMapping && !p.kind : (ITEM_KINDS as readonly string[]).includes(f) ? (p.kind || p.suggestedKind) === f : p.modules.includes(f as CheckModule));
   const cell = (n: number) => (n > 0 ? <b className="check-bad">{formatQuantity(n, locale)}</b> : <span className="check-ok">✓</span>);
   const dot = <span className="muted" title={tc.notNeeded}>·</span>;
 
@@ -85,7 +86,7 @@ export function MappingCheckPanel() {
       {
         name: tc.sheetParts,
         header: [tc.item, tc.kind, tc.customerNumber, tc.description, tc.project, tc.fill, tc.modules, tc.folder],
-        rows: c.parts.map((p) => [p.item, p.kind, p.customerNumber, p.description, p.project, fill(p), modules(p.modules), p.folder]),
+        rows: c.parts.map((p) => [p.item, p.kind || p.suggestedKind, p.customerNumber, p.description, p.project, fill(p), modules(p.modules), p.folder]),
         stickyColumns: 1,
       },
       {
@@ -255,14 +256,14 @@ export function MappingCheckPanel() {
                       <td>
                         <strong>{p.item || '—'}</strong>
                       </td>
-                      <td>{p.kind || <span className="muted">—</span>}</td>
+                      <td>{p.kind || (p.suggestedKind ? <span className="muted" title={tc.suggestedKind}>{p.suggestedKind}</span> : <span className="muted">—</span>)}</td>
                       <td>{p.customerNumber}</td>
                       <td className="wrap">{p.description}</td>
                       <td>{p.project || <span className="muted">—</span>}</td>
                       <td className="wrap">
                         {p.notInMapping ? (
                           <>
-                            <span className="check-chip check-chip-new">{tc.newRow}</span>
+                            <span className="check-chip check-chip-new">{p.suggestedKind ? tc.newRowSheet.replace('{kind}', p.suggestedKind) : tc.newRow}</span>
                             {p.folder && <small className="muted cell-note">{tc.folderHint.replace('{folder}', p.folder)}</small>}
                           </>
                         ) : (

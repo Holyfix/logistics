@@ -36,7 +36,15 @@ const master = parseMasterData(
   ),
 );
 if (!master.ok) throw new Error();
-const sheets = mappingTemplate(master.value, [{ item: 'NEW', customerNumber: 'A9999999999  00000001', description: 'NEW PART' }, { item: 'FG1', customerNumber: '', description: '' }], texts);
+const sheets = mappingTemplate(
+  master.value,
+  [
+    { item: 'NEW', customerNumber: 'A9999999999  00000001', description: 'NEW PART' },
+    { item: 'FG1', customerNumber: '', description: '' },
+    { item: 'K-NEW', customerNumber: '', description: 'CLIP NEW', kind: 'PG' },
+  ],
+  texts,
+);
 const byName = (name: string) => sheets.find((s) => s.name === name)!;
 const headers = (s: ReportSheet) => s.data[0]!.map((c) => c?.value);
 const row = (s: ReportSheet, item: string) => {
@@ -55,7 +63,8 @@ describe('šablona mapování po druzích dílu', () => {
   it('díly bez druhu podle údajů, díly mimo mapování na FG (bez duplicit)', () => {
     expect(byName('FG').data.slice(1).map((r) => r[0]?.value)).toEqual(['FG1', 'FG2', 'FG3', 'X1', 'NEW']);
     expect(byName('SFG').data.slice(1).map((r) => r[0]?.value)).toEqual(['SFG1', 'X2']);
-    expect(byName('PG').data.slice(1).map((r) => r[0]?.value)).toEqual(['PG1', 'X3']);
+    // díl mimo mapování s navrženým druhem na svém listu
+    expect(byName('PG').data.slice(1).map((r) => r[0]?.value)).toEqual(['PG1', 'X3', 'K-NEW']);
     expect(row(byName('FG'), 'NEW')['Customer Number']!.value).toBe('A9999999999 0001');
     expect(templateKind(undefined)).toBe('FG');
   });
@@ -90,7 +99,7 @@ describe('šablona mapování po druzích dílu', () => {
     const table = (s: ReportSheet) => ({ name: s.name, table: { header: headers(s).map(String), rows: s.data.slice(1).map((r) => r.map((c) => c?.value ?? null)) } });
     const back = parseMasterWorkbook(sheets.map(table));
     if (!back.ok) throw new Error();
-    expect(Object.fromEntries([...back.value.items.values()].map((m) => [m.item, m.kind]))).toEqual({ FG1: 'FG', FG2: 'FG', FG3: 'FG', X1: 'FG', NEW: 'FG', SFG1: 'SFG', X2: 'SFG', PG1: 'PG', X3: 'PG' });
+    expect(Object.fromEntries([...back.value.items.values()].map((m) => [m.item, m.kind]))).toEqual({ FG1: 'FG', FG2: 'FG', FG3: 'FG', X1: 'FG', NEW: 'FG', SFG1: 'SFG', X2: 'SFG', PG1: 'PG', X3: 'PG', 'K-NEW': 'PG' });
     const kinded = [...master.value.items.values()].filter((m) => m.kind);
     // šablona nepřenáší sloupce, které aplikace nepoužívá
     const fields = (m: MasterItem) => ({ ...m, type: '', safetyStock: null, safetyTime: null, customer: '', componentCoverage: false });

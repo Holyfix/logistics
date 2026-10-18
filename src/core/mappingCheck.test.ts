@@ -31,15 +31,22 @@ describe('kontrola mapování po modulech (díly bez druhu)', () => {
   const check = checkMapping(m, {
     coverage: [source('P1', [row('A1111111111 0001'), row('A2222222222 0001'), row('A3333333333 0001'), row('A9999999999 0001', '', 'NEW PART')])],
     callOffs: callOffs(['100', '101', '900']),
-    bomParents: ['900', 'FG-X', '100'],
+    // z kusovníku: nakupovaný K1 a 102 (v mapování), vyráběný S1
+    bomParts: [
+      { item: 'K1', description: 'CLIP NEW', purchased: true },
+      { item: 'S1', description: 'FOAM NEW', purchased: false },
+      { item: '102', description: 'CLIP', purchased: true },
+    ],
   });
 
-  it('díl bez mapování: celý řádek, moduly podle toho, kde je', () => {
-    const missing = check.parts.filter((p) => p.notInMapping).map((p) => [p.item || p.customerNumber, p.folder, p.modules]);
+  it('díl bez mapování: celý řádek, moduly podle toho, kde je, a navržený list', () => {
+    const missing = check.parts.filter((p) => p.notInMapping).map((p) => [p.item || p.customerNumber, p.folder, p.modules, p.suggestedKind, p.description]);
     expect(missing).toEqual([
-      ['900', '', ['calloffs', 'components']],
-      ['A9999999999 0001', 'P1', ['coverage', 'planning']],
-      ['FG-X', '', ['components']],
+      ['900', '', ['calloffs'], 'FG', 'popis 900'],
+      ['A9999999999 0001', 'P1', ['coverage', 'planning'], 'FG', 'NEW PART'],
+      // nakupovaný z kusovníku → Komponenty (PG), vyráběný → Plánování (SFG)
+      ['K1', '', ['components'], 'PG', 'CLIP NEW'],
+      ['S1', '', ['planning'], 'SFG', 'FOAM NEW'],
     ]);
   });
 
@@ -55,32 +62,32 @@ describe('kontrola mapování po modulech (díly bez druhu)', () => {
       ['description', ['coverage']],
       ['line', ['planning']],
     ]);
-    // 100 je kompletní, 102 se nikde nepoužívá
+    // 100 je kompletní, 102 (nakupovaný z kusovníku) má popis
     expect(fields('100')).toBeUndefined();
     expect(fields('102')).toBeUndefined();
   });
 
   it('souhrn po modulech a počty', () => {
     expect(check.modules.coverage).toMatchObject({ active: true, parts: 3, notInMapping: 1, fields: { side: 1, description: 1 } });
-    expect(check.modules.planning).toMatchObject({ parts: 3, notInMapping: 1, fields: { side: 1, line: 1, orderMultiple: 1 } });
+    expect(check.modules.planning).toMatchObject({ parts: 4, notInMapping: 2, fields: { side: 1, line: 1, orderMultiple: 1 } });
     expect(check.modules.calloffs).toMatchObject({ parts: 2, notInMapping: 1, fields: { side: 1 } });
-    expect(check.modules.components).toMatchObject({ parts: 2, notInMapping: 2, fields: {} });
+    expect(check.modules.components).toMatchObject({ parts: 1, notInMapping: 1, fields: {} });
     // mapování bez druhu dílu: kontrola podle modulů a hlásí chybějící sloupec
     expect(check.columns.map((c) => c.column)).toEqual(['kind']);
-    expect(checkCount(check)).toBe(6);
-    expect(checkCount(check, 'components')).toBe(2);
+    expect(checkCount(check)).toBe(7);
+    expect(checkCount(check, 'components')).toBe(1);
   });
 
   it('chybějící sloupce a sloupce bez označení, s moduly, které je potřebují', () => {
     const plain = master('Item Number;Project;Description\n100;P1;DOOR');
-    const c = checkMapping(plain, { coverage: [], callOffs: callOffs(['100']), bomParents: ['100'] });
+    const c = checkMapping(plain, { coverage: [], callOffs: callOffs(['100']), bomParts: [{ item: 'K', description: '', purchased: true }] });
     expect(c.columns.map((x) => [x.column, x.kind, x.modules])).toEqual([
       ['kind', 'missing', []],
-      ['category', 'missing', ['calloffs', 'components']],
+      ['category', 'missing', ['calloffs']],
     ]);
     // Line bez ASSEMBLY u dílů z Coverage
     const unmarked = master(`${HEADER}\n100;A1111111111 0001;DOOR;P1;LHD;;DP;12;IMM`);
-    const u = checkMapping(unmarked, { coverage: [source('P1', [row('A1111111111 0001')])], callOffs: undefined, bomParents: ['100'] });
+    const u = checkMapping(unmarked, { coverage: [source('P1', [row('A1111111111 0001')])], callOffs: undefined });
     expect(u.columns.map((x) => [x.column, x.kind])).toEqual([
       ['kind', 'missing'],
       ['line', 'noneMarked'],
@@ -111,7 +118,7 @@ describe('kontrola podle druhu dílu (Item Type)', () => {
       'X1;;;;P1;;;;;', // bez druhu
     ].join('\n'),
   );
-  const c = checkMapping(m, { coverage: [source('P1', [row('A1111111111 0001')])], callOffs: callOffs(['FG1', 'X1']), bomParents: ['FG1'] });
+  const c = checkMapping(m, { coverage: [source('P1', [row('A1111111111 0001')])], callOffs: callOffs(['FG1', 'X1']), bomParts: [{ item: 'PG1', description: '', purchased: true }] });
 
   it('co doplnit podle druhu; díly s druhem se kontrolují i mimo načtená data', () => {
     expect(c.parts.map((p) => [p.item, p.kind, p.fields.map((f) => f.field)])).toEqual([
@@ -121,7 +128,7 @@ describe('kontrola podle druhu dílu (Item Type)', () => {
       ['PG1', 'PG', ['description']],
       ['SFG1', 'SFG', ['project']],
     ]);
-    // FG1 je v Coverage, odvolávkách i kusovníku – balení potřebuje Plánování; FG2 se nepoužívá → jen podle druhu
+    // FG1 je v Coverage i odvolávkách – balení potřebuje Plánování; FG2 se nepoužívá → jen podle druhu
     expect(c.parts[0]!.fields[0]).toEqual({ field: 'orderMultiple', modules: ['planning'], byKind: true });
     expect(c.parts[1]!.fields[0]).toEqual({ field: 'customerNumber', modules: [], byKind: true });
   });

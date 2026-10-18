@@ -171,3 +171,33 @@ export function mergeBoms(boms: readonly BomData[]): BomData {
   }
   return { parents, trees, info, issueCount: boms.reduce((n, b) => n + b.issueCount, 0), issues: boms.flatMap((b) => b.issues).slice(0, MAX_ISSUES) };
 }
+
+/** Díl z kusovníku pod hotovým dílem: nakupovaný (P), nebo vyráběný (mezivýroba). */
+export interface BomPart {
+  item: string;
+  description: string;
+  purchased: boolean;
+}
+
+/**
+ * Komponenty všech kusovníků (bez hotových dílů nahoře) s rozlišením nakupovaný / vyráběný podle sloupce
+ * Purchase/Manufacture (P = nakupovaný, jiný údaj = vyráběný); bez údaje je nakupovaný díl, pod kterým už nic není.
+ */
+export function bomParts(boms: readonly BomData[]): BomPart[] {
+  const parts = new Map<string, BomPart>();
+  for (const bom of boms) {
+    const walk = (nodes: readonly BomNode[]) => {
+      for (const node of nodes) {
+        const source = bom.info.get(node.item)?.source ?? '';
+        const purchased = source === 'P' || (!source && node.children.length === 0);
+        const known = parts.get(node.item);
+        // Díl, který je někde vyráběný (má pod sebou díly nebo je označený jako vyráběný), je vyráběný.
+        if (!known) parts.set(node.item, { item: node.item, description: bom.info.get(node.item)?.description ?? '', purchased });
+        else if (!purchased) known.purchased = false;
+        walk(node.children);
+      }
+    };
+    for (const tree of bom.trees.values()) walk(tree);
+  }
+  return [...parts.values()];
+}
