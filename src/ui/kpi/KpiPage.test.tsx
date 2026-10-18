@@ -99,6 +99,8 @@ describe('KpiPage', () => {
 
   it('kliknutí na den otevře jeho zápis v kartě Zápis dne', () => {
     renderPage();
+    // popisek dne v písmenu vyjmenuje ukazatele mimo cíl
+    expect(cell('S', 2).getAttribute('title')).toBe('Pá 2. 10. – mimo cíl\n• Úrazy v logistice: 1 počet (≤ 0 · červená nad 0)');
     fireEvent.click(cell('Q', 2));
     expect(screen.getByRole('heading', { level: 2, name: /Zápis za den Pá 2\. 10\./ })).toBeTruthy();
     expect(screen.getByText('Zapsáno: Novák 5.10.2026 7:30')).toBeTruthy();
@@ -131,15 +133,18 @@ describe('KpiPage', () => {
     expect(charts()[1]!.textContent).toContain('Za období žádné události.');
     fireEvent.click(screen.getByRole('button', { name: 'Měsíc' }));
     expect(charts()[0]!.querySelector('h3')!.textContent).toBe('S Pareto · Říjen 2026');
-    // D: výběr ukazatele; zapsané dny bez hodnoty ukazatele se nekreslí
-    const select = screen.getByLabelText('Ukazatel v grafu D') as HTMLSelectElement;
-    expect(select.value).toBe('d_customer');
+    // C, D, P: všechny ukazatele písmene po dnech, barva podle stavu, klik otevře zápis
+    const c = charts()[2]!;
+    expect([...c.querySelectorAll('.kpi-days-head span')].map((x) => x.textContent)).toEqual(['Čt 1.', 'Pá 2.']);
+    expect([...c.querySelectorAll('.kpi-days-cell')].map((x) => [x.textContent, x.className.replace('kpi-days-cell ', '')])).toEqual([
+      ['0', 'kpi-green'],
+      ['6k', 'kpi-red'],
+    ]);
+    expect(c.querySelector('.kpi-days-cell.kpi-red')!.getAttribute('title')).toMatch(/^Pá 2\. 10\. – Náklady na mimořádné přepravy: 6\s000 Kč – mimo cíl$/);
+    // D: v zápisech chybí – písmeno nemá hodnoty
     expect(charts()[3]!.textContent).toContain('Zatím žádné zapsané dny.');
-    fireEvent.change(select, { target: { value: 'd_premium' } });
-    expect(select.value).toBe('d_premium');
-    // C má jediný ukazatel: název místo výběru, sloupce obarvené podle stavu
-    expect(charts()[2]!.querySelector('.kpi-chart-name')!.textContent).toBe('Náklady na mimořádné přepravy');
-    expect([...charts()[2]!.querySelectorAll('rect')].map((r) => r.getAttribute('class'))).toEqual(['kpi-chart-bar kpi-green', 'kpi-chart-bar kpi-red']);
+    fireEvent.click(c.querySelector('.kpi-days-cell.kpi-red')!);
+    expect(screen.getByRole('heading', { level: 2, name: /Zápis za den Pá 2\. 10\./ })).toBeTruthy();
   });
 
   it('bez souboru KPI: úvodní sada ukazatelů', () => {

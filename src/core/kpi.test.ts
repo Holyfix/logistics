@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import { dayFromParts } from './dates';
 import {
   addDef,
-  dailyBars,
   dayState,
   defaultKpis,
   kpiSheets,
@@ -12,6 +11,7 @@ import {
   paretoOf,
   parseKpiWorkbook,
   previousWorkday,
+  recentEntries,
   withEntry,
   type KpiData,
   type KpiDef,
@@ -121,16 +121,13 @@ describe('grafy', () => {
     expect(paretoOf(data, 'S', day(1), day(31))).toEqual([]);
   });
 
-  it('denní sloupce: posledních N zapsaných dní ukazatele se stavem', () => {
+  it('poslední zapsané dny písmene (dny bez hodnot písmene se přeskočí)', () => {
     const d = def({ id: 'c', letter: 'C', target: 0, red: 10 });
     let data: KpiData = { defs: [d], entries: [] };
-    for (const [n, v] of [[1, 0], [2, 5], [5, 12], [6, 0], [7, 3]] as const) data = withEntry(data, { day: day(n), author: '', at: '', values: { c: v } });
+    for (const n of [7, 1, 2, 5, 6]) data = withEntry(data, { day: day(n), author: '', at: '', values: { c: n } });
     data = withEntry(data, { day: day(8), author: '', at: '', values: {} });
-    expect(dailyBars(data, d, day(6), 3)).toEqual([
-      { day: day(2), value: 5, status: 'yellow' },
-      { day: day(5), value: 12, status: 'red' },
-      { day: day(6), value: 0, status: 'green' },
-    ]);
-    expect(dailyBars(data, d, day(31), 7)).toHaveLength(5);
+    expect(recentEntries(data, 'C', day(6), 3).map((e) => e.day)).toEqual([day(2), day(5), day(6)]);
+    expect(recentEntries(data, 'C', day(31), 7)).toHaveLength(5);
+    expect(recentEntries(data, 'D', day(31), 7)).toEqual([]);
   });
 });

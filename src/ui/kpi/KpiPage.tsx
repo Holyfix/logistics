@@ -7,7 +7,6 @@ import { formatDayShort } from '../../core/format';
 import {
   addDef,
   categoryKey,
-  dailyBars,
   dayState,
   defaultKpis,
   entryOf,
@@ -18,6 +17,7 @@ import {
   monthSummary,
   paretoOf,
   previousWorkday,
+  recentEntries,
   removeDef,
   updateDef,
   withEntry,
@@ -38,7 +38,7 @@ import { Icon } from '../icons';
 import { useOilDraftList } from '../oil/OilProvider';
 import { SaveStatus, useSaveFlow } from '../planning/SaveStatus';
 import { shapeCells } from './letterShapes';
-import { DailyChart, ParetoChart } from './KpiCharts';
+import { dayIssues, LetterDays, ParetoChart, targetText } from './KpiCharts';
 
 const KPI_FILE = 'KPI/KPI.xlsx';
 const NAME_KEY = 'logistics-user-name';
@@ -117,7 +117,6 @@ export function KpiPage({ today = localToday() }: { today?: DayNumber } = {}) {
   const [name, setName] = useState(readName);
   const [tab, setTab] = useState<Tab>('overview');
   const [period, setPeriod] = useState<Period>('year');
-  const [chartDef, setChartDef] = useState<Partial<Record<Letter, string>>>({});
   const auto = useAutoValues(today);
 
   const head = (
@@ -220,11 +219,6 @@ export function KpiPage({ today = localToday() }: { today?: DayNumber } = {}) {
   const missing: DayNumber[] = [];
   for (let d = today - MISSING_LOOKBACK; d < today; d++) if (dayState(kpi, 'S', d, today) === 'missing') missing.push(d);
 
-  const targetText = (def: KpiDef) => {
-    const target = (def.higherIsBetter ? tk.targetText.higher : tk.targetText.lower).replace('{target}', String(def.target));
-    const red = def.red === null ? tk.targetText.warnOnly : (def.higherIsBetter ? tk.targetText.redHigher : tk.targetText.redLower).replace('{red}', String(def.red));
-    return `${target} · ${red}`;
-  };
   const dot = (status: KpiStatus | null) => (status ? <span className={`kpi-dot kpi-${status}`} title={tk.legend[status]} /> : <span className="muted">—</span>);
 
   return (
@@ -291,24 +285,12 @@ export function KpiPage({ today = localToday() }: { today?: DayNumber } = {}) {
                     <ParetoChart bars={paretoOf(kpi, letter, range.from, range.to)} label={`${letter} ${tk.letters[letter]} – ${tk.charts.pareto} ${periodText}`} />
                   </div>
                 );
-              const defs = kpi.defs.filter((d) => d.letter === letter);
-              const def = defs.find((d) => d.id === chartDef[letter]) ?? defs[0];
               return (
                 <div key={letter} className="kpi-card kpi-chart-card">
                   <h3>
                     <span className="kpi-letter">{letter}</span> {tk.charts.last}
                   </h3>
-                  {def && defs.length > 1 && (
-                    <select className="kpi-chart-select" aria-label={`${tk.charts.kpi} ${letter}`} value={def.id} onChange={(e) => setChartDef((c) => ({ ...c, [letter]: e.target.value }))}>
-                      {defs.map((d) => (
-                        <option key={d.id} value={d.id}>
-                          {d.name}
-                        </option>
-                      ))}
-                    </select>
-                  )}
-                  {def && defs.length === 1 && <p className="kpi-chart-name">{def.name}</p>}
-                  {def ? <DailyChart def={def} bars={dailyBars(kpi, def, range.to, DAILY_COUNT)} label={`${letter} – ${def.name}`} /> : <p className="kpi-chart-empty muted">{tk.charts.dailyEmpty}</p>}
+                  <LetterDays kpi={kpi} letter={letter} entries={recentEntries(kpi, letter, range.to, DAILY_COUNT)} onPick={openDay} />
                 </div>
               );
             })}
@@ -407,7 +389,7 @@ export function KpiPage({ today = localToday() }: { today?: DayNumber } = {}) {
                               {tk.sources[def.source]}
                             </span>
                           </td>
-                          <td className="muted">{targetText(def)}</td>
+                          <td className="muted">{targetText(def, tk.targetText)}</td>
                           <td>
                             <div className="kpi-inputs">
                               {inputKeys(def).map((key, k) => (
@@ -555,7 +537,7 @@ interface LetterCardProps {
 
 /** Písmeno jako kalendář měsíce a pod ním pruh měsíců roku. */
 function LetterCard({ letter, kpi, month, today, todayMonth, onPick, onMonth }: LetterCardProps) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const tk = t.kpi;
   const days = monthDays(month.year, month.month);
   const summary = monthSummary(kpi, letter, month.year, month.month);
@@ -577,7 +559,7 @@ function LetterCard({ letter, kpi, month, today, todayMonth, onPick, onMonth }: 
               type="button"
               className={`kpi-cell kpi-${state}`}
               style={style}
-              title={`${dayToIso(d)} – ${tk.dayTitle[state]}`}
+              title={[`${t.calloffs.weekdays[weekday(d) - 1]} ${formatDayShort(dayToIso(d), locale)} – ${tk.dayTitle[state]}`, ...dayIssues(kpi, letter, entryOf(kpi, d), tk, locale)].join('\n')}
               disabled={d > today}
               onClick={() => onPick(d)}
             >

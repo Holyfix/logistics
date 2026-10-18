@@ -191,23 +191,12 @@ export function paretoOf(data: KpiData, letter: Letter, from: DayNumber, to: Day
   });
 }
 
-/** Denní hodnota ukazatele se stavem. */
-export interface DailyBar {
-  day: DayNumber;
-  value: number;
-  status: KpiStatus;
-}
-
-/** Posledních `count` zapsaných dní ukazatele do dne `to` (včetně), od nejstaršího. */
-export function dailyBars(data: KpiData, def: KpiDef, to: DayNumber, count: number): DailyBar[] {
-  const bars: DailyBar[] = [];
-  for (const entry of [...data.entries].filter((e) => e.day <= to).sort((a, b) => b.day - a.day)) {
-    const value = kpiValue(entry, def);
-    if (value === null) continue;
-    bars.push({ day: entry.day, value, status: kpiStatus(def, value) });
-    if (bars.length === count) break;
-  }
-  return bars.reverse();
+/** Posledních `count` zapsaných dní do dne `to` (včetně), kdy má písmeno aspoň jednu hodnotu; od nejstaršího. */
+export function recentEntries(data: KpiData, letter: Letter, to: DayNumber, count: number): KpiEntry[] {
+  return data.entries
+    .filter((e) => e.day <= to && letterStatus(data, letter, e) !== null)
+    .sort((a, b) => a.day - b.day)
+    .slice(-count);
 }
 
 /** Den, který se na ranní poradě zapisuje: předchozí pracovní den (v pondělí pátek). */

@@ -548,10 +548,9 @@ export const en: Messages = {
       paretoTitle: '{label}: {value}, cumulative {share} %',
       legendEvents: 'events',
       legendCumulative: 'cumulative %',
-      kpi: 'KPI in chart',
       last: 'last 7 recorded days',
       dailyEmpty: 'No recorded days yet.',
-      legendTarget: 'target {target}',
+      noValue: 'not recorded',
     },
     entry: {
       heading: 'Daily record',
