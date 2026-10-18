@@ -26,28 +26,32 @@ if (!calls.ok) throw new Error();
 const stock = parseStock(
   parseCsv(
     [
-      'Site,Item Number,Description,Status,Standard Cost,Qty On Hand - Inv Detail,Location,Location Types,OID Date (Last Transaction Date),ABC Class',
-      '1000,FG-1,PANEL,WH.F,100,25,A-01,,10/10/26,A',
-      '1000,FG-1,PANEL,WH.F,100,10,SEQ-1,External,10/11/26,A',
-      '1000,FG-1,PANEL,QH,100,5,Q-01,,10/01/26,A',
-      '1000,PG-1,CLIP,WH.P,"0,5",2000,C-01,,10/09/26,B',
-      '1000,PG-1,CLIP,DIFF,"0,5",-3,C-02,,10/09/26,B',
-      '1000,PG-2,OLD CLIP,WH.P,2,50,C-03,,12/15/25,C',
-      '1000,OTHER-1,PALLET,WH.P,10,5,P-01,,10/09/26,C',
-      '1000EXT,FG-1,PANEL,WH.F,100,0,X-01,,10/09/26,A',
+      'Site,Item Number,Description,Status,Standard Cost,Qty On Hand - Inv Detail,Location,OID Date (Last Transaction Date),ABC Class',
+      '1000,FG-1,PANEL,WH.F,100,25,A-01,10/10/26,A',
+      '1000DE,FG-1,PANEL,WH.F,100,10,SEQ-1,10/11/26,A',
+      '1000,FG-1,PANEL,QH,100,5,Q-01,10/01/26,A',
+      '1000,PG-1,CLIP,WH.P,"0,5",2000,C-01,10/09/26,B',
+      '1000,PG-1,CLIP,DIFF,"0,5",-3,C-02,10/09/26,B',
+      '1000,PG-2,OLD CLIP,WH.P,2,50,C-03,12/15/25,C',
+      '1000,OTHER-1,PALLET,WH.P,10,5,P-01,10/09/26,C',
+      '1000,FG-1,PANEL,WH.F,100,0,X-01,10/09/26,A',
+      '1000,FG-1,PANEL,WH.F,100,0,EXT-01,10/09/26,A',
     ].join('\n'),
   ),
 );
 if (!stock.ok) throw new Error();
-const inputs = { stock: stock.value, master: master.value, boms: [bom.value], callOffs: calls.value, today: TODAY };
+// Externí lokace v domácím závodě (v aplikaci podle otisku názvu, tady smyšlená).
+const ext = (location: string) => location.trim().toUpperCase() === 'EXT-01';
+const inputs = { stock: stock.value, master: master.value, boms: [bom.value], callOffs: calls.value, today: TODAY, excludedLocation: ext };
 const line = (item: string, scope: 'all' | 'internal' | 'external' = 'all') => buildInventory({ ...inputs, scope }).lines.find((l) => l.item === item)!;
 
 describe('Zásoby', () => {
-  it('domácí závod = nejčastější Site; externí = jiný Site nebo typ lokace External', () => {
+  it('domácí závod = nejčastější Site; externí = jiný Site nebo externí lokace vyloučená v Coverage', () => {
     const rows = stock.value.rows;
     expect(homeSite(rows)).toBe('1000');
-    expect(rows.filter((r) => isExternal(r, '1000')).map((r) => r.location)).toEqual(['SEQ-1', 'X-01']);
-    expect(isExternal({ site: '1000', locationType: 'external' } as StockRow, '1000')).toBe(true);
+    expect(rows.filter((r) => isExternal(r, '1000', ext)).map((r) => r.location)).toEqual(['SEQ-1', 'EXT-01']);
+    expect(isExternal({ site: '1000', location: 'ext-01 ' } as StockRow, '1000', ext)).toBe(true);
+    expect(isExternal({ site: '1000', location: 'X-01' } as StockRow, '1000')).toBe(false);
   });
 
   it('dosah v pracovních dnech, minimum a maximum z potřeby den po dni', () => {

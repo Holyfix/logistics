@@ -22,13 +22,13 @@ const calls = parseCallOffExport(parseCsv(['Item Number,Date,Discrete Qty', ...[
 const stock = parseStock(
   parseCsv(
     [
-      'Site,Item Number,Description,Status,Standard Cost,Qty On Hand - Inv Detail,Location,Location Types,OID Date (Last Transaction Date),ABC Class',
-      '1000,FG-1,PANEL,WH.F,100,25,A-01,,10/10/26,A',
-      '1000,FG-1,PANEL,WH.F,100,10,SEQ-1,External,10/11/26,A',
-      '1000,FG-1,PANEL,QH,100,5,Q-01,,10/01/26,A',
-      '1000,PG-1,CLIP,WH.P,"0,5",2000,C-01,,10/09/26,B',
-      '1000,PG-2,OLD CLIP,DIFF,2,50,C-03,,12/15/25,C',
-      '1000,PAL-1,PALLET,WH.P,10,5,P-01,,10/09/26,C',
+      'Site,Item Number,Description,Status,Standard Cost,Qty On Hand - Inv Detail,Location,OID Date (Last Transaction Date),ABC Class',
+      '1000,FG-1,PANEL,WH.F,100,25,A-01,10/10/26,A',
+      '1000DE,FG-1,PANEL,WH.F,100,10,SEQ-1,10/11/26,A',
+      '1000,FG-1,PANEL,QH,100,5,Q-01,10/01/26,A',
+      '1000,PG-1,CLIP,WH.P,"0,5",2000,C-01,10/09/26,B',
+      '1000,PG-2,OLD CLIP,DIFF,2,50,C-03,12/15/25,C',
+      '1000,PAL-1,PALLET,WH.P,10,5,P-01,10/09/26,C',
     ].join('\n'),
   ),
 );

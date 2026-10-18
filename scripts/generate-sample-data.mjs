@@ -206,16 +206,16 @@ mkdirSync('sample-data/Coverage/Lokalita C/P200', { recursive: true });
 await writeXlsxFile(bestandRows, { sheet: 'bestand' }).toFile('sample-data/Coverage/Lokalita C/P200/bestand_P200.xlsx');
 
 // Náš sklad ve formátu exportu zásob po lokacích: hotové díly v zónách SALE/PURCH, výroba a blokace jinde.
-// Cena za jednotku, typ lokace (External = sekvencér u zákazníka), datum poslední transakce (m/d/rr) a třída ABC.
+// Cena za jednotku, závod (jiný než 1000 = externí sklad, sekvencér u zákazníka), datum poslední transakce (m/d/rr) a ABC.
 const czQty = (n) => `"${n.toLocaleString('en-US').replace(/,/g, NBSP)},0"`;
 const czCost = (n) => `"${n.toFixed(2).replace('.', ',')}"`;
 const moved = (daysAgo) => {
   const d = new Date(Date.UTC(2026, 9, 13 - daysAgo));
   return `${String(d.getUTCMonth() + 1).padStart(2, '0')}/${String(d.getUTCDate()).padStart(2, '0')}/${String(d.getUTCFullYear()).slice(2)}`;
 };
-const stockLines = ['Site,Item Number,Description,Unit of Measure,Status,Standard Cost,Qty On Hand - Inv Detail,Location,Location Types,Zone ID,Area ID,Warehouse ID,OID Date (Last Transaction Date),ABC Class'];
-const stockLine = (it, um, status, cost, qty, location, type, zone, area, daysAgo, abc) =>
-  stockLines.push(['1000', it.item, it.description, um, status, czCost(cost), czQty(qty), location, type, zone, area, 'WH1', moved(daysAgo), abc].join(','));
+const stockLines = ['Site,Item Number,Description,Unit of Measure,Status,Standard Cost,Qty On Hand - Inv Detail,Location,Zone ID,Area ID,Warehouse ID,OID Date (Last Transaction Date),ABC Class'];
+const stockLine = (it, um, status, cost, qty, location, site, zone, area, daysAgo, abc) =>
+  stockLines.push([site || '1000', it.item, it.description, um, status, czCost(cost), czQty(qty), location, zone, area, 'WH1', moved(daysAgo), abc].join(','));
 items
   .filter((it) => it.project)
   .forEach((it, idx) => {
@@ -227,7 +227,7 @@ items
     if (idx % 3 === 0) stockLine(it, 'EA', 'WH.P', cost, Math.ceil(pack / 2), 'B-01', '', 'PURCH', 'WRH', 2, abc);
     stockLine(it, 'EA', 'Prod-O', cost, Math.round(rnd() * 30), 'L-01', '', 'WRKC', 'PROD', 0, abc);
     // Sekvencér u zákazníka: díly jsou stále naše (externí lokace).
-    if (idx % 2 === 0) stockLine(it, 'EA', 'WH.F', cost, pack * 2, 'SEQ-EXT', 'External', 'SEQ', 'WRH', 1, abc);
+    if (idx % 2 === 0) stockLine(it, 'EA', 'WH.F', cost, pack * 2, 'SEQ-EXT', '1000DE', 'SEQ', 'WRH', 1, abc);
     if (idx % 5 === 0) stockLine(it, 'EA', 'QH', cost, 2, 'Q-HOLD', '', 'LAB', 'PROD', 20, abc);
     if (idx % 7 === 0) stockLine(it, 'EA', 'DIFF', cost, 1, 'CYCLE-01', '', 'CYCLE', 'WRH', 40, abc);
   });

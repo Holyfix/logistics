@@ -15,7 +15,6 @@ export const STOCK_COLUMNS = {
   warehouse: ['Warehouse ID', 'Warehouse', 'Sklad'],
   status: ['Status', 'Inventory Status'],
   site: ['Site', 'Závod'],
-  locationType: ['Location Types', 'Location Type', 'Typ lokace'],
   cost: ['Standard Cost', 'Unit Cost', 'Cena'],
   lastMove: ['OID Date (Last Transaction Date)', 'Last Transaction Date', 'Poslední pohyb'],
   abc: ['ABC Class', 'ABC'],
@@ -35,8 +34,8 @@ export function locationHash(location: string): number {
 }
 
 /**
- * Lokace, které se do našeho skladu nepočítají: externí lokace, kde jsou díly už zamontované
- * ve výrobku odběratele. Názvy jsou firemní, proto jsou ve veřejném kódu jen jako otisk (locationHash);
+ * Lokace, které se do našeho skladu pro Coverage nepočítají: externí lokace, kde jsou díly už zamontované
+ * ve výrobku odběratele (v Zásobách se počítají jako externí zásoba). Názvy jsou firemní, proto jsou ve veřejném kódu jen jako otisk (locationHash);
  * skutečný název ukáže modul Data podle načteného souboru skladu.
  */
 const EXCLUDED_LOCATIONS = new Set([0xe9f4bdc9]);
@@ -54,8 +53,6 @@ export interface StockRow {
   status: string;
   qty: number;
   site: string;
-  /** Typ lokace z exportu (např. External); prázdné = běžná lokace. */
-  locationType: string;
   /** Cena za jednotku (Standard Cost); null = sloupec chybí nebo je prázdný. */
   cost: number | null;
   /** Den poslední transakce na lokaci; null = neuvedeno. */
@@ -121,7 +118,6 @@ export function parseStock(table: DataTable): StockResult {
       status: text(row, col.status),
       qty,
       site: text(row, col.site),
-      locationType: text(row, col.locationType),
       cost: col.cost === -1 ? null : cellNumber(row[col.cost]),
       lastMove: col.lastMove === -1 ? null : lastMoveDay(row[col.lastMove]),
       abc: upper(row, col.abc),

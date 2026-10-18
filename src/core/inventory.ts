@@ -7,7 +7,7 @@ import type { CallOffExport } from './calloffs/parse';
 import { weekday, type DayNumber } from './dates';
 import { callOffDemand } from './demand';
 import type { MasterData } from './masterdata';
-import type { StockData, StockRow } from './stock';
+import { isExcludedLocation, type StockData, type StockRow } from './stock';
 
 /** Pásma dosahu v pracovních dnech: kritické pod 2, nízké pod 5, v pořádku do 20, vysoké do 40, nad 40 nadbytek. */
 export const CRIT_DAYS = 2;
@@ -42,8 +42,12 @@ export function homeSite(rows: readonly StockRow[]): string {
   return [...counts].sort((a, b) => b[1] - a[1])[0]?.[0] ?? '';
 }
 
-/** Externí lokace (např. sekvencér u zákazníka): jiný závod než domácí, nebo typ lokace External. */
-export const isExternal = (row: StockRow, home: string) => (row.site !== '' && row.site !== home) || /^external$/i.test(row.locationType.trim());
+/**
+ * Externí lokace (sekvencéry hotových dílů u zákazníka, díly jsou stále naše): jiný závod (Site) než domácí, nebo
+ * externí lokace v domácím závodě, kterou Coverage vylučuje ze skladu (isExcludedLocation, název je jen jako otisk).
+ */
+export const isExternal = (row: StockRow, home: string, excluded: (location: string) => boolean = isExcludedLocation) =>
+  (row.site !== '' && row.site !== home) || excluded(row.location);
 
 export type Scope = 'all' | 'internal' | 'external';
 
@@ -102,6 +106,8 @@ export interface InventoryInputs {
   callOffs: CallOffExport | undefined;
   today: DayNumber;
   scope?: Scope;
+  /** Externí lokace v domácím závodě (výchozí: lokace vyloučené v Coverage). */
+  excludedLocation?: (location: string) => boolean;
 }
 
 export interface InventoryTable {
@@ -156,7 +162,7 @@ export function demandForWorkdays(demand: readonly number[], days: readonly DayN
  * z odvolávek a kusovníku, dosah, minimum a maximum. Díly z mapování s potřebou se ukážou i bez zásoby (kritické);
  * díly mimo mapování jsou „ostatní“ jen s hodnotou.
  */
-export function buildInventory({ stock, master, boms, callOffs, today, scope = 'all' }: InventoryInputs): InventoryTable {
+export function buildInventory({ stock, master, boms, callOffs, today, scope = 'all', excludedLocation = isExcludedLocation }: InventoryInputs): InventoryTable {
   const home = homeSite(stock.rows);
   const masterByItem = new Map([...(master?.items.values() ?? [])].map((m) => [m.item.toUpperCase(), m]));
 
@@ -199,7 +205,7 @@ export function buildInventory({ stock, master, boms, callOffs, today, scope = '
   for (const row of stock.rows) {
     if (row.qty < 0) negativeRows++;
     if (row.qty <= 0) continue;
-    const external = isExternal(row, home);
+    const external = isExternal(row, home, excludedLocation);
     if ((scope === 'internal' && external) || (scope === 'external' && !external)) continue;
     (byItem.get(row.item) ?? byItem.set(row.item, []).get(row.item)!).push(row);
   }
@@ -216,7 +222,7 @@ export function buildInventory({ stock, master, boms, callOffs, today, scope = '
     let external = 0;
     let lastMove: DayNumber | null = null;
     const locations: InventoryLocation[] = rows.map((r) => {
-      const ext = isExternal(r, home);
+      const ext = isExternal(r, home, excludedLocation);
       const blocked = blockReason(r.status);
       if (blocked) blockedBy[blocked] += r.qty;
       else {
