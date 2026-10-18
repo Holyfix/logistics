@@ -1769,3 +1769,191 @@ button.oil-step:disabled {
   max-width: 100%;
   flex-wrap: wrap;
 }
+
+/* KPI SQCDP: písmena jako kalendář měsíce, pruh měsíců, denní zápis. */
+.kpi-letters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.kpi-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px 14px 10px;
+}
+
+.kpi-card h3 {
+  margin: 0 0 8px;
+  font: 600 13px/1.2 var(--font-display);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+
+.kpi-letter {
+  color: var(--ink);
+}
+
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 30px);
+  grid-auto-rows: 27px;
+  gap: 3px;
+  justify-content: center;
+}
+
+.kpi-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid transparent;
+  font: 600 12px/1 var(--font-display);
+  color: #ffffff;
+  cursor: pointer;
+}
+
+.kpi-cell:disabled {
+  cursor: default;
+}
+
+.kpi-months {
+  display: flex;
+  justify-content: center;
+  gap: 2px;
+  margin-top: 10px;
+}
+
+.kpi-month {
+  width: 19px;
+  height: 18px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 2px;
+  font: 700 10px/1 var(--font-display);
+  color: #ffffff;
+  cursor: pointer;
+}
+
+.kpi-green {
+  --kpi: #6bb33f;
+  background: var(--kpi);
+}
+
+.kpi-yellow {
+  --kpi: #f2bd36;
+  background: var(--kpi);
+  color: #4a3500;
+}
+
+.kpi-red {
+  --kpi: #d8404b;
+  background: var(--kpi);
+}
+
+.kpi-missing {
+  background: var(--surface-2);
+  border: 1px dashed var(--line);
+  color: var(--muted);
+}
+
+.kpi-none,
+.kpi-future {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  color: var(--muted);
+}
+
+.kpi-pad {
+  background: var(--surface-2);
+}
+
+.kpi-selected {
+  box-shadow:
+    0 0 0 2px var(--surface),
+    0 0 0 4px var(--accent);
+}
+
+.kpi-caption {
+  margin: 6px 0 0;
+  text-align: center;
+  font-size: 12px;
+  color: var(--ink-2);
+}
+
+.kpi-monthnav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.kpi-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 13px;
+  color: var(--ink-2);
+}
+
+.kpi-swatch {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+  vertical-align: -1px;
+}
+
+.kpi-dot {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+
+.kpi-entry .kpi-group td {
+  background: var(--surface-2);
+  font: 700 14px/1.2 var(--font-display);
+}
+
+.kpi-inputs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+}
+
+.kpi-cat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.kpi-input {
+  width: 80px;
+  text-align: right;
+}
+
+.chip-accent {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.kpi-defs > summary {
+  cursor: pointer;
+}
+
+.kpi-defs > summary h2 {
+  display: inline;
+}
+
+.kpi-defs-actions {
+  display: flex;
+  gap: 8px;
+}

@@ -82,7 +82,7 @@ export type SaveResult =
   | { status: 'saved'; path: string; lastModified: number }
   | { status: 'conflict'; path: string; lastModified: number }
   | { status: 'denied' }
-  | { status: 'downloaded' };
+  | { status: 'downloaded'; path: string };
 
 /** Povolí zápis do složky (aplikace ji jinak jen čte). Musí být volané z kliknutí uživatele. */
 export async function requestWrite(handle: FileSystemDirectoryHandle): Promise<boolean> {

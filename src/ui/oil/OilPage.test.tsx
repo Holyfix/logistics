@@ -32,6 +32,7 @@ const state: DataState = {
         ],
       },
     },
+    kpi: null,
     failed: [],
     loadedAt: 1,
   },

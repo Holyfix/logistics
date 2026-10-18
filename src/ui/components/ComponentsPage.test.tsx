@@ -51,6 +51,7 @@ const state: DataState = {
     plans: [],
     planSettings: null,
     oil: null,
+    kpi: null,
     failed: [],
     loadedAt: 0,
   },

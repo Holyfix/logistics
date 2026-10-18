@@ -25,7 +25,7 @@ function renderHub(exports: CallOffExport[] | null, oil: OilList | null = null) 
     folderName: 'data',
     progress: null,
     error: '',
-    data: exports ? { folderName: 'data', exports, master: null, coverage: [], stock: null, boms: [], plans: [], planSettings: null, oil: oil && { path: 'OIL/OIL.xlsx', lastModified: 0, list: oil }, failed: [], loadedAt: 0 } : null,
+    data: exports ? { folderName: 'data', exports, master: null, coverage: [], stock: null, boms: [], plans: [], planSettings: null, oil: oil && { path: 'OIL/OIL.xlsx', lastModified: 0, list: oil }, kpi: null, failed: [], loadedAt: 0 } : null,
   };
   return render(
     <I18nProvider>

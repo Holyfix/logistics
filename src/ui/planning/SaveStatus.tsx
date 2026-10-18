@@ -27,7 +27,7 @@ export function useSaveFlow() {
         result = await save(true);
       }
       if (result.status === 'saved') setMessage({ tone: 'ok', text: `${tp.status.savedTo} ${result.path}` });
-      else if (result.status === 'downloaded') setMessage({ tone: 'warn', text: tp.status.downloaded });
+      else if (result.status === 'downloaded') setMessage({ tone: 'warn', text: tp.status.downloaded.replace('{path}', result.path) });
       else if (result.status === 'denied') setMessage({ tone: 'warn', text: tp.status.denied });
     } catch (error) {
       setMessage({ tone: 'warn', text: `${tp.status.error}: ${error instanceof Error ? error.message : String(error)}` });
