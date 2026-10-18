@@ -62,7 +62,7 @@ describe('KpiPage', () => {
     expect([...document.querySelectorAll('.kpi-card:not(.kpi-chart-card) .kpi-letter')].map((l) => l.textContent)).toEqual(['S', 'Q', 'C', 'D', 'P']);
     expect(cell('S', 1).className).toContain('kpi-green');
     expect(cell('S', 2).className).toContain('kpi-red');
-    expect(cell('S', 3).className).toContain('kpi-none'); // sobota
+    expect(cell('S', 3).className).toContain('kpi-weekend'); // sobota bez zápisu
     expect(cell('S', 5).className).toContain('kpi-missing'); // pondělí bez zápisu
     expect(cell('S', 7).className).toContain('kpi-future');
     // říjen má 31 dní – všechna políčka jsou dny

@@ -1828,7 +1828,7 @@ button.oil-step:disabled {
 }
 
 .kpi-month {
-  width: 19px;
+  width: 18px;
   height: 18px;
   padding: 0;
   border: 1px solid transparent;
@@ -1855,8 +1855,14 @@ button.oil-step:disabled {
 }
 
 .kpi-missing {
-  background: var(--surface-2);
-  border: 1px dashed var(--line);
+  background: var(--surface);
+  border: 1px dashed var(--muted);
+  color: var(--muted);
+}
+
+.kpi-weekend {
+  background: var(--line);
+  border: 1px solid var(--line);
   color: var(--muted);
 }
 
@@ -1871,10 +1877,12 @@ button.oil-step:disabled {
   background: var(--surface-2);
 }
 
+/* Zvolený měsíc: rámeček vně políčka a odsazení od sousedů o jeho šířku, aby je nepřekrýval. */
 .kpi-selected {
+  margin: 0 3px;
   box-shadow:
-    0 0 0 2px var(--surface),
-    0 0 0 4px var(--accent);
+    0 0 0 1px var(--surface),
+    0 0 0 3px var(--accent);
 }
 
 .kpi-caption {

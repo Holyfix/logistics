@@ -537,8 +537,8 @@ export const cs = {
     inTarget: 'v cíli {green} z {days} dní',
     noDays: 'v měsíci zatím nic nezapsáno',
     monthTitle: '{month}: v cíli {green} z {days} zapsaných dní',
-    legend: { green: 'v cíli', yellow: 'upozornění', red: 'mimo cíl', missing: 'nezapsáno' },
-    dayTitle: { green: 'v cíli', yellow: 'upozornění', red: 'mimo cíl', missing: 'nezapsaný pracovní den', none: 'bez zápisu', future: 'budoucí den' },
+    legend: { green: 'v cíli', yellow: 'upozornění', red: 'mimo cíl', missing: 'nezapsáno', weekend: 'víkend' },
+    dayTitle: { green: 'v cíli', yellow: 'upozornění', red: 'mimo cíl', missing: 'nezapsaný pracovní den', weekend: 'víkend bez zápisu', none: 'bez zápisu', future: 'budoucí den' },
     write: 'Zapsat {day}',
     tabs: { overview: 'Přehled', entry: 'Zápis dne', defs: 'Ukazatele a cíle' },
     charts: {

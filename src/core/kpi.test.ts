@@ -52,7 +52,7 @@ describe('kalendář po písmenech', () => {
     expect(dayState(data, 'Q', day(1), today)).toBe('green');
     expect(dayState(data, 'Q', day(2), today)).toBe('red');
     expect(dayState(data, 'S', day(5), today)).toBe('yellow');
-    expect(dayState(data, 'S', day(3), today)).toBe('none'); // sobota
+    expect(dayState(data, 'S', day(3), today)).toBe('weekend'); // sobota bez zápisu
     expect(dayState(data, 'S', day(6), today)).toBe('missing'); // út bez zápisu
     expect(dayState(data, 'S', day(8), today)).toBe('future');
     expect(dayState(data, 'S', day(30) - 30, today)).toBe('none'); // před prvním zápisem

@@ -97,7 +97,7 @@ const RANK: Record<KpiStatus, number> = { green: 0, yellow: 1, red: 2 };
 const worst = (statuses: KpiStatus[]): KpiStatus | null => (statuses.length ? statuses.reduce((a, b) => (RANK[b] > RANK[a] ? b : a)) : null);
 
 /** Stav dne v kalendáři: barva, nezapsaný pracovní den, bez dat (víkend, před prvním zápisem) nebo budoucí. */
-export type DayState = KpiStatus | 'missing' | 'none' | 'future';
+export type DayState = KpiStatus | 'missing' | 'weekend' | 'none' | 'future';
 
 export const isWeekend = (day: DayNumber) => weekday(day) >= 6;
 
@@ -124,9 +124,10 @@ export function letterStatus(data: KpiData, letter: Letter, entry: KpiEntry): Kp
 export function dayState(data: KpiData, letter: Letter, day: DayNumber, today: DayNumber): DayState {
   const entry = entryOf(data, day);
   if (entry) return letterStatus(data, letter, entry) ?? 'none';
+  if (isWeekend(day)) return 'weekend';
   if (day >= today) return 'future';
   const first = data.entries[0]?.day;
-  if (first === undefined || day < first || isWeekend(day)) return 'none';
+  if (first === undefined || day < first) return 'none';
   return 'missing';
 }
 

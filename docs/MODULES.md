@@ -56,8 +56,9 @@ a Dodavatelé odložené. Modul Kapacity (odvolávky vs. kapacita linek) byl zva
 ### KPI (SQCDP)
 - Tři karty: **Přehled** (písmena a grafy, později opatření), **Zápis dne**, **Ukazatele a cíle**
 - ✅ **Písmena S, Q, C, D, P** (bezpečnost, kvalita, náklady, dodávky, lidé) jako kalendář měsíce: každé políčko
-  písmena je den. Barví se jen den: zelená v cíli, žlutá varování, červená za červenou hranicí, šedá = pracovní den
-  bez zápisu. Víkend se barví jen, když je zapsaný (někdy se pracuje). Stav dne písmena = nejhorší z jeho ukazatelů
+  písmena je den. Barví se jen den: zelená v cíli, žlutá varování, červená za červenou hranicí, čárkovaný rámeček =
+  pracovní den bez zápisu. Víkend je šedý, a když je zapsaný (někdy se pracuje), obarví se. Stav dne písmena = nejhorší
+  z jeho ukazatelů
 - ✅ **Pruh měsíců L–P** pod písmenem: barva měsíce podle podílu zelených dní ze zapsaných (90 % a víc zelená,
   75 % a víc žlutá, jinak červená); kliknutím se měsíc otevře
 - ✅ **Zápis dne** (vlastní karta): tlačítko Zapsat nabídne předchozí pracovní den (v pondělí pátek), kliknutím

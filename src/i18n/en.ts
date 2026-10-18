@@ -535,8 +535,8 @@ export const en: Messages = {
     inTarget: 'on target {green} of {days} days',
     noDays: 'nothing recorded this month yet',
     monthTitle: '{month}: on target {green} of {days} recorded days',
-    legend: { green: 'on target', yellow: 'warning', red: 'off target', missing: 'not recorded' },
-    dayTitle: { green: 'on target', yellow: 'warning', red: 'off target', missing: 'working day not recorded', none: 'no record', future: 'future day' },
+    legend: { green: 'on target', yellow: 'warning', red: 'off target', missing: 'not recorded', weekend: 'weekend' },
+    dayTitle: { green: 'on target', yellow: 'warning', red: 'off target', missing: 'working day not recorded', weekend: 'weekend, not recorded', none: 'no record', future: 'future day' },
     write: 'Record {day}',
     tabs: { overview: 'Overview', entry: 'Daily record', defs: 'KPIs and targets' },
     charts: {
