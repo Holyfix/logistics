@@ -8,6 +8,7 @@ import { CoveragePage } from './coverage/CoveragePage';
 import { DashboardPage } from './dashboard/DashboardPage';
 import { DataPage } from './DataPage';
 import { HubPage } from './HubPage';
+import { InventoryPage } from './inventory/InventoryPage';
 import { KpiPage } from './kpi/KpiPage';
 import { ModulePage } from './ModulePage';
 import { OilPage } from './oil/OilPage';
@@ -83,11 +84,12 @@ export function App() {
             {current?.id === 'data' && <DataPage />}
             {current?.id === 'oil' && <OilPage />}
             {current?.id === 'kpi' && <KpiPage />}
+            {current?.id === 'stock' && <InventoryPage />}
             {current?.id === 'calloffs' && <CallOffsPage />}
             {current?.id === 'coverage' && <CoveragePage />}
             {current?.id === 'components' && <ComponentsPage />}
             {current?.id === 'production' && <PlanningPage />}
-            {current && !['dashboard', 'data', 'calloffs', 'coverage', 'components', 'production', 'oil', 'kpi'].includes(current.id) && <ModulePage module={current} />}
+            {current && !['dashboard', 'data', 'calloffs', 'coverage', 'components', 'production', 'oil', 'kpi', 'stock'].includes(current.id) && <ModulePage module={current} />}
           </main>
         </OilProvider>
       </PlanningProvider>

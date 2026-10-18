@@ -18,7 +18,7 @@ Pořadí skupin na rozcestníku (karty se čtou shora dolů po sloupcích):
 | Zákazníci | **Expedice a dodávky** (OTD outbound) | Dodáváme zákazníkům včas? | Později |
 | Zákazníci | **Mimořádné přepravy** | Kolik stojí mimořádné přepravy a proč vznikají? | Později |
 | Materiál a sklad | **Komponenty** | Máme materiál na výrobu? | Fáze 4 (probíhá) |
-| Materiál a sklad | **Zásoby** | Nemáme zásob moc nebo málo? | Fáze 9 |
+| Materiál a sklad | **Zásoby** | Nemáme zásob moc nebo málo? | Fáze 9 (probíhá), přehled, díly a blokace hotové |
 | Materiál a sklad | **Obaly** | Na kolik dílů a dní vystačí obaly? | Fáze 5 |
 | Výroba | **Plánování** | Co a kdy vyrobit na linkách, aby byl zákazník pokrytý? | Fáze 7 (probíhá), montáž hotová |
 | Dodavatelé | **Příjem** | Co má dnes a zítra přijet a co je po termínu? | Fáze 9 |
@@ -116,10 +116,19 @@ Filtry projekt, kategorie, strana (LHD/RHD) a varianta z kmenových dat se ovliv
 - Shortage list pro ranní poradu
 
 ### Zásoby
-- Zásoba ve dnech spotřeby
-- Díly nad maximem a pod minimem, ležáky bez pohybu
-- Zdroj: export zásob a pohybů z ERP
-
+- Karty: **Přehled** · **Díly** · **Blokace**; filtry druh (FG, SFG, PG, ostatní), projekt, kategorie, ABC a sklad
+  (interní + externí, jen interní, jen externí)
+- ✅ **Dosah zásoby** v pracovních dnech: kolik dní volná zásoba pokryje potřebu den po dni – FG z odvolávek, SFG a PG
+  přes kusovník (odvolávky × množství na 1 ks hotového dílu, bez odečtu skladu hotových dílů jako v Komponentách)
+- ✅ **Minimum** = potřeba na 5 pracovních dní, **maximum** = na 20 pracovních dní; kusy do minima a nad maximem
+- ✅ **Pásma** (stejná pro všechny druhy): kritické pod 2 dny, nízké 2–5, v pořádku 5–20, vysoké 20–40, nadbytek nad 40
+  nebo nad potřebu celého horizontu, bez potřeby v horizontu; díly mimo mapování „ostatní“ jen s hodnotou
+- ✅ **Přehled:** hodnota zásob (z toho externí), kritické, pod minimem (za kolik doplnit), nadbytek (hodnota nad
+  maximem), ležáky (bez pohybu 180+ dní), blokováno podle důvodu; rozložení podle dosahu pro FG, SFG a PG; struktura
+  hodnoty (interní, externí, blokace); díly mimo pásmo v pořádku (klik ukáže lokace se statusem a posledním pohybem)
+- ✅ **Díly:** všechny díly s filtrem pásma, hledáním a exportem do Excelu
+- ✅ **Blokace:** blokovaná zásoba po lokacích podle hodnoty (QH a QH-TEMP kvalita, DIFF inventura, ClaimS-O logistika)
+- ⏳ Karta Ležáky a bez potřeby, trend ze starších souborů Stock, ukazatel na rozcestníku a v Dashboardu
 ### Plánování
 - Karty: **Přehled** · **ASSEMBLY** · **FOA** · **SLH** · **IMM** · **Kapacity**
 - Přehled: pro každou linku a projekt nepokryté díly, pokryto do (s plánem a bez něj), naplánované kusy, stav uložení

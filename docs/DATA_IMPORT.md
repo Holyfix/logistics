@@ -142,7 +142,12 @@ Soubor obsahuje celý sklad, takže ho mohou použít i další moduly (Komponen
 | Qty On Hand - Inv Detail | Qty Available (má přednost), Qty On Hand, Quantity, Množství | ano |
 | Zone ID | Zone, Zóna | pro Coverage |
 | Location | Lokace | pro vyloučení externích lokací |
-| Status, Area ID, Warehouse ID, Description | | ne |
+| Status | Inventory Status | pro Zásoby (blokace) |
+| Standard Cost | Unit Cost, Cena | pro Zásoby (hodnota, Kč za jednotku) |
+| Site | Závod | pro Zásoby (externí sklady) |
+| OID Date (Last Transaction Date) | Last Transaction Date, Poslední pohyb | pro Zásoby (ležáky) |
+| ABC Class | ABC | ne (filtr v Zásobách) |
+| Area ID, Warehouse ID, Description | | ne |
 
 - Čísla v českém formátu (`"1 236,0"`) i anglickém se přečtou; řádek s neplatným množstvím se vypíše v modulu Data.
 - **Pro Coverage** se sečtou kladná množství dílu na lokacích v zónách **INCOME, MEZ, PRE, PURCH, SALE a WRKC**;
@@ -152,6 +157,12 @@ Soubor obsahuje celý sklad, takže ho mohou použít i další moduly (Komponen
   v aplikaci (`src/core/stock.ts`); název lokace je firemní, proto je v kódu jen jako otisk (hash) a skutečný
   název ukáže modul Data v panelu „Náš sklad“ (řádek „Vyloučené lokace“). Další lokaci lze přidat jen úpravou aplikace.
 - Díl se se skladem páruje přes mapování (Item Number), díl bez mapování sklad nemá.
+- **Pro Zásoby** se počítají všechny lokace a zóny (s kladným množstvím) a rozhoduje **status**: QH a QH-TEMP
+  (kvalita), DIFF (inventurní rozdíly) a ClaimS-O (logistika) jsou blokovaná zásoba, ostatní statusy volná.
+  **Externí lokace** (sekvencéry hotových dílů u zákazníka, díly jsou stále naše) = jiný Site než domácí (nejčastější
+  v souboru), nebo externí lokace v domácím závodě, kterou vylučuje Coverage (viz výše); typ lokace z exportu se
+  nepoužívá. Do zásoby i dosahu se počítají, hodnota je vidět zvlášť. Hodnota = Standard Cost ×
+  množství. Datum poslední transakce může být `m/d/rr` (export ERP), `d.m.rrrr` nebo datum Excelu.
 - U Excelu se čte list „Data“, jinak první list.
 
 ## Kusovník (BOM) a modul Komponenty
