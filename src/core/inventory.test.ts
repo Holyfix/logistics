@@ -1,0 +1,100 @@
+import { describe, expect, it } from 'vitest';
+import { parseBom } from './bom';
+import { parseCallOffExport } from './calloffs/parse';
+import { parseCsv } from './csv';
+import { dayFromParts } from './dates';
+import { bandOf, buildInventory, byUrgency, coverageDays, demandForWorkdays, homeSite, isExternal } from './inventory';
+import { parseMasterData } from './masterdata';
+import { parseStock, type StockRow } from './stock';
+
+const day = (n: number) => dayFromParts(2026, 10, n)!;
+const TODAY = day(12); // pondělí
+
+const master = parseMasterData(parseCsv('Item Number;Customer Number;Description;Project;Category;Item Type\nFG-1;C1;PANEL LHD;P1;DP;FG\nSFG-1;;CARRIER;P1;;SFG\nPG-1;;CLIP;;;PG\nPG-2;;OLD CLIP;;;PG'));
+if (!master.ok) throw new Error();
+const bom = parseBom([
+  ['Level', 'Component Item', 'Quantity Per', 'Purchase/Manufacture'],
+  ['Parent', 'FG-1', null, 'L'],
+  ['1', 'SFG-1', 1, 'L'],
+  ['.2', 'PG-1', 2, 'P'],
+]);
+if (!bom.ok) throw new Error();
+// FG-1: 10 ks každý pracovní den dva týdny (12.–23. 10.).
+const workdays = [12, 13, 14, 15, 16, 19, 20, 21, 22, 23];
+const calls = parseCallOffExport(parseCsv(['Item Number,Date,Discrete Qty', ...workdays.map((d) => `FG-1,${d}.10.2026,10`)].join('\n')), 'Odvolavky_CW42.csv');
+if (!calls.ok) throw new Error();
+const stock = parseStock(
+  parseCsv(
+    [
+      'Site,Item Number,Description,Status,Standard Cost,Qty On Hand - Inv Detail,Location,Location Types,OID Date (Last Transaction Date),ABC Class',
+      '1000,FG-1,PANEL,WH.F,100,25,A-01,,10/10/26,A',
+      '1000,FG-1,PANEL,WH.F,100,10,SEQ-1,External,10/11/26,A',
+      '1000,FG-1,PANEL,QH,100,5,Q-01,,10/01/26,A',
+      '1000,PG-1,CLIP,WH.P,"0,5",2000,C-01,,10/09/26,B',
+      '1000,PG-1,CLIP,DIFF,"0,5",-3,C-02,,10/09/26,B',
+      '1000,PG-2,OLD CLIP,WH.P,2,50,C-03,,12/15/25,C',
+      '1000,OTHER-1,PALLET,WH.P,10,5,P-01,,10/09/26,C',
+      '1000EXT,FG-1,PANEL,WH.F,100,0,X-01,,10/09/26,A',
+    ].join('\n'),
+  ),
+);
+if (!stock.ok) throw new Error();
+const inputs = { stock: stock.value, master: master.value, boms: [bom.value], callOffs: calls.value, today: TODAY };
+const line = (item: string, scope: 'all' | 'internal' | 'external' = 'all') => buildInventory({ ...inputs, scope }).lines.find((l) => l.item === item)!;
+
+describe('Zásoby', () => {
+  it('domácí závod = nejčastější Site; externí = jiný Site nebo typ lokace External', () => {
+    const rows = stock.value.rows;
+    expect(homeSite(rows)).toBe('1000');
+    expect(rows.filter((r) => isExternal(r, '1000')).map((r) => r.location)).toEqual(['SEQ-1', 'X-01']);
+    expect(isExternal({ site: '1000', locationType: 'external' } as StockRow, '1000')).toBe(true);
+  });
+
+  it('dosah v pracovních dnech, minimum a maximum z potřeby den po dni', () => {
+    const days = Array.from({ length: 14 }, (_, k) => TODAY + k);
+    const need = days.map((d) => (workdays.includes(d - day(1) + 1) ? 10 : 0));
+    expect(coverageDays(35, need, days)).toBe(3);
+    expect(coverageDays(0, need, days)).toBe(0);
+    expect(coverageDays(1000, need, days)).toBeNull();
+    // 5 pracovních dní = po–pá, 6. pracovní den je až po víkendu
+    expect(demandForWorkdays(need, days, 5)).toBe(50);
+    expect(demandForWorkdays(need, days, 6)).toBe(60);
+    expect([0, 1.9, 2, 4, 5, 20, 21, 40, 41].map((d) => bandOf(d, 100))).toEqual(['crit', 'crit', 'low', 'low', 'ok', 'ok', 'high', 'high', 'over']);
+    expect(bandOf(null, 100)).toBe('over');
+    expect(bandOf(null, 0)).toBe('none');
+  });
+
+  it('FG: volná zásoba včetně externích lokací, blokace zvlášť, hodnota z ceny', () => {
+    const fg = line('FG-1');
+    expect(fg).toMatchObject({ kind: 'FG', projects: ['P1'], categories: ['DP'], abc: 'A', free: 35, external: 10, blocked: 5, value: 3500, externalValue: 1000, blockedValue: 500 });
+    expect(fg.blockedBy).toEqual({ quality: 5, inventory: 0, logistics: 0 });
+    expect(fg).toMatchObject({ days: 3, band: 'low', min: 50, max: 100, toMin: 15, overMax: 0, lastMove: dayFromParts(2026, 10, 11), idle: false });
+    expect(fg.locations.map((l) => [l.location, l.external, l.blocked])).toEqual([
+      ['A-01', false, null],
+      ['SEQ-1', true, null],
+      ['Q-01', false, 'quality'],
+    ]);
+    // jen interní nebo jen externí lokace
+    expect(line('FG-1', 'internal')).toMatchObject({ free: 25, external: 0 });
+    expect(line('FG-1', 'external')).toMatchObject({ free: 10, external: 10, blocked: 0 });
+  });
+
+  it('SFG a PG přes kusovník; bez zásoby kritické, zásoba na celý horizont nadbytek; bez potřeby a ležák; ostatní jen hodnota', () => {
+    expect(line('SFG-1')).toMatchObject({ kind: 'SFG', projects: ['P1'], free: 0, days: 0, band: 'crit', min: 50, toMin: 50 });
+    expect(line('PG-1')).toMatchObject({ kind: 'PG', projects: ['P1'], categories: ['DP'], free: 2000, value: 1000, horizonDemand: 200, days: null, band: 'over', max: 200, overMax: 1800 });
+    expect(line('PG-2')).toMatchObject({ band: 'none', horizonDemand: 0, overMax: 0, idle: true });
+    expect(line('OTHER-1')).toMatchObject({ kind: 'other', band: 'other', value: 50, description: 'PALLET' });
+    const table = buildInventory(inputs);
+    expect(table.negativeRows).toBe(1);
+    expect(table.hasCost).toBe(true);
+    expect(table.horizonEnd).toBe(day(23));
+    // naléhavost: kritické, nízké, nadbytek, bez potřeby, ostatní
+    expect([...table.lines].sort(byUrgency).map((l) => l.item)).toEqual(['SFG-1', 'FG-1', 'PG-1', 'PG-2', 'OTHER-1']);
+  });
+
+  it('bez odvolávek nemá žádný díl potřebu', () => {
+    const table = buildInventory({ ...inputs, callOffs: undefined });
+    expect(table.horizonEnd).toBeNull();
+    expect(table.lines.find((l) => l.item === 'FG-1')!.band).toBe('none');
+  });
+});

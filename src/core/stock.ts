@@ -1,7 +1,8 @@
 // Náš sklad: export zásob po lokacích (celý sklad, používají ho i další moduly).
 
 import { findColumn } from './csv';
-import { cellNumber, cellText, MAX_ISSUES, type DataIssue, type DataTable } from './table';
+import { dayFromParts, type DayNumber } from './dates';
+import { cellDay, cellNumber, cellText, MAX_ISSUES, type Cell, type DataIssue, type DataTable } from './table';
 
 export const STOCK_COLUMNS = {
   item: ['Item Number', 'Díl', 'Číslo dílu', 'Item'],
@@ -13,6 +14,11 @@ export const STOCK_COLUMNS = {
   area: ['Area ID', 'Area'],
   warehouse: ['Warehouse ID', 'Warehouse', 'Sklad'],
   status: ['Status', 'Inventory Status'],
+  site: ['Site', 'Závod'],
+  locationType: ['Location Types', 'Location Type', 'Typ lokace'],
+  cost: ['Standard Cost', 'Unit Cost', 'Cena'],
+  lastMove: ['OID Date (Last Transaction Date)', 'Last Transaction Date', 'Poslední pohyb'],
+  abc: ['ABC Class', 'ABC'],
 } as const;
 
 /** Zóny, které se počítají do našeho skladu: příjem, sklady a výroba. */
@@ -47,6 +53,24 @@ export interface StockRow {
   warehouse: string;
   status: string;
   qty: number;
+  site: string;
+  /** Typ lokace z exportu (např. External); prázdné = běžná lokace. */
+  locationType: string;
+  /** Cena za jednotku (Standard Cost); null = sloupec chybí nebo je prázdný. */
+  cost: number | null;
+  /** Den poslední transakce na lokaci; null = neuvedeno. */
+  lastMove: DayNumber | null;
+  abc: string;
+}
+
+/** Datum poslední transakce: d.m.rrrr, rrrr-mm-dd, datum z Excelu, nebo americké m/d/rr (m/d/rrrr) z exportu ERP. */
+export function lastMoveDay(cell: Cell | undefined): DayNumber | null {
+  const day = cellDay(cell);
+  if (day !== null) return day;
+  const m = /^(\d{1,2})\/(\d{1,2})\/(\d{2}|\d{4})$/.exec(cellText(cell));
+  if (!m) return null;
+  const year = Number(m[3]) < 100 ? 2000 + Number(m[3]) : Number(m[3]);
+  return dayFromParts(year, Number(m[1]), Number(m[2]));
 }
 
 export interface StockData {
@@ -96,6 +120,11 @@ export function parseStock(table: DataTable): StockResult {
       warehouse: upper(row, col.warehouse),
       status: text(row, col.status),
       qty,
+      site: text(row, col.site),
+      locationType: text(row, col.locationType),
+      cost: col.cost === -1 ? null : cellNumber(row[col.cost]),
+      lastMove: col.lastMove === -1 ? null : lastMoveDay(row[col.lastMove]),
+      abc: upper(row, col.abc),
     });
   });
 

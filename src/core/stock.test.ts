@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { parseCsv } from './csv';
-import { excludedLocationsIn, isExcludedLocation, locationHash, parseStock, stockByItem, stockItemCount } from './stock';
+import { dayFromParts } from './dates';
+import { excludedLocationsIn, isExcludedLocation, lastMoveDay, locationHash, parseStock, stockByItem, stockItemCount } from './stock';
 
 // Smyšlený export skladu ve formátu z ERP: čárka jako oddělovač, čísla v českém formátu, dvakrát sloupec Description.
 const csv = [
@@ -22,11 +23,20 @@ describe('parseStock', () => {
     if (!r.ok) throw new Error();
     expect(r.value.qtyColumn).toBe('Qty On Hand - Inv Detail');
     expect(r.value.rows).toHaveLength(7);
-    expect(r.value.rows[0]).toEqual({ item: '900100', location: 'A-01', zone: 'SALE', area: 'WRH', warehouse: 'WH1', status: 'OK', qty: 1200 });
+    expect(r.value.rows[0]).toEqual({ item: '900100', location: 'A-01', zone: 'SALE', area: 'WRH', warehouse: 'WH1', status: 'OK', qty: 1200, site: '1000', locationType: '', cost: null, lastMove: null, abc: '' });
     expect(r.value.descriptions.get('900100')).toBe('DOOR LHD');
     expect(stockItemCount(r.value)).toBe(2);
     // neplatné množství je v problémech, řádek bez dílu se přeskočí
     expect(r.value.issues).toEqual([{ row: 10, column: 'Qty On Hand - Inv Detail', value: 'x', message: 'invalidNumber' }]);
+  });
+
+  it('cena, typ lokace, poslední pohyb (americké m/d/rr i české datum) a ABC', () => {
+    const r = parseStock(parseCsv('Site,Item Number,Status,Standard Cost,Qty On Hand - Inv Detail,Location,Location Types,OID Date (Last Transaction Date),ABC Class\n1000,PG-1,QH,"1 473,5","2,0",SEQ-1,External,09/29/25,b'));
+    if (!r.ok) throw new Error();
+    expect(r.value.rows[0]).toMatchObject({ site: '1000', locationType: 'External', cost: 1473.5, lastMove: dayFromParts(2025, 9, 29), abc: 'B' });
+    expect(lastMoveDay('1.10.2026')).toBe(dayFromParts(2026, 10, 1));
+    expect(lastMoveDay('12/31/2025')).toBe(dayFromParts(2025, 12, 31));
+    expect(lastMoveDay('')).toBeNull();
   });
 
   it('Qty Available má přednost před množstvím na lokaci', () => {

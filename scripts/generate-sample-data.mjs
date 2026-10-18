@@ -76,6 +76,8 @@ const master = [
   // Nakupované díly (PG) se sledují v modulu Komponenty, mezivýroba (SFG) ne.
   ...COMPONENTS.map((c) => [c.item, 'PG', '', c.description, '', '', '', '', '', ''].join(';')),
   'S-0100;SFG;;CARRIER SUB-ASSY;P100;;;;FOA;',
+  // Doběhlý nakupovaný díl: na skladě, ale bez potřeby.
+  'K-0900;PG;;TRIM OLD VERSION;;;;;;',
 ];
 writeFileSync('sample-data/Item_Mapping.csv', '\ufeff' + master.join('\r\n') + '\r\n');
 
@@ -204,23 +206,41 @@ mkdirSync('sample-data/Coverage/Lokalita C/P200', { recursive: true });
 await writeXlsxFile(bestandRows, { sheet: 'bestand' }).toFile('sample-data/Coverage/Lokalita C/P200/bestand_P200.xlsx');
 
 // Náš sklad ve formátu exportu zásob po lokacích: hotové díly v zónách SALE/PURCH, výroba a blokace jinde.
+// Cena za jednotku, typ lokace (External = sekvencér u zákazníka), datum poslední transakce (m/d/rr) a třída ABC.
 const czQty = (n) => `"${n.toLocaleString('en-US').replace(/,/g, NBSP)},0"`;
-const stockLines = ['Site,Item Number,Description,Unit of Measure,Status,Qty On Hand - Inv Detail,Location,Zone ID,Area ID,Warehouse ID'];
+const czCost = (n) => `"${n.toFixed(2).replace('.', ',')}"`;
+const moved = (daysAgo) => {
+  const d = new Date(Date.UTC(2026, 9, 13 - daysAgo));
+  return `${String(d.getUTCMonth() + 1).padStart(2, '0')}/${String(d.getUTCDate()).padStart(2, '0')}/${String(d.getUTCFullYear()).slice(2)}`;
+};
+const stockLines = ['Site,Item Number,Description,Unit of Measure,Status,Standard Cost,Qty On Hand - Inv Detail,Location,Location Types,Zone ID,Area ID,Warehouse ID,OID Date (Last Transaction Date),ABC Class'];
+const stockLine = (it, um, status, cost, qty, location, type, zone, area, daysAgo, abc) =>
+  stockLines.push(['1000', it.item, it.description, um, status, czCost(cost), czQty(qty), location, type, zone, area, 'WH1', moved(daysAgo), abc].join(','));
 items
   .filter((it) => it.project)
   .forEach((it, idx) => {
     const pack = [8, 12, 16, 24][idx % 4];
+    const cost = 600 + (idx % 7) * 450;
+    const abc = ['A', 'B', 'B', 'C'][idx % 4];
     const full = Math.floor(rnd() * 4);
-    for (let k = 0; k < full; k++) stockLines.push(['1000', it.item, it.description, 'EA', 'OK', czQty(pack), `A-0${k + 1}`, 'SALE', 'WRH', 'WH1'].join(','));
-    if (idx % 3 === 0) stockLines.push(['1000', it.item, it.description, 'EA', 'PROD', czQty(Math.ceil(pack / 2)), 'B-01', 'PURCH', 'WRH', 'WH1'].join(','));
-    stockLines.push(['1000', it.item, it.description, 'EA', 'PROD', czQty(Math.round(rnd() * 30)), 'L-01', 'WRKC', 'PROD', 'WH1'].join(','));
-    if (idx % 5 === 0) stockLines.push(['1000', it.item, it.description, 'EA', 'HOLD', czQty(2), 'HOLD', 'LAB', 'PROD', 'WH1'].join(','));
+    for (let k = 0; k < full; k++) stockLine(it, 'EA', 'WH.F', cost, pack, `A-0${k + 1}`, '', 'SALE', 'WRH', 1 + k, abc);
+    if (idx % 3 === 0) stockLine(it, 'EA', 'WH.P', cost, Math.ceil(pack / 2), 'B-01', '', 'PURCH', 'WRH', 2, abc);
+    stockLine(it, 'EA', 'Prod-O', cost, Math.round(rnd() * 30), 'L-01', '', 'WRKC', 'PROD', 0, abc);
+    // Sekvencér u zákazníka: díly jsou stále naše (externí lokace).
+    if (idx % 2 === 0) stockLine(it, 'EA', 'WH.F', cost, pack * 2, 'SEQ-EXT', 'External', 'SEQ', 'WRH', 1, abc);
+    if (idx % 5 === 0) stockLine(it, 'EA', 'QH', cost, 2, 'Q-HOLD', '', 'LAB', 'PROD', 20, abc);
+    if (idx % 7 === 0) stockLine(it, 'EA', 'DIFF', cost, 1, 'CYCLE-01', '', 'CYCLE', 'WRH', 40, abc);
   });
 // Sklad komponent (nákup) s různým pokrytím.
 COMPONENTS.forEach((c, k) => {
   const qty = [80_000, 20_000, 15_000, 3_000, 0][k];
-  stockLines.push(['1000', c.item, c.description, c.um, 'OK', czQty(qty), `C-0${k + 1}`, 'PURCH', 'WRH', 'WH1'].join(','));
+  stockLine(c, c.um, 'WH.P', [0.35, 0.8, 0.05, 42, 12][k], qty, `C-0${k + 1}`, '', 'PURCH', 'WRH', 3 + k, ['B', 'A', 'C', 'A', 'B'][k]);
 });
+stockLine({ item: 'S-0100', description: 'CARRIER SUB-ASSY' }, 'EA', 'WH.P', 310, 40, 'F-01', '', 'WRKC', 'PROD', 1, 'A');
+stockLine(COMPONENTS[1], 'EA', 'ClaimS-O', 0.8, 500, 'CLAIM-01', '', 'CLAIM', 'WRH', 9, 'A');
+// Doběhlý díl bez pohybu přes rok a obaly mimo mapování.
+stockLine({ item: 'K-0900', description: 'TRIM OLD VERSION' }, 'EA', 'WH.P', 95, 1_400, 'C-09', '', 'PURCH', 'WRH', 420, 'C');
+stockLine({ item: 'PAL-1200', description: 'PALLET 1200x800' }, 'EA', 'WH.P', 180, 60, 'PACK-01', '', 'PURCH', 'WRH', 15, 'C');
 writeFileSync('sample-data/Stock_13.10.2026.csv', '\ufeff' + stockLines.join('\r\n') + '\r\n');
 
 // Kusovník ve formátu exportu z ERP: odsazené úrovně, množství na nadřazený díl.
