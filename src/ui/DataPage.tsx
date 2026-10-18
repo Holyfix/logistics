@@ -78,7 +78,7 @@ export function DataPage() {
   // Šablona: všechny díly mapování + díly, které v něm chybí (bez mapování díly z aktuálního exportu odvolávek).
   const downloadTemplate = () => {
     const missingParts = mappingCheck
-      ? mappingCheck.parts.filter((p) => p.notInMapping).map((p) => ({ item: p.item, customerNumber: p.customerNumber, description: p.description }))
+      ? mappingCheck.parts.filter((p) => p.notInMapping).map((p) => ({ item: p.item, customerNumber: p.customerNumber, description: p.description, ...(p.suggestedKind ? { kind: p.suggestedKind } : {}) }))
       : (current?.items.map((item, i) => ({ item, customerNumber: '', description: current.descriptions[i] ?? '' })) ?? []);
     void downloadReport('Item_Mapping.xlsx', mappingTemplate(data?.master?.data, missingParts, t.data.master.templateTexts));
   };

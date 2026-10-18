@@ -55,8 +55,12 @@ Ukazuje přesně, **co v Item_Mapping doplnit a kvůli kterým modulům**.
 |---|---|---|
 | Coverage (i dlaždice Zákazník) | díly ze souborů Coverage | Project, Category, Side*, Description |
 | Odvolávky | díly z aktuálního exportu | Project, Category, Side*, Description |
-| Plánování | díly z Coverage | Line; u dílů s Line = ASSEMBLY navíc Project, Side*, Description, Order Multiple |
-| Komponenty | hotové díly z kusovníků | Project, Category, Description; sledují se všechny díly PG |
+| Plánování | díly z Coverage a vyráběné díly z kusovníků (SFG) | Line; u dílů s Line = ASSEMBLY navíc Project, Side*, Description, Order Multiple; u vyráběných dílů z kusovníku Project, Description, Line |
+| Komponenty | nakupované díly z kusovníků (PG) | Description; sledují se všechny díly PG |
+
+Díl z kusovníku je nakupovaný podle sloupce Purchase/Manufacture (P); bez údaje je nakupovaný díl, pod kterým už nic
+není, ostatní jsou vyráběné. Díl, který v mapování chybí, má v kontrole navržený list: z odvolávek nebo Coverage FG,
+vyráběný z kusovníku SFG, nakupovaný PG – na tento list ho dá i šablona mapování.
 
 \* Strana jen v kategoriích projektu, které se dělí na LHD / RHD (aspoň jeden díl kategorie projektu stranu má).
 Bere se ze sloupce Side, jinak z LHD/RHD na začátku Variant. Varianta se nekontroluje – použije se, je-li vyplněná.

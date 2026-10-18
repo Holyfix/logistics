@@ -87,6 +87,8 @@ export interface TemplatePart {
   item: string;
   customerNumber: string;
   description: string;
+  /** List šablony (navržený druh z kontroly); bez něj FG. */
+  kind?: ItemKind;
 }
 
 type Value = string | number | null;
@@ -128,7 +130,7 @@ export function mappingTemplate(master: MasterData | undefined, extra: readonly 
     ...items.map((m) => ({ kind: templateKind(m), values: valuesOf(m, { item: m.item, customerNumber: '', description: '' }) })),
     ...extra
       .filter((p) => !p.item || !known.has(p.item.toUpperCase()))
-      .map((p) => ({ kind: templateKind(undefined), values: valuesOf(undefined, { ...p, customerNumber: p.customerNumber ? customerDisplay(p.customerNumber) : '' }) })),
+      .map((p) => ({ kind: p.kind ?? templateKind(undefined), values: valuesOf(undefined, { ...p, customerNumber: p.customerNumber ? customerDisplay(p.customerNumber) : '' }) })),
   ];
 
   const sheets: ReportSheet[] = ITEM_KINDS.map((kind) => {

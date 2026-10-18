@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { mergeBoms, parseBom } from './bom';
+import { bomParts, mergeBoms, parseBom } from './bom';
 import type { Cell } from './table';
 
 // Smyšlený odsazený kusovník ve formátu z ERP (dva hotové díly).
@@ -62,5 +62,28 @@ describe('parseBom', () => {
     const b = parseBom([rows[0]!, ['Parent', 'FG-1', 'OLD', null, 'EA', 'L', null], ['1', 'OLD-1', 'OLD', 1, 'EA', 'P', null]]);
     if (!a.ok || !b.ok) throw new Error();
     expect(mergeBoms([a.value, b.value]).parents.get('FG-1')!.map((c) => c.item)).not.toContain('OLD-1');
+  });
+});
+
+describe('bomParts', () => {
+  it('nakupované a vyráběné díly pod hotovými díly (bez hotových dílů nahoře)', () => {
+    const a = parseBom([
+      ['Level', 'Component Item', 'Description', 'Quantity Per', 'UM', 'Purchase/Manufacture'],
+      ['Parent', 'FG-1', 'PANEL', null, 'EA', 'L'],
+      ['1', 'SUB-1', 'CARRIER', 1, 'EA', 'L'],
+      ['.2', 'K-1', 'CLIP', 2, 'EA', 'P'],
+      ['1', 'K-2', 'LABEL', 1, 'EA', ''],
+      ['1', 'X-1', 'KIT', 1, 'EA', ''],
+      ['.2', 'K-3', 'SCREW', 1, 'EA', 'P'],
+    ]);
+    if (!a.ok) throw new Error();
+    // bez údaje: nakupovaný, když pod ním nic není; jinak vyráběný
+    expect(bomParts([a.value]).map((p) => [p.item, p.description, p.purchased])).toEqual([
+      ['SUB-1', 'CARRIER', false],
+      ['K-1', 'CLIP', true],
+      ['K-2', 'LABEL', true],
+      ['X-1', 'KIT', false],
+      ['K-3', 'SCREW', true],
+    ]);
   });
 });

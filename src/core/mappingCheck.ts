@@ -4,6 +4,7 @@
 // (použije se, je-li vyplněná). Pro každý díl ukáže, co doplnit (celý řádek, nebo které sloupce) a kvůli kterým
 // modulům / podle druhu.
 
+import type { BomPart } from './bom';
 import type { CallOffExport } from './calloffs/parse';
 import type { CoverageSource } from './coverage/compute';
 import { customerDisplay, ITEM_KINDS, type ItemKind, type MasterData, type MasterField, type MasterItem } from './masterdata';
@@ -18,14 +19,18 @@ export type CheckedField = (typeof CHECKED_FIELDS)[number];
 /**
  * Co který modul potřebuje u dílů, se kterými pracuje: Coverage díly ze souborů Coverage (i dlaždice Zákazník),
  * Odvolávky díly z aktuálního exportu, Plánování díly z Coverage (Line u všech; projekt, popis, strana a balení u dílů
- * s Line = ASSEMBLY), Komponenty hotové díly z kusovníků. Strana jen tam, kde se díly kategorie dělí na LHD / RHD.
+ * s Line = ASSEMBLY) a vyráběné díly z kusovníků (mezivýroba: projekt, popis, linka), Komponenty nakupované díly
+ * z kusovníků (popis). Strana jen tam, kde se díly kategorie dělí na LHD / RHD.
  */
 export const MODULE_FIELDS: Record<CheckModule, readonly CheckedField[]> = {
   coverage: ['project', 'category', 'side', 'description'],
   calloffs: ['project', 'category', 'side', 'description'],
   planning: ['line', 'project', 'side', 'description', 'orderMultiple'],
-  components: ['project', 'category', 'description'],
+  components: ['description'],
 };
+
+/** Co potřebuje Plánování u vyráběného dílu z kusovníku (mezivýroba). */
+const MADE_FIELDS: readonly CheckedField[] = ['project', 'description', 'line'];
 
 /** Co má být vyplněné podle druhu dílu (strana jen v kategoriích dělených na LHD / RHD, balení jen u ASSEMBLY). */
 export const KIND_FIELDS: Record<ItemKind, readonly CheckedField[]> = {
@@ -56,6 +61,11 @@ export interface PartIssue {
   kind: ItemKind | '';
   /** Díl v mapování vůbec není – doplnit celý řádek. */
   notInMapping: boolean;
+  /**
+   * List Item_Mapping pro díl, který v mapování není: z odvolávek nebo Coverage FG, vyráběný díl z kusovníku SFG,
+   * nakupovaný PG. U dílu v mapování prázdné.
+   */
+  suggestedKind: ItemKind | '';
   /** Složka Coverage, ve které díl je (nápověda pro projekt u dílu bez mapování). */
   folder: string;
   /** Prázdné sloupce mapování (u dílu bez mapování prázdné). */
@@ -105,11 +115,11 @@ export interface MappingCheck {
 export interface CheckInputs {
   coverage: readonly CoverageSource[];
   callOffs: CallOffExport | undefined;
-  /** Hotové díly z kusovníků (parent). */
-  bomParents?: Iterable<string>;
+  /** Díly z kusovníků pod hotovými díly: nakupované (Komponenty) a vyráběné (Plánování). */
+  bomParts?: readonly BomPart[];
 }
 
-type Context = 'coverage' | 'calloffs' | 'bom';
+type Context = 'coverage' | 'calloffs' | 'purchased' | 'made';
 
 const ASSEMBLY = 'ASSEMBLY';
 const byItem = (a: PartIssue, b: PartIssue) => (a.item || a.customerNumber).localeCompare(b.item || b.customerNumber, 'en', { numeric: true });
@@ -120,9 +130,10 @@ function isEmpty(m: MasterItem, field: CheckedField): boolean {
 }
 
 /** Kontrola mapování proti dílům ze souborů Coverage, aktuálního exportu odvolávek, kusovníků a podle druhu dílu. */
-export function checkMapping(master: MasterData, { coverage, callOffs, bomParents = [] }: CheckInputs): MappingCheck {
-  const parents = [...bomParents];
-  const active: Record<CheckModule, boolean> = { coverage: coverage.length > 0, calloffs: callOffs !== undefined, planning: coverage.length > 0, components: parents.length > 0 };
+export function checkMapping(master: MasterData, { coverage, callOffs, bomParts = [] }: CheckInputs): MappingCheck {
+  const purchased = bomParts.some((p) => p.purchased);
+  const made = bomParts.some((p) => !p.purchased);
+  const active: Record<CheckModule, boolean> = { coverage: coverage.length > 0, calloffs: callOffs !== undefined, planning: coverage.length > 0 || made, components: purchased };
   // Strana se bere ze sloupce Side, jinak z varianty (LHD/RHD) – stačí jeden z nich.
   const has = (field: MasterField) => master.columns.has(field) || (field === 'side' && master.columns.has('variant'));
   const hasKind = has('kind');
@@ -158,23 +169,27 @@ export function checkMapping(master: MasterData, { coverage, callOffs, bomParent
     else missing(`i:${item.toUpperCase()}`, { item, customerNumber: '', description: callOffs.descriptions[i] ?? '', folder: '' }, 'calloffs');
   });
   const byUpper = new Map([...master.items.values()].map((m) => [m.item.toUpperCase(), m]));
-  for (const parent of parents) {
-    const m = byUpper.get(parent.toUpperCase());
-    if (m) seen(m, 'bom');
-    else missing(`i:${parent.toUpperCase()}`, { item: parent, customerNumber: '', description: '', folder: '' }, 'bom');
+  for (const part of bomParts) {
+    const context: Context = part.purchased ? 'purchased' : 'made';
+    const m = byUpper.get(part.item.toUpperCase());
+    if (m) seen(m, context);
+    else missing(`i:${part.item.toUpperCase()}`, { item: part.item, customerNumber: '', description: part.description, folder: '' }, context);
   }
   // Díly s vyplněným druhem se kontrolují celé (i když se v načtených datech nepoužívají).
   for (const m of master.items.values()) if (m.kind && !mapped.has(m.item)) mapped.set(m.item, { m, contexts: new Set() });
 
   const modulesOf = (contexts: Set<Context>): CheckModule[] =>
-    CHECK_MODULES.filter((mod) => (mod === 'coverage' || mod === 'planning' ? contexts.has('coverage') : mod === 'calloffs' ? contexts.has('calloffs') : contexts.has('bom')));
+    CHECK_MODULES.filter((mod) =>
+      mod === 'coverage' ? contexts.has('coverage') : mod === 'planning' ? contexts.has('coverage') || contexts.has('made') : mod === 'calloffs' ? contexts.has('calloffs') : contexts.has('purchased'),
+    );
 
   // Strana je potřeba jen v kategoriích projektu, kde ji má aspoň jeden díl (díly se dělí na LHD / RHD).
   const sideGroups = new Set([...master.items.values()].filter((m) => m.side).map(sideGroup).filter(Boolean));
 
   const parts: PartIssue[] = [];
   for (const { contexts, ...u } of unmapped.values()) {
-    parts.push({ ...u, project: '', kind: '', notInMapping: true, fields: [], modules: modulesOf(contexts) });
+    const suggestedKind: ItemKind = contexts.has('coverage') || contexts.has('calloffs') ? 'FG' : contexts.has('made') ? 'SFG' : 'PG';
+    parts.push({ ...u, project: '', kind: '', notInMapping: true, suggestedKind, fields: [], modules: modulesOf(contexts) });
   }
   for (const { m, contexts } of mapped.values()) {
     // Co potřebují moduly, ve kterých díl je.
@@ -185,7 +200,8 @@ export function checkMapping(master: MasterData, { coverage, callOffs, bomParent
       need('planning', m.line === ASSEMBLY ? MODULE_FIELDS.planning : ['line']);
     }
     if (contexts.has('calloffs')) need('calloffs', MODULE_FIELDS.calloffs);
-    if (contexts.has('bom')) need('components', MODULE_FIELDS.components);
+    if (contexts.has('made')) need('planning', MADE_FIELDS);
+    if (contexts.has('purchased')) need('components', MODULE_FIELDS.components);
     const partModules = modulesOf(contexts);
     if (hasKind && !m.kind) byModule.set('kind', partModules);
     // Povinné údaje: podle druhu, bez druhu podle modulů.
@@ -208,6 +224,7 @@ export function checkMapping(master: MasterData, { coverage, callOffs, bomParent
         project: m.project,
         kind: m.kind,
         notInMapping: false,
+        suggestedKind: '',
         folder: '',
         fields,
         modules: partModules,
