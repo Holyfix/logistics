@@ -1,6 +1,7 @@
-import { dayToIso, weekday } from '../../core/dates';
+import { dayToIso, weekday, type DayNumber } from '../../core/dates';
 import { formatDayShort, formatOneDecimal, formatQuantity, type Locale } from '../../core/format';
-import type { DailyBar, KpiDef, ParetoBar } from '../../core/kpi';
+import { kpiStatus, kpiValue, letterStatus, type KpiData, type KpiDef, type KpiEntry, type Letter, type ParetoBar } from '../../core/kpi';
+import type { Messages } from '../../i18n/cs';
 import { useI18n } from '../../i18n/I18nProvider';
 
 const W = 260;
@@ -80,50 +81,77 @@ export function ParetoChart({ bars, label }: { bars: ParetoBar[]; label: string 
   );
 }
 
-/** Denní sloupce ukazatele obarvené podle stavu, přerušovaná čára = cíl. */
-export function DailyChart({ def, bars, label }: { def: KpiDef; bars: DailyBar[]; label: string }) {
-  const { t, locale } = useI18n();
-  const tc = t.kpi.charts;
-  if (!bars.length) return <p className="kpi-chart-empty muted">{tc.dailyEmpty}</p>;
+/** Cíl a červená hranice ukazatele jako text („≤ 0 · červená nad 10“). */
+export function targetText(def: KpiDef, texts: Messages['kpi']['targetText']): string {
+  const target = (def.higherIsBetter ? texts.higher : texts.lower).replace('{target}', String(def.target));
+  const red = def.red === null ? texts.warnOnly : (def.higherIsBetter ? texts.redHigher : texts.redLower).replace('{red}', String(def.red));
+  return `${target} · ${red}`;
+}
 
-  const max = Math.max(...bars.map((b) => b.value), def.target, 1);
-  const step = PLOT_W / bars.length;
-  const barW = Math.min(26, step * 0.7);
-  const x = (k: number) => M.left + step * k + step / 2;
-  const y = (v: number) => M.top + PLOT_H - (Math.max(0, v) / max) * PLOT_H;
-  const dayText = (d: number) => `${t.calloffs.weekdays[weekday(d) - 1]} ${formatDayShort(dayToIso(d), locale)}`;
+/** Hodnota do úzkého políčka: tisíce zkráceně („4,1k“), celá hodnota je v popisku. */
+function compactValue(value: number, locale: Locale): string {
+  if (Math.abs(value) < 1000) return formatValue(value, locale);
+  return `${formatValue(Math.round(value / 100) / 10, locale)}k`;
+}
+
+/** Popis ukazatelů písmene, které den obarvily (pro popisek dne v písmenu). */
+export function dayIssues(kpi: KpiData, letter: Letter, entry: KpiEntry | undefined, texts: Messages['kpi'], locale: Locale): string[] {
+  if (!entry) return [];
+  return kpi.defs
+    .filter((d) => d.letter === letter)
+    .flatMap((def) => {
+      const value = kpiValue(entry, def);
+      if (value === null || kpiStatus(def, value) === 'green') return [];
+      return [`• ${def.name}: ${formatValue(value, locale)}${def.unit ? ` ${def.unit}` : ''} (${targetText(def, texts.targetText)})`];
+    });
+}
+
+/**
+ * Všechny ukazatele písmene za poslední zapsané dny: řádek = ukazatel, políčko = den s hodnotou,
+ * barva podle stavu. Klik na políčko otevře zápis dne.
+ */
+export function LetterDays({ kpi, letter, entries, onPick }: { kpi: KpiData; letter: Letter; entries: KpiEntry[]; onPick: (day: DayNumber) => void }) {
+  const { t, locale } = useI18n();
+  const tk = t.kpi;
+  const defs = kpi.defs.filter((d) => d.letter === letter);
+  if (!defs.length || !entries.length) return <p className="kpi-chart-empty muted">{tk.charts.dailyEmpty}</p>;
+
+  const dayText = (d: DayNumber) => `${t.calloffs.weekdays[weekday(d) - 1]} ${Number(dayToIso(d).slice(8))}.`;
+  const dayLong = (d: DayNumber) => `${t.calloffs.weekdays[weekday(d) - 1]} ${formatDayShort(dayToIso(d), locale)}`;
+  const green = entries.filter((e) => letterStatus(kpi, letter, e) === 'green').length;
+  const columns = { gridTemplateColumns: `repeat(${entries.length}, minmax(0, 1fr))` };
 
   return (
-    <figure className="kpi-chart">
-      <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={label}>
-        {ticksOf(max).map((v) => (
-          <g key={v}>
-            <line className="kpi-chart-grid" x1={M.left} x2={W - M.right} y1={y(v)} y2={y(v)} />
-            <text className="kpi-chart-axis" x={M.left - 4} y={y(v) + 3} textAnchor="end">
-              {formatValue(v, locale)}
-            </text>
-          </g>
+    <div className="kpi-days">
+      <div className="kpi-days-row kpi-days-head" style={columns}>
+        {entries.map((e) => (
+          <span key={e.day}>{dayText(e.day)}</span>
         ))}
-        {bars.map((b, k) => (
-          <g key={b.day}>
-            <title>{`${dayText(b.day)}: ${formatValue(b.value, locale)}${def.unit ? ` ${def.unit}` : ''} – ${t.kpi.legend[b.status]}`}</title>
-            <rect className={`kpi-chart-bar kpi-${b.status}`} x={x(k) - barW / 2} y={y(b.value)} width={barW} height={Math.max(1, M.top + PLOT_H - y(b.value))} rx={2} />
-            <text className="kpi-chart-value" x={x(k)} y={y(b.value) - 3} textAnchor="middle">
-              {formatValue(b.value, locale)}
-            </text>
-            <text className="kpi-chart-label" transform={`translate(${x(k) + 3},${M.top + PLOT_H + 8}) rotate(-40)`} textAnchor="end">
-              {dayText(b.day)}
-            </text>
-          </g>
-        ))}
-        <line className="kpi-chart-target" x1={M.left} x2={W - M.right} y1={y(def.target)} y2={y(def.target)} />
-      </svg>
-      <figcaption className="kpi-chart-legend">
-        <span>
-          <i className="kpi-chart-legend-target" /> {tc.legendTarget.replace('{target}', formatValue(def.target, locale))}
-          {def.unit && ` ${def.unit}`}
-        </span>
-      </figcaption>
-    </figure>
+      </div>
+      {defs.map((def) => (
+        <div key={def.id} className="kpi-days-kpi">
+          <div className="kpi-days-name">
+            {def.name}{' '}
+            <small>
+              {def.unit && `${def.unit} · `}
+              {targetText(def, tk.targetText)}
+            </small>
+          </div>
+          <div className="kpi-days-row" style={columns}>
+            {entries.map((e) => {
+              const value = kpiValue(e, def);
+              const status = value === null ? null : kpiStatus(def, value);
+              const title = `${dayLong(e.day)} – ${def.name}: ${value === null ? tk.charts.noValue : `${formatValue(value, locale)}${def.unit ? ` ${def.unit}` : ''} – ${tk.legend[status!]}`}`;
+              return (
+                <button key={e.day} type="button" className={`kpi-days-cell ${status ? `kpi-${status}` : 'kpi-missing'}`} title={title} aria-label={title} onClick={() => onPick(e.day)}>
+                  {value === null ? '–' : compactValue(value, locale)}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+      <p className="kpi-caption">{tk.inTarget.replace('{green}', String(green)).replace('{days}', String(entries.length))}</p>
+    </div>
   );
 }

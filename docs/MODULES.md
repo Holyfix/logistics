@@ -71,8 +71,9 @@ a Dodavatelé odložené. Modul Kapacity (odvolávky vs. kapacita linek) byl zva
 - ✅ Uložení do `KPI/KPI.xlsx` ve sdílené složce; na rozcestníku jsou písmena SQCDP obarvená podle předchozího pracovního dne (nezapsaný den = bez barvy)
 - ✅ **Grafy pod písmeny:** pod S a Q Paretův graf kategorií za zobrazený měsíc nebo od začátku roku (součet
   událostí za kategorii, ukazatel bez kategorií svým součtem, např. úrazy; sloupce sestupně, kumulativní čára
-  a hranice 80 %). Pod C, D a P denní sloupce posledních 7 zapsaných dní vybraného ukazatele písmene, obarvené
-  podle stavu, s přerušovanou čarou cíle
+  a hranice 80 %). Pod C, D a P všechny ukazatele písmene za posledních 7 zapsaných dní: řádek = ukazatel
+  (s cílem a červenou hranicí), políčko = den s hodnotou obarvené podle stavu; klik otevře zápis dne.
+  Popisek dne v písmenu vyjmenuje ukazatele, které den obarvily, s hodnotou
 - ⏳ Propojení s OIL: písmeno u bodu OIL, seznam otevřených opatření, založení bodu z červeného dne
 ### Call-offs
 Hlavní údaj je **Discrete Qty** (požadavek na den), kumulativy jsou doplňková informace.

@@ -550,10 +550,9 @@ export const cs = {
       paretoTitle: '{label}: {value}, kumulativně {share} %',
       legendEvents: 'počet událostí',
       legendCumulative: 'kumulativně %',
-      kpi: 'Ukazatel v grafu',
       last: 'posledních 7 zapsaných dní',
       dailyEmpty: 'Zatím žádné zapsané dny.',
-      legendTarget: 'cíl {target}',
+      noValue: 'nezapsáno',
     },
     entry: {
       heading: 'Zápis za den',
