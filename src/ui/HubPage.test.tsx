@@ -84,6 +84,17 @@ describe('HubPage', () => {
     expect(badges.every((b) => b.className.includes('hub-kpi-none'))).toBe(true);
   });
 
+  it('u Dashboardu počet oblastí, které hoří a kde je pozor', () => {
+    const day = (offset: number) => dayFromParts(new Date().getFullYear(), new Date().getMonth() + 1, new Date().getDate())! + offset;
+    const item = { id: 1, problem: '', action: '', owner: '', opened: day(-30), due: day(-2), progress: 0 as const, cancelled: false, closed: null, comments: [], shifts: [], letter: null, kpi: null };
+    renderHub([cw41, cw42], { items: [item] });
+    const metric = screen.getByRole('link', { name: /Dashboard/ }).querySelector('.hub-dash')!;
+    // OIL po termínu hoří; bez coverage, kusovníku a s neaktuálními daty pozor
+    expect(metric.textContent).toMatch(/^ 1 hoří \d pozor$/);
+    expect(metric.querySelector('.dot-crit')).not.toBeNull();
+    expect(metric.getAttribute('title')).toContain('OIL: hoří');
+  });
+
   it('bez dat číslo nezobrazí', () => {
     renderHub(null);
     expect(callOffsLink().querySelector('.metric')).toBeNull();

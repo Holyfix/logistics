@@ -30,6 +30,7 @@ export const cs = {
     phase: 'Fáze',
     later: 'Později',
     metrics: {
+      allOk: 'vše v pořádku',
       changes: { one: 'změna', few: 'změny', other: 'změn' },
       changesTitle: 'Významné změny odvolávek v příštích 12 týdnech (všechny díly)',
       against: 'proti exportu',

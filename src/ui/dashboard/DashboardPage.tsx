@@ -1,30 +1,18 @@
-import { useMemo, type ReactNode } from 'react';
-import { buildCoverage, SHORTAGE_DAYS } from '../../core/coverage/compute';
-import { callOffDigest, componentAlerts, dataFreshness, oilAlerts, projectCoverage, type CoverageSpan, type ProjectCoverage, type Severity } from '../../core/dashboard';
+import { type ReactNode } from 'react';
+import { SHORTAGE_DAYS } from '../../core/coverage/compute';
+import type { CoverageSpan, ProjectCoverage, Severity } from '../../core/dashboard';
 import { dayToIso, weekday, type DayNumber } from '../../core/dates';
 import { formatDayShort, formatPercent, formatQuantity, formatSigned } from '../../core/format';
 import { useI18n } from '../../i18n/I18nProvider';
-import { localToday, useComponents } from '../components/useComponents';
+import { localToday } from '../components/useComponents';
 import { useData } from '../data/DataProvider';
 import { Icon, type IconName } from '../icons';
-import { useOilDraftList } from '../oil/OilProvider';
-import { useMappingCheck } from '../data/MappingPanels';
-import { checkCount } from '../../core/mappingCheck';
+import { useDashboard, type Tone } from './useDashboard';
 
 /** Kolik nejnaléhavějších položek ukazuje karta. */
 const CARD_LINES = 4;
 
-type Tone = Severity | 'ok';
-
 const Dot = ({ tone }: { tone: Tone }) => <i className={`dot dot-${tone}`} aria-hidden="true" />;
-
-/** Nejhorší stav z položek; bez dat pozor, bez položek v pořádku. */
-function worstOf(list: readonly { severity: Severity }[] | null): Tone {
-  if (!list) return 'warn';
-  if (list.some((a) => a.severity === 'crit')) return 'crit';
-  if (list.some((a) => a.severity === 'warn')) return 'warn';
-  return 'ok';
-}
 
 interface Line {
   key: string;
@@ -56,32 +44,7 @@ export function DashboardPage({ today = localToday(), now = Date.now() }: { toda
   const td = t.dashboard;
   const { state } = useData();
   const data = state.data;
-  const components = useComponents(today);
-  const oilDraft = useOilDraftList();
-  const mapping = useMappingCheck();
-  const mappingIssues = mapping ? checkCount(mapping) : 0;
-  const oilList = oilDraft ?? data?.oil?.list ?? null;
-
-  const coverage = useMemo(() => {
-    if (!data?.coverage.length) return null;
-    const master = data.master?.data;
-    return { withTransit: buildCoverage(data.coverage, master, { transit: true }), withoutTransit: buildCoverage(data.coverage, master, { transit: false }) };
-  }, [data]);
-  const projects = useMemo(() => (coverage ? projectCoverage(coverage.withTransit, coverage.withoutTransit, today) : null), [coverage, today]);
-  const componentList = useMemo(() => (components ? componentAlerts(components) : null), [components]);
-  const oil = useMemo(() => (oilList ? oilAlerts(oilList, today) : null), [oilList, today]);
-  const calloffs = useMemo(() => {
-    const current = data?.exports.at(-1);
-    return current ? callOffDigest(current, data!.exports.at(-2)) : null;
-  }, [data]);
-  const freshness = useMemo(
-    () =>
-      data
-        ? dataFreshness({ callOffs: data.exports.at(-1), coverage: data.coverage, stock: data.stock, boms: data.boms, master: data.master, today, now })
-        : [],
-    [data, today, now],
-  );
-
+  const { projects, componentList, oil, calloffs, freshness, mapping, mappingIssues, tones } = useDashboard(today, now);
   const head = (
     <div className="page-head module-head">
       <span className="module-icon">
@@ -143,7 +106,7 @@ export function DashboardPage({ today = localToday(), now = Date.now() }: { toda
       title: td.customer.title,
       icon: 'coverage',
       href: '#coverage',
-      tone: projects ? worstOf(projects.flatMap((p) => (p.severity ? [{ severity: p.severity }] : []))) : 'warn',
+      tone: tones.customer,
       value: projects ? projects.filter((p) => p.severity === 'crit').length : null,
       label: td.customer.main,
       counters: projects
@@ -161,7 +124,7 @@ export function DashboardPage({ today = localToday(), now = Date.now() }: { toda
       title: td.components.title,
       icon: 'components',
       href: '#components',
-      tone: worstOf(componentList),
+      tone: tones.components,
       value: componentList ? count(componentList, 'crit') : null,
       label: td.components.main,
       counters: [
@@ -185,7 +148,7 @@ export function DashboardPage({ today = localToday(), now = Date.now() }: { toda
       title: td.oil.title,
       icon: 'actions',
       href: '#oil',
-      tone: worstOf(oil),
+      tone: tones.oil,
       value: oil ? count(oil, 'crit') : null,
       label: td.oil.main,
       counters: [
@@ -210,7 +173,7 @@ export function DashboardPage({ today = localToday(), now = Date.now() }: { toda
       title: td.calloffs.title,
       icon: 'calloffs',
       href: '#calloffs',
-      tone: !calloffs ? 'warn' : calloffs.alerts.some((a) => a.severity === 'warn') ? 'warn' : 'ok',
+      tone: tones.calloffs,
       value: calloffs ? calloffs.changes : null,
       label: calloffs?.previous ? `${td.calloffs.main} · CW ${calloffs.week} ${td.calloffs.against} CW ${calloffs.previous.week}` : `${td.calloffs.main} · ${td.calloffs.single}`,
       counters: calloffs ? [{ value: calloffs.backlogPieces, label: `${td.pcs} ${td.calloffs.backlog}` }] : [],
@@ -234,7 +197,7 @@ export function DashboardPage({ today = localToday(), now = Date.now() }: { toda
       title: td.data.title,
       icon: 'data',
       href: '#data',
-      tone: stale.length || mappingIssues ? 'warn' : 'ok',
+      tone: tones.data,
       value: stale.length,
       label: td.data.main,
       counters: mapping ? [{ value: mappingIssues, label: td.data.mapping }] : [],

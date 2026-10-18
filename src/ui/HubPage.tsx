@@ -10,6 +10,7 @@ import { useI18n } from '../i18n/I18nProvider';
 import { useData } from './data/DataProvider';
 import { localToday, useComponents } from './components/useComponents';
 import { Icon } from './icons';
+import { AREAS, useDashboard } from './dashboard/useDashboard';
 import { useOilDraftList } from './oil/OilProvider';
 import { GROUPS, MODULES, type ModuleDef, type ModuleId } from './modules';
 
@@ -72,6 +73,8 @@ function useMetrics(): Partial<Record<ModuleId, ReactNode>> {
   }, [coverage, master]);
 
   const today = useMemo(localToday, []);
+  const now = useMemo(() => Date.now(), []);
+  const dashboard = useDashboard(today, now);
   const components = useComponents(today);
   const oilDraft = useOilDraftList();
   const oilList = oilDraft ?? state.data?.oil?.list ?? null;
@@ -124,6 +127,27 @@ function useMetrics(): Partial<Record<ModuleId, ReactNode>> {
       : soon
         ? <Metric value={formatQuantity(soon, locale)} label={tm.oilSoon} tone="warn" title={title} />
         : <Metric value={formatQuantity(oil.length, locale)} label={tm.oilOpen} tone="ok" title={title} />;
+  }
+  // Dashboard: kolik oblastí hoří a kolik je pozor (stejně jako souhrn nahoře v Dashboardu).
+  if (state.data) {
+    const td = t.dashboard;
+    const counts = (['crit', 'warn'] as const).map((tone) => ({ tone, n: AREAS.filter((a) => dashboard.tones[a] === tone).length })).filter((c) => c.n > 0);
+    const title = AREAS.map((a) => `${td[a].title}: ${td.summary[dashboard.tones[a]]}`).join(', ');
+    metrics.dashboard = (
+      <span className="metric hub-dash" title={title}>
+        {counts.length ? (
+          counts.map((c) => (
+            <span key={c.tone}>
+              <i className={`dot dot-${c.tone}`} aria-hidden="true" /> <b>{formatQuantity(c.n, locale)}</b> {td.summary[c.tone]}
+            </span>
+          ))
+        ) : (
+          <span>
+            <i className="dot dot-ok" aria-hidden="true" /> {tm.allOk}
+          </span>
+        )}
+      </span>
+    );
   }
   // KPI: písmena SQCDP obarvená podle předchozího pracovního dne (nezapsaný den = šedá).
   if (state.data) {
