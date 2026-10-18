@@ -3,7 +3,7 @@ import { callOffSummary } from '../core/calloffs/views';
 import { COMPONENT_SOON_DAYS } from '../core/components/compute';
 import { oilAlerts } from '../core/dashboard';
 import { dayToIso, weekday } from '../core/dates';
-import { letterStatus, LETTERS } from '../core/kpi';
+import { dayState, defaultKpis, LETTERS, previousWorkday } from '../core/kpi';
 import { buildCoverage, SHORTAGE_DAYS, shortage } from '../core/coverage/compute';
 import { formatDayShort, formatQuantity } from '../core/format';
 import { useI18n } from '../i18n/I18nProvider';
@@ -125,16 +125,23 @@ function useMetrics(): Partial<Record<ModuleId, ReactNode>> {
         ? <Metric value={formatQuantity(soon, locale)} label={tm.oilSoon} tone="warn" title={title} />
         : <Metric value={formatQuantity(oil.length, locale)} label={tm.oilOpen} tone="ok" title={title} />;
   }
-  // KPI: poslední zapsaný den – kolik písmen je mimo cíl.
-  const kpi = state.data?.kpi?.data;
-  const last = kpi?.entries.at(-1);
-  if (kpi && last) {
-    const statuses = LETTERS.map((l) => letterStatus(kpi, l, last));
-    const red = statuses.filter((s) => s === 'red').length;
-    const yellow = statuses.filter((s) => s === 'yellow').length;
+  // KPI: písmena SQCDP obarvená podle předchozího pracovního dne (nezapsaný den = šedá).
+  if (state.data) {
+    const kpi = state.data.kpi?.data ?? defaultKpis(t.kpi.defaults);
+    const day = previousWorkday(today);
+    const states = LETTERS.map((letter) => ({ letter, state: dayState(kpi, letter, day, today) }));
     const tk = t.kpi.hub;
-    const day = `${t.calloffs.weekdays[weekday(last.day) - 1]} ${formatDayShort(dayToIso(last.day), locale)}`;
-    metrics.kpi = <Metric value={formatQuantity(red, locale)} label={tk.red} tone={red ? 'crit' : yellow ? 'warn' : 'ok'} title={tk.title.replace('{day}', day)} />;
+    const dayText = `${t.calloffs.weekdays[weekday(day) - 1]} ${formatDayShort(dayToIso(day), locale)}`;
+    const title = `${tk.title.replace('{day}', dayText)}: ${states.map((s) => `${s.letter} ${t.kpi.dayTitle[s.state]}`).join(', ')}`;
+    metrics.kpi = (
+      <span className="metric hub-kpi" title={title} aria-label={title}>
+        {states.map((s) => (
+          <span key={s.letter} className={`kpi-badge kpi-${s.state}`}>
+            {s.letter}
+          </span>
+        ))}
+      </span>
+    );
   }
   return metrics;
 }

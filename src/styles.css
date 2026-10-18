@@ -1838,6 +1838,22 @@ button.oil-step:disabled {
   cursor: pointer;
 }
 
+/* Písmena SQCDP na rozcestníku (barva podle stavu dne níže). */
+.hub-kpi {
+  gap: 3px;
+}
+
+.kpi-badge {
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  font: 700 12px/1 var(--font-display);
+  color: #ffffff;
+}
+
 .kpi-green {
   --kpi: #6bb33f;
   background: var(--kpi);
