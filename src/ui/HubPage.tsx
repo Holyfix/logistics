@@ -136,7 +136,7 @@ function useMetrics(): Partial<Record<ModuleId, ReactNode>> {
     metrics.kpi = (
       <span className="metric hub-kpi" title={title} aria-label={title}>
         {states.map((s) => (
-          <span key={s.letter} className={`kpi-badge kpi-${s.state}`}>
+          <span key={s.letter} className={`hub-kpi-letter hub-kpi-${s.state}`}>
             {s.letter}
           </span>
         ))}

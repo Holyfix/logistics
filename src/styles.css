@@ -1838,22 +1838,6 @@ button.oil-step:disabled {
   cursor: pointer;
 }
 
-/* Písmena SQCDP na rozcestníku (barva podle stavu dne níže). */
-.hub-kpi {
-  gap: 3px;
-}
-
-.kpi-badge {
-  display: inline-grid;
-  place-items: center;
-  width: 20px;
-  height: 20px;
-  border: 1px solid transparent;
-  border-radius: 4px;
-  font: 700 12px/1 var(--font-display);
-  color: #ffffff;
-}
-
 .kpi-green {
   --kpi: #6bb33f;
   background: var(--kpi);
@@ -2090,4 +2074,30 @@ button.oil-step:disabled {
   margin: 40px 0;
   text-align: center;
   font-size: 13px;
+}
+
+/* Písmena SQCDP na rozcestníku: barevné písmo podle stavu předchozího pracovního dne. */
+.hub-kpi {
+  gap: 4px;
+}
+
+.hub-kpi-letter {
+  font: 700 18px/1 var(--font-display);
+  color: var(--muted);
+  opacity: 0.55;
+}
+
+.hub-kpi-green {
+  color: #4f9a26;
+  opacity: 1;
+}
+
+.hub-kpi-yellow {
+  color: #d89a00;
+  opacity: 1;
+}
+
+.hub-kpi-red {
+  color: #d8404b;
+  opacity: 1;
 }
