@@ -259,7 +259,7 @@ export function KpiPage({ today = localToday() }: { today?: DayNumber } = {}) {
               </button>
             </div>
             <ul className="kpi-legend">
-              {(['green', 'yellow', 'red', 'missing'] as const).map((s) => (
+              {(['green', 'yellow', 'red', 'missing', 'weekend'] as const).map((s) => (
                 <li key={s}>
                   <i className={`kpi-swatch kpi-${s}`} /> {tk.legend[s]}
                 </li>
