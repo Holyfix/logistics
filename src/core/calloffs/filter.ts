@@ -3,7 +3,7 @@
 
 import type { MasterItem } from '../masterdata';
 
-/** Hodnota filtru projektu pro díly, které v kmenových datech chybí. */
+/** Hodnota filtru projektu pro díly bez projektu: v mapování chybí, nebo nemají vyplněný projekt. */
 export const MISSING_MASTER = '__missing__';
 
 /** Údaje z mapování, podle kterých se odvolávky filtrují a členění (v tomto pořadí). */
@@ -23,8 +23,8 @@ export const EMPTY_FILTER: ItemFilter = { project: '', category: '', side: '', v
 
 /** Díl odpovídá filtrům mapování (bez hledání); `except` = bez filtru tohoto údaje (pro jeho nabídku). */
 function matches(m: MasterItem | undefined, filter: ItemFilter, except?: ItemField): boolean {
-  if (filter.project === MISSING_MASTER && except !== 'project') return !m;
-  return ITEM_FIELDS.every((field) => field === except || !filter[field] || m?.[field] === filter[field]);
+  if (filter.project === MISSING_MASTER && except !== 'project' && m?.project) return false;
+  return ITEM_FIELDS.every((field) => field === except || !filter[field] || (field === 'project' && filter.project === MISSING_MASTER) || m?.[field] === filter[field]);
 }
 
 export function filterItems(
@@ -52,10 +52,8 @@ export function filterOptions(items: readonly string[], master: ReadonlyMap<stri
   let missing = 0;
   for (const item of items) {
     const m = master?.get(item);
-    if (!m) {
-      missing++;
-      continue;
-    }
+    if (!m?.project) missing++;
+    if (!m) continue;
     ITEM_FIELDS.forEach((field, index) => {
       if (m[field] && matches(m, filter, field)) sets[index]!.add(m[field]);
     });

@@ -1,6 +1,6 @@
 // Kontrola mapování: vlastnosti dílů se berou jen z Item_Mapping (bez záloh). Co má být u dílu vyplněné, určuje druh
-// dílu (Item Type: FG hotový výrobek, SFG mezivýroba, PG nakupovaný); díl bez druhu se kontroluje podle modulů, ve
-// kterých je. Strana se vyžaduje jen tam, kde se díly kategorie projektu dělí na LHD / RHD; varianta se nekontroluje
+// dílu (Item Type: FG hotový výrobek, SFG mezivýroba, PG nakupovaný) a moduly, ve kterých díl je (díl bez druhu jen
+// moduly). Strana se vyžaduje jen tam, kde se díly kategorie projektu dělí na LHD / RHD; varianta se nekontroluje
 // (použije se, je-li vyplněná). Pro každý díl ukáže, co doplnit (celý řádek, nebo které sloupce) a kvůli kterým
 // modulům / podle druhu.
 
@@ -204,8 +204,9 @@ export function checkMapping(master: MasterData, { coverage, callOffs, bomParts 
     if (contexts.has('purchased')) need('components', MODULE_FIELDS.components);
     const partModules = modulesOf(contexts);
     if (hasKind && !m.kind) byModule.set('kind', partModules);
-    // Povinné údaje: podle druhu, bez druhu podle modulů.
-    const required = new Set<CheckedField>(m.kind ? KIND_FIELDS[m.kind] : byModule.keys());
+    // Povinné údaje: podle druhu a vždy i to, co potřebují moduly, ve kterých díl je (např. projekt u nakupovaného
+    // dílu v odvolávkách).
+    const required = new Set<CheckedField>([...(m.kind ? KIND_FIELDS[m.kind] : []), ...byModule.keys()]);
     if (hasKind && !m.kind && partModules.length) required.add('kind');
     if (!sideGroups.has(sideGroup(m))) required.delete('side');
     if (m.line !== ASSEMBLY) required.delete('orderMultiple');
@@ -213,7 +214,7 @@ export function checkMapping(master: MasterData, { coverage, callOffs, bomParts 
     const fields = CHECKED_FIELDS.flatMap((field): FieldIssue[] => {
       if (!required.has(field) || !has(field) || !isEmpty(m, field)) return [];
       const modules = byModule.get(field) ?? [];
-      return [{ field, modules: CHECK_MODULES.filter((x) => modules.includes(x)), byKind: m.kind !== '' }];
+      return [{ field, modules: CHECK_MODULES.filter((x) => modules.includes(x)), byKind: m.kind !== '' && KIND_FIELDS[m.kind].includes(field) }];
     });
     if (fields.length) {
       parts.push({

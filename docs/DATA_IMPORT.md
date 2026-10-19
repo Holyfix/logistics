@@ -78,7 +78,7 @@ sloupcem Item Type); ostatní listy (Návod) se vynechají. Díl na dvou listech
 | Sloupec | Alternativní názvy | Povinný |
 |---|---|---|
 | Item Number | Díl, Číslo dílu | ano |
-| Item Type | Druh dílu, Druh | ne; `FG` hotový výrobek, `SFG` mezivýroba (WIP, přijme i „WIP“), `PG` nakupovaný díl; podle něj Kontrola mapování určí, co má být u dílu vyplněné |
+| Item Type | Druh dílu, Druh | ne; `FG` hotový výrobek, `SFG` mezivýroba (WIP, přijme i „WIP“), `PG` nakupovaný díl; podle něj Kontrola mapování určí, co má být u dílu vyplněné; navíc vždy to, co potřebují moduly, ve kterých díl je (např. projekt u nakupovaného dílu v odvolávkách) |
 | Customer Number | Číslo zákazníka | u FG |
 | Description | Item Description, Popis | ano |
 | Project | Projekt | u FG a SFG |
@@ -102,7 +102,7 @@ do šablony na list PG.
   rychlý. Sloupce, které aplikace nepoužívá (Customer, Component Coverage, Type, Safety Stock, Safety Time), šablona
   neobsahuje. Soubor uložte
   jako Item_Mapping.xlsx.
-- Díly bez kmenových dat lze v Call-offs vyfiltrovat volbou „Bez kmenových dat“.
+- Díly bez projektu (v mapování chybí, nebo nemají vyplněný Project) lze v Call-offs vyfiltrovat volbou „Bez projektu“.
 - **Číslo zákazníka** se pro párování se soubory zákazníka sjednotí: velká písmena, bez mezer;
   u dlouhých čísel začínajících „A“ (15 a více znaků) se mezi prvními 11 a posledními 4 znaky vynechají
   doplňující nuly a pomlčky. Tím se shodnou zápisy `A1234567890  00009051`, `A1234567890      9051`

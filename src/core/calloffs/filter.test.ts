@@ -19,6 +19,15 @@ describe('filterItems', () => {
     expect(filterItems(items, desc, master, { ...EMPTY_FILTER, project: MISSING_MASTER })).toEqual(['4']);
   });
 
+  it('Bez projektu: díly bez mapování i díly v mapování bez projektu, kombinovatelné s kategorií', () => {
+    const withEmpty = new Map([...master, m('6', '', 'DP', '')]);
+    const all = [...items, '6'];
+    expect(filterItems(all, [...desc, 'CLIP'], withEmpty, { ...EMPTY_FILTER, project: MISSING_MASTER })).toEqual(['4', '6']);
+    expect(filterItems(all, [...desc, 'CLIP'], withEmpty, { ...EMPTY_FILTER, project: MISSING_MASTER, category: 'DP' })).toEqual(['6']);
+    expect(filterOptions(all, withEmpty).missing).toBe(2);
+    expect(filterOptions(all, withEmpty, { ...EMPTY_FILTER, project: MISSING_MASTER }).categories).toEqual(['DP']);
+  });
+
 });
 
 describe('filterOptions', () => {
