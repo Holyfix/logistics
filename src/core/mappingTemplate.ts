@@ -25,7 +25,7 @@ export const TEMPLATE_COLUMNS: Record<TemplateKey, { header: string; width: numb
 export const KIND_COLUMNS: Record<ItemKind, readonly TemplateKey[]> = {
   FG: ['item', 'customerNumber', 'description', 'project', 'category', 'side', 'variant', 'line', 'orderMultiple'],
   SFG: ['item', 'description', 'project', 'line'],
-  PG: ['item', 'description'],
+  PG: ['item', 'description', 'project', 'category'],
 };
 
 /** Všechny sloupce šablony v pořadí (pro Návod). */
@@ -77,6 +77,8 @@ export interface TemplateTexts {
   sideRule: string;
   /** Balení u FG: jen u linky ASSEMBLY. */
   packRule: string;
+  /** Projekt a kategorie u PG: jen u dílů, které zákazník odvolává. */
+  calloffRule: string;
   notNeeded: string;
   /** Poznámka ke sloupci (podle klíče sloupce). */
   columnNotes: Partial<Record<TemplateKey, string>>;
@@ -154,6 +156,7 @@ export function mappingTemplate(master: MasterData | undefined, extra: readonly 
   const statusText = (key: TemplateKey, kind: ItemKind): ReportCell => {
     if (kind === 'FG' && key === 'side') return { value: texts.sideRule, align: 'center', wrap: true };
     if (kind === 'FG' && key === 'orderMultiple') return { value: texts.packRule, fontWeight: 'bold', align: 'center', wrap: true };
+    if (kind === 'PG' && (key === 'project' || key === 'category')) return { value: texts.calloffRule, align: 'center', wrap: true };
     const s = columnStatus(key, kind);
     if (s === 'required') return { value: texts.required, fontWeight: 'bold', align: 'center' };
     if (s === 'notNeeded') return { value: texts.notNeeded, backgroundColor: COLORS.notNeeded, textColor: COLORS.muted, align: 'center' };

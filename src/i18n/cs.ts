@@ -357,6 +357,7 @@ export const cs = {
         optional: 'volitelné',
         sideRule: 'jen kde se kategorie dělí na LHD / RHD',
         packRule: 'povinné u linky ASSEMBLY',
+        calloffRule: 'jen u dílů v odvolávkách',
         notNeeded: '–',
         columnNotes: {
           customerNumber: 'číslo dílu zákazníka tak, jak je v souborech Coverage; podle něj se Coverage spojí s dílem',
@@ -369,7 +370,7 @@ export const cs = {
           orderMultiple: 'kusů v balení; plán montáže plánuje po celých baleních',
         },
         footnotes: [
-          'Každý druh dílu má vlastní list (FG, SFG, PG) jen se sloupci, které aplikace pro daný druh používá. Druh dílu určuje název listu.',
+          'Každý druh dílu má vlastní list (FG, SFG, PG) jen se sloupci, které aplikace pro daný druh používá. Druh dílu určuje název listu. Na listu PG vyplňte projekt a kategorii jen u dílů, které zákazník odvolává.',
           'Díly bez druhu jsou zařazené podle údajů: linka FOA/SLH/IMM → SFG, dřívější Component Coverage = Ano → PG, ostatní → FG.',
           'Díly, které v mapování chybí (z Coverage, odvolávek, kusovníků), jsou na listu FG. Případně je přesuňte na správný list.',
           'Chybějící údaj zůstane prázdný; co doplnit, ukazuje Kontrola mapování v modulu Data.',

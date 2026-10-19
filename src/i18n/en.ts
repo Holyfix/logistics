@@ -355,6 +355,7 @@ export const en: Messages = {
         optional: 'optional',
         sideRule: 'only where the category splits into LHD / RHD',
         packRule: 'required for line ASSEMBLY',
+        calloffRule: 'only for parts in call-offs',
         notNeeded: '–',
         columnNotes: {
           customerNumber: 'customer part number as in the Coverage files; Coverage is joined to the part by it',
@@ -367,7 +368,7 @@ export const en: Messages = {
           orderMultiple: 'pieces per pack; the assembly plan uses whole packs',
         },
         footnotes: [
-          'Each item type has its own sheet (FG, SFG, PG) with only the columns the app uses for it. The sheet name sets the item type.',
+          'Each item type has its own sheet (FG, SFG, PG) with only the columns the app uses for it. The sheet name sets the item type. On the PG sheet fill in project and category only for parts the customer calls off.',
           'Parts without a type are placed by their data: line FOA/SLH/IMM → SFG, former Component Coverage = Yes → PG, others → FG.',
           'Parts missing in the mapping (from Coverage, call-offs, BOMs) are on the FG sheet. Move them to the right sheet if needed.',
           'A missing value stays empty; the mapping check in the Data module shows what to fill in.',
