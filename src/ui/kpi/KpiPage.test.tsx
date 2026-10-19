@@ -241,6 +241,15 @@ describe('KpiPage', () => {
     fireEvent.click(within(injury() as HTMLElement).getAllByRole('button', { name: '+ OIL' })[0]!);
     expect(location.hash).toBe('#oil?open=1');
     location.hash = '';
+    expect(injury().querySelector('.kpi-off-oil')!.textContent).toBe('OIL bod 1');
+    // + OIL u skupiny: bod patří jen k ní (ne k ostatním skupinám podle textu)
+    const group = (name: string) => [...injury().querySelectorAll('.kpi-group')].find((g) => g.querySelector('.kpi-group-name')!.textContent === name)!;
+    fireEvent.click(within(group('Novák') as HTMLElement).getByRole('button', { name: '+ OIL' }));
+    location.hash = '';
+    expect(group('Novák').querySelector('.kpi-group-oil')!.textContent).toBe('OIL bod 2');
+    expect(group('Dvořák').querySelector('.kpi-group-oil')!.textContent).toBe('+ OIL');
+    // u ukazatele oba body: „OIL bod 1“ a „2“
+    expect([...injury().querySelectorAll('.kpi-off-oil button')].map((b) => b.textContent)).toEqual(['OIL bod 1', '2']);
     // den v pruhu otevře zápis
     fireEvent.click(within(injury().querySelector('.kpi-off-head') as HTMLElement).getByRole('button', { name: 'Pá 2. 10.' }));
     expect(screen.getByRole('heading', { level: 2, name: /Zápis za den Pá 2\. 10\./ })).toBeTruthy();

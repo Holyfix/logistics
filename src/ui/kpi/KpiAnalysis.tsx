@@ -3,7 +3,7 @@ import { dayToIso, parseDay, weekday, type DayNumber } from '../../core/dates';
 import { formatDayShort } from '../../core/format';
 import { entryOf, kpiStatus, kpiValue, LETTERS, type KpiData, type KpiDef, type KpiDetail, type KpiSource, type Letter } from '../../core/kpi';
 import { detailGroups, GROUP_DIMS, letterSummary, nokPoints, offKpis, type DetailGroup, type GroupDim, type KpiOff, type NokPoint } from '../../core/kpiAnalysis';
-import { ownerNames, parseKpiSource, statusOf, type OilItem } from '../../core/oil';
+import { parseKpiSource, statusOf, type KpiGroupRef, type OilItem } from '../../core/oil';
 import { useI18n } from '../../i18n/I18nProvider';
 import { downloadXlsx } from '../../platform/download';
 import { openOilItem } from './KpiActions';
@@ -17,20 +17,18 @@ const ITEM_ROWS = 5;
 /** Od kolika dní je opakování „horké“ (červený štítek). */
 const HOT_DAYS = 3;
 
-/** Otevřené body OIL, které se týkají hodnoty: odpovědný (osoba), jinak hodnota v textu problému nebo opatření. */
-function oilFor(items: readonly OilItem[], dim: GroupDim, value: string, today: DayNumber): OilItem[] {
-  const v = value.toLowerCase();
-  if (!v) return [];
+const isOpenOil = (i: OilItem, today: DayNumber) => !['done', 'cancelled'].includes(statusOf(i, today));
+
+/** Otevřené body OIL založené k ukazateli (zdroj KPI), bez ohledu na skupinu. */
+const oilForKpi = (items: readonly OilItem[], kpiId: string, today: DayNumber) => items.filter((i) => parseKpiSource(i.kpi)?.kpiId === kpiId && isOpenOil(i, today));
+
+/** Otevřené body OIL založené ke skupině ukazatele (+ OIL u skupiny): ukazatel, seskupení a hodnota. */
+function oilForGroup(items: readonly OilItem[], kpiId: string, dim: GroupDim, value: string, today: DayNumber): OilItem[] {
   return items.filter((i) => {
-    if (['done', 'cancelled'].includes(statusOf(i, today))) return false;
-    if (dim === 'person') return ownerNames(i.owner).some((o) => o.toLowerCase() === v);
-    return v.length >= 3 && `${i.problem} ${i.action}`.toLowerCase().includes(v);
+    const s = parseKpiSource(i.kpi);
+    return s?.kpiId === kpiId && s.group?.dim === dim && s.group.value.toLowerCase() === value.toLowerCase() && isOpenOil(i, today);
   });
 }
-
-/** Otevřené body OIL založené k ukazateli (zdroj KPI). */
-const oilForKpi = (items: readonly OilItem[], kpiId: string, today: DayNumber) =>
-  items.filter((i) => parseKpiSource(i.kpi)?.kpiId === kpiId && !['done', 'cancelled'].includes(statusOf(i, today)));
 
 /** Český tvar podle počtu: 1 den, 2–4 dny, 5 dní. */
 const plural = (n: number, forms: readonly string[]) => `${n} ${forms[n === 1 ? 0 : n >= 2 && n <= 4 ? 1 : 2]}`;
@@ -57,7 +55,7 @@ export function KpiAnalysis({
   /** Dodavatel dílu z mapování (prázdný = neuvedeno). */
   supplierOf: (item: string) => string;
   onOpenDay: (day: DayNumber) => void;
-  onAddOil: (init: { letter: Letter; problem: string; kpi: { day: DayNumber; kpiId: string } }) => void;
+  onAddOil: (init: { letter: Letter; problem: string; kpi: { day: DayNumber; kpiId: string; group?: KpiGroupRef } }) => void;
 }) {
   const { t, locale } = useI18n();
   const ta = t.kpi.analysis;
@@ -108,12 +106,17 @@ export function KpiAnalysis({
   );
   const groupStrip = (g: DetailGroup) => strip(periodDays.map((day) => ({ day, state: g.days.get(day) ?? 'none' })), false);
   const daysBadge = (n: number) => <span className={`kpi-days-badge${n >= HOT_DAYS ? ' kpi-days-hot' : n === 1 ? ' kpi-days-once' : ''}`}>{plural(n, ta.dayForms)}</span>;
-  const oilLinks = (items: OilItem[]) =>
-    items.map((i) => (
-      <button key={i.id} type="button" className="link-button kpi-oil-link" onClick={() => openOilItem(i.id)}>
-        {ta.oilItem.replace('{id}', String(i.id))}
-      </button>
-    ));
+  /** Odkazy na body OIL: nejvýš dva, další jen počtem (všechny v popisku). */
+  const oilLinks = (items: OilItem[]) => (
+    <span className="kpi-oil-links" title={items.map((i) => `${ta.oilItem.replace('{id}', String(i.id))}: ${i.problem.split('\n')[0]}`).join('\n')}>
+      {items.slice(0, 2).map((i, k) => (
+        <button key={i.id} type="button" className="link-button kpi-oil-link" onClick={() => openOilItem(i.id)}>
+          {k === 0 ? ta.oilItem.replace('{id}', String(i.id)) : i.id}
+        </button>
+      ))}
+      {items.length > 2 && <span className="muted">+{items.length - 2}</span>}
+    </span>
+  );
   const addOilButton = (onClick: () => void) => (
     <button type="button" className="button button-small" onClick={onClick}>
       + OIL
@@ -200,12 +203,12 @@ export function KpiAnalysis({
               const key = `${def.id}|${dim}|${g.value}`;
               const groupOpen = openGroups.has(key);
               const days = [...g.days.keys()].sort((a, b) => a - b);
-              const oil = oilFor(oilItems, dim, g.value, today);
+              const oil = g.value ? oilForGroup(oilItems, def.id, dim, g.value, today) : [];
               const items = more.has(key) ? g.items : g.items.slice(0, ITEM_ROWS);
               const addGroupOil = () => {
                 const parts = g.items.slice(0, ITEM_ROWS).map((i) => i.label);
                 const problem = `${def.name} – ${dimLabel(def.source, dim)} ${groupLabel(dim, g)}: ${days.length}× (${daysText(days)})${parts.length ? `; ${parts.join(', ')}` : ''}`;
-                onAddOil({ letter: def.letter, problem, kpi: { day: lastDay(days), kpiId: def.id } });
+                onAddOil({ letter: def.letter, problem, kpi: { day: lastDay(days), kpiId: def.id, group: { dim, value: g.value } } });
               };
               return (
                 <div key={key} className="kpi-group">

@@ -35,7 +35,7 @@ import {
   type KpiStatus,
   type Letter,
 } from '../../core/kpi';
-import { addItem, emptyOil, kpiSourceKey, ownerNames, stamp } from '../../core/oil';
+import { addItem, emptyOil, kpiSourceKey, ownerNames, parseKpiSource, stamp } from '../../core/oil';
 import { useI18n } from '../../i18n/I18nProvider';
 import { xlsxBlob } from '../../platform/download';
 import { localToday, useComponents } from '../components/useComponents';
@@ -622,7 +622,7 @@ export function KpiPage({ today = localToday() }: { today?: DayNumber } = {}) {
                               </button>
                             )}
                             {oilList.items
-                              .filter((i) => i.kpi === kpiSourceKey(dayOf(def), def.id))
+                              .filter((i) => { const s = parseKpiSource(i.kpi); return s?.kpiId === def.id && s.day === dayOf(def); })
                               .map((i) => (
                                 <a key={i.id} href={`#oil?open=${i.id}`}>
                                   {tk.entry.point.replace('{id}', String(i.id))}
@@ -653,7 +653,7 @@ export function KpiPage({ today = localToday() }: { today?: DayNumber } = {}) {
           supplierOf={(item) => suppliers.get(item.toUpperCase()) ?? ''}
           onOpenDay={(d) => openDay(d)}
           onAddOil={({ letter, problem, kpi: source }) => {
-            const result = addItem(oilList, today, { letter, problem, kpi: kpiSourceKey(source.day, source.kpiId) });
+            const result = addItem(oilList, today, { letter, problem, kpi: kpiSourceKey(source.day, source.kpiId, source.group) });
             setOilDraft(result.list);
             openOilItem(result.id);
           }}

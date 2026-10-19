@@ -83,12 +83,21 @@ export function updateItem(list: OilList, id: number, change: (item: OilItem) =>
   return { items: list.items.map((i) => (i.id === id ? change(i) : i)) };
 }
 
-/** Zdroj bodu v KPI: den a ukazatel. */
-export const kpiSourceKey = (day: DayNumber, kpiId: string) => `${dayToIso(day)} ${kpiId}`;
+/** Skupina rozboru KPI, ke které bod patří (např. projekt P100 nebo dodavatel). */
+export interface KpiGroupRef {
+  dim: string;
+  value: string;
+}
 
-export function parseKpiSource(key: string | null): { day: DayNumber; kpiId: string } | null {
+/** Zdroj bodu v KPI: den a ukazatel, případně skupina z rozboru („2026-10-19 d_customer | project=P100“). */
+export const kpiSourceKey = (day: DayNumber, kpiId: string, group?: KpiGroupRef) => `${dayToIso(day)} ${kpiId}${group ? ` | ${group.dim}=${group.value}` : ''}`;
+
+export function parseKpiSource(key: string | null): { day: DayNumber; kpiId: string; group: KpiGroupRef | null } | null {
   const day = key ? parseDay(key.slice(0, 10)) : null;
-  return day === null ? null : { day, kpiId: key!.slice(11) };
+  if (day === null) return null;
+  const [kpiId = '', group] = key!.slice(11).split(' | ');
+  const eq = group?.indexOf('=') ?? -1;
+  return { day, kpiId, group: group && eq > 0 ? { dim: group.slice(0, eq), value: group.slice(eq + 1) } : null };
 }
 
 /** Jednotliví odpovědní z pole Odpovědný („A / B“, „A, B“ nebo „A; B“). */
