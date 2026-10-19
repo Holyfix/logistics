@@ -62,6 +62,10 @@ a Dodavatelé odložené. Modul Kapacity (odvolávky vs. kapacita linek) byl zva
   z jeho ukazatelů
 - ✅ **Pruh měsíců L–P** pod písmenem: barva měsíce podle podílu zelených dní ze zapsaných (90 % a víc zelená,
   75 % a víc žlutá, jinak červená); kliknutím se měsíc otevře
+- ✅ **Den hodnoty** u každého ukazatele: **výsledek dne** (ruční, zapíše se ráno zpětně za uplynulý pracovní den) nebo
+  **stav v den zápisu** (automatické: chybí u zákazníka, komponenty, OIL po termínu – patří k dnešku a obarví dnešní
+  den). Ranní zápis má dvě části („Výsledky za Pá 16. 10.“ a „Stav Po 19. 10.“), jedno uložení zapíše každou ke svému
+  dni. Automatické hodnoty se předvyplní jen pro dnešní stav; při úpravě staršího dne zůstanou prázdné
 - ✅ **Zápis dne** (vlastní karta): tlačítko Zapsat nabídne nejstarší nezapsaný pracovní den za 30 dní, jinak předchozí
   pracovní den (v pondělí pátek; už zapsaný se zaškrtnutím „zapsáno ✓“ otevře zápis k úpravě), kliknutím
   na políčko v přehledu se otevře zápis jiného dne; nabídnou se i nezapsané pracovní dny za posledních 30 dní.

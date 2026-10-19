@@ -14,6 +14,13 @@ export type KpiStatus = 'green' | 'yellow' | 'red';
 export const KPI_SOURCES = ['manual', 'coverageShortage', 'componentsShort', 'oilOverdue'] as const;
 export type KpiSource = (typeof KPI_SOURCES)[number];
 
+/** result = výsledek uplynulého dne (ráno se zapíše za předchozí pracovní den); state = stav v den zápisu (dnes). */
+export type KpiTiming = 'result' | 'state';
+export const KPI_TIMINGS: readonly KpiTiming[] = ['result', 'state'];
+
+/** Výchozí den hodnoty: automatické ukazatele (ze stavu dat) jsou stav v den zápisu, ruční výsledek dne. */
+export const defaultTiming = (source: KpiSource): KpiTiming => (source === 'manual' ? 'result' : 'state');
+
 export interface KpiDef {
   /** Stálý klíč ukazatele (v souboru ve sloupci ID). */
   id: string;
@@ -29,6 +36,8 @@ export interface KpiDef {
   source: KpiSource;
   /** Kategorie (např. druhy událostí): zapisuje se počet po kategoriích, hodnota je jejich součet. */
   categories: string[];
+  /** Ke kterému dni hodnota patří: výsledek uplynulého dne (zapisuje se zpětně), nebo stav v den zápisu. */
+  timing: KpiTiming;
 }
 
 /** Zápis jednoho dne: hodnoty ukazatelů (klíč ID, u kategorií „ID|kategorie“), kdo a kdy zapsal. */
@@ -52,7 +61,7 @@ export interface DefaultKpiTexts {
   categories: Record<string, string[]>;
 }
 
-const DEFAULTS: Omit<KpiDef, 'name' | 'unit' | 'categories'>[] = [
+const DEFAULTS: Omit<KpiDef, 'name' | 'unit' | 'categories' | 'timing'>[] = [
   { id: 's_injury', letter: 'S', target: 0, red: 0, higherIsBetter: false, source: 'manual' },
   { id: 's_nearmiss', letter: 'S', target: 0, red: null, higherIsBetter: false, source: 'manual' },
   { id: 'q_claims', letter: 'Q', target: 0, red: 0, higherIsBetter: false, source: 'manual' },
@@ -67,7 +76,7 @@ const DEFAULTS: Omit<KpiDef, 'name' | 'unit' | 'categories'>[] = [
 
 export function defaultKpis(texts: DefaultKpiTexts): KpiData {
   return {
-    defs: DEFAULTS.map((d) => ({ ...d, name: texts.names[d.id] ?? d.id, unit: texts.units[d.id] ?? '', categories: texts.categories[d.id] ?? [] })),
+    defs: DEFAULTS.map((d) => ({ ...d, name: texts.names[d.id] ?? d.id, unit: texts.units[d.id] ?? '', categories: texts.categories[d.id] ?? [], timing: defaultTiming(d.source) })),
     entries: [],
   };
 }
@@ -215,11 +224,34 @@ export function withoutEntry(data: KpiData, day: DayNumber): KpiData {
   return { ...data, entries: data.entries.filter((e) => e.day !== day) };
 }
 
+/** Klíče hodnot ukazatelů (u kategorií jeden na kategorii). */
+export const valueKeys = (defs: readonly KpiDef[]) => defs.flatMap((d) => (d.categories.length ? d.categories.map((c) => categoryKey(d, c)) : [d.id]));
+
+/**
+ * Zápis části dne: hodnoty klíčů `keys` se nahradí `values` (chybějící se smažou), ostatní hodnoty dne zůstanou.
+ * Bez hodnot se zápis dne odebere.
+ */
+export function withValues(data: KpiData, day: DayNumber, keys: readonly string[], values: Record<string, number>, author: string, at: string): KpiData {
+  const old = entryOf(data, day);
+  const kept = Object.fromEntries(Object.entries(old?.values ?? {}).filter(([k]) => !keys.includes(k)));
+  const next = { ...kept, ...values };
+  if (!Object.keys(next).length) return withoutEntry(data, day);
+  return withEntry(data, { day, author, at, values: next });
+}
+
+/** Den má zapsaný výsledek: aspoň jeden ukazatel „výsledek dne“ má hodnotu (bez takových ukazatelů stačí zápis). */
+export function hasResults(data: KpiData, day: DayNumber): boolean {
+  const entry = entryOf(data, day);
+  if (!entry) return false;
+  const results = data.defs.filter((d) => d.timing === 'result');
+  return !results.length || results.some((d) => kpiValue(entry, d) !== null);
+}
+
 /** Nový ukazatel s volným ID. */
 export function addDef(data: KpiData, letter: Letter, name: string): KpiData {
   let n = data.defs.length + 1;
   while (data.defs.some((d) => d.id === `k${n}`)) n++;
-  const def: KpiDef = { id: `k${n}`, letter, name, unit: '', target: 0, red: null, higherIsBetter: false, source: 'manual', categories: [] };
+  const def: KpiDef = { id: `k${n}`, letter, name, unit: '', target: 0, red: null, higherIsBetter: false, source: 'manual', categories: [], timing: 'result' };
   return { ...data, defs: [...data.defs, def] };
 }
 
@@ -244,6 +276,7 @@ const COLUMNS = {
   direction: ['Lepší je', 'Better'],
   source: ['Zdroj', 'Source'],
   categories: ['Kategorie', 'Categories'],
+  timing: ['Den hodnoty', 'Value day'],
   day: ['Datum', 'Date'],
   category: ['Kategorie', 'Category'],
   value: ['Hodnota', 'Value'],
@@ -253,6 +286,7 @@ const COLUMNS = {
 
 const HIGHER = 'více';
 const LOWER = 'méně';
+const TIMING_TEXT: Record<KpiTiming, string> = { result: 'výsledek dne', state: 'stav v den zápisu' };
 
 const formatDate = (day: DayNumber) => {
   const [y, m, d] = dayToIso(day).split('-');
@@ -271,8 +305,8 @@ export function kpiSheets(data: KpiData): KpiSheet[] {
   return [
     {
       name: 'Ukazatele',
-      header: [COLUMNS.id[0], COLUMNS.letter[0], COLUMNS.name[0], COLUMNS.unit[0], COLUMNS.target[0], COLUMNS.red[0], COLUMNS.direction[0], COLUMNS.source[0], COLUMNS.categories[0]],
-      rows: data.defs.map((d) => [d.id, d.letter, d.name, d.unit, d.target, d.red, d.higherIsBetter ? HIGHER : LOWER, d.source, d.categories.join('; ')]),
+      header: [COLUMNS.id[0], COLUMNS.letter[0], COLUMNS.name[0], COLUMNS.unit[0], COLUMNS.target[0], COLUMNS.red[0], COLUMNS.direction[0], COLUMNS.source[0], COLUMNS.categories[0], COLUMNS.timing[0]],
+      rows: data.defs.map((d) => [d.id, d.letter, d.name, d.unit, d.target, d.red, d.higherIsBetter ? HIGHER : LOWER, d.source, d.categories.join('; '), TIMING_TEXT[d.timing]]),
     },
     {
       name: 'Hodnoty',
@@ -312,13 +346,14 @@ export function parseKpiWorkbook(sheets: readonly { name: string; data: Cell[][]
   if (defsSheet) {
     const [idC, letterC, nameC, targetC] = defsSheet.cols as [number, number, number, number];
     const col = (aliases: readonly string[]) => findColumn(defsSheet.header, aliases);
-    const [unitC, redC, dirC, sourceC, catC] = [col(COLUMNS.unit), col(COLUMNS.red), col(COLUMNS.direction), col(COLUMNS.source), col(COLUMNS.categories)];
+    const [unitC, redC, dirC, sourceC, catC, timingC] = [col(COLUMNS.unit), col(COLUMNS.red), col(COLUMNS.direction), col(COLUMNS.source), col(COLUMNS.categories), col(COLUMNS.timing)];
     const text = (row: Cell[], c: number) => (c === -1 ? '' : cellText(row[c]));
     for (const row of defsSheet.rows) {
       const id = cellText(row[idC]);
       const letter = cellText(row[letterC]).toUpperCase() as Letter;
       if (!id || !LETTERS.includes(letter) || defs.some((d) => d.id === id)) continue;
-      const source = text(row, sourceC) as KpiSource;
+      const source = KPI_SOURCES.includes(text(row, sourceC) as KpiSource) ? (text(row, sourceC) as KpiSource) : 'manual';
+      const timingText = text(row, timingC).toLowerCase();
       defs.push({
         id,
         letter,
@@ -327,11 +362,13 @@ export function parseKpiWorkbook(sheets: readonly { name: string; data: Cell[][]
         target: cellNumber(row[targetC]) ?? 0,
         red: redC === -1 ? null : cellNumber(row[redC]),
         higherIsBetter: text(row, dirC).toLowerCase() === HIGHER,
-        source: KPI_SOURCES.includes(source) ? source : 'manual',
+        source,
         categories: text(row, catC)
           .split(';')
           .map((c) => c.trim())
           .filter(Boolean),
+        // Starší soubor bez sloupce: podle zdroje (automatické ukazatele jsou stav v den zápisu).
+        timing: timingText ? (/stav|state/.test(timingText) ? 'state' : 'result') : defaultTiming(source),
       });
     }
   }

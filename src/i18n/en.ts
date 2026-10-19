@@ -666,6 +666,9 @@ export const en: Messages = {
     },
     entry: {
       heading: 'Daily record',
+      morning: 'Morning record: results for {day} · status {state}',
+      sectionResult: 'Results for {day}',
+      sectionState: 'Status {day} (day of record)',
       missing: 'Working days not recorded:',
       day: 'Day',
       you: 'Recorded by',
@@ -688,6 +691,7 @@ export const en: Messages = {
       note: 'A day is green when all KPIs of the letter are on target, yellow on a warning and red when any is off target. Automatic values are taken from the app data when the day is recorded.',
     },
     targetText: { lower: '≤ {target}', higher: '≥ {target}', redLower: 'red above {red}', redHigher: 'red below {red}', warnOnly: 'warning only' },
+    timings: { result: 'day result (next morning)', state: 'status on the day of record' },
     sources: { manual: 'manual', coverageShortage: 'auto · Coverage', componentsShort: 'auto · Components', oilOverdue: 'auto · OIL' },
     defs: {
       heading: 'KPIs and targets',
@@ -701,6 +705,7 @@ export const en: Messages = {
       lower: 'less',
       higher: 'more',
       source: 'Source',
+      timing: 'Value day',
       categories: 'Categories',
       add: '+ KPI',
       newName: 'New KPI',

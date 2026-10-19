@@ -83,7 +83,12 @@ describe('KpiPage', () => {
     renderPage();
     fireEvent.click(screen.getByRole('button', { name: 'Zapsat Po 5. 10.' }));
     expect(screen.getByRole('tab', { name: 'Zápis dne' }).getAttribute('aria-selected')).toBe('true');
-    expect(screen.getByRole('heading', { level: 2, name: /Zápis za den Po 5\. 10\./ })).toBeTruthy();
+    // ranní zápis: výsledky za předchozí pracovní den, stav k dnešku (automatické ukazatele)
+    expect(screen.getByRole('heading', { level: 2, name: 'Ranní zápis: výsledky za Po 5. 10. · stav Út 6. 10.' })).toBeTruthy();
+    expect([...document.querySelectorAll('.kpi-section td')].map((td) => td.textContent)).toEqual(['Výsledky za Po 5. 10.', 'Stav Út 6. 10. (v den zápisu)']);
+    const section = (name: string) => screen.getByLabelText(name).closest('tbody')!.previousElementSibling;
+    expect(document.querySelector('.kpi-entry')!.textContent).toMatch(/Výsledky za Po 5\. 10\..*Úrazy v logistice.*Stav Út 6\. 10\..*Chybí u zákazníka/s);
+    expect(section('Úrazy v logistice')).toBeTruthy();
     expect(screen.getByText(/Den zatím není zapsaný/)).toBeTruthy();
     const injuries = screen.getByLabelText('Úrazy v logistice') as HTMLInputElement;
     expect(injuries.value).toBe('0');
@@ -99,13 +104,17 @@ describe('KpiPage', () => {
 
   it('tlačítko Zapsat: nejstarší nezapsaný pracovní den, jinak předchozí pracovní den se zaškrtnutím', () => {
     const entry = (n: number) => ({ day: day(n), author: 'Novák', at: '', values: { s_injury: 0 } });
+    // výsledky za 5. 10. zapsané, dnešní stav ještě ne → Zapsat; s dnešním stavem → zapsáno ✓
     renderPage(withEntry(withEntry(kpi, entry(5)), entry(1)));
+    expect(screen.getByRole('button', { name: 'Zapsat Po 5. 10.' })).toBeTruthy();
+    cleanup();
+    renderPage(withEntry(withEntry(withEntry(kpi, entry(5)), entry(1)), { day: day(6), author: 'Novák', at: '', values: { d_customer: 0 } }));
     expect(screen.getByRole('button', { name: 'Po 5. 10. zapsáno ✓' })).toBeTruthy();
     cleanup();
     // chybí pátek 2. 10. (1. a 5. 10. zapsané)
     renderPage(withEntry(withEntry(defaultKpis(cs.kpi.defaults), entry(1)), entry(5)));
     fireEvent.click(screen.getByRole('button', { name: 'Zapsat Pá 2. 10.' }));
-    expect(screen.getByRole('heading', { level: 2, name: /Zápis za den Pá 2\. 10\./ })).toBeTruthy();
+    expect(screen.getByRole('heading', { level: 2, name: 'Ranní zápis: výsledky za Pá 2. 10. · stav Út 6. 10.' })).toBeTruthy();
   });
 
   it('kliknutí na den otevře jeho zápis v kartě Zápis dne', () => {
@@ -114,6 +123,9 @@ describe('KpiPage', () => {
     expect(cell('S', 2).getAttribute('title')).toBe('Pá 2. 10. – mimo cíl\n• Úrazy v logistice: 1 počet (≤ 0 · červená nad 0)');
     fireEvent.click(cell('Q', 2));
     expect(screen.getByRole('heading', { level: 2, name: /Zápis za den Pá 2\. 10\./ })).toBeTruthy();
+    // starší den: stav patří k tomu dni a automatické hodnoty se nepředvyplní (data jsou z dneška)
+    expect(document.querySelectorAll('.kpi-section td')[1]!.textContent).toBe('Stav Pá 2. 10. (v den zápisu)');
+    expect((screen.getByLabelText('Chybí u zákazníka v prvních 2 dnech') as HTMLInputElement).value).toBe('');
     expect(screen.getByText('Zapsáno: Novák 5.10.2026 7:30')).toBeTruthy();
     expect((screen.getByLabelText('Úrazy v logistice') as HTMLInputElement).value).toBe('1');
   });
