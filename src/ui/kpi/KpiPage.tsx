@@ -644,7 +644,19 @@ export function KpiPage({ today = localToday() }: { today?: DayNumber } = {}) {
         </div>
       )}
 
-      {tab === 'analysis' && <KpiAnalysis kpi={kpi} oilItems={oilList.items} today={today} onOpenDay={(d) => openDay(d)} />}
+      {tab === 'analysis' && (
+        <KpiAnalysis
+          kpi={kpi}
+          oilItems={oilList.items}
+          today={today}
+          onOpenDay={(d) => openDay(d)}
+          onAddOil={({ letter, problem, kpi: source }) => {
+            const result = addItem(oilList, today, { letter, problem, kpi: kpiSourceKey(source.day, source.kpiId) });
+            setOilDraft(result.list);
+            openOilItem(result.id);
+          }}
+        />
+      )}
 
       {tab === 'defs' && (
         <div className="panel kpi-defs">
