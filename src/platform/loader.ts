@@ -9,6 +9,7 @@ import type { LinePlan } from '../core/planning/plan';
 import type { PlanSettings } from '../core/planning/settings';
 import type { KpiData } from '../core/kpi';
 import type { OilList } from '../core/oil';
+import { applyTransit, type TransitEntry } from '../core/transit';
 import { classifyPath, coverageScope, formatOf } from '../core/sources';
 import { idbDelete, idbGet, idbKeys, idbSet, STORE_CALLOFFS } from './idb';
 import { listFiles, type FolderSource, type SourceFile } from './folder';
@@ -39,6 +40,8 @@ export interface LoadedData {
   oil: { path: string; lastModified: number; list: OilList } | null;
   /** KPI (KPI/KPI.xlsx): nejnovější soubor. */
   kpi: { path: string; lastModified: number; data: KpiData } | null;
+  /** Doplněný transit ze složky Transit: soubory a co se z nich přičetlo k coverage (už je v `coverage`). */
+  transit?: { files: string[]; entries: TransitEntry[] };
   failed: FailedFile[];
   loadedAt: number;
 }
@@ -95,6 +98,7 @@ export async function loadFolder(source: FolderSource, onProgress: (p: LoadProgr
   const settingsFiles = files.filter((f) => classifyPath(f.path) === 'planSettings').sort((a, b) => b.lastModified - a.lastModified);
   const oilFiles = files.filter((f) => classifyPath(f.path) === 'oil').sort((a, b) => b.lastModified - a.lastModified);
   const kpiFiles = files.filter((f) => classifyPath(f.path) === 'kpi').sort((a, b) => b.lastModified - a.lastModified);
+  const transitFiles = files.filter((f) => classifyPath(f.path) === 'transit').sort((a, b) => a.path.localeCompare(b.path));
 
   // Coverage: pro každou destinaci a projekt platí naposledy změněný soubor (i z hlubší podsložky).
   const coverageFiles = new Map<string, SourceFile>();
@@ -111,7 +115,7 @@ export async function loadFolder(source: FolderSource, onProgress: (p: LoadProgr
   }
 
   const parsed: { file: SourceFile; exp: CallOffExport }[] = [];
-  const total = calloffFiles.length + (masterFiles.length > 0 ? 1 : 0) + coverageFiles.size + (stockFiles.length > 0 ? 1 : 0) + bomFiles.length + planFiles.length + (settingsFiles.length > 0 ? 1 : 0) + (oilFiles.length > 0 ? 1 : 0) + (kpiFiles.length > 0 ? 1 : 0);
+  const total = calloffFiles.length + (masterFiles.length > 0 ? 1 : 0) + coverageFiles.size + (stockFiles.length > 0 ? 1 : 0) + bomFiles.length + planFiles.length + (settingsFiles.length > 0 ? 1 : 0) + (oilFiles.length > 0 ? 1 : 0) + (kpiFiles.length > 0 ? 1 : 0) + transitFiles.length;
   let done = 0;
   onProgress({ done, total });
 
@@ -177,6 +181,17 @@ export async function loadFolder(source: FolderSource, onProgress: (p: LoadProgr
   }
   coverage.sort((a, b) => a.location.localeCompare(b.location) || a.project.localeCompare(b.project));
 
+  // Doplněný transit: přičte se k transitu u zákazníka v coverage (jen expedice, které soubor coverage ještě nemá).
+  const transitData: Parameters<typeof applyTransit>[2][number][] = [];
+  for (const file of transitFiles) {
+    const response = await parseInWorker({ kind: 'transit', format: formatOf(file.path)!, name: file.path, file: file.file });
+    if (response.kind === 'transit' && response.result.ok) transitData.push({ path: file.path, data: response.result.value });
+    else if (response.kind === 'transit' && !response.result.ok) failed.push({ path: file.path, reason: 'missingColumns', detail: response.result.columns.join(', ') });
+    else if (response.kind === 'error') failed.push({ path: file.path, reason: 'unreadable', detail: response.message });
+    onProgress({ done: ++done, total });
+  }
+  const withTransit = transitData.length ? applyTransit(coverage, master?.data, transitData) : null;
+
   let stock: LoadedData['stock'] = null;
   const stockFile = stockFiles[0];
   if (stockFile) {
@@ -240,5 +255,19 @@ export async function loadFolder(source: FolderSource, onProgress: (p: LoadProgr
     for (const older of kpiFiles.slice(1)) failed.push({ path: older.path, reason: 'superseded', detail: kpiFile.path });
   }
 
-  return { folderName: source.name, exports, master, coverage, stock, boms, plans, planSettings, oil, kpi, failed, loadedAt: Date.now() };
+  return {
+    folderName: source.name,
+    exports,
+    master,
+    coverage: withTransit?.coverage ?? coverage,
+    stock,
+    boms,
+    plans,
+    planSettings,
+    oil,
+    kpi,
+    ...(withTransit ? { transit: { files: transitData.map((t) => t.path), entries: withTransit.entries } } : {}),
+    failed,
+    loadedAt: Date.now(),
+  };
 }

@@ -243,6 +243,15 @@ stockLine({ item: 'K-0900', description: 'TRIM OLD VERSION' }, 'EA', 'WH.P', 95,
 stockLine({ item: 'PAL-1200', description: 'PALLET 1200x800' }, 'EA', 'WH.P', 180, 60, 'PACK-01', '', 'PURCH', 'WRH', 15, 'C');
 writeFileSync('sample-data/Stock_13.10.2026.csv', '\ufeff' + stockLines.join('\r\n') + '\r\n');
 
+// Doplněný transit: ranní expedice, kterou soubor coverage ještě nemá (export transakcí, výdej je záporný).
+mkdirSync('sample-data/Transit', { recursive: true });
+const transitLines = ['Site,Item Number,Item Description,Transaction Number,Transaction Type,Effective Date,Time,Quantity Change,Address,Shipper Number'];
+items
+  .filter((it) => it.project === 'P100')
+  .slice(0, 2)
+  .forEach((it, k) => transitLines.push(['1000', it.item, it.description, 9001 + k, 'ISS-DO', '13.10.2026', '05:40', -[48, 24][k], '1000DE', 'SD-0001'].join(',')));
+writeFileSync('sample-data/Transit/Transit_13.10.2026.csv', '\ufeff' + transitLines.join('\r\n') + '\r\n');
+
 // Kusovník ve formátu exportu z ERP: odsazené úrovně, množství na nadřazený díl.
 const bomRows = [['Level', 'Component Item', 'Description', 'Quantity Per', 'UM', 'Purchase/Manufacture', 'Start Eff'].map(bold)];
 const text = (value) => ({ value, type: String });

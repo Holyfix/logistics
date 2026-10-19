@@ -245,6 +245,14 @@ export function DataPage() {
                 </table>
               </div>
             )}
+            {data.transit && (
+              <p className="muted">
+                {t.data.coverage.transit
+                  .replace('{files}', data.transit.files.map((f) => f.split('/').pop()).join(', '))
+                  .replace('{added}', formatQuantity(data.transit.entries.filter((e) => e.status === 'added').length, locale))
+                  .replace('{total}', formatQuantity(data.transit.entries.length, locale))}
+              </p>
+            )}
           </div>
 
           <div className="panel">

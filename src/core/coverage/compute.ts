@@ -12,6 +12,8 @@ export interface CoverageSource {
   project: string;
   lastModified: number;
   report: CoverageReport;
+  /** Doplněný transit ze složky Transit (už přičtený v report.rows[].transit), po pořadí řádku. */
+  extraTransit?: ReadonlyMap<number, number>;
 }
 
 export interface CoverageOptions {
@@ -38,8 +40,10 @@ export interface CoverageLine {
   /** Kategorie z mapování (sloupec Category). */
   category: string;
   customerStock: number;
-  /** Transit celkem za horizont souboru. */
+  /** Transit celkem za horizont souboru (včetně doplněného). */
   transit: number;
+  /** Z toho doplněný transit ze složky Transit (naše expedice, které soubor zákazníka ještě nemá). */
+  extraTransit: number;
   /** Náš sklad dílu; null, když sklad není načtený nebo díl není v mapování. */
   ourStock: number | null;
   firstUncovered: string;
@@ -109,6 +113,7 @@ export function buildCoverage(
         category: m?.category ?? '',
         customerStock: row.customerStock,
         transit: row.transit.at(-1) ?? 0,
+        extraTransit: source.extraTransit?.get(index) ?? 0,
         ourStock,
         firstUncovered: row.firstUncovered,
         uncoveredAt: row.uncoveredAt,

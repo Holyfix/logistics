@@ -28,6 +28,8 @@ describe('classifyPath', () => {
     ['Logistics/oil/body.xlsx', 'oil'],
     ['OIL_logistika.xlsx', 'oil'],
     ['KPI/KPI.xlsx', 'kpi'],
+    ['Transit/Transit.xlsx', 'transit'],
+    ['Transit_19.10.csv', 'transit'],
     ['KPI_logistika.xlsx', 'kpi'],
     ['OIL/OIL.csv', 'ignored'],
     ['Plán/poznamky.csv', 'ignored'],
