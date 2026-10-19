@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { dayFromParts } from '../../core/dates';
-import { defaultKpis, withEntry, type KpiData } from '../../core/kpi';
+import { defaultKpis, withDetails, withEntry, type KpiData, type KpiDetail } from '../../core/kpi';
 import { cs } from '../../i18n/cs';
 import { I18nProvider } from '../../i18n/I18nProvider';
 import { DataProvider, type DataState } from '../data/DataProvider';
@@ -70,9 +70,9 @@ describe('KpiPage', () => {
     expect(screen.getAllByText('v cíli 1 z 2 dní')[0]).toBeTruthy();
   });
 
-  it('karty: přehled, zápis dne, ukazatele a cíle', () => {
+  it('karty: přehled, zápis dne, rozbor, ukazatele a cíle', () => {
     renderPage();
-    expect(screen.getAllByRole('tab').map((t) => t.textContent)).toEqual(['Přehled', 'Zápis dne', 'Ukazatele a cíle']);
+    expect(screen.getAllByRole('tab').map((t) => t.textContent)).toEqual(['Přehled', 'Zápis dne', 'Rozbor', 'Ukazatele a cíle']);
     expect(screen.queryByLabelText('Úrazy v logistice')).toBeNull();
     fireEvent.click(screen.getByRole('tab', { name: 'Ukazatele a cíle' }));
     expect(screen.getByRole('button', { name: '+ Ukazatel' })).toBeTruthy();
@@ -193,6 +193,48 @@ describe('KpiPage', () => {
     expect([...actions.querySelectorAll('td')].slice(0, 3).map((td) => td.textContent)).toEqual(['S', '1', 'Úrazy v logistice: 1 počet (Pá 2. 10., ≤ 0 · červená nad 0)']);
     expect(document.querySelector('.kpi-card .kpi-caption')!.textContent).toContain('1 opatření');
     location.hash = '';
+  });
+
+  it('detail u ručního ukazatele mimo cíl: projekt, díl, osoba, množství, příčina; v cíli bez detailu', () => {
+    renderPage();
+    fireEvent.click(cell('S', 2));
+    const row = (name: string) => screen.getByLabelText(name).closest('tr')!;
+    expect(row('Úrazy v logistice').nextElementSibling!.className).toBe('kpi-detail');
+    expect(screen.getByLabelText('Úrazy v logistice: Projekt 1')).toBeTruthy();
+    expect(screen.getByLabelText('Úrazy v logistice: Příčina / popis 1')).toBeTruthy();
+    fireEvent.click(within(row('Úrazy v logistice').nextElementSibling as HTMLElement).getByRole('button', { name: '+ další řádek' }));
+    expect(screen.getByLabelText('Úrazy v logistice: Osoba (z OIL) 2')).toBeTruthy();
+    // hodnota v cíli: bez detailu
+    expect(row('Logistické reklamace: Záměna dílu').nextElementSibling?.className).not.toBe('kpi-detail');
+    // změna na hodnotu mimo cíl přidá detail hned
+    fireEvent.change(screen.getByLabelText('Logistické reklamace: Záměna dílu'), { target: { value: '1' } });
+    expect(screen.getByLabelText('Logistické reklamace: Projekt 1')).toBeTruthy();
+  });
+
+  it('Rozbor: body mimo cíl s detaily a co se opakuje ve víc dnech', () => {
+    const detail = (n: number, cause: string): KpiDetail => ({ day: day(n), kpiId: 's_injury', project: 'P1', item: '', person: 'Novák / Dvořák', qty: null, cause, source: 'manual' });
+    let data = withEntry(kpi, { day: day(5), author: 'Novák', at: '', values: { s_injury: 2 } });
+    data = withDetails(data, day(2), ['s_injury'], [detail(2, 'Pád z rampy')]);
+    data = withDetails(data, day(5), ['s_injury'], [detail(5, 'pád z rampy')]);
+    renderPage(data);
+    fireEvent.click(screen.getByRole('tab', { name: 'Rozbor' }));
+    const repeats = [...document.querySelectorAll('.kpi-repeats li')].map((li) => li.textContent);
+    expect(repeats).toEqual([
+      'Projekt P1: objevilo se 2× (Pá 2. 10., Po 5. 10.) – Úrazy v logistice',
+      'Osoba (OIL) Dvořák: objevilo se 2× (Pá 2. 10., Po 5. 10.) – Úrazy v logistice',
+      'Osoba (OIL) Novák: objevilo se 2× (Pá 2. 10., Po 5. 10.) – Úrazy v logistice',
+      'Příčina pád z rampy: objevilo se 2× (Pá 2. 10., Po 5. 10.) – Úrazy v logistice',
+    ]);
+    // body od nejnovějšího dne; klik na den otevře zápis
+    const points = [...document.querySelectorAll('.kpi-points tbody tr')];
+    // Pá 2. 10. mimo cíl i mimořádné přepravy (bez detailu)
+    expect(points.map((r) => [...r.querySelectorAll('td')].map((td) => td.textContent!.replace(/\s/g, ' ')).join(' | '))).toEqual([
+      'Po 5. 10. |  S | Úrazy v logistice | 2 počet | P1 | — | Novák / Dvořák | — | pád z rampy | ruční',
+      'Pá 2. 10. |  S | Úrazy v logistice | 1 počet | P1 | — | Novák / Dvořák | — | Pád z rampy | ruční',
+      'Pá 2. 10. |  C | Náklady na mimořádné přepravy | 6 000 Kč | — | — | — | — | bez detailu | ',
+    ]);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Pá 2. 10.' })[0]!);
+    expect(screen.getByRole('heading', { level: 2, name: /Zápis za den Pá 2\. 10\./ })).toBeTruthy();
   });
 
   it('bez souboru KPI: úvodní sada ukazatelů', () => {

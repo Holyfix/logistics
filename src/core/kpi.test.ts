@@ -92,7 +92,7 @@ describe('soubor KPI.xlsx', () => {
     data = addDef(data, 'C', 'Přesčasy');
     data = withEntry(data, { day: day(1), author: 'Novák', at: '2.10.2026 7:30', values: { s_injury: 0, 'q_claims|Záměna': 2, 'q_claims|Obal': 0, d_customer: 15 } });
     const sheets = kpiSheets(data).map((s) => ({ name: s.name, data: [s.header, ...s.rows] as Cell[][] }));
-    expect(sheets.map((s) => s.name)).toEqual(['Ukazatele', 'Hodnoty', 'Dny']);
+    expect(sheets.map((s) => s.name)).toEqual(['Ukazatele', 'Hodnoty', 'Dny', 'Detaily']);
     const back = parseKpiWorkbook(sheets);
     if (!back.ok) throw new Error();
     expect(back.value).toEqual(data);
@@ -109,6 +109,7 @@ describe('grafy', () => {
     let data: KpiData = {
       defs: [def({ id: 'q', letter: 'Q', name: 'Reklamace', categories: ['Záměna', 'Obal', 'Etiketa'] }), def({ id: 'late', letter: 'Q', name: 'Pozdě', target: 0, red: 5 })],
       entries: [],
+      details: [],
     };
     data = withEntry(data, { day: day(1), author: '', at: '', values: { 'q|Záměna': 1, 'q|Obal': 3, late: 2 } });
     data = withEntry(data, { day: day(2), author: '', at: '', values: { 'q|Záměna': 2, late: 0 } });
@@ -125,7 +126,7 @@ describe('grafy', () => {
 
   it('poslední zapsané dny písmene (dny bez hodnot písmene se přeskočí)', () => {
     const d = def({ id: 'c', letter: 'C', target: 0, red: 10 });
-    let data: KpiData = { defs: [d], entries: [] };
+    let data: KpiData = { defs: [d], entries: [], details: [] };
     for (const n of [7, 1, 2, 5, 6]) data = withEntry(data, { day: day(n), author: '', at: '', values: { c: n } });
     data = withEntry(data, { day: day(8), author: '', at: '', values: {} });
     expect(recentEntries(data, 'C', day(6), 3).map((e) => e.day)).toEqual([day(2), day(5), day(6)]);

@@ -2355,3 +2355,88 @@ button.oil-step:disabled {
 .extra-transit > summary .link-button {
   font-weight: 400;
 }
+
+/* KPI: detail bodu mimo cíl v zápisu (ruční řádky, automatický seznam). */
+.kpi-entry .kpi-detail td {
+  padding: 6px 10px 10px 28px;
+  background: #fff8f2;
+}
+
+.kpi-entry .kpi-detail-auto td {
+  background: var(--surface-2);
+}
+
+.kpi-detail-title {
+  margin: 2px 0 6px;
+  font: 600 11px/1 var(--font-display);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.kpi-detail-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.kpi-detail-row input {
+  width: 130px;
+  padding: 4px 6px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 12.5px;
+}
+
+.kpi-detail-row .kpi-detail-qty {
+  width: 80px;
+}
+
+.kpi-detail-row .kpi-detail-cause {
+  flex: 1;
+  min-width: 220px;
+}
+
+.kpi-detail-list {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 12.5px;
+  line-height: 1.6;
+}
+
+/* KPI: karta Rozbor. */
+.kpi-repeats {
+  background: #fff6ec;
+  border-color: #f2c89b;
+  line-height: 1.7;
+}
+
+.kpi-groups {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr));
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.kpi-groups .panel {
+  min-width: 0;
+  margin-bottom: 0;
+  overflow-x: auto;
+}
+
+.kpi-groups td {
+  white-space: normal;
+}
+
+.kpi-groups td:last-child {
+  white-space: nowrap;
+}
+
+.kpi-group-repeat td {
+  background: #fff1f1;
+}

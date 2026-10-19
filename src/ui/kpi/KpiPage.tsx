@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { Fragment, useMemo, useState } from 'react';
 import { COMPONENT_SOON_DAYS } from '../../core/components/compute';
 import { buildCoverage, shortage, SHORTAGE_DAYS } from '../../core/coverage/compute';
 import { oilAlerts } from '../../core/dashboard';
@@ -24,16 +24,18 @@ import {
   updateDef,
   valueKeys,
   withValues,
+  withDetails,
   KPI_TIMINGS,
   KPI_SOURCES,
   type KpiData,
   type KpiDef,
+  type KpiDetail,
   type KpiSource,
   type KpiTiming,
   type KpiStatus,
   type Letter,
 } from '../../core/kpi';
-import { addItem, emptyOil, kpiSourceKey, stamp } from '../../core/oil';
+import { addItem, emptyOil, kpiSourceKey, ownerNames, stamp } from '../../core/oil';
 import { useI18n } from '../../i18n/I18nProvider';
 import { xlsxBlob } from '../../platform/download';
 import { localToday, useComponents } from '../components/useComponents';
@@ -43,6 +45,7 @@ import { useOilDraft, useOilDraftList } from '../oil/OilProvider';
 import { SaveStatus, useSaveFlow } from '../planning/SaveStatus';
 import { shapeCells } from './letterShapes';
 import { KpiActionList, openActions, openOilItem } from './KpiActions';
+import { KpiAnalysis } from './KpiAnalysis';
 import { dayIssues, formatValue, LetterDays, ParetoChart, targetText } from './KpiCharts';
 
 const KPI_FILE = 'KPI/KPI.xlsx';
@@ -50,7 +53,7 @@ const NAME_KEY = 'logistics-user-name';
 /** Kolik dní zpátky se nabízejí nezapsané pracovní dny. */
 const MISSING_LOOKBACK = 30;
 
-type Tab = 'overview' | 'entry' | 'defs';
+type Tab = 'overview' | 'entry' | 'analysis' | 'defs';
 type Period = 'month' | 'year';
 
 /** Písmena s Paretovým grafem kategorií; ostatní mají denní sloupce ukazatele. */
@@ -83,26 +86,57 @@ const monthOf = (day: DayNumber): Month => {
   return { year: Number(y), month: Number(m) };
 };
 
-/** Automatické hodnoty z dat aplikace (null = data nejsou načtená). */
-function useAutoValues(today: DayNumber): Record<Exclude<KpiSource, 'manual'>, number | null> {
+type AutoSource = Exclude<KpiSource, 'manual'>;
+/** Detail automatického ukazatele (bez dne a ukazatele): co z dat aplikace bod způsobilo. */
+export type AutoDetail = Pick<KpiDetail, 'project' | 'item' | 'person' | 'qty' | 'cause'>;
+
+/** Automatické hodnoty z dat aplikace (null = data nejsou načtená) a jejich detaily pro rozbor. */
+function useAutoValues(today: DayNumber): { values: Record<AutoSource, number | null>; details: Record<AutoSource, AutoDetail[]> } {
   const { state } = useData();
   const data = state.data;
   const components = useComponents(today);
   const oilDraft = useOilDraftList();
   const oilList = oilDraft ?? data?.oil?.list ?? null;
-  const coverageShortage = useMemo(
-    () => (data?.coverage.length ? shortage(buildCoverage(data.coverage, data.master?.data, { transit: true }).lines, SHORTAGE_DAYS).pieces : null),
-    [data],
-  );
-  return {
-    coverageShortage,
-    componentsShort: components ? components.components.filter((c) => c.shortDay !== null && c.shortDay < COMPONENT_SOON_DAYS).length : null,
-    oilOverdue: oilList ? oilAlerts(oilList, today).filter((a) => a.severity === 'crit').length : null,
-  };
+  const coverage = useMemo(() => (data?.coverage.length ? buildCoverage(data.coverage, data.master?.data, { transit: true }).lines : null), [data]);
+  return useMemo(() => {
+    // Chybí u zákazníka: díly se záporem v prvních dnech (kolik nejvíc chybí), destinace jako příčina.
+    const customer = (coverage ?? []).flatMap((l): AutoDetail[] => {
+      const worst = Math.min(0, ...l.values.slice(0, SHORTAGE_DAYS).filter((v): v is number => v !== null));
+      return worst < 0 ? [{ project: l.project, item: l.item || l.customerNumber, person: '', qty: -worst, cause: l.location }] : [];
+    });
+    const short = components ? components.components.filter((c) => c.shortDay !== null && c.shortDay < COMPONENT_SOON_DAYS) : [];
+    const overdue = oilList ? oilAlerts(oilList, today).filter((a) => a.severity === 'crit') : [];
+    return {
+      values: {
+        coverageShortage: coverage ? shortage(coverage, SHORTAGE_DAYS).pieces : null,
+        componentsShort: components ? short.length : null,
+        oilOverdue: oilList ? overdue.length : null,
+      },
+      details: {
+        coverageShortage: customer,
+        componentsShort: short.map((c) => ({ project: c.projects.join(', '), item: c.item, person: '', qty: -Math.min(0, ...c.balance.slice(0, COMPONENT_SOON_DAYS)), cause: c.description })),
+        oilOverdue: overdue.map(({ item }) => ({ project: '', item: '', person: item.owner, qty: null, cause: `OIL ${item.id}: ${item.problem.split('\n')[0]!.trim()}` })),
+      },
+    };
+  }, [coverage, components, oilList, today]);
 }
 
 /** Klíče vstupů ukazatele: u kategorií jeden na kategorii, jinak jeden. */
 const inputKeys = (def: KpiDef) => (def.categories.length ? def.categories.map((c) => categoryKey(def, c)) : [def.id]);
+
+/** Řádek ručního detailu v zápisu (texty polí). */
+interface DetailRow {
+  project: string;
+  item: string;
+  person: string;
+  qty: string;
+  cause: string;
+}
+
+const EMPTY_ROW: DetailRow = { project: '', item: '', person: '', qty: '', cause: '' };
+const toRow = (d: KpiDetail): DetailRow => ({ project: d.project, item: d.item, person: d.person, qty: d.qty === null ? '' : String(d.qty), cause: d.cause });
+/** Kolik automatických detailů se v zápisu vypíše (ostatní se jen spočítají). */
+const AUTO_DETAIL_ROWS = 20;
 
 /** KPI SQCDP: kalendář po písmenech, denní zápis ukazatelů a úprava ukazatelů. Ukládá se do KPI/KPI.xlsx. */
 export function KpiPage({ today = localToday() }: { today?: DayNumber } = {}) {
@@ -121,6 +155,7 @@ export function KpiPage({ today = localToday() }: { today?: DayNumber } = {}) {
   // Den pro ukazatele „stav v den zápisu“: při ranním zápisu dnešek, při úpravě konkrétního dne ten den.
   const [stateDay, setStateDay] = useState<DayNumber>(today);
   const [edited, setEdited] = useState<Record<string, string> | null>(null);
+  const [detailsEdited, setDetailsEdited] = useState<Record<string, DetailRow[]> | null>(null);
   const [name, setName] = useState(readName);
   const [tab, setTab] = useState<Tab>('overview');
   const [period, setPeriod] = useState<Period>('year');
@@ -168,7 +203,7 @@ export function KpiPage({ today = localToday() }: { today?: DayNumber } = {}) {
     const stored = e?.values[key];
     if (stored !== undefined) return String(stored);
     if (e && valueKeys(kpi.defs.filter((d) => d.timing === def.timing)).some((k) => e.values[k] !== undefined)) return '';
-    if (def.source !== 'manual') return dayOf(def) === today && auto[def.source] !== null ? String(auto[def.source]) : '';
+    if (def.source !== 'manual') return dayOf(def) === today && auto.values[def.source] !== null ? String(auto.values[def.source]) : '';
     return '0';
   };
   const valueOf = (def: KpiDef, key: string) => edited?.[key] ?? prefill(def, key);
@@ -181,10 +216,31 @@ export function KpiPage({ today = localToday() }: { today?: DayNumber } = {}) {
     return values.length ? values.reduce((a, b) => a + b, 0) : null;
   };
 
+  // Detaily bodů mimo cíl: ruční řádky (projekt, díl, osoba, množství, příčina), automatické z dat aplikace.
+  const storedDetails = (def: KpiDef) => kpi.details.filter((d) => d.day === dayOf(def) && d.kpiId === def.id);
+  const detailRows = (def: KpiDef): DetailRow[] => detailsEdited?.[def.id] ?? (storedDetails(def).length ? storedDetails(def).map(toRow) : [EMPTY_ROW]);
+  const setDetailRows = (def: KpiDef, rows: DetailRow[]) => setDetailsEdited((e) => ({ ...(e ?? {}), [def.id]: rows }));
+  const isOff = (def: KpiDef) => {
+    const v = currentValue(def);
+    return v !== null && kpiStatus(def, v) !== 'green';
+  };
+  const autoDetails = (def: KpiDef): AutoDetail[] => (def.source === 'manual' ? [] : dayOf(def) === today ? auto.details[def.source] : storedDetails(def));
+  /** Detaily k uložení; null = u ukazatele nic neměnit (automatický ukazatel staršího dne). */
+  const detailsToSave = (def: KpiDef): KpiDetail[] | null => {
+    const base = { day: dayOf(def), kpiId: def.id };
+    if (!isOff(def)) return [];
+    if (def.source === 'manual')
+      return detailRows(def)
+        .filter((r) => Object.values(r).some((v) => v.trim()))
+        .map((r) => ({ ...base, project: r.project.trim(), item: r.item.trim(), person: r.person.trim(), qty: numberOf(r.qty), cause: r.cause.trim(), source: 'manual' }));
+    return dayOf(def) === today ? auto.details[def.source].map((d) => ({ ...base, ...d, source: 'auto' })) : null;
+  };
+
   const pickDay = (d: DayNumber, state: DayNumber = d) => {
     setDay(d);
     setStateDay(state);
     setEdited(null);
+    setDetailsEdited(null);
   };
   const setValue = (key: string, value: string) => setEdited((e) => ({ ...(e ?? {}), [key]: value }));
 
@@ -198,6 +254,7 @@ export function KpiPage({ today = localToday() }: { today?: DayNumber } = {}) {
         updateData((d) => ({ ...d, kpi: { path: result.path, lastModified, data: next } }));
         setDefsDraft(null);
         setEdited(null);
+        setDetailsEdited(null);
       }
       return result;
     });
@@ -216,6 +273,10 @@ export function KpiPage({ today = localToday() }: { today?: DayNumber } = {}) {
         }
       next = withValues(next, timing === 'state' ? stateDay : day, valueKeys(defs), values, name.trim(), at);
     }
+    for (const def of kpi.defs) {
+      const details = detailsToSave(def);
+      if (details) next = withDetails(next, dayOf(def), [def.id], details);
+    }
     void save(next);
   };
   const removeDay = () => {
@@ -227,6 +288,7 @@ export function KpiPage({ today = localToday() }: { today?: DayNumber } = {}) {
       const old = entryOf(next, d);
       if (old) next = withValues(next, d, valueKeys(kpi.defs.filter((def) => def.timing === timing)), {}, old.author, old.at);
     }
+    for (const def of kpi.defs) next = withDetails(next, dayOf(def), [def.id], []);
     void save(next);
   };
   const oilList = oilDraft ?? data.oil?.list ?? emptyOil();
@@ -272,6 +334,70 @@ export function KpiPage({ today = localToday() }: { today?: DayNumber } = {}) {
   const todayEntry = entryOf(kpi, today);
   const writeDone = hasResults(kpi, writeDay) && (!stateDefs.length || stateDefs.some((d) => kpiValue(todayEntry, d) !== null));
 
+  // Nabídky pro ruční detail: projekty a díly z mapování, osoby z OIL, dříve zapsané příčiny.
+  const masterItems = [...(data.master?.data.items.values() ?? [])];
+  const suggestions = {
+    projects: [...new Set([...masterItems.map((m) => m.project), ...kpi.details.map((d) => d.project)].filter(Boolean))].sort(),
+    items: [...new Set(masterItems.map((m) => m.item))].sort(),
+    persons: [...new Set(oilList.items.flatMap((i) => ownerNames(i.owner)))].sort((a, b) => a.localeCompare(b, 'cs')),
+    causes: [...new Set(kpi.details.filter((d) => d.source === 'manual').map((d) => d.cause).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'cs')),
+  };
+  const details = (def: KpiDef) => {
+    if (def.source === 'manual') {
+      if (!isOff(def) && !storedDetails(def).length) return null;
+      const rows = detailRows(def);
+      const set = (k: number, field: keyof DetailRow, value: string) => setDetailRows(def, rows.map((r, i) => (i === k ? { ...r, [field]: value } : r)));
+      const field = (k: number, key: keyof DetailRow, list: string | undefined, className?: string) => (
+        <input
+          className={className}
+          list={list}
+          inputMode={key === 'qty' ? 'decimal' : undefined}
+          aria-label={`${def.name}: ${tk.detail[key]} ${k + 1}`}
+          placeholder={tk.detail[key]}
+          value={rows[k]![key]}
+          onChange={(e) => set(k, key, e.target.value)}
+        />
+      );
+      return (
+        <tr className="kpi-detail">
+          <td colSpan={6}>
+            <div className="kpi-detail-title">{tk.detail.manual}</div>
+            {rows.map((_, k) => (
+              <div key={k} className="kpi-detail-row">
+                {field(k, 'project', 'kpi-projects')}
+                {field(k, 'item', 'kpi-items')}
+                {field(k, 'person', 'kpi-persons')}
+                {field(k, 'qty', undefined, 'kpi-detail-qty')}
+                {field(k, 'cause', 'kpi-causes', 'kpi-detail-cause')}
+                <button type="button" className="link-button" aria-label={`${tk.detail.removeRow} ${k + 1}`} onClick={() => setDetailRows(def, rows.length > 1 ? rows.filter((_r, i) => i !== k) : [EMPTY_ROW])}>
+                  ✕
+                </button>
+              </div>
+            ))}
+            <button type="button" className="link-button" onClick={() => setDetailRows(def, [...rows, EMPTY_ROW])}>
+              {tk.detail.addRow}
+            </button>
+          </td>
+        </tr>
+      );
+    }
+    const list = autoDetails(def);
+    if (!isOff(def) || !list.length) return null;
+    return (
+      <tr className="kpi-detail kpi-detail-auto">
+        <td colSpan={6}>
+          <div className="kpi-detail-title">{dayOf(def) === today ? tk.detail.autoNew : tk.detail.autoSaved}</div>
+          <ul className="kpi-detail-list">
+            {list.slice(0, AUTO_DETAIL_ROWS).map((d, k) => (
+              <li key={k}>{[d.item, d.project, d.person, d.qty === null ? '' : `${tk.detail.qty.toLowerCase()} ${formatValue(d.qty, locale)}`, d.cause].filter(Boolean).join(' · ')}</li>
+            ))}
+          </ul>
+          {list.length > AUTO_DETAIL_ROWS && <small className="muted">{tk.detail.more.replace('{n}', String(list.length - AUTO_DETAIL_ROWS))}</small>}
+        </td>
+      </tr>
+    );
+  };
+
   const dot = (status: KpiStatus | null) => (status ? <span className={`kpi-dot kpi-${status}`} title={tk.legend[status]} /> : <span className="muted">—</span>);
 
   return (
@@ -279,7 +405,7 @@ export function KpiPage({ today = localToday() }: { today?: DayNumber } = {}) {
       {head}
 
       <div className="tabs" role="tablist" aria-label={t.modules.kpi.title}>
-        {(['overview', 'entry', 'defs'] as const).map((id) => (
+        {(['overview', 'entry', 'analysis', 'defs'] as const).map((id) => (
           <button key={id} type="button" role="tab" className="tab" aria-selected={tab === id} onClick={() => setTab(id)}>
             {tk.tabs[id]}
           </button>
@@ -408,6 +534,20 @@ export function KpiPage({ today = localToday() }: { today?: DayNumber } = {}) {
               ))}
             </p>
           )}
+          {(
+            [
+              ['kpi-projects', suggestions.projects],
+              ['kpi-items', suggestions.items],
+              ['kpi-persons', suggestions.persons],
+              ['kpi-causes', suggestions.causes],
+            ] as const
+          ).map(([id, values]) => (
+            <datalist key={id} id={id}>
+              {values.map((v) => (
+                <option key={v} value={v} />
+              ))}
+            </datalist>
+          ))}
           <div className="table-scroll">
             <table className="table kpi-entry">
               <thead>
@@ -444,7 +584,8 @@ export function KpiPage({ today = localToday() }: { today?: DayNumber } = {}) {
                       const value = currentValue(def);
                       const stored = kpiValue(entryFor(def), def);
                       return (
-                        <tr key={def.id}>
+                        <Fragment key={def.id}>
+                        <tr>
                           <td>
                             {def.name}
                             {def.unit && <small className="muted"> ({def.unit})</small>}
@@ -488,6 +629,8 @@ export function KpiPage({ today = localToday() }: { today?: DayNumber } = {}) {
                               ))}
                           </td>
                         </tr>
+                        {details(def)}
+                        </Fragment>
                       );
                     })}
                   </tbody>
@@ -500,6 +643,8 @@ export function KpiPage({ today = localToday() }: { today?: DayNumber } = {}) {
           <p className="muted">{tk.entry.note}</p>
         </div>
       )}
+
+      {tab === 'analysis' && <KpiAnalysis kpi={kpi} oilItems={oilList.items} today={today} onOpenDay={(d) => openDay(d)} />}
 
       {tab === 'defs' && (
         <div className="panel kpi-defs">

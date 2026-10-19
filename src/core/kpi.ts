@@ -48,10 +48,27 @@ export interface KpiEntry {
   values: Record<string, number>;
 }
 
+/** Detail bodu mimo cíl: co, kde, kdo (ručně u ručních ukazatelů, automaticky z dat u automatických). */
+export interface KpiDetail {
+  day: DayNumber;
+  kpiId: string;
+  project: string;
+  /** Díl (číslo dílu). */
+  item: string;
+  /** Osoba / odpovědný (jména jako v OIL). */
+  person: string;
+  qty: number | null;
+  /** Příčina / popis (u automatických detailů např. destinace nebo bod OIL). */
+  cause: string;
+  source: 'manual' | 'auto';
+}
+
 export interface KpiData {
   defs: KpiDef[];
   /** Zapsané dny seřazené od nejstaršího. */
   entries: KpiEntry[];
+  /** Detaily bodů mimo cíl (po dnech a ukazatelích). */
+  details: KpiDetail[];
 }
 
 /** Úvodní sada ukazatelů (názvy a kategorie podle jazyka, ostatní napevno; vše jde v aplikaci upravit). */
@@ -78,6 +95,7 @@ export function defaultKpis(texts: DefaultKpiTexts): KpiData {
   return {
     defs: DEFAULTS.map((d) => ({ ...d, name: texts.names[d.id] ?? d.id, unit: texts.units[d.id] ?? '', categories: texts.categories[d.id] ?? [], timing: defaultTiming(d.source) })),
     entries: [],
+    details: [],
   };
 }
 
@@ -239,6 +257,12 @@ export function withValues(data: KpiData, day: DayNumber, keys: readonly string[
   return withEntry(data, { day, author, at, values: next });
 }
 
+/** Detaily ukazatelů `kpiIds` za den se nahradí `details` (ostatní detaily zůstanou). */
+export function withDetails(data: KpiData, day: DayNumber, kpiIds: readonly string[], details: readonly KpiDetail[]): KpiData {
+  const kept = data.details.filter((d) => d.day !== day || !kpiIds.includes(d.kpiId));
+  return { ...data, details: [...kept, ...details].sort((a, b) => a.day - b.day) };
+}
+
 /** Den má zapsaný výsledek: aspoň jeden ukazatel „výsledek dne“ má hodnotu (bez takových ukazatelů stačí zápis). */
 export function hasResults(data: KpiData, day: DayNumber): boolean {
   const entry = entryOf(data, day);
@@ -282,6 +306,12 @@ const COLUMNS = {
   value: ['Hodnota', 'Value'],
   author: ['Zapsal', 'Author'],
   at: ['Kdy', 'When'],
+  project: ['Projekt', 'Project'],
+  item: ['Díl', 'Part'],
+  person: ['Osoba', 'Person'],
+  qty: ['Množství', 'Quantity'],
+  cause: ['Příčina', 'Cause'],
+  detailSource: ['Zdroj detailu', 'Detail source'],
 } as const;
 
 const HIGHER = 'více';
@@ -322,6 +352,11 @@ export function kpiSheets(data: KpiData): KpiSheet[] {
       name: 'Dny',
       header: [COLUMNS.day[0], COLUMNS.author[0], COLUMNS.at[0]],
       rows: data.entries.map((e) => [formatDate(e.day), e.author, e.at]),
+    },
+    {
+      name: 'Detaily',
+      header: [COLUMNS.day[0], COLUMNS.id[0], COLUMNS.name[0], COLUMNS.project[0], COLUMNS.item[0], COLUMNS.person[0], COLUMNS.qty[0], COLUMNS.cause[0], COLUMNS.detailSource[0]],
+      rows: data.details.map((d) => [formatDate(d.day), d.kpiId, byId.get(d.kpiId)?.name ?? '', d.project, d.item, d.person, d.qty, d.cause, d.source === 'auto' ? 'auto' : 'ruční']),
     },
   ];
 }
@@ -403,5 +438,28 @@ export function parseKpiWorkbook(sheets: readonly { name: string; data: Cell[][]
       e.at = atC === -1 ? '' : cellText(row[atC]);
     }
   }
-  return { ok: true, value: { defs, entries: [...entries.values()].sort((a, b) => a.day - b.day) } };
+  const details: KpiDetail[] = [];
+  const detailsSheet = find([COLUMNS.day, COLUMNS.id, COLUMNS.cause]);
+  if (detailsSheet) {
+    const [dayC, idC, causeC] = detailsSheet.cols as [number, number, number];
+    const col = (aliases: readonly string[]) => findColumn(detailsSheet.header, aliases);
+    const [projectC, itemC, personC, qtyC, sourceC] = [col(COLUMNS.project), col(COLUMNS.item), col(COLUMNS.person), col(COLUMNS.qty), col(COLUMNS.detailSource)];
+    const text = (row: Cell[], c: number) => (c === -1 ? '' : cellText(row[c]));
+    for (const row of detailsSheet.rows) {
+      const day = cellDay(row[dayC]);
+      const kpiId = cellText(row[idC]);
+      if (day === null || !kpiId) continue;
+      details.push({
+        day,
+        kpiId,
+        project: text(row, projectC),
+        item: text(row, itemC),
+        person: text(row, personC),
+        qty: qtyC === -1 ? null : cellNumber(row[qtyC]),
+        cause: cellText(row[causeC]),
+        source: /^auto/i.test(text(row, sourceC)) ? 'auto' : 'manual',
+      });
+    }
+  }
+  return { ok: true, value: { defs, entries: [...entries.values()].sort((a, b) => a.day - b.day), details: details.sort((a, b) => a.day - b.day) } };
 }
