@@ -57,7 +57,7 @@ describe('šablona mapování po druzích dílu', () => {
   it('jen listy FG, SFG, PG (každý jen se svými sloupci) a Návod', () => {
     expect(sheets.map((s) => s.name)).toEqual(['FG', 'SFG', 'PG', 'Návod']);
     expect(headers(byName('SFG'))).toEqual(['Item Number', 'Description', 'Project', 'Line']);
-    expect(headers(byName('PG'))).toEqual(['Item Number', 'Description', 'Project', 'Category']);
+    expect(headers(byName('PG'))).toEqual(['Item Number', 'Description', 'Supplier', 'Project', 'Category']);
     expect(headers(byName('FG'))).toEqual(KIND_COLUMNS.FG.map((k) => TEMPLATE_COLUMNS[k].header));
   });
 
@@ -74,7 +74,7 @@ describe('šablona mapování po druzích dílu', () => {
     const fg = row(byName('FG'), 'FG1');
     expect(fg['Order Multiple']).toEqual({});
     expect(byName('FG').data.slice(1).flat().every((c) => c?.backgroundColor === undefined)).toBe(true);
-    expect(byName('PG').data[0]!.map((c) => c?.backgroundColor)).toEqual(['#1D5C9E', '#1D5C9E', '#BDD7EE', '#BDD7EE']);
+    expect(byName('PG').data[0]!.map((c) => c?.backgroundColor)).toEqual(['#1D5C9E', '#1D5C9E', '#BDD7EE', '#BDD7EE', '#BDD7EE']);
     // u FG volitelné jen strana a varianta
     expect(byName('FG').data[0]!.filter((c) => c?.backgroundColor === '#BDD7EE').map((c) => c?.value)).toEqual(['Side', 'Variant']);
   });

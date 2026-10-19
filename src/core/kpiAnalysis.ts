@@ -1,7 +1,7 @@
 // Rozbor KPI: body mimo cíl za období s detaily a co se opakuje (projekt, díl, osoba, příčina).
 
 import { weekday, type DayNumber } from './dates';
-import { entryOf, kpiStatus, kpiValue, LETTERS, letterStatus, type KpiData, type KpiDef, type KpiDetail, type KpiStatus, type Letter } from './kpi';
+import { entryOf, kpiStatus, kpiValue, LETTERS, letterStatus, type KpiData, type KpiDef, type KpiDetail, type KpiSource, type KpiStatus, type Letter } from './kpi';
 import { ownerNames } from './oil';
 
 export interface NokPoint {
@@ -34,46 +34,102 @@ export function nokPoints(data: KpiData, from: DayNumber, to: DayNumber, filter:
   return points;
 }
 
-export type Dimension = 'project' | 'item' | 'person' | 'cause';
-export const DIMENSIONS: readonly Dimension[] = ['project', 'item', 'person', 'cause'];
+/** Podle čeho se body ukazatele seskupí (cause = příčina; u Coverage lokalita, u komponent popis, u OIL bod). */
+export type GroupDim = 'project' | 'item' | 'person' | 'cause' | 'supplier';
 
-export interface NokGroup {
-  value: string;
-  /** Dny, kdy se hodnota objevila (vzestupně). */
-  days: DayNumber[];
-  /** Počet bodů mimo cíl s touto hodnotou. */
-  points: number;
-  /** Ukazatele, u kterých se objevila. */
-  kpis: KpiDef[];
-  /** Nejhorší stav bodů s touto hodnotou po dnech. */
-  dayStatus: ReadonlyMap<DayNumber, 'yellow' | 'red'>;
+/** Seskupení podle zdroje ukazatele; první je výchozí (komponenty podle dodavatele, OIL podle odpovědného …). */
+export const GROUP_DIMS: Record<KpiSource, readonly GroupDim[]> = {
+  manual: ['cause', 'project', 'item', 'person'],
+  coverageShortage: ['project', 'item', 'cause'],
+  componentsShort: ['supplier', 'project', 'item'],
+  oilOverdue: ['person', 'cause'],
+};
+
+type OffStatus = 'yellow' | 'red';
+const worse = (a: OffStatus | undefined, b: OffStatus): OffStatus => (a === 'red' ? 'red' : b);
+
+/** Ukazatel mimo cíl v období: dny mimo cíl s nejhorším stavem a jeho body. */
+export interface KpiOff {
+  def: KpiDef;
+  days: ReadonlyMap<DayNumber, OffStatus>;
+  points: NokPoint[];
 }
 
-/** Hodnoty detailu v daném rozměru; osoby „A / B“ se rozdělí jako v OIL, příčina bez rozdílu velikosti písmen. */
-function valuesOf(detail: KpiDetail, dim: Dimension): string[] {
-  const raw = detail[dim].trim();
-  if (!raw) return [];
+/** Ukazatele, které byly v období aspoň jednou mimo cíl: nejdřív víc dní mimo cíl, pak červené, pak pořadí písmen. */
+export function offKpis(points: readonly NokPoint[]): KpiOff[] {
+  const byDef = new Map<string, { def: KpiDef; days: Map<DayNumber, OffStatus>; points: NokPoint[] }>();
+  for (const p of points) {
+    let k = byDef.get(p.def.id);
+    if (!k) byDef.set(p.def.id, (k = { def: p.def, days: new Map(), points: [] }));
+    k.days.set(p.day, worse(k.days.get(p.day), p.status));
+    k.points.push(p);
+  }
+  const reds = (k: KpiOff) => [...k.days.values()].filter((s) => s === 'red').length;
+  return [...byDef.values()].sort((a, b) => b.days.size - a.days.size || reds(b) - reds(a) || LETTERS.indexOf(a.def.letter) - LETTERS.indexOf(b.def.letter));
+}
+
+/** Díl (nebo jiná položka detailu) ve skupině: ve kterých dnech byl, nejvyšší množství. */
+export interface GroupItem {
+  /** Hlavní text: díl, jinak příčina nebo osoba. */
+  label: string;
+  /** Doplňující údaje (popis / lokalita, projekt, osoba). */
+  note: string;
+  days: DayNumber[];
+  maxQty: number | null;
+}
+
+export interface DetailGroup {
+  /** Hodnota skupiny; prázdná = bez údaje (nebo bod bez detailu). */
+  value: string;
+  days: ReadonlyMap<DayNumber, OffStatus>;
+  items: GroupItem[];
+  maxQty: number | null;
+}
+
+/** Hodnoty detailu pro seskupení: projekty „P1, P2“ a osoby „A / B“ se rozdělí, dodavatel z mapování podle dílu. */
+function valuesOf(d: KpiDetail, dim: GroupDim, supplierOf: (item: string) => string): string[] {
+  const raw = (dim === 'supplier' ? supplierOf(d.item) : d[dim]).trim();
+  if (!raw) return [''];
   if (dim === 'person') return ownerNames(raw);
+  if (dim === 'project') return raw.split(/\s*,\s*/).filter(Boolean);
   return [raw];
 }
 
-/** Souhrn bodů mimo cíl podle rozměru: nejdřív co se objevilo ve víc dnech, pak víckrát. */
-export function nokGroups(points: readonly NokPoint[], dim: Dimension): NokGroup[] {
-  const groups = new Map<string, { value: string; days: Map<DayNumber, 'yellow' | 'red'>; points: number; kpis: Map<string, KpiDef> }>();
-  for (const point of points) {
-    const values = new Map<string, string>();
-    for (const detail of point.details) for (const v of valuesOf(detail, dim)) values.set(v.toLowerCase(), v);
-    for (const [key, value] of values) {
-      let g = groups.get(key);
-      if (!g) groups.set(key, (g = { value, days: new Map(), points: 0, kpis: new Map() }));
-      if (g.days.get(point.day) !== 'red') g.days.set(point.day, point.status);
-      g.points++;
-      g.kpis.set(point.def.id, point.def);
+/**
+ * Body ukazatele seskupené podle `dim`: skupina má dny (s nejhorším stavem), nejvyšší množství a položky (díly)
+ * s dny a množstvím. Bod bez detailu patří do skupiny bez údaje. Nejdřív skupiny s víc dny, bez údaje na konci.
+ */
+export function detailGroups(points: readonly NokPoint[], dim: GroupDim, supplierOf: (item: string) => string = () => ''): DetailGroup[] {
+  type Item = { label: string; note: string; days: Set<DayNumber>; maxQty: number | null };
+  const groups = new Map<string, { value: string; days: Map<DayNumber, OffStatus>; items: Map<string, Item> }>();
+  const maxOf = (a: number | null, b: number | null) => (b === null ? a : a === null ? b : Math.max(a, b));
+  for (const p of points) {
+    for (const d of p.details.length ? p.details : [null]) {
+      const values = d ? valuesOf(d, dim, supplierOf) : [''];
+      const label = d ? d.item || d.cause || d.person || d.project : '';
+      const note = d ? [d.item ? d.cause : '', dim !== 'project' && label !== d.project ? d.project : '', dim !== 'person' && label !== d.person ? d.person : ''].filter(Boolean).join(' · ') : '';
+      for (const value of new Set(values)) {
+        const key = value.toLowerCase();
+        let g = groups.get(key);
+        if (!g) groups.set(key, (g = { value, days: new Map(), items: new Map() }));
+        g.days.set(p.day, worse(g.days.get(p.day), p.status));
+        if (!label) continue;
+        const itemKey = label.toLowerCase();
+        let item = g.items.get(itemKey);
+        if (!item) g.items.set(itemKey, (item = { label, note, days: new Set(), maxQty: null }));
+        item.days.add(p.day);
+        item.maxQty = maxOf(item.maxQty, d!.qty);
+      }
     }
   }
   return [...groups.values()]
-    .map((g) => ({ value: g.value, days: [...g.days.keys()].sort((a, b) => a - b), points: g.points, kpis: [...g.kpis.values()], dayStatus: g.days }))
-    .sort((a, b) => b.days.length - a.days.length || b.points - a.points || a.value.localeCompare(b.value, 'cs'));
+    .map((g) => {
+      const items = [...g.items.values()]
+        .map((i) => ({ label: i.label, note: i.note, days: [...i.days].sort((a, b) => a - b), maxQty: i.maxQty }))
+        .sort((a, b) => b.days.length - a.days.length || (b.maxQty ?? 0) - (a.maxQty ?? 0) || a.label.localeCompare(b.label, 'cs', { numeric: true }));
+      return { value: g.value, days: g.days, items, maxQty: items.reduce<number | null>((m, i) => maxOf(m, i.maxQty), null) };
+    })
+    .sort((a, b) => Number(!a.value) - Number(!b.value) || b.days.size - a.days.size || b.items.length - a.items.length || a.value.localeCompare(b.value, 'cs', { numeric: true }));
 }
 
 /** Kolik zapsaných pracovních dní období bylo písmeno červené / mimo cíl a kolik pracovních dní období má. */

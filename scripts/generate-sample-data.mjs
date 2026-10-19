@@ -57,27 +57,27 @@ for (const week of [40, 41, 42]) {
 const customerNumber = (idx) => `A90000000${String(10 + (idx % 4)).padStart(2, '0')}  0000${String(1000 + idx)}`;
 // Komponenty z kusovníku: nakupované díly (PG), sledované v modulu Komponenty.
 const COMPONENTS = [
-  { item: 'K-1001', description: 'SCREW M5 BLACK', um: 'EA', source: 'P', qty: 6 },
-  { item: 'K-1002', description: 'CLIP PANEL', um: 'EA', source: 'P', qty: 4 },
+  { item: 'K-1001', description: 'SCREW M5 BLACK', um: 'EA', source: 'P', qty: 6, supplier: 'Dodavatel Alfa' },
+  { item: 'K-1002', description: 'CLIP PANEL', um: 'EA', source: 'P', qty: 4, supplier: 'Dodavatel Alfa' },
   { item: 'K-1003', description: 'LABEL', um: 'EA', source: 'P', qty: 1 },
-  { item: 'K-2001', description: 'GRANULATE PP', um: 'KG', source: 'P', qty: 0.85, sub: true },
-  { item: 'K-2002', description: 'FOAM PAD', um: 'EA', source: 'P', qty: 2, sub: true },
+  { item: 'K-2001', description: 'GRANULATE PP', um: 'KG', source: 'P', qty: 0.85, sub: true, supplier: 'Dodavatel Beta' },
+  { item: 'K-2002', description: 'FOAM PAD', um: 'EA', source: 'P', qty: 2, sub: true, supplier: 'Dodavatel Gama' },
 ];
 // Kategorie hotového dílu podle druhu výrobku v popisu; varianta jen u dveřních panelů projektu P100 (BASIS / PREMIUM).
 const CATEGORY = { DOOR: 'DP', POCKET: 'MP', IP: 'IP', GLOVEBOX: 'GB' };
 const master = [
-  'Item Number;Item Type;Customer Number;Description;Project;Category;Side;Variant;Line;Order Multiple',
+  'Item Number;Item Type;Customer Number;Description;Project;Category;Side;Variant;Line;Order Multiple;Supplier',
   ...items
     .filter((it) => it.project)
     .map((it, idx) => {
       const variant = it.project === 'P100' ? (it.description.includes('PREMIUM') ? 'PREMIUM' : 'BASIS') : '';
-      return [it.item, 'FG', customerNumber(idx), it.description, it.project, CATEGORY[it.description.split(' ')[1]], it.side, variant, 'ASSEMBLY', [8, 12, 16, 24][idx % 4]].join(';');
+      return [it.item, 'FG', customerNumber(idx), it.description, it.project, CATEGORY[it.description.split(' ')[1]], it.side, variant, 'ASSEMBLY', [8, 12, 16, 24][idx % 4], ''].join(';');
     }),
-  // Nakupované díly (PG) se sledují v modulu Komponenty, mezivýroba (SFG) ne.
-  ...COMPONENTS.map((c) => [c.item, 'PG', '', c.description, '', '', '', '', '', ''].join(';')),
-  'S-0100;SFG;;CARRIER SUB-ASSY;P100;;;;FOA;',
+  // Nakupované díly (PG) se sledují v modulu Komponenty, mezivýroba (SFG) ne; dodavatel u PG (jeden bez dodavatele).
+  ...COMPONENTS.map((c) => [c.item, 'PG', '', c.description, '', '', '', '', '', '', c.supplier ?? ''].join(';')),
+  'S-0100;SFG;;CARRIER SUB-ASSY;P100;;;;FOA;;',
   // Doběhlý nakupovaný díl: na skladě, ale bez potřeby.
-  'K-0900;PG;;TRIM OLD VERSION;;;;;;',
+  'K-0900;PG;;TRIM OLD VERSION;;;;;;;',
 ];
 writeFileSync('sample-data/Item_Mapping.csv', '\ufeff' + master.join('\r\n') + '\r\n');
 

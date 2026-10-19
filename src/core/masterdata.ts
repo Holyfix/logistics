@@ -19,6 +19,7 @@ export const MASTER_COLUMNS = {
   componentCoverage: ['Component Coverage', 'Coverage Component', 'Coverage komponent', 'Komponenta'],
   line: ['Line', 'Linka', 'Výrobní linka', 'Production Line'],
   category: ['Category', 'Kategorie'],
+  supplier: ['Supplier', 'Dodavatel', 'Vendor'],
 } as const;
 
 /** Hodnoty, které ve sloupci Component Coverage znamenají „sledovat“. */
@@ -71,6 +72,8 @@ export interface MasterItem {
   line: string;
   /** Druh výrobku nebo komponenty (např. DP = door panel, HB), jak ho uživatel zapíše; prázdné = neuvedeno. */
   category: string;
+  /** Dodavatel nakupovaného dílu (rozbor KPI seskupí komponenty podle dodavatele); prázdné = neuvedeno. */
+  supplier: string;
 }
 
 /** Sloupec mapování (klíč z MASTER_COLUMNS). */
@@ -254,6 +257,7 @@ export function parseMasterWorkbook(workbook: readonly MasterSheet[]): MasterRes
         componentCoverage: YES.has(text(row, col.componentCoverage).toLowerCase()),
         line: lineOf(text(row, col.line)),
         category: text(row, col.category).replace(/\s+/g, ' '),
+        supplier: text(row, col.supplier),
       };
       items.set(item, entry);
       if (entry.customerKey) {

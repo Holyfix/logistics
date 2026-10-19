@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { dayFromParts } from './dates';
 import { defaultKpis, withDetails, withEntry, type KpiData, type KpiDetail } from './kpi';
-import { letterDays, letterSummary, nokGroups, nokPoints } from './kpiAnalysis';
+import { detailGroups, letterDays, letterSummary, nokPoints, offKpis, type DetailGroup } from './kpiAnalysis';
 
 const day = (n: number) => dayFromParts(2026, 10, n)!;
 const texts = { names: { d_linestop: 'Zastavení linky', d_customer: 'Chybí u zákazníka' }, units: {}, categories: {} };
@@ -30,22 +30,40 @@ describe('rozbor KPI', () => {
     expect(nokPoints(data, day(6), day(7), { letter: '', kpiId: 'd_linestop' }).map((p) => p.day)).toEqual([day(6)]);
   });
 
-  it('co se opakuje: dny, body a ukazatele podle projektu, dílu, osoby a příčiny', () => {
+  it('ukazatele mimo cíl: dny s nejhorším stavem a body', () => {
+    const off = offKpis(nokPoints(data, day(1), day(31), { letter: '', kpiId: '' }));
+    expect(off.map((k) => [k.def.id, [...k.days.keys()].sort((a, b) => a - b), k.points.length])).toEqual([
+      ['d_customer', [day(7), day(9)], 2],
+      ['d_linestop', [day(6), day(8)], 2],
+    ]);
+  });
+
+  it('skupiny ukazatele: projekt → díly s dny a nejvyšším množstvím; osoby a projekty se rozdělí', () => {
     const points = nokPoints(data, day(1), day(31), { letter: '', kpiId: '' });
-    const summary = (dim: 'project' | 'item' | 'person' | 'cause') => nokGroups(points, dim).map((g) => [g.value, g.days.length, g.points, g.kpis.map((k) => k.id).join(',')]);
-    expect(summary('project')).toEqual([
-      ['P300', 3, 3, 'd_customer,d_linestop'],
-      ['P100', 2, 2, 'd_customer'],
+    const customer = points.filter((p) => p.def.id === 'd_customer');
+    const linestop = points.filter((p) => p.def.id === 'd_linestop');
+    const summary = (groups: DetailGroup[]) => groups.map((g) => [g.value, g.days.size, g.maxQty, g.items.map((i) => `${i.label}|${i.note}|${i.days.length}|${i.maxQty}`)]);
+    expect(summary(detailGroups(customer, 'project'))).toEqual([
+      ['P100', 2, 18, ['900101|Lokalita A|2|18']],
+      ['P300', 1, 13, ['900111|Lokalita B|1|13']],
     ]);
-    expect(summary('item')[0]).toEqual(['900101', 2, 2, 'd_customer']);
-    // osoba „Nákup / Logistika“ patří k oběma; příčina bez rozdílu velikosti písmen
-    expect(summary('person')).toEqual([
-      ['Nákup', 2, 2, 'd_linestop'],
-      ['Logistika', 1, 1, 'd_linestop'],
+    expect(summary(detailGroups(linestop, 'person')).map((g) => [g[0], g[1]])).toEqual([
+      ['Nákup', 2],
+      ['Logistika', 1],
     ]);
-    expect(summary('cause').slice(0, 2)).toEqual([
-      ['Lokalita A', 2, 2, 'd_customer'],
-      ['zpoždění dodavatele', 2, 2, 'd_linestop'],
+    // příčina bez rozdílu velikosti písmen; díl s poznámkou
+    expect(summary(detailGroups(linestop, 'cause'))).toEqual([['zpoždění dodavatele', 2, 40, ['K-1002|zpoždění dodavatele · P300 · Nákup / Logistika|2|40']]]);
+    // dodavatel z mapování; bez něj skupina bez údaje
+    expect(summary(detailGroups(linestop, 'supplier', (item) => (item === 'K-1002' ? 'Alfa' : ''))).map((g) => [g[0], g[1]])).toEqual([['Alfa', 2]]);
+    expect(detailGroups(linestop, 'supplier').map((g) => g.value)).toEqual(['']);
+  });
+
+  it('bod bez detailu patří do skupiny bez údaje (na konci)', () => {
+    const withBare = withEntry(data, { day: day(12), author: '', at: '', values: { d_linestop: 30 } });
+    const groups = detailGroups(nokPoints(withBare, day(1), day(31), { letter: '', kpiId: 'd_linestop' }), 'project');
+    expect(groups.map((g) => [g.value, g.days.size, g.items.length])).toEqual([
+      ['P300', 2, 1],
+      ['', 1, 0],
     ]);
   });
 
@@ -55,11 +73,5 @@ describe('rozbor KPI', () => {
 
   it('stav písmene po dnech: barva zápisu, nezapsaný pracovní den, víkend, budoucnost', () => {
     expect(letterDays(data, 'D', day(5), day(11), day(10)).map((d) => d.state)).toEqual(['missing', 'red', 'red', 'red', 'red', 'weekend', 'future']);
-  });
-
-  it('skupina zná nejhorší stav po dnech', () => {
-    const points = nokPoints(data, day(1), day(31), { letter: '', kpiId: '' });
-    const p300 = nokGroups(points, 'project').find((g) => g.value === 'P300')!;
-    expect([...p300.dayStatus.keys()].sort((a, b) => a - b)).toEqual([day(6), day(8), day(9)]);
   });
 });

@@ -87,12 +87,12 @@ a Dodavatelé odložené. Modul Kapacity (odvolávky vs. kapacita linek) byl zva
 - ✅ **Detail bodu mimo cíl** (nepovinný) v Zápisu dne pod ukazatelem: Projekt, Díl, Osoba (z OIL), Množství, Příčina
   (volný text s nabídkou dříve zapsaných příčin), víc řádků. Automatické ukazatele uloží detail samy (které díly,
   komponenty nebo body OIL hodnotu způsobily)
-- ✅ **Rozbor** (posledních 7 dní, měsíc nebo vlastní období, filtr ukazatele): 1) **Jak dopadla písmena** – dlaždice
-  S Q C D P s počtem pracovních dní mimo cíl a pruhem dní (klik na písmeno zúží rozbor); 2) **Co se opakuje** – karty
-  projektů, dílů, osob a příčin, které se objevily ve 2 a více dnech (červená od 3 dní), s dny v pruhu, odkazem na
-  otevřené body OIL, nebo tlačítkem + OIL; 3) **Nejčastější** – pruhy podle počtu dní mimo cíl s přepínačem Projekt /
-  Díl / Osoba / Příčina; 4) **Body mimo cíl po dnech** – nejnovější dva dny rozbalené, detail jedním řádkem, odkaz na
-  zápis dne, export do Excelu
+- ✅ **Rozbor** (posledních 7 dní, měsíc nebo vlastní období) podle ukazatelů: dlaždice písmen (počet dní mimo cíl, klik
+  zúží rozbor) a pod nimi **ukazatele mimo cíl od nejhoršího**, každý jeden řádek: pruh dní (klik otevře zápis dne),
+  počet dní mimo cíl, nejčastější viník a OIL bod nebo + OIL. Po rozbalení se body seskupí podle toho, co u ukazatele
+  dává smysl – Chybí u zákazníka podle projektu, Komponenty podle **dodavatele** (sloupec Supplier v mapování), Body
+  OIL podle odpovědného, ruční ukazatele podle příčiny; přepínačem i jinak. Skupina: pruh dní, počet dní (červeně od
+  3), max. množství, OIL / + OIL; po rozbalení položky (díly) – prvních 5, pak „další“. Export do Excelu
 ### Call-offs
 Hlavní údaj je **Discrete Qty** (požadavek na den), kumulativy jsou doplňková informace.
 Filtry projekt, kategorie, strana (LHD/RHD) a varianta z kmenových dat se ovlivňují navzájem v libovolném pořadí (každý nabízí jen hodnoty odpovídající ostatním vybraným filtrům; strana a varianta jen tam, kde je díly mají), hledání dílu; díly bez projektu (bez mapování nebo s prázdným Project) jako volba „Bez projektu“ ve filtru Projekt.

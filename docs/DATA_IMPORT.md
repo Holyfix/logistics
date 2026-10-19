@@ -87,6 +87,7 @@ sloupcem Item Type); ostatní listy (Návod) se vynechají. Díl na dvou listech
 | Variant | Varianta | ne; jen u dílů, které je potřeba rozlišit (např. `SR1 Heating`), zapisuje se bez strany |
 | Line | Linka, Výrobní linka | u FG a SFG; linka, na které se díl vyrábí: `ASSEMBLY`, `FOA`, `SLH`, `IMM` (přijme i Montáž, Assy, Foaming, Slush, Vstřikování) |
 | Order Multiple | Balení, Kusů v balení | u FG s linkou ASSEMBLY |
+| Supplier | Dodavatel, Vendor | ne; dodavatel nakupovaného dílu (PG) – Rozbor KPI podle něj seskupí komponenty |
 
 Modul Komponenty sleduje všechny nakupované díly (Item Type = PG). Další sloupce (např. Customer, Component Coverage,
 Type, Safety Stock, Yield Percent) aplikace nepoužívá; Component Coverage = Ano jen pomůže zařadit díl bez druhu
@@ -95,7 +96,7 @@ do šablony na list PG.
 - **Šablonu mapování** stáhnete v modulu Data. Má jen listy **FG**, **SFG**, **PG** (a Návod), každý jen se
   sloupci, které aplikace pro daný druh používá: FG (Item Number, Customer Number, Description, Project, Category,
   Side, Variant, Line, Order Multiple), SFG (Item Number, Description, Project, Line), PG (Item Number,
-  Description, Project, Category – projekt a kategorie jen u dílů, které zákazník odvolává). Díly bez druhu se zařadí podle údajů (linka FOA / SLH / IMM → SFG, dřívější Component Coverage =
+  Description, Supplier, Project, Category – projekt a kategorie jen u dílů, které zákazník odvolává). Díly bez druhu se zařadí podle údajů (linka FOA / SLH / IMM → SFG, dřívější Component Coverage =
   Ano → PG, ostatní → FG), díly, které v mapování chybí (z Coverage, odvolávek a kusovníků),
   jsou na listu FG; po nahrání mají díly druh podle listu. Chybějící údaj zůstane prázdný (co doplnit, ukazuje
   Kontrola mapování). Formátování je jen záhlaví (tmavé = povinný sloupec, světlé = volitelný), aby byl soubor

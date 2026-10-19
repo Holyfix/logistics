@@ -6,7 +6,7 @@ import type { ReportCell, ReportSheet } from './calloffs/summaryReport';
 import { KIND_FIELDS, type CheckedField } from './mappingCheck';
 import { customerDisplay, ITEM_KINDS, type ItemKind, type MasterData, type MasterItem } from './masterdata';
 
-type TemplateKey = 'item' | 'customerNumber' | 'description' | 'project' | 'category' | 'side' | 'variant' | 'line' | 'orderMultiple';
+type TemplateKey = 'item' | 'customerNumber' | 'description' | 'project' | 'category' | 'side' | 'variant' | 'line' | 'orderMultiple' | 'supplier';
 
 /** Sloupce šablony: záhlaví a šířka. */
 export const TEMPLATE_COLUMNS: Record<TemplateKey, { header: string; width: number }> = {
@@ -19,13 +19,14 @@ export const TEMPLATE_COLUMNS: Record<TemplateKey, { header: string; width: numb
   variant: { header: 'Variant', width: 16 },
   line: { header: 'Line', width: 11 },
   orderMultiple: { header: 'Order Multiple', width: 10 },
+  supplier: { header: 'Supplier', width: 22 },
 };
 
 /** Sloupce listu podle druhu dílu: jen to, co aplikace u daného druhu používá. */
 export const KIND_COLUMNS: Record<ItemKind, readonly TemplateKey[]> = {
   FG: ['item', 'customerNumber', 'description', 'project', 'category', 'side', 'variant', 'line', 'orderMultiple'],
   SFG: ['item', 'description', 'project', 'line'],
-  PG: ['item', 'description', 'project', 'category'],
+  PG: ['item', 'description', 'supplier', 'project', 'category'],
 };
 
 /** Všechny sloupce šablony v pořadí (pro Návod). */
@@ -106,6 +107,7 @@ function valuesOf(m: MasterItem | undefined, part: TemplatePart): Record<Templat
     category: m?.category ?? '',
     line: m?.line ?? '',
     orderMultiple: m?.orderMultiple ?? null,
+    supplier: m?.supplier ?? '',
   };
 }
 
