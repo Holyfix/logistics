@@ -92,7 +92,7 @@ a Dodavatelé odložené. Modul Kapacity (odvolávky vs. kapacita linek) byl zva
   po projektech, dílech, osobách a příčinách a seznam bodů s detaily (klik na den otevře zápis, export do Excelu)
 ### Call-offs
 Hlavní údaj je **Discrete Qty** (požadavek na den), kumulativy jsou doplňková informace.
-Filtry projekt, kategorie, strana (LHD/RHD) a varianta z kmenových dat se ovlivňují navzájem v libovolném pořadí (každý nabízí jen hodnoty odpovídající ostatním vybraným filtrům; strana a varianta jen tam, kde je díly mají), hledání dílu; díly bez mapování jako volba „Bez kmenových dat“ ve filtru Projekt.
+Filtry projekt, kategorie, strana (LHD/RHD) a varianta z kmenových dat se ovlivňují navzájem v libovolném pořadí (každý nabízí jen hodnoty odpovídající ostatním vybraným filtrům; strana a varianta jen tam, kde je díly mají), hledání dílu; díly bez projektu (bez mapování nebo s prázdným Project) jako volba „Bez projektu“ ve filtru Projekt.
 - ✅ **Přehled po projektech:** strom Projekt → Kategorie → Strana → Varianta (sloupce Project, Category, Side, Variant v mapování; strana a varianta jen tam, kde je díly mají) se součty po týdnech, celkem a změna proti předchozímu exportu; rozbalení po úrovních; Excel pro vedení (titulek s exportem, datem a filtry, barevné záhlaví s pondělky týdnů, oddělovače tisíců, změna v ks i v % zeleně/červeně, ukotvené záhlaví, list Přehled ve zvolené úrovni a list Díly se všemi díly) a CSV
 
 - ✅ **Aktuální odvolávky:** nejnovější export po týdnech nebo dnech,

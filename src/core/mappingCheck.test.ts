@@ -133,6 +133,16 @@ describe('kontrola podle druhu dílu (Item Type)', () => {
     expect(c.parts[1]!.fields[0]).toEqual({ field: 'customerNumber', modules: [], byKind: true });
   });
 
+  it('i díl s druhem potřebuje, co chtějí moduly, ve kterých je: nakupovaný díl v odvolávkách projekt a kategorii', () => {
+    const pg = checkMapping(m, { coverage: [], callOffs: callOffs(['PG2']) });
+    const part = pg.parts.find((p) => p.item === 'PG2')!;
+    expect(part.fields).toEqual([
+      { field: 'project', modules: ['calloffs'], byKind: false },
+      { field: 'category', modules: ['calloffs'], byKind: false },
+    ]);
+    expect(pg.modules.calloffs).toMatchObject({ parts: 1, fields: { project: 1, category: 1 } });
+  });
+
   it('souhrn podle druhu', () => {
     expect(c.hasKind).toBe(true);
     expect(c.kinds.FG).toEqual({ total: 3, parts: 2, fields: { orderMultiple: 1, customerNumber: 1, side: 1 } });
