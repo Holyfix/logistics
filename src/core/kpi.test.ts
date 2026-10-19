@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { dayFromParts } from './dates';
 import {
   addDef,
+  hasResults,
   dayState,
   defaultKpis,
   kpiSheets,
@@ -13,13 +14,14 @@ import {
   previousWorkday,
   recentEntries,
   withEntry,
+  withValues,
   type KpiData,
   type KpiDef,
 } from './kpi';
 import type { Cell } from './table';
 
 const day = (d: number) => dayFromParts(2026, 10, d)!;
-const def = (over: Partial<KpiDef>): KpiDef => ({ id: 'x', letter: 'D', name: 'X', unit: '', target: 0, red: 10, higherIsBetter: false, source: 'manual', categories: [], ...over });
+const def = (over: Partial<KpiDef>): KpiDef => ({ id: 'x', letter: 'D', name: 'X', unit: '', target: 0, red: 10, higherIsBetter: false, source: 'manual', categories: [], timing: 'result', ...over });
 const texts = { names: { s_injury: 'Úrazy', q_claims: 'Reklamace' }, units: {}, categories: { q_claims: ['Záměna', 'Obal'], s_nearmiss: ['Skoronehoda'] } };
 
 describe('stav ukazatele', () => {
@@ -129,5 +131,41 @@ describe('grafy', () => {
     expect(recentEntries(data, 'C', day(6), 3).map((e) => e.day)).toEqual([day(2), day(5), day(6)]);
     expect(recentEntries(data, 'C', day(31), 7)).toHaveLength(5);
     expect(recentEntries(data, 'D', day(31), 7)).toEqual([]);
+  });
+});
+
+describe('den hodnoty: výsledek dne a stav v den zápisu', () => {
+  it('výchozí: ruční ukazatele výsledek dne, automatické stav v den zápisu', () => {
+    const d = defaultKpis(texts).defs;
+    expect(d.filter((x) => x.timing === 'state').map((x) => x.id)).toEqual(['d_customer', 'd_components', 'p_oil']);
+  });
+
+  it('zápis po částech: výsledky k jednomu dni, stav k druhému, ostatní hodnoty dne zůstanou', () => {
+    let data = defaultKpis(texts);
+    data = withValues(data, day(5), ['s_injury'], { s_injury: 1 }, 'A', 'ráno');
+    data = withValues(data, day(6), ['d_customer'], { d_customer: 31 }, 'A', 'ráno');
+    // další den se k 6. 10. dopíšou výsledky; stav zůstane
+    data = withValues(data, day(6), ['s_injury'], { s_injury: 0 }, 'B', 'ráno');
+    expect(data.entries.map((e) => [e.day, e.values, e.author])).toEqual([
+      [day(5), { s_injury: 1 }, 'A'],
+      [day(6), { d_customer: 31, s_injury: 0 }, 'B'],
+    ]);
+    expect(hasResults(data, day(5))).toBe(true);
+    expect(hasResults(withValues(data, day(7), ['d_customer'], { d_customer: 1 }, 'A', ''), day(7))).toBe(false);
+    // smazání všech hodnot dne odebere zápis
+    expect(withValues(data, day(5), ['s_injury'], {}, 'A', '').entries.map((e) => e.day)).toEqual([day(6)]);
+  });
+
+  it('soubor: sloupec Den hodnoty se uloží a načte; starší soubor bez něj podle zdroje', () => {
+    const data = defaultKpis(texts);
+    const sheets = kpiSheets({ ...data, defs: data.defs.map((d) => (d.id === 's_injury' ? { ...d, timing: 'state' as const } : d)) });
+    const defsSheet = sheets[0]!;
+    expect(defsSheet.header.at(-1)).toBe('Den hodnoty');
+    const parsed = parseKpiWorkbook(sheets.map((s) => ({ name: s.name, data: [s.header, ...s.rows] as Cell[][] })));
+    if (!parsed.ok) throw new Error();
+    expect(parsed.value.defs.filter((d) => d.timing === 'state').map((d) => d.id)).toEqual(['s_injury', 'd_customer', 'd_components', 'p_oil']);
+    const old = parseKpiWorkbook([{ name: 'Ukazatele', data: [['ID', 'Písmeno', 'Ukazatel', 'Cíl', 'Zdroj'], ['a', 'S', 'A', 0, 'manual'], ['b', 'D', 'B', 0, 'coverageShortage']] }]);
+    if (!old.ok) throw new Error();
+    expect(old.value.defs.map((d) => d.timing)).toEqual(['result', 'state']);
   });
 });

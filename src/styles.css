@@ -1971,6 +1971,14 @@ button.oil-step:disabled {
   font: 700 14px/1.2 var(--font-display);
 }
 
+/* Část zápisu: výsledky za uplynulý den / stav v den zápisu. */
+.kpi-entry .kpi-section td {
+  padding-top: 18px;
+  border-bottom: 2px solid var(--accent);
+  color: var(--accent);
+  font: 700 15px/1.2 var(--font-display);
+}
+
 .kpi-inputs {
   display: flex;
   flex-wrap: wrap;

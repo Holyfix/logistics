@@ -668,6 +668,9 @@ export const cs = {
     },
     entry: {
       heading: 'Zápis za den',
+      morning: 'Ranní zápis: výsledky za {day} · stav {state}',
+      sectionResult: 'Výsledky za {day}',
+      sectionState: 'Stav {day} (v den zápisu)',
       missing: 'Nezapsané pracovní dny:',
       day: 'Den',
       you: 'Zapsal',
@@ -690,6 +693,7 @@ export const cs = {
       note: 'Den je zelený, když jsou všechny ukazatele písmene v cíli, žlutý při upozornění a červený, když je některý mimo cíl. Automatické hodnoty se berou z dat aplikace v okamžiku zápisu.',
     },
     targetText: { lower: '≤ {target}', higher: '≥ {target}', redLower: 'červená nad {red}', redHigher: 'červená pod {red}', warnOnly: 'jen upozornění' },
+    timings: { result: 'výsledek dne (zpětně)', state: 'stav v den zápisu' },
     sources: { manual: 'ruční', coverageShortage: 'auto · Coverage', componentsShort: 'auto · Komponenty', oilOverdue: 'auto · OIL' },
     defs: {
       heading: 'Ukazatele a cíle',
@@ -703,6 +707,7 @@ export const cs = {
       lower: 'méně',
       higher: 'více',
       source: 'Zdroj',
+      timing: 'Den hodnoty',
       categories: 'Kategorie',
       add: '+ Ukazatel',
       newName: 'Nový ukazatel',

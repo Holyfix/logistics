@@ -306,7 +306,7 @@ aplikace nabídne úvodní sadu ukazatelů. Když soubor mezitím změnil někdo
 
 | List | Obsah |
 |---|---|
-| **Ukazatele** | ID, Písmeno (S, Q, C, D, P), Ukazatel, Jednotka, Cíl, Červená za, Lepší je (více / méně), Zdroj, Kategorie (oddělené „; “) |
+| **Ukazatele** | ID, Písmeno (S, Q, C, D, P), Ukazatel, Jednotka, Cíl, Červená za, Lepší je (více / méně), Zdroj, Kategorie (oddělené „; “), Den hodnoty (výsledek dne / stav v den zápisu; chybí-li, ruční = výsledek dne, automatické = stav) |
 | **Hodnoty** | Datum, ID, Ukazatel, Kategorie, Hodnota (u ukazatele s kategoriemi řádek za každou kategorii) |
 | **Dny** | Datum, Zapsal, Kdy – které dny jsou zapsané |
 

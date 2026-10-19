@@ -10,6 +10,7 @@ import {
   dayState,
   defaultKpis,
   entryOf,
+  hasResults,
   kpiSheets,
   kpiStatus,
   kpiValue,
@@ -21,12 +22,14 @@ import {
   recentEntries,
   removeDef,
   updateDef,
-  withEntry,
-  withoutEntry,
+  valueKeys,
+  withValues,
+  KPI_TIMINGS,
   KPI_SOURCES,
   type KpiData,
   type KpiDef,
   type KpiSource,
+  type KpiTiming,
   type KpiStatus,
   type Letter,
 } from '../../core/kpi';
@@ -115,6 +118,8 @@ export function KpiPage({ today = localToday() }: { today?: DayNumber } = {}) {
 
   const [month, setMonth] = useState<Month>(() => monthOf(previousWorkday(today)));
   const [day, setDay] = useState<DayNumber>(() => previousWorkday(today));
+  // Den pro ukazatele „stav v den zápisu“: při ranním zápisu dnešek, při úpravě konkrétního dne ten den.
+  const [stateDay, setStateDay] = useState<DayNumber>(today);
   const [edited, setEdited] = useState<Record<string, string> | null>(null);
   const [name, setName] = useState(readName);
   const [tab, setTab] = useState<Tab>('overview');
@@ -152,12 +157,18 @@ export function KpiPage({ today = localToday() }: { today?: DayNumber } = {}) {
 
   const dayLabel = (d: DayNumber) => `${t.calloffs.weekdays[weekday(d) - 1]} ${formatDayShort(dayToIso(d), locale)}`;
   const entry = entryOf(kpi, day);
-  // Hodnoty dne: upravené, jinak ze zápisu, jinak předvyplněné (ručně 0, automaticky z dat aplikace).
+  const stateEntry = entryOf(kpi, stateDay);
+  // Výsledek dne patří k vybranému dni, stav k dni zápisu (při ranním zápisu dnešek).
+  const dayOf = (def: KpiDef) => (def.timing === 'state' ? stateDay : day);
+  const entryFor = (def: KpiDef) => (def.timing === 'state' ? stateEntry : entry);
+  // Hodnoty: upravené, jinak ze zápisu, jinak předvyplněné (ručně 0; automaticky z dat aplikace jen pro dnešní den,
+  // protože data jsou z dneška).
   const prefill = (def: KpiDef, key: string): string => {
-    const stored = entry?.values[key];
+    const e = entryFor(def);
+    const stored = e?.values[key];
     if (stored !== undefined) return String(stored);
-    if (entry) return '';
-    if (def.source !== 'manual') return auto[def.source] === null ? '' : String(auto[def.source]);
+    if (e && valueKeys(kpi.defs.filter((d) => d.timing === def.timing)).some((k) => e.values[k] !== undefined)) return '';
+    if (def.source !== 'manual') return dayOf(def) === today && auto[def.source] !== null ? String(auto[def.source]) : '';
     return '0';
   };
   const valueOf = (def: KpiDef, key: string) => edited?.[key] ?? prefill(def, key);
@@ -170,8 +181,9 @@ export function KpiPage({ today = localToday() }: { today?: DayNumber } = {}) {
     return values.length ? values.reduce((a, b) => a + b, 0) : null;
   };
 
-  const pickDay = (d: DayNumber) => {
+  const pickDay = (d: DayNumber, state: DayNumber = d) => {
     setDay(d);
+    setStateDay(state);
     setEdited(null);
   };
   const setValue = (key: string, value: string) => setEdited((e) => ({ ...(e ?? {}), [key]: value }));
@@ -189,17 +201,33 @@ export function KpiPage({ today = localToday() }: { today?: DayNumber } = {}) {
       }
       return result;
     });
+  // Výsledky se uloží k vybranému dni, stav k dni zápisu; ostatní hodnoty těch dnů zůstanou.
   const saveDay = () => {
-    const values: Record<string, number> = {};
-    for (const def of kpi.defs)
-      for (const key of inputKeys(def)) {
-        const n = numberOf(valueOf(def, key));
-        if (n !== null) values[key] = n;
-      }
-    void save(withEntry(kpi, { day, author: name.trim(), at: stamp(new Date()), values }));
+    const at = stamp(new Date());
+    let next = kpi;
+    for (const timing of KPI_TIMINGS) {
+      const defs = kpi.defs.filter((d) => d.timing === timing);
+      if (!defs.length) continue;
+      const values: Record<string, number> = {};
+      for (const def of defs)
+        for (const key of inputKeys(def)) {
+          const n = numberOf(valueOf(def, key));
+          if (n !== null) values[key] = n;
+        }
+      next = withValues(next, timing === 'state' ? stateDay : day, valueKeys(defs), values, name.trim(), at);
+    }
+    void save(next);
   };
   const removeDay = () => {
-    if (window.confirm(tk.entry.removeConfirm.replace('{day}', dayLabel(day)))) void save(withoutEntry(kpi, day));
+    const label = day === stateDay ? dayLabel(day) : `${dayLabel(day)} + ${dayLabel(stateDay)}`;
+    if (!window.confirm(tk.entry.removeConfirm.replace('{day}', label))) return;
+    let next = kpi;
+    for (const timing of KPI_TIMINGS) {
+      const d = timing === 'state' ? stateDay : day;
+      const old = entryOf(next, d);
+      if (old) next = withValues(next, d, valueKeys(kpi.defs.filter((def) => def.timing === timing)), {}, old.author, old.at);
+    }
+    void save(next);
   };
   const oilList = oilDraft ?? data.oil?.list ?? emptyOil();
   const actions = openActions(oilList.items, today);
@@ -207,11 +235,11 @@ export function KpiPage({ today = localToday() }: { today?: DayNumber } = {}) {
   const addOil = (def: KpiDef, value: number) => {
     const unit = def.unit ? ` ${def.unit}` : '';
     const parts = def.categories.flatMap((c) => {
-      const v = entry?.values[categoryKey(def, c)] ?? 0;
+      const v = entryFor(def)?.values[categoryKey(def, c)] ?? 0;
       return v ? [`${c} ${formatValue(v, locale)}`] : [];
     });
-    const problem = `${def.name}: ${formatValue(value, locale)}${unit}${parts.length ? ` – ${parts.join(', ')}` : ''} (${dayLabel(day)}, ${targetText(def, tk.targetText)})`;
-    const result = addItem(oilList, today, { letter: def.letter, problem, kpi: kpiSourceKey(day, def.id) });
+    const problem = `${def.name}: ${formatValue(value, locale)}${unit}${parts.length ? ` – ${parts.join(', ')}` : ''} (${dayLabel(dayOf(def))}, ${targetText(def, tk.targetText)})`;
+    const result = addItem(oilList, today, { letter: def.letter, problem, kpi: kpiSourceKey(dayOf(def), def.id) });
     setOilDraft(result.list);
     openOilItem(result.id);
   };
@@ -227,17 +255,22 @@ export function KpiPage({ today = localToday() }: { today?: DayNumber } = {}) {
   const monthRange = monthDays(month.year, month.month);
   const range = { from: period === 'month' ? monthRange[0]! : monthDays(month.year, 1)[0]!, to: monthRange[monthRange.length - 1]! };
   const periodText = period === 'month' || month.month === 1 ? `${tk.monthNames[month.month - 1]} ${month.year}` : `${tk.monthNames[0]}–${tk.monthNames[month.month - 1]!.toLowerCase()} ${month.year}`;
-  const openDay = (d: DayNumber) => {
-    pickDay(d);
+  const openDay = (d: DayNumber, state: DayNumber = d) => {
+    pickDay(d, state);
     setMonth(monthOf(d));
     setTab('entry');
   };
-  // Pracovní dny za posledních 30 dní bez zápisu (až od prvního zápisu).
+  // Pracovní dny za posledních 30 dní bez zapsaného výsledku (až od prvního zápisu).
+  const firstDay = kpi.entries[0]?.day;
   const missing: DayNumber[] = [];
-  for (let d = today - MISSING_LOOKBACK; d < today; d++) if (dayState(kpi, 'S', d, today) === 'missing') missing.push(d);
-  // Tlačítko Zapsat: nejstarší nezapsaný pracovní den za 30 dní, jinak předchozí pracovní den (už zapsaný = ✓).
+  if (firstDay !== undefined)
+    for (let d = Math.max(today - MISSING_LOOKBACK, firstDay); d < today; d++) if (weekday(d) <= 5 && !hasResults(kpi, d)) missing.push(d);
+  // Tlačítko Zapsat (ranní zápis): výsledky za nejstarší nezapsaný pracovní den za 30 dní, jinak za předchozí pracovní
+  // den, a stav dnes. Hotovo (✓), když jsou výsledky i dnešní stav zapsané.
   const writeDay = missing[0] ?? previousWorkday(today);
-  const writeDone = entryOf(kpi, writeDay) !== undefined;
+  const stateDefs = kpi.defs.filter((d) => d.timing === 'state');
+  const todayEntry = entryOf(kpi, today);
+  const writeDone = hasResults(kpi, writeDay) && (!stateDefs.length || stateDefs.some((d) => kpiValue(todayEntry, d) !== null));
 
   const dot = (status: KpiStatus | null) => (status ? <span className={`kpi-dot kpi-${status}`} title={tk.legend[status]} /> : <span className="muted">—</span>);
 
@@ -252,7 +285,7 @@ export function KpiPage({ today = localToday() }: { today?: DayNumber } = {}) {
           </button>
         ))}
         <span className="tabs-actions">
-          <button type="button" className={`button${writeDone ? '' : ' button-primary'}`} onClick={() => openDay(writeDay)}>
+          <button type="button" className={`button${writeDone ? '' : ' button-primary'}`} onClick={() => openDay(writeDay, today)}>
             {(writeDone ? tk.written : tk.write).replace('{day}', dayLabel(writeDay))}
           </button>
         </span>
@@ -323,9 +356,7 @@ export function KpiPage({ today = localToday() }: { today?: DayNumber } = {}) {
       {tab === 'entry' && (
         <div className="panel">
           <div className="panel-head">
-            <h2>
-              {tk.entry.heading} {dayLabel(day)}
-            </h2>
+            <h2>{day === stateDay || !stateDefs.length ? `${tk.entry.heading} ${dayLabel(day)}` : tk.entry.morning.replace('{day}', dayLabel(day)).replace('{state}', dayLabel(stateDay))}</h2>
             <label className="inline-field">
               <span>{tk.entry.day}</span>
               <input
@@ -353,7 +384,7 @@ export function KpiPage({ today = localToday() }: { today?: DayNumber } = {}) {
               />
             </label>
             <span className="panel-actions">
-              {entry && (
+              {(entry || stateEntry) && (
                 <button type="button" className="link-button" disabled={flow.busy} onClick={removeDay}>
                   {tk.entry.remove}
                 </button>
@@ -364,7 +395,7 @@ export function KpiPage({ today = localToday() }: { today?: DayNumber } = {}) {
             </span>
           </div>
           <p className="muted">
-            {entry ? tk.entry.entered.replace('{author}', entry.author).replace('{at}', entry.at) : tk.entry.notEntered}{' '}
+            {hasResults(kpi, day) && entry ? tk.entry.entered.replace('{author}', entry.author).replace('{at}', entry.at) : tk.entry.notEntered}{' '}
             <SaveStatus dirty={edited !== null} saved={data.kpi ? { path: data.kpi.path, lastModified: data.kpi.lastModified } : null} message={flow.message} />
           </p>
           {missing.length > 0 && (
@@ -389,11 +420,21 @@ export function KpiPage({ today = localToday() }: { today?: DayNumber } = {}) {
                   <th>{tk.entry.oil}</th>
                 </tr>
               </thead>
-              {LETTERS.map((letter) => {
-                const defs = kpi.defs.filter((d) => d.letter === letter);
+              {KPI_TIMINGS.flatMap((timing) => {
+                const ofTiming = kpi.defs.filter((d) => d.timing === timing);
+                if (!ofTiming.length) return [];
+                const section = (timing === 'state' ? tk.entry.sectionState : tk.entry.sectionResult).replace('{day}', dayLabel(timing === 'state' ? stateDay : day));
+                return [
+                  <tbody key={timing}>
+                    <tr className="kpi-section">
+                      <td colSpan={6}>{section}</td>
+                    </tr>
+                  </tbody>,
+                  ...LETTERS.map((letter) => {
+                const defs = ofTiming.filter((d) => d.letter === letter);
                 if (!defs.length) return null;
                 return (
-                  <tbody key={letter}>
+                  <tbody key={`${timing}-${letter}`}>
                     <tr className="kpi-group">
                       <td colSpan={6}>
                         {letter} – {tk.letters[letter]}
@@ -401,7 +442,7 @@ export function KpiPage({ today = localToday() }: { today?: DayNumber } = {}) {
                     </tr>
                     {defs.map((def) => {
                       const value = currentValue(def);
-                      const stored = kpiValue(entry, def);
+                      const stored = kpiValue(entryFor(def), def);
                       return (
                         <tr key={def.id}>
                           <td>
@@ -439,7 +480,7 @@ export function KpiPage({ today = localToday() }: { today?: DayNumber } = {}) {
                               </button>
                             )}
                             {oilList.items
-                              .filter((i) => i.kpi === kpiSourceKey(day, def.id))
+                              .filter((i) => i.kpi === kpiSourceKey(dayOf(def), def.id))
                               .map((i) => (
                                 <a key={i.id} href={`#oil?open=${i.id}`}>
                                   {tk.entry.point.replace('{id}', String(i.id))}
@@ -451,6 +492,8 @@ export function KpiPage({ today = localToday() }: { today?: DayNumber } = {}) {
                     })}
                   </tbody>
                 );
+                  }),
+                ];
               })}
             </table>
           </div>
@@ -476,6 +519,7 @@ export function KpiPage({ today = localToday() }: { today?: DayNumber } = {}) {
                   <th>{tk.defs.red}</th>
                   <th>{tk.defs.better}</th>
                   <th>{tk.defs.source}</th>
+                  <th>{tk.defs.timing}</th>
                   <th>{tk.defs.categories}</th>
                   <th />
                 </tr>
@@ -515,6 +559,15 @@ export function KpiPage({ today = localToday() }: { today?: DayNumber } = {}) {
                         {KPI_SOURCES.map((s) => (
                           <option key={s} value={s}>
                             {tk.sources[s]}
+                          </option>
+                        ))}
+                      </select>
+                    </td>
+                    <td>
+                      <select aria-label={tk.defs.timing} value={def.timing} onChange={(e) => changeDef(def.id, (d) => ({ ...d, timing: e.target.value as KpiTiming }))}>
+                        {KPI_TIMINGS.map((m) => (
+                          <option key={m} value={m}>
+                            {tk.timings[m]}
                           </option>
                         ))}
                       </select>
