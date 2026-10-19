@@ -81,8 +81,8 @@ sloupcem Item Type); ostatní listy (Návod) se vynechají. Díl na dvou listech
 | Item Type | Druh dílu, Druh | ne; `FG` hotový výrobek, `SFG` mezivýroba (WIP, přijme i „WIP“), `PG` nakupovaný díl; podle něj Kontrola mapování určí, co má být u dílu vyplněné; navíc vždy to, co potřebují moduly, ve kterých díl je (např. projekt u nakupovaného dílu v odvolávkách) |
 | Customer Number | Číslo zákazníka | u FG |
 | Description | Item Description, Popis | ano |
-| Project | Projekt | u FG a SFG |
-| Category | Kategorie | u FG; kategorie hotového dílu (např. `DP` = door panel, `IP`); filtry a přehledy, v Komponentách kategorie hotových dílů, ve kterých komponenta je |
+| Project | Projekt | u FG, SFG a u PG dílů v odvolávkách |
+| Category | Kategorie | u FG a u PG dílů v odvolávkách; kategorie hotového dílu (např. `DP` = door panel, `IP`); filtry a přehledy, v Komponentách kategorie hotových dílů, ve kterých komponenta je |
 | Strana | Side, Řízení; jinak se odvodí ze začátku varianty | u FG jen v kategoriích projektu, které se dělí na LHD / RHD |
 | Variant | Varianta | ne; jen u dílů, které je potřeba rozlišit (např. `SR1 Heating`), zapisuje se bez strany |
 | Line | Linka, Výrobní linka | u FG a SFG; linka, na které se díl vyrábí: `ASSEMBLY`, `FOA`, `SLH`, `IMM` (přijme i Montáž, Assy, Foaming, Slush, Vstřikování) |
@@ -95,7 +95,7 @@ do šablony na list PG.
 - **Šablonu mapování** stáhnete v modulu Data. Má jen listy **FG**, **SFG**, **PG** (a Návod), každý jen se
   sloupci, které aplikace pro daný druh používá: FG (Item Number, Customer Number, Description, Project, Category,
   Side, Variant, Line, Order Multiple), SFG (Item Number, Description, Project, Line), PG (Item Number,
-  Description). Díly bez druhu se zařadí podle údajů (linka FOA / SLH / IMM → SFG, dřívější Component Coverage =
+  Description, Project, Category – projekt a kategorie jen u dílů, které zákazník odvolává). Díly bez druhu se zařadí podle údajů (linka FOA / SLH / IMM → SFG, dřívější Component Coverage =
   Ano → PG, ostatní → FG), díly, které v mapování chybí (z Coverage, odvolávek a kusovníků),
   jsou na listu FG; po nahrání mají díly druh podle listu. Chybějící údaj zůstane prázdný (co doplnit, ukazuje
   Kontrola mapování). Formátování je jen záhlaví (tmavé = povinný sloupec, světlé = volitelný), aby byl soubor
