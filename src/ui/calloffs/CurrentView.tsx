@@ -45,7 +45,6 @@ export function CurrentView({ current, previous, items, master, filters }: Props
 
   const totals = periods.map((_, k) => rows.reduce((sum, r) => sum + r.values[k]!, 0));
   const total = totals.reduce((a, b) => a + b, 0);
-  const backlog = rows.reduce((sum, r) => sum + r.backlog, 0);
   const significant = countSignificantChanges(rows);
 
   const periodTitle = (p: Period) => {
@@ -62,12 +61,11 @@ export function CurrentView({ current, previous, items, master, filters }: Props
         t.calloffs.table.item,
         t.calloffs.table.description,
         ...fieldLabels,
-        t.calloffs.table.backlog,
         ...periods.map((p) => (granularity === 'week' ? p.label : dayToIso(p.start))),
         t.calloffs.table.total,
       ],
       rows: rows.map((r) => {
-        return [r.item, r.description, ...itemFieldValues(master?.get(r.item)), r.backlog, ...r.values, r.total];
+        return [r.item, r.description, ...itemFieldValues(master?.get(r.item)), ...r.values, r.total];
       }),
     };
   };
@@ -86,11 +84,6 @@ export function CurrentView({ current, previous, items, master, filters }: Props
           <span className="kpi-note">
             {t.calloffs.table.unit}, {periodTitle(periods[0]!)} – {periodTitle(periods.at(-1)!)}
           </span>
-        </div>
-        <div className="kpi">
-          <span className="kpi-label">{t.calloffs.kpi.backlog}</span>
-          <span className="kpi-value">{formatQuantity(backlog, locale)}</span>
-          <span className="kpi-note">{t.calloffs.kpi.backlogNote}</span>
         </div>
         <div className="kpi">
           <span className="kpi-label">{t.calloffs.kpi.changes}</span>
@@ -142,7 +135,6 @@ export function CurrentView({ current, previous, items, master, filters }: Props
                   <th className="sticky-col">{t.calloffs.table.item}</th>
                   <th>{t.calloffs.table.description}</th>
                   <ItemFieldHeaders />
-                  <th className="n">{t.calloffs.table.backlog}</th>
                   {periods.map((p) => (
                     <th key={p.start} className="n">
                       {periodTitle(p)}
@@ -161,7 +153,6 @@ export function CurrentView({ current, previous, items, master, filters }: Props
                       </td>
                       <td className="desc">{r.description}</td>
                       <ItemFieldCells m={m} />
-                      <td className="n">{r.backlog ? formatQuantity(r.backlog, locale) : '—'}</td>
                       {r.values.map((v, k) => {
                         const prev = r.previous[k]!;
                         const change = changeOf(v, prev);
@@ -191,7 +182,6 @@ export function CurrentView({ current, previous, items, master, filters }: Props
                   {fieldLabels.map((label) => (
                     <td key={label} />
                   ))}
-                  <td className="n">{formatQuantity(backlog, locale)}</td>
                   {totals.map((v, k) => (
                     <td key={periods[k]!.start} className="n">
                       {formatQuantity(v, locale)}

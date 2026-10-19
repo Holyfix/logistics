@@ -48,13 +48,10 @@ describe('parseCallOffExport', () => {
 
   it('spočítá nedodané množství z prvního řádku každého plánu', () => {
     const exp = parse([
-      // plán 1: kumulativ před exportem 1000 - 752 = 248, odesláno 200 → po termínu 48
       row('1001', '12.10.2026', '752,0', '1 000,0', '200,0'),
       row('1001', '13.10.2026', '100,0', '1 100,0', '200,0'),
-      // plán 2: odesláno víc, než bylo požadováno → 0
       row('1001', '12.10.2026', '10,0', '510,0', '600,0', 'SO2', '1', 'S2'),
     ]);
-    expect(exp.backlog[0]).toBe(48);
     expect(exp.cumShipped[0]).toBe(800);
   });
 

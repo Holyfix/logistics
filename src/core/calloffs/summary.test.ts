@@ -5,17 +5,17 @@ import type { CurrentRow } from './views';
 
 const m = (item: string, project: string, category: string, side: string, variant = '') => [item, { item, project, category, side, variant } as MasterItem] as const;
 const master = new Map([m('1', 'P1', 'DP', 'LHD'), m('2', 'P1', 'DP', 'RHD'), m('3', 'P1', 'HB', 'LHD'), m('4', 'P2', '', 'LHD')]);
-const row = (item: string, values: number[], previous: (number | null)[], backlog = 0): CurrentRow => ({ item, description: '', values, previous, total: values.reduce((a, b) => a + b, 0), backlog });
+const row = (item: string, values: number[], previous: (number | null)[]): CurrentRow => ({ item, description: '', values, previous, total: values.reduce((a, b) => a + b, 0) });
 
 describe('přehled po projektech', () => {
-  const rows = [row('1', [10, 20], [10, 10], 5), row('2', [1, 2], [1, 2]), row('3', [100, 0], [50, null]), row('4', [7, 7], [7, 7]), row('5', [3, 3], [3, 3])];
+  const rows = [row('1', [10, 20], [10, 10]), row('2', [1, 2], [1, 2]), row('3', [100, 0], [50, null]), row('4', [7, 7], [7, 7]), row('5', [3, 3], [3, 3])];
   const tree = summarize(rows, master);
 
   it('projekt → kategorie → strana se součty po týdnech, bez údaje na konci', () => {
-    expect(tree.map((n) => [n.label, n.items, n.values, n.total, n.backlog, n.diff])).toEqual([
-      ['P1', 3, [111, 22], 133, 5, 60],
-      ['P2', 1, [7, 7], 14, 0, 0],
-      ['', 1, [3, 3], 6, 0, 0],
+    expect(tree.map((n) => [n.label, n.items, n.values, n.total, n.diff])).toEqual([
+      ['P1', 3, [111, 22], 133, 60],
+      ['P2', 1, [7, 7], 14, 0],
+      ['', 1, [3, 3], 6, 0],
     ]);
     const p1 = tree[0]!;
     expect(p1.children.map((n) => [n.label, n.values])).toEqual([

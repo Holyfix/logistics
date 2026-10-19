@@ -155,10 +155,10 @@ describe('CallOffsPage', () => {
     const table = screen.getByRole('table');
     const rows = [...table.querySelectorAll('tbody tr')].map((tr) => [...tr.querySelectorAll('td')].slice(0, 4).map((td) => td.textContent));
     expect(rows.slice(0, 4)).toEqual([
-      ['▾P100 · 1 dílů', '—', '150', '0'],
-      ['▾DP · 1 dílů', '—', '150', '0'],
-      ['▾LHD · 1 dílů', '—', '150', '0'],
-      ['SR2 · 1 dílů', '—', '150', '0'],
+      ['▾P100 · 1 dílů', '150', '0', '150'],
+      ['▾DP · 1 dílů', '150', '0', '150'],
+      ['▾LHD · 1 dílů', '150', '0', '150'],
+      ['SR2 · 1 dílů', '150', '0', '150'],
     ]);
     // P300 bez varianty: strana je poslední úroveň
     expect(rows.map((r) => r[0])).toContain('RHD · 1 dílů');

@@ -55,12 +55,10 @@ Týdenní export požadavků na expedici z ERP, horizont podle dat od zákazník
 | Date | den požadavku (`DD.MM.YYYY`) | ano |
 | Discrete Qty | **požadavek na daný den, hlavní údaj** | ano |
 | Item Description | popis dílu | ne |
-| Cumulative Qty, Cum Shipped | kumulativy, doplňková informace (nedodáno po termínu, odesláno po týdnech) | ne |
+| Cumulative Qty, Cum Shipped | kumulativy, doplňková informace (odesláno po týdnech) | ne |
 | Sales Order, Line, Ship-To | rozlišení plánů pro kumulativy | ne |
 
 - Řádky se stejným dílem a dnem (různá odběrná místa, zakázky, reference) se sečtou.
-- **Po termínu** = kumulativ požadovaný před prvním dnem exportu minus odesláno, za každý plán zvlášť,
-  sečteno za díl (záporné hodnoty se nepočítají).
 - **Excel od začátku roku** (tlačítko v Call-offs): požadavek týdne je vždy z exportu daného týdne (chybí-li, z posledního
   staršího exportu). **Odesláno** v týdnu = Cum Shipped v exportu následujícího týdne minus Cum Shipped
   v exportu týdne. Proto je potřeba ukládat do složky každý týdenní export; pokles kumulativu

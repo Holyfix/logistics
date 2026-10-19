@@ -18,7 +18,6 @@ export interface SummaryNode {
   items: number;
   values: number[];
   total: number;
-  backlog: number;
   /** Změna proti předchozímu exportu v obdobích, která oba exporty pokrývají; null bez předchozího exportu. */
   diff: number | null;
   /** Součet předchozího exportu v týchž obdobích (základ pro změnu v %); null bez předchozího exportu. */
@@ -69,7 +68,6 @@ export function summarize(rows: readonly CurrentRow[], master: ReadonlyMap<strin
           items: list.length,
           values,
           total: values.reduce((a, b) => a + b, 0),
-          backlog: list.reduce((s, r) => s + r.backlog, 0),
           diff: hasPrevious ? diff : null,
           previousTotal: hasPrevious ? previousTotal : null,
           children: build(list, index + 1, level + 1, key),

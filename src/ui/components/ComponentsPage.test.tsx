@@ -33,7 +33,6 @@ const callOffs = {
   offsets: Int32Array.from([0, 3]),
   days: Int32Array.from([day(13), day(14), day(15)]),
   qty: Float64Array.from([5, 5, 10]),
-  backlog: Float64Array.from([0]),
   cumShipped: Float64Array.from([0]),
   hasCumShipped: false,
   week: 42,
