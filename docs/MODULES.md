@@ -62,7 +62,8 @@ a Dodavatelé odložené. Modul Kapacity (odvolávky vs. kapacita linek) byl zva
   z jeho ukazatelů
 - ✅ **Pruh měsíců L–P** pod písmenem: barva měsíce podle podílu zelených dní ze zapsaných (90 % a víc zelená,
   75 % a víc žlutá, jinak červená); kliknutím se měsíc otevře
-- ✅ **Zápis dne** (vlastní karta): tlačítko Zapsat nabídne předchozí pracovní den (v pondělí pátek), kliknutím
+- ✅ **Zápis dne** (vlastní karta): tlačítko Zapsat nabídne nejstarší nezapsaný pracovní den za 30 dní, jinak předchozí
+  pracovní den (v pondělí pátek; už zapsaný se zaškrtnutím „zapsáno ✓“ otevře zápis k úpravě), kliknutím
   na políčko v přehledu se otevře zápis jiného dne; nabídnou se i nezapsané pracovní dny za posledních 30 dní.
   Ukazatele s kategoriemi (S skoronehody, Q reklamace) mají pole pro každou kategorii (podklad pro Paretův graf).
   Stav se počítá už při psaní. Některé hodnoty aplikace předvyplní z dat (chybí u zákazníka z Coverage, kritické

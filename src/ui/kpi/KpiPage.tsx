@@ -235,6 +235,9 @@ export function KpiPage({ today = localToday() }: { today?: DayNumber } = {}) {
   // Pracovní dny za posledních 30 dní bez zápisu (až od prvního zápisu).
   const missing: DayNumber[] = [];
   for (let d = today - MISSING_LOOKBACK; d < today; d++) if (dayState(kpi, 'S', d, today) === 'missing') missing.push(d);
+  // Tlačítko Zapsat: nejstarší nezapsaný pracovní den za 30 dní, jinak předchozí pracovní den (už zapsaný = ✓).
+  const writeDay = missing[0] ?? previousWorkday(today);
+  const writeDone = entryOf(kpi, writeDay) !== undefined;
 
   const dot = (status: KpiStatus | null) => (status ? <span className={`kpi-dot kpi-${status}`} title={tk.legend[status]} /> : <span className="muted">—</span>);
 
@@ -249,8 +252,8 @@ export function KpiPage({ today = localToday() }: { today?: DayNumber } = {}) {
           </button>
         ))}
         <span className="tabs-actions">
-          <button type="button" className="button button-primary" onClick={() => openDay(previousWorkday(today))}>
-            {tk.write.replace('{day}', dayLabel(previousWorkday(today)))}
+          <button type="button" className={`button${writeDone ? '' : ' button-primary'}`} onClick={() => openDay(writeDay)}>
+            {(writeDone ? tk.written : tk.write).replace('{day}', dayLabel(writeDay))}
           </button>
         </span>
       </div>

@@ -617,6 +617,7 @@ export const en: Messages = {
     legend: { green: 'on target', yellow: 'warning', red: 'off target', missing: 'not recorded', weekend: 'weekend' },
     dayTitle: { green: 'on target', yellow: 'warning', red: 'off target', missing: 'working day not recorded', weekend: 'weekend, not recorded', none: 'no record', future: 'future day' },
     write: 'Record {day}',
+    written: '{day} recorded ✓',
     tabs: { overview: 'Overview', entry: 'Daily record', defs: 'KPIs and targets' },
     actionsCount: '{n} open actions',
     actions: {
