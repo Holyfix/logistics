@@ -39,8 +39,6 @@ export interface CallOffExport {
   offsets: Int32Array;
   days: Int32Array;
   qty: Float64Array;
-  /** Nedodáno po termínu k datu exportu (z kumulativů), po dílech. */
-  backlog: Float64Array;
   /** Odesláno kumulativně k datu exportu, po dílech. */
   cumShipped: Float64Array;
   /** Export obsahuje kumulativy (Cumulative Qty a Cum Shipped), takže jde spočítat odeslané množství. */
@@ -144,7 +142,6 @@ export function parseCallOffExport(table: DataTable, fileName: string): ParseRes
 
   const days = new Int32Array(total);
   const qty = new Float64Array(total);
-  const backlog = new Float64Array(items.length);
   const cumShipped = new Float64Array(items.length);
   items.forEach((item, i) => {
     const entries = [...perItem.get(item)!.entries()].sort((a, b) => a[0] - b[0]);
@@ -155,7 +152,6 @@ export function parseCallOffExport(table: DataTable, fileName: string): ParseRes
     for (const s of schedules.get(item)?.values() ?? []) {
       if (s.cumShipped === null) continue;
       cumShipped[i]! += s.cumShipped;
-      backlog[i]! += Math.max(0, s.cumQty - s.qty - s.cumShipped);
     }
   });
 
@@ -184,7 +180,6 @@ export function parseCallOffExport(table: DataTable, fileName: string): ParseRes
       offsets,
       days,
       qty,
-      backlog,
       cumShipped,
       hasCumShipped: col.cumQty !== -1 && col.cumShipped !== -1,
       rowCount,

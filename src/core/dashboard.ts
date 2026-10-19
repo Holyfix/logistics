@@ -64,8 +64,6 @@ export interface CallOffAlert {
   percent: number | null;
   /** Počet týdnů s významnou změnou (od 20 %). */
   changedWeeks: number;
-  /** Nedodáno po termínu podle aktuálního exportu. */
-  backlog: number;
   severity: Severity;
 }
 
@@ -73,16 +71,14 @@ export interface CallOffDigest {
   week: number;
   year: number;
   previous: { week: number; year: number } | null;
-  /** Díly s významnou změnou nebo nedodaným množstvím, od největší změny. */
+  /** Díly s významnou změnou, od největší změny. */
   alerts: CallOffAlert[];
   changes: number;
-  backlogPieces: number;
-  backlogParts: number;
 }
 
 /**
- * Změny odvolávek proti předchozímu exportu (příštích 12 týdnů, jako modul Odvolávky) a nedodáno po termínu.
- * warn = nedodáno po termínu nebo změna o 50 % a víc, info = ostatní významné změny.
+ * Změny odvolávek proti předchozímu exportu (příštích 12 týdnů, jako modul Odvolávky).
+ * warn = změna o 50 % a víc, info = ostatní významné změny.
  */
 export function callOffDigest(current: CallOffExport, previous: CallOffExport | undefined): CallOffDigest {
   const periods = buildPeriods(current, 'week', DEFAULT_WEEKS);
@@ -103,20 +99,17 @@ export function callOffDigest(current: CallOffExport, previous: CallOffExport | 
     changes += changedWeeks;
     const diff = now - before;
     const percent = before === 0 ? null : (diff / before) * 100;
-    if (changedWeeks === 0 && row.backlog <= 0) continue;
+    if (changedWeeks === 0) continue;
     const big = percent === null ? diff !== 0 : Math.abs(percent) >= 50;
-    alerts.push({ item: row.item, description: row.description, diff, percent, changedWeeks, backlog: row.backlog, severity: row.backlog > 0 || (changedWeeks > 0 && big) ? 'warn' : 'info' });
+    alerts.push({ item: row.item, description: row.description, diff, percent, changedWeeks, severity: big ? 'warn' : 'info' });
   }
-  alerts.sort((a, b) => bySeverity(a, b) || b.backlog - a.backlog || Math.abs(b.diff) - Math.abs(a.diff));
-  const withBacklog = rows.filter((r) => r.backlog > 0);
+  alerts.sort((a, b) => bySeverity(a, b) || Math.abs(b.diff) - Math.abs(a.diff));
   return {
     week: current.week,
     year: current.year,
     previous: previous ? { week: previous.week, year: previous.year } : null,
     alerts,
     changes,
-    backlogPieces: withBacklog.reduce((s, r) => s + r.backlog, 0),
-    backlogParts: withBacklog.length,
   };
 }
 

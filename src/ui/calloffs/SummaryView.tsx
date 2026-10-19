@@ -42,7 +42,6 @@ export function SummaryView({ current, previous, items, master, filter, filters 
   const rows = visibleNodes(tree, expanded);
   const totals = periods.map((_, k) => tree.reduce((s, n) => s + n.values[k]!, 0));
   const total = totals.reduce((a, b) => a + b, 0);
-  const backlog = tree.reduce((s, n) => s + n.backlog, 0);
   const diff = previous ? tree.reduce((s, n) => s + (n.diff ?? 0), 0) : null;
 
   const none: Record<ItemField, string> = { project: ts.noProject, category: ts.noCategory, side: ts.noSide, variant: ts.noVariant };
@@ -69,14 +68,14 @@ export function SummaryView({ current, previous, items, master, filter, filters 
     const walk = (nodes: readonly SummaryNode[], path: Partial<Record<ItemField, string>>) =>
       nodes.forEach((n) => {
         const p = { ...path, [n.field]: label(n) };
-        out.push([...ITEM_FIELDS.map((f) => p[f] ?? ''), n.items, n.backlog, ...n.values, n.total, n.diff]);
+        out.push([...ITEM_FIELDS.map((f) => p[f] ?? ''), n.items, ...n.values, n.total, n.diff]);
         walk(n.children, p);
       });
     walk(tree, {});
     return {
       fileName: `${t.calloffs.export.fileName}_${ts.fileName}_CW${current.week}-${current.year}`,
       sheetName: ts.tab,
-      header: [ts.project, ts.category, ts.side, ts.variant, ts.items, t.calloffs.table.backlog, ...periods.map((p) => p.label), t.calloffs.table.total, previous ? `${ts.diff} CW ${previous.week}` : ts.diff],
+      header: [ts.project, ts.category, ts.side, ts.variant, ts.items, ...periods.map((p) => p.label), t.calloffs.table.total, previous ? `${ts.diff} CW ${previous.week}` : ts.diff],
       rows: out,
     };
   };
@@ -107,7 +106,6 @@ export function SummaryView({ current, previous, items, master, filter, filters 
       variant: ts.variant,
       item: tr.item,
       description: tr.description,
-      backlog: tr.backlog,
       total: tr.total,
       diff: tr.diff,
       diffPercent: tr.diffPercent,
@@ -162,7 +160,6 @@ export function SummaryView({ current, previous, items, master, filter, filters 
               <thead>
                 <tr>
                   <th className="sticky-col">{ts.tree}</th>
-                  <th className="n">{t.calloffs.table.backlog}</th>
                   {periods.map((p) => (
                     <th key={p.start} className="n">
                       {p.label}
@@ -188,7 +185,6 @@ export function SummaryView({ current, previous, items, master, filter, filters 
                         <small className="muted"> · {formatQuantity(n.items, locale)} {ts.parts}</small>
                       </span>
                     </td>
-                    <td className="n">{n.backlog ? formatQuantity(n.backlog, locale) : <span className="muted">—</span>}</td>
                     {n.values.map((v, k) => (
                       <td key={periods[k]!.start} className="n">
                         {v ? formatQuantity(v, locale) : <span className="muted">0</span>}
@@ -204,7 +200,6 @@ export function SummaryView({ current, previous, items, master, filter, filters 
               <tfoot>
                 <tr>
                   <td className="sticky-col">{t.calloffs.table.sum}</td>
-                  <td className="n">{formatQuantity(backlog, locale)}</td>
                   {totals.map((v, k) => (
                     <td key={periods[k]!.start} className="n">
                       {formatQuantity(v, locale)}

@@ -51,7 +51,6 @@ export interface ReportTexts {
   variant: string;
   item: string;
   description: string;
-  backlog: string;
   total: string;
   diff: string;
   diffPercent: string;
@@ -106,8 +105,8 @@ function headerRows(labels: string[], periods: readonly Period[], firstWeek: num
   const head: ReportCell = { fontWeight: 'bold', textColor: C.headerText, backgroundColor: C.header, align: 'center', alignVertical: 'center', wrap: true, height: 30 };
   const sub: ReportCell = { fontSize: 9, textColor: C.ink, backgroundColor: C.subHeader, align: 'center', bottomBorderColor: C.header, bottomBorderStyle: 'medium' };
   return [
-    // Textové sloupce (před sloupcem Po termínu) vlevo, čísla na střed.
-    labels.map((value, k) => ({ ...head, value, ...(k < firstWeek - 1 ? { align: 'left' as const } : {}) })),
+    // Textové sloupce (před prvním týdnem) vlevo, čísla na střed.
+    labels.map((value, k) => ({ ...head, value, ...(k < firstWeek ? { align: 'left' as const } : {}) })),
     labels.map((_, k) => ({ ...sub, value: k >= firstWeek && k < firstWeek + periods.length ? weekStart(periods[k - firstWeek]!) : '' })),
   ];
 }
@@ -128,7 +127,7 @@ export function summaryReport(
   const weeks = periods.map((p) => p.label);
 
   // List 1: strom.
-  const summaryLabels = [texts.tree, texts.backlog, ...weeks, texts.total, texts.diff, texts.diffPercent];
+  const summaryLabels = [texts.tree, ...weeks, texts.total, texts.diff, texts.diffPercent];
   const levelStyle: ReportCell[] = [
     { fontWeight: 'bold', backgroundColor: C.project, topBorderColor: C.line, topBorderStyle: 'thin' },
     { backgroundColor: C.category },
@@ -139,7 +138,6 @@ export function summaryReport(
     return [
       // Odsazení se v Excelu projeví jen u buňky zarovnané vlevo.
       { value: label(n), align: 'left' as const, indent: n.level * 2, ...s, ...(n.label ? {} : { textColor: C.muted, fontStyle: 'italic' as const }) },
-      num(n.backlog, s),
       ...n.values.map((v) => num(v, s)),
       num(n.total, { ...s, fontWeight: 'bold' }),
       diffCell(n.diff, s),
@@ -152,7 +150,6 @@ export function summaryReport(
   const totalDiff = hasPrevious ? sum((n) => n.diff ?? 0) : null;
   const totalRow = [
     { value: texts.sum, ...totalStyle },
-    num(sum((n) => n.backlog), totalStyle),
     ...periods.map((_, k) => num(sum((n) => n.values[k]!), totalStyle)),
     num(sum((n) => n.total), totalStyle),
     diffCell(totalDiff, totalStyle),
@@ -163,13 +160,13 @@ export function summaryReport(
     name: texts.sheetSummary,
     data: [
       ...titleRows(texts, width),
-      ...headerRows(summaryLabels, periods, 2),
+      ...headerRows(summaryLabels, periods, 1),
       ...treeRows,
       totalRow,
       [],
       [{ value: texts.note, textColor: C.muted, fontStyle: 'italic', columnSpan: width, wrap: true, height: 30, alignVertical: 'top' }, ...Array.from({ length: width - 1 }, () => null)],
     ],
-    columns: [{ width: 34 }, { width: 10 }, ...weeks.map(() => ({ width: 9 })), { width: 11 }, { width: 11 }, { width: 9 }],
+    columns: [{ width: 34 }, ...weeks.map(() => ({ width: 9 })), { width: 11 }, { width: 11 }, { width: 9 }],
     stickyRows: 6,
     stickyColumns: 1,
   };
@@ -185,7 +182,7 @@ export function summaryReport(
   const sorted = [...rows].sort((a, b) => ITEM_FIELDS.reduce((d, key) => d || by(key)(a, b), 0) || a.item.localeCompare(b.item, 'en', { numeric: true }));
   // Projekt a kategorie bez údaje s popiskem, strana a varianta prázdné (díl je nemá).
   const shown = (item: string, key: ItemField) => value(item, key) || (key === 'project' || key === 'category' ? texts.none[key] : '');
-  const itemLabels = [texts.project, texts.category, texts.side, texts.variant, texts.item, texts.description, texts.backlog, ...weeks, texts.total, texts.diff, texts.diffPercent];
+  const itemLabels = [texts.project, texts.category, texts.side, texts.variant, texts.item, texts.description, ...weeks, texts.total, texts.diff, texts.diffPercent];
   const itemRows = sorted.map((r, i) => {
     const s: ReportCell = i % 2 ? { backgroundColor: C.category } : {};
     let diff = 0;
@@ -200,7 +197,6 @@ export function summaryReport(
       ...ITEM_FIELDS.map((key) => ({ value: shown(r.item, key), ...s })),
       { value: r.item, fontWeight: 'bold' as const, ...s },
       { value: r.description, ...s },
-      num(r.backlog, s),
       ...r.values.map((v) => num(v, s)),
       num(r.total, { ...s, fontWeight: 'bold' }),
       diffCell(hasPrevious ? diff : null, s),
@@ -210,8 +206,8 @@ export function summaryReport(
   const itemWidth = itemLabels.length;
   const itemsSheet: ReportSheet = {
     name: texts.sheetItems,
-    data: [...titleRows(texts, itemWidth), ...headerRows(itemLabels, periods, 7), ...itemRows],
-    columns: [{ width: 12 }, { width: 12 }, { width: 9 }, { width: 16 }, { width: 18 }, { width: 42 }, { width: 10 }, ...weeks.map(() => ({ width: 9 })), { width: 11 }, { width: 11 }, { width: 9 }],
+    data: [...titleRows(texts, itemWidth), ...headerRows(itemLabels, periods, 6), ...itemRows],
+    columns: [{ width: 12 }, { width: 12 }, { width: 9 }, { width: 16 }, { width: 18 }, { width: 42 }, ...weeks.map(() => ({ width: 9 })), { width: 11 }, { width: 11 }, { width: 9 }],
     stickyRows: 6,
     stickyColumns: 5,
   };

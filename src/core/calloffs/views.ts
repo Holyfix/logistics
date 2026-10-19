@@ -76,7 +76,6 @@ export interface CurrentRow {
   /** Hodnota ze staršího exportu; null, pokud starší export do období vůbec nezasahuje nebo neexistuje. */
   previous: (number | null)[];
   total: number;
-  backlog: number;
 }
 
 export function buildCurrentRows(
@@ -100,7 +99,6 @@ export function buildCurrentRows(
       values,
       previous: prevValues,
       total: values.reduce((a, b) => a + b, 0),
-      backlog: i >= 0 ? current.backlog[i]! : 0,
     };
   });
 }

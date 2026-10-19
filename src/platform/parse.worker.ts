@@ -100,7 +100,7 @@ self.onmessage = async (event: MessageEvent<ParseRequest>) => {
     if (kind === 'calloffs') {
       const result = parseCallOffExport(table, name);
       const transfer = result.ok
-        ? [result.value.offsets.buffer, result.value.days.buffer, result.value.qty.buffer, result.value.backlog.buffer, result.value.cumShipped.buffer]
+        ? [result.value.offsets.buffer, result.value.days.buffer, result.value.qty.buffer, result.value.cumShipped.buffer]
         : [];
       (self as unknown as Worker).postMessage({ id, kind, result } satisfies ParseResponse, transfer);
     } else {

@@ -47,8 +47,7 @@ a Dodavatelé odložené. Modul Kapacity (odvolávky vs. kapacita linek) byl zva
   nebo zítra chybí jen bez transitu (čeká na transit), pro informaci = chybí s transitem později
 - ✅ **Kritické komponenty** (podle odvolávek a našeho skladu): hoří = dojdou do 2 dnů, pozor = do 7 dnů,
   pro informaci = později v horizontu; u každé „zákazník pokryt do“
-- ✅ **Změny v odvolávkách** (příštích 12 týdnů proti předchozímu exportu): pozor = nedodáno po termínu nebo změna
-  o 50 % a víc, pro informaci = ostatní významné změny (od 20 %)
+- ✅ **Změny v odvolávkách** (příštích 12 týdnů proti předchozímu exportu): pozor = změna o 50 % a víc, pro informaci = ostatní významné změny (od 20 %)
 - ✅ **OIL: nejbližší termíny:** otevřené body, hoří = po termínu, pozor = termín do 7 dní, pro informaci = později
   nebo bez termínu; plnění, odpovědný a počet posunů
 - ✅ **Čerstvost dat:** sklad a coverage starší než 24 hodin, odvolávky z minulého týdne nebo chybějící soubor
@@ -94,9 +93,9 @@ a Dodavatelé odložené. Modul Kapacity (odvolávky vs. kapacita linek) byl zva
 ### Call-offs
 Hlavní údaj je **Discrete Qty** (požadavek na den), kumulativy jsou doplňková informace.
 Filtry projekt, kategorie, strana (LHD/RHD) a varianta z kmenových dat se ovlivňují navzájem v libovolném pořadí (každý nabízí jen hodnoty odpovídající ostatním vybraným filtrům; strana a varianta jen tam, kde je díly mají), hledání dílu; díly bez mapování jako volba „Bez kmenových dat“ ve filtru Projekt.
-- ✅ **Přehled po projektech:** strom Projekt → Kategorie → Strana → Varianta (sloupce Project, Category, Side, Variant v mapování; strana a varianta jen tam, kde je díly mají) se součty po týdnech, nedodáno po termínu, celkem a změna proti předchozímu exportu; rozbalení po úrovních; Excel pro vedení (titulek s exportem, datem a filtry, barevné záhlaví s pondělky týdnů, oddělovače tisíců, změna v ks i v % zeleně/červeně, ukotvené záhlaví, list Přehled ve zvolené úrovni a list Díly se všemi díly) a CSV
+- ✅ **Přehled po projektech:** strom Projekt → Kategorie → Strana → Varianta (sloupce Project, Category, Side, Variant v mapování; strana a varianta jen tam, kde je díly mají) se součty po týdnech, celkem a změna proti předchozímu exportu; rozbalení po úrovních; Excel pro vedení (titulek s exportem, datem a filtry, barevné záhlaví s pondělky týdnů, oddělovače tisíců, změna v ks i v % zeleně/červeně, ukotvené záhlaví, list Přehled ve zvolené úrovni a list Díly se všemi díly) a CSV
 
-- ✅ **Aktuální odvolávky:** nejnovější export po týdnech nebo dnech, nedodáno po termínu,
+- ✅ **Aktuální odvolávky:** nejnovější export po týdnech nebo dnech,
   změna proti předchozímu exportu (zvýraznění od 20 %), export do Excelu a CSV
 - ⏳ **Přehled od začátku roku:** požadavek na každý týden z exportu téhož týdne, po dílech i celkem;
   odesláno z kumulativu jako doplňková informace

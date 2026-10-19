@@ -176,7 +176,7 @@ export function DashboardPage({ today = localToday(), now = Date.now() }: { toda
       tone: tones.calloffs,
       value: calloffs ? calloffs.changes : null,
       label: calloffs?.previous ? `${td.calloffs.main} · CW ${calloffs.week} ${td.calloffs.against} CW ${calloffs.previous.week}` : `${td.calloffs.main} · ${td.calloffs.single}`,
-      counters: calloffs ? [{ value: calloffs.backlogPieces, label: `${td.pcs} ${td.calloffs.backlog}` }] : [],
+      counters: [],
       lines: (calloffs?.alerts ?? []).map((a) => ({
         key: a.item,
         tone: a.severity,
@@ -185,10 +185,7 @@ export function DashboardPage({ today = localToday(), now = Date.now() }: { toda
             <strong>{a.item}</strong> {a.description}
           </>
         ),
-        value:
-          a.backlog > 0
-            ? `${td.calloffs.backlog} ${pcs(a.backlog)}`
-            : `${formatSigned(a.diff, locale)} ${td.pcs}${a.percent === null ? '' : ` (${formatPercent(a.percent, locale, true)})`}`,
+        value: `${formatSigned(a.diff, locale)} ${td.pcs}${a.percent === null ? '' : ` (${formatPercent(a.percent, locale, true)})`}`,
       })),
       empty: td.calloffs.none,
     },
