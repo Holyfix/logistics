@@ -336,6 +336,7 @@ export function KpiPage({ today = localToday() }: { today?: DayNumber } = {}) {
 
   // Nabídky pro ruční detail: projekty a díly z mapování, osoby z OIL, dříve zapsané příčiny.
   const masterItems = [...(data.master?.data.items.values() ?? [])];
+  const suppliers = new Map(masterItems.filter((m) => m.supplier).map((m) => [m.item.toUpperCase(), m.supplier]));
   const suggestions = {
     projects: [...new Set([...masterItems.map((m) => m.project), ...kpi.details.map((d) => d.project)].filter(Boolean))].sort(),
     items: [...new Set(masterItems.map((m) => m.item))].sort(),
@@ -649,6 +650,7 @@ export function KpiPage({ today = localToday() }: { today?: DayNumber } = {}) {
           kpi={kpi}
           oilItems={oilList.items}
           today={today}
+          supplierOf={(item) => suppliers.get(item.toUpperCase()) ?? ''}
           onOpenDay={(d) => openDay(d)}
           onAddOil={({ letter, problem, kpi: source }) => {
             const result = addItem(oilList, today, { letter, problem, kpi: kpiSourceKey(source.day, source.kpiId) });

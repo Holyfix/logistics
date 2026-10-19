@@ -34,6 +34,12 @@ describe('customerDisplay', () => {
 });
 
 describe('parseMasterData', () => {
+  it('dodavatel ze sloupce Supplier (nebo Dodavatel)', () => {
+    const r = parseMasterData(parseCsv('Item Number;Item Type;Description;Dodavatel\nK-1;PG;CLIP;Alfa s.r.o.'));
+    if (!r.ok) throw new Error();
+    expect(r.value.items.get('K-1')).toMatchObject({ kind: 'PG', supplier: 'Alfa s.r.o.' });
+  });
+
   it('čte formát mapování a stranu odvodí z varianty', () => {
     const r = parseMasterData(
       parseCsv(
@@ -64,6 +70,7 @@ describe('parseMasterData', () => {
       componentCoverage: false,
       line: '',
       category: '',
+      supplier: '',
     });
     expect(r.value.hasComponentColumn).toBe(false);
     expect(r.value.items.get('900101-0001')).toMatchObject({ side: 'RHD', orderMultiple: null });
