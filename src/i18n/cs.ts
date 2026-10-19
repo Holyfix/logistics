@@ -530,7 +530,7 @@ export const cs = {
       empty: 'Filtru neodpovídá žádný díl.',
       unmapped: 'není v mapování',
       fileCustomerNumber: 'V souboru zákazníka',
-      ourStockNote: 'Náš sklad = součet kladných množství dílu na lokacích v zónách {zones} ze souboru skladu (plná i neúplná balení dohromady), bez externích lokací s díly už zamontovanými u odběratele ({excluded}). S volbou „Přičíst náš sklad“ se přičte ke všem dnům.',
+      ourStockNote: 'Náš sklad = součet kladných množství dílu na lokacích v zónách {zones} domácího závodu ze souboru skladu (plná i neúplná balení dohromady; jiné závody už obsahuje coverage od zákazníka), bez externích lokací s díly už zamontovanými u odběratele ({excluded}). S volbou „Přičíst náš sklad“ se přičte ke všem dnům.',
       ourStockNoExclusions: 'žádné',
       note: 'Pokrytí = zůstatek u zákazníka bez transitu na konci dne, volitelně + transit. Záporné hodnoty jsou červeně. Číslo zákazníka je v jednotném zápisu bez doplňujících nul (zápis ze souboru zákazníka ukáže najetí myší). Popis je z mapování; díl bez mapování je uvedený číslem zákazníka a popisem ze souboru zákazníka.',
     },

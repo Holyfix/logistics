@@ -15,6 +15,7 @@ const csv = [
   '1000,900101,DOOR RHD,,EA,HOLD,"5,0","5,0",HOLD,LAB,PROD,WH1',
   '1000,,,,EA,OK,"0,0","3,0",A-05,SALE,WRH,WH1',
   '1000,900102,DOOR X,,EA,OK,"x","x",A-06,SALE,WRH,WH1',
+  '1000DE,900100,DOOR LHD,A1234567890,EA,OK,"1 236,0","50,0",SEQ-1,SALE,WRH,WH1',
 ].join('\r\n');
 
 describe('parseStock', () => {
@@ -22,7 +23,7 @@ describe('parseStock', () => {
     const r = parseStock(parseCsv(csv));
     if (!r.ok) throw new Error();
     expect(r.value.qtyColumn).toBe('Qty On Hand - Inv Detail');
-    expect(r.value.rows).toHaveLength(7);
+    expect(r.value.rows).toHaveLength(8);
     expect(r.value.rows[0]).toEqual({ item: '900100', location: 'A-01', zone: 'SALE', area: 'WRH', warehouse: 'WH1', status: 'OK', qty: 1200, site: '1000', cost: null, lastMove: null, abc: '' });
     expect(r.value.descriptions.get('900100')).toBe('DOOR LHD');
     expect(stockItemCount(r.value)).toBe(2);
@@ -55,7 +56,7 @@ describe('stockByItem', () => {
   it('sečte kladná množství na lokacích v zónách příjmu, skladů a výroby, plná i neúplná balení dohromady', () => {
     const r = parseStock(parseCsv(csv));
     if (!r.ok) throw new Error();
-    // 1 200 + 24 (SALE) + 12 (PURCH) + 8 (WRKC); karanténa (LAB), záporná a nulová lokace se nepočítají
+    // 1 200 + 24 (SALE) + 12 (PURCH) + 8 (WRKC); karanténa (LAB), záporná a nulová lokace a jiný závod se nepočítají
     expect(stockByItem(r.value)).toEqual(new Map([['900100', 1244]]));
   });
 

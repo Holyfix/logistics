@@ -7,7 +7,7 @@ import type { CallOffExport } from './calloffs/parse';
 import { weekday, type DayNumber } from './dates';
 import { callOffDemand } from './demand';
 import type { MasterData } from './masterdata';
-import { isExcludedLocation, type StockData, type StockRow } from './stock';
+import { homeSite, isExcludedLocation, type StockData, type StockRow } from './stock';
 
 /** Pásma dosahu v pracovních dnech: kritické pod 2, nízké pod 5, v pořádku do 20, vysoké do 40, nad 40 nadbytek. */
 export const CRIT_DAYS = 2;
@@ -35,12 +35,7 @@ const BLOCKED: Record<string, BlockReason> = { QH: 'quality', 'QH-TEMP': 'qualit
 
 export const blockReason = (status: string): BlockReason | null => BLOCKED[status.trim().toUpperCase()] ?? null;
 
-/** Domácí závod: nejčastější Site v souboru skladu. */
-export function homeSite(rows: readonly StockRow[]): string {
-  const counts = new Map<string, number>();
-  for (const r of rows) if (r.site) counts.set(r.site, (counts.get(r.site) ?? 0) + 1);
-  return [...counts].sort((a, b) => b[1] - a[1])[0]?.[0] ?? '';
-}
+export { homeSite };
 
 /**
  * Externí lokace (sekvencéry hotových dílů u zákazníka, díly jsou stále naše): jiný závod (Site) než domácí, nebo
