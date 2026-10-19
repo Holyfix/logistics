@@ -405,6 +405,7 @@ function OilDetail({
           <small className="muted">
             {td.fromKpi.replace('{day}', dayLabel(source.day))}
             {` · ${kpiDefs?.find((d) => d.id === source.kpiId)?.name ?? source.kpiId}`}
+            {source.group && ` · ${t.kpi.analysis.dims[source.group.dim as keyof typeof t.kpi.analysis.dims] ?? source.group.dim} ${source.group.value}`}
           </small>
         )}
       </div>

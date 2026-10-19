@@ -44,7 +44,11 @@ describe('OIL', () => {
   it('bod z KPI: písmeno a zdroj (den a ukazatel) se uloží do souboru a zase načtou', () => {
     const key = kpiSourceKey(day(6), 'd_customer');
     expect(key).toBe('2026-10-06 d_customer');
-    expect(parseKpiSource(key)).toEqual({ day: day(6), kpiId: 'd_customer' });
+    expect(parseKpiSource(key)).toEqual({ day: day(6), kpiId: 'd_customer', group: null });
+    // bod ke skupině z rozboru
+    const grouped = kpiSourceKey(day(6), 'd_components', { dim: 'supplier', value: 'Alfa s.r.o.' });
+    expect(grouped).toBe('2026-10-06 d_components | supplier=Alfa s.r.o.');
+    expect(parseKpiSource(grouped)).toEqual({ day: day(6), kpiId: 'd_components', group: { dim: 'supplier', value: 'Alfa s.r.o.' } });
     expect(parseKpiSource(null)).toBeNull();
     const a = addItem(emptyOil(), TODAY, { letter: 'D', problem: 'Chybí u zákazníka: 31 ks', kpi: key });
     const b = addItem(a.list, TODAY);

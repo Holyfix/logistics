@@ -93,6 +93,8 @@ a Dodavatelé odložené. Modul Kapacity (odvolávky vs. kapacita linek) byl zva
   dává smysl – Chybí u zákazníka podle projektu, Komponenty podle **dodavatele** (sloupec Supplier v mapování), Body
   OIL podle odpovědného, ruční ukazatele podle příčiny; přepínačem i jinak. Skupina: pruh dní, počet dní (červeně od
   3), max. množství, OIL / + OIL; po rozbalení položky (díly) – prvních 5, pak „další“. Export do Excelu
+  Body OIL se přiřazují jen přes vazbu: u ukazatele body založené tlačítkem + OIL u něj (Zdroj KPI), u skupiny body
+  založené u té skupiny (Zdroj KPI s ukazatelem a skupinou, např. „dodavatel Alfa“) – ne podle textu problému
 ### Call-offs
 Hlavní údaj je **Discrete Qty** (požadavek na den), kumulativy jsou doplňková informace.
 Filtry projekt, kategorie, strana (LHD/RHD) a varianta z kmenových dat se ovlivňují navzájem v libovolném pořadí (každý nabízí jen hodnoty odpovídající ostatním vybraným filtrům; strana a varianta jen tam, kde je díly mají), hledání dílu; díly bez projektu (bez mapování nebo s prázdným Project) jako volba „Bez projektu“ ve filtru Projekt.
