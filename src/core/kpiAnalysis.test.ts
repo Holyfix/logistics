@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { dayFromParts } from './dates';
 import { defaultKpis, withDetails, withEntry, type KpiData, type KpiDetail } from './kpi';
-import { letterSummary, nokGroups, nokPoints } from './kpiAnalysis';
+import { letterDays, letterSummary, nokGroups, nokPoints } from './kpiAnalysis';
 
 const day = (n: number) => dayFromParts(2026, 10, n)!;
 const texts = { names: { d_linestop: 'Zastavení linky', d_customer: 'Chybí u zákazníka' }, units: {}, categories: {} };
@@ -51,5 +51,15 @@ describe('rozbor KPI', () => {
 
   it('souhrn písmene: červené dny z pracovních dní období', () => {
     expect(letterSummary(data, 'D', day(5), day(11))).toEqual({ red: 4, off: 4, workdays: 5 });
+  });
+
+  it('stav písmene po dnech: barva zápisu, nezapsaný pracovní den, víkend, budoucnost', () => {
+    expect(letterDays(data, 'D', day(5), day(11), day(10)).map((d) => d.state)).toEqual(['missing', 'red', 'red', 'red', 'red', 'weekend', 'future']);
+  });
+
+  it('skupina zná nejhorší stav po dnech', () => {
+    const points = nokPoints(data, day(1), day(31), { letter: '', kpiId: '' });
+    const p300 = nokGroups(points, 'project').find((g) => g.value === 'P300')!;
+    expect([...p300.dayStatus.keys()].sort((a, b) => a - b)).toEqual([day(6), day(8), day(9)]);
   });
 });

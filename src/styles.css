@@ -2410,33 +2410,359 @@ button.oil-step:disabled {
 }
 
 /* KPI: karta Rozbor. */
-.kpi-repeats {
-  background: #fff6ec;
-  border-color: #f2c89b;
-  line-height: 1.7;
+/* Rozbor KPI */
+.kpi-filter-hint,
+.kpi-letter-chip {
+  margin-left: auto;
 }
 
-.kpi-groups {
+.kpi-letter-chip {
+  border: 0;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.kpi-an-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.kpi-an-title {
+  font: 600 13px/1.2 var(--font-display);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.kpi-an-letters {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr));
-  gap: 16px;
-  margin-bottom: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
+  gap: 12px;
 }
 
-.kpi-groups .panel {
-  min-width: 0;
-  margin-bottom: 0;
-  overflow-x: auto;
+.kpi-an-letter {
+  appearance: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
 }
 
-.kpi-groups td {
-  white-space: normal;
+.kpi-an-letter:hover {
+  border-color: var(--accent);
 }
 
-.kpi-groups td:last-child {
+.kpi-an-letter-on {
+  outline: 2px solid var(--accent);
+}
+
+.kpi-an-letter-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.kpi-an-letter-mark {
+  font: 700 30px/1 var(--font-display);
+  color: var(--muted);
+}
+
+.kpi-text-green {
+  color: #4f9a26;
+}
+
+.kpi-text-yellow {
+  color: #d89a00;
+}
+
+.kpi-text-red {
+  color: #d8404b;
+}
+
+.kpi-an-letter-name {
+  color: var(--ink-2);
+  font-size: 13px;
+}
+
+.kpi-an-letter-value {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 12px;
   white-space: nowrap;
 }
 
-.kpi-group-repeat td {
-  background: #fff1f1;
+.kpi-an-letter-value b {
+  font: 700 18px/1 var(--font-display);
+  color: var(--ink);
+}
+
+.kpi-strip,
+.kpi-strip-days,
+.kpi-mini {
+  display: flex;
+  gap: 3px;
+}
+
+.kpi-strip i {
+  flex: 1;
+  height: 14px;
+  border-radius: 2px;
+}
+
+.kpi-strip-days span {
+  flex: 1;
+  text-align: center;
+  font-size: 10.5px;
+  color: var(--muted);
+}
+
+.kpi-mini {
+  gap: 2px;
+}
+
+.kpi-mini i {
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+  background: var(--grid);
+}
+
+.kpi-strip-green {
+  background: #6bb33f;
+}
+
+.kpi-strip i.kpi-strip-yellow,
+.kpi-mini i.kpi-strip-yellow {
+  background: #f2bd36;
+}
+
+.kpi-strip i.kpi-strip-red,
+.kpi-mini i.kpi-strip-red {
+  background: #d8404b;
+}
+
+.kpi-strip-weekend {
+  background: var(--weekend-bg);
+}
+
+.kpi-strip-missing {
+  border: 1px dashed var(--muted);
+}
+
+.kpi-strip-future {
+  background: var(--surface-2);
+}
+
+.kpi-repeat-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr));
+  gap: 12px;
+}
+
+.kpi-repeat-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-left: 5px solid #f2bd36;
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.kpi-repeat-hot {
+  border-left-color: #d8404b;
+}
+
+.kpi-repeat-top,
+.kpi-repeat-foot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.kpi-repeat-value {
+  overflow: hidden;
+  font: 700 20px/1.15 var(--font-display);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kpi-repeat-badge {
+  margin-left: auto;
+  padding: 5px 10px;
+  border-radius: 12px;
+  background: var(--changed);
+  color: #7a5a00;
+  font: 700 14px/1 var(--font-display);
+  white-space: nowrap;
+}
+
+.kpi-repeat-hot .kpi-repeat-badge {
+  background: var(--negative-bg);
+  color: var(--down);
+}
+
+.kpi-repeat-foot {
+  gap: 10px;
+  font-size: 13px;
+}
+
+.kpi-repeat-oil {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.kpi-an-bottom {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 480px), 1fr));
+  gap: 16px;
+  align-items: start;
+}
+
+.kpi-bars-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+}
+
+.kpi-bar-swatch {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+  background: #9db8d6;
+  vertical-align: -1px;
+}
+
+.kpi-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.kpi-bars li {
+  display: grid;
+  grid-template-columns: minmax(80px, 160px) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+}
+
+.kpi-bar-label {
+  overflow: hidden;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kpi-bar-track {
+  height: 18px;
+  border-radius: 3px;
+  background: var(--surface-2);
+}
+
+.kpi-bar-fill {
+  display: block;
+  min-width: 22px;
+  height: 100%;
+  padding-right: 6px;
+  border-radius: 3px;
+  background: #9db8d6;
+  color: #fff;
+  font: 700 12px/18px var(--font-display);
+  text-align: right;
+}
+
+.kpi-bar-fill.kpi-bar-repeat,
+.kpi-bar-swatch.kpi-bar-repeat {
+  background: #d8404b;
+}
+
+.kpi-bar-note {
+  white-space: nowrap;
+}
+
+.kpi-day {
+  border-top: 1px solid var(--grid);
+}
+
+.kpi-day-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.kpi-day-toggle {
+  appearance: none;
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 2px;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.kpi-day-chev {
+  width: 12px;
+  color: var(--muted);
+}
+
+.kpi-day-label {
+  font: 600 15px/1.2 var(--font-display);
+}
+
+.kpi-day-dots {
+  display: flex;
+  gap: 4px;
+}
+
+.kpi-pt {
+  display: grid;
+  grid-template-columns: 14px 16px minmax(0, 1.1fr) auto minmax(0, 1fr);
+  align-items: baseline;
+  gap: 8px;
+  padding: 4px 2px 4px 24px;
+  font-size: 14px;
+}
+
+.kpi-pt .n {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.kpi-pt-details {
+  display: flex;
+  flex-direction: column;
+  color: var(--ink-2);
+}
+
+.kpi-pt-detail b {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.link-button.kpi-pt-missing {
+  padding: 0;
+  font: italic 400 13px/1.4 var(--font-body);
+  color: var(--muted);
+  text-align: left;
 }

@@ -218,22 +218,33 @@ describe('KpiPage', () => {
     data = withDetails(data, day(5), ['s_injury'], [detail(5, 'pád z rampy')]);
     renderPage(data);
     fireEvent.click(screen.getByRole('tab', { name: 'Rozbor' }));
-    const repeats = [...document.querySelectorAll('.kpi-repeats li')].map((li) => li.textContent);
-    expect(repeats).toEqual([
-      'Projekt P1: objevilo se 2× (Pá 2. 10., Po 5. 10.) – Úrazy v logistice',
-      'Osoba (OIL) Dvořák: objevilo se 2× (Pá 2. 10., Po 5. 10.) – Úrazy v logistice',
-      'Osoba (OIL) Novák: objevilo se 2× (Pá 2. 10., Po 5. 10.) – Úrazy v logistice',
-      'Příčina pád z rampy: objevilo se 2× (Pá 2. 10., Po 5. 10.) – Úrazy v logistice',
+    // co se opakuje: karty s druhem, hodnotou a počtem dní
+    const cards = () => [...document.querySelectorAll('.kpi-repeat-top')].map((c) => c.textContent);
+    expect(cards()).toEqual(['ProjektP12 dny', 'OsobaDvořák2 dny', 'OsobaNovák2 dny', 'Příčinapád z rampy2 dny']);
+    // písmena: S mimo cíl ve 2 z 5 pracovních dní
+    const tile = (l: string) => [...document.querySelectorAll('.kpi-an-letter')].find((t) => t.querySelector('.kpi-an-letter-mark')!.textContent === l)!;
+    expect(tile('S').querySelector('.kpi-an-letter-value')!.textContent).toBe('2 / 5 pracovních dní mimo cíl');
+    expect(tile('S').querySelector('.kpi-an-letter-mark')!.className).toContain('kpi-text-red');
+    // body po dnech: nejnovější dny rozbalené, detail jedním řádkem, bez detailu odkaz na zápis
+    const rows = () => [...document.querySelectorAll('.kpi-pt')].map((r) => r.textContent!.replace(/\s/g, ' '));
+    expect([...document.querySelectorAll('.kpi-day-label')].map((d) => d.textContent)).toEqual(['Po 5. 10.', 'Pá 2. 10.']);
+    expect(rows()).toEqual([
+      'SÚrazy v logistice2 početP1 · Novák / Dvořák · pád z rampy',
+      'SÚrazy v logistice1 početP1 · Novák / Dvořák · Pád z rampy',
+      'CNáklady na mimořádné přepravy6 000 Kčbez detailu – doplnit',
     ]);
-    // body od nejnovějšího dne; klik na den otevře zápis
-    const points = [...document.querySelectorAll('.kpi-points tbody tr')];
-    // Pá 2. 10. mimo cíl i mimořádné přepravy (bez detailu)
-    expect(points.map((r) => [...r.querySelectorAll('td')].map((td) => td.textContent!.replace(/\s/g, ' ')).join(' | '))).toEqual([
-      'Po 5. 10. |  S | Úrazy v logistice | 2 počet | P1 | — | Novák / Dvořák | — | pád z rampy | ruční',
-      'Pá 2. 10. |  S | Úrazy v logistice | 1 počet | P1 | — | Novák / Dvořák | — | Pád z rampy | ruční',
-      'Pá 2. 10. |  C | Náklady na mimořádné přepravy | 6 000 Kč | — | — | — | — | bez detailu | ',
-    ]);
-    fireEvent.click(screen.getAllByRole('button', { name: 'Pá 2. 10.' })[0]!);
+    fireEvent.click(screen.getAllByRole('button', { name: /Pá 2\. 10\./ })[0]!);
+    expect(rows()).toHaveLength(1);
+    // klik na písmeno zúží rozbor
+    fireEvent.click(tile('C'));
+    expect(rows()).toEqual([]);
+    expect([...document.querySelectorAll('.kpi-day-label')].map((d) => d.textContent)).toEqual(['Pá 2. 10.']);
+    fireEvent.click(screen.getByRole('button', { name: 'Písmeno C ✕' }));
+    // + OIL u opakování bez opatření založí bod s písmenem a problémem
+    fireEvent.click(screen.getAllByRole('button', { name: '+ OIL' })[0]!);
+    expect(location.hash).toBe('#oil?open=1');
+    location.hash = '';
+    fireEvent.click(screen.getAllByRole('button', { name: 'otevřít zápis' })[1]!);
     expect(screen.getByRole('heading', { level: 2, name: /Zápis za den Pá 2\. 10\./ })).toBeTruthy();
   });
 
