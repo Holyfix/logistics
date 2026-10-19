@@ -18,6 +18,7 @@ Soubory se rozpoznají podle názvu (nezáleží na velikosti písmen ani diakri
 | Plánování: kapacity a plány linek | leží ve složce `Plan` (nebo `Plán`); `Kapacity.xlsx` = kapacity, ostatní = plány | XLSX (zapisuje aplikace) |
 | OIL (Open Issue List) | leží ve složce `OIL`, nebo název začíná „OIL“; platí nejnovější soubor | XLSX (zapisuje aplikace) |
 | KPI (SQCDP) | leží ve složce `KPI`, nebo název začíná „KPI“; platí nejnovější soubor | XLSX (zapisuje aplikace) |
+| Doplněný transit (naše expedice, které coverage ještě nemá) | leží ve složce `Transit`, nebo název začíná „Transit“; všechny soubory | XLSX nebo CSV |
 
 Doporučená struktura (složka se v aplikaci vybírá celá, podsložky se prohledají):
 
@@ -32,6 +33,7 @@ Logistics/
 ├── Plan/                 Plánování: Kapacity.xlsx a plány linek (ASSEMBLY_<projekt>.xlsx), zapisuje aplikace
 ├── OIL/                  OIL.xlsx (Open Issue List), zapisuje aplikace
 ├── KPI/                  KPI.xlsx (ukazatele SQCDP a denní zápisy), zapisuje aplikace
+├── Transit/              doplněný transit: ranní expedice, které soubor coverage ještě nemá
 └── Obaly/                později: Obaly
 ```
 
@@ -130,6 +132,28 @@ na názvu souboru nezáleží. Díly se párují s mapováním podle čísla zá
 - Stejný díl na víc řádcích jednoho souboru (druhý řádek bývá prázdný) se sečte do jednoho řádku.
 - **Náš sklad** (sloupec „Náš sklad“, volba „Přičíst náš sklad“): zásoba dílu ze souboru skladu, přičte se ke všem dnům.
 - Další formáty zákazníka a dodatečný transit (naše expedice) se doplní postupně.
+
+## Doplněný transit (složka Transit)
+
+Když soubor coverage od zákazníka ještě neobsahuje naši expedici (typicky ranní), dejte do složky `Transit` export
+transakcí z ERP (výdej na dodací list) nebo vlastní seznam. Množství se přičte k transitu dílu u zákazníka v Coverage
+a tím i v Dashboardu, Komponentách a KPI.
+
+| Sloupec | Další povolené názvy | Povinný |
+|---|---|---|
+| Item Number | Díl, Číslo dílu, Item | ano |
+| Quantity Change | Loc Qty Change, Quantity, Qty, Množství (bere se absolutní hodnota, výdej bývá záporný) | ano |
+| Effective Date | Date, Ship Date, Datum (`d.m.rrrr`, `m/d/rr` nebo datum Excelu) | ano |
+| Time, Shipper Number, Address, Transaction Number | Čas; Packing Slip, Doklad; Destinace; Transakce | ne |
+
+- Díl se najde přes mapování (naše číslo dílu → řádek coverage). Množství se přičte k transitu u všech dnů souboru.
+- **Proti dvojímu započtení:** expedice ze dne **před prvním dnem souboru coverage** se nepřičte – soubor zákazníka
+  je novější a expedici už obsahuje (zítřejší coverage tedy dnešní expedici automaticky přestane přičítat). Stejné
+  číslo transakce se započte jen jednou.
+- Nepřičte se ani díl, který není v žádném souboru coverage, nebo je ve víc souborech (nejde určit destinaci).
+- Co se přičetlo a co ne, ukáže Coverage nad tabulkou („Doplněný transit … Podrobnosti“); u dílu v tabulce je
+  „+N expedice“. Starý soubor ze složky můžete smazat, ale nevadí ani když tam zůstane.
+- U Excelu se čte list „Data“, jinak první list.
 
 ## Náš sklad (Stock)
 

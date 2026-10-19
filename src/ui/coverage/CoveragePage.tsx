@@ -13,6 +13,7 @@ import {
 import { dayToIso, parseDay, weekday, type DayNumber } from '../../core/dates';
 import { formatDayShort, formatQuantity } from '../../core/format';
 import { excludedLocationsIn, STOCK_ZONES, stockByItem } from '../../core/stock';
+import type { TransitEntry } from '../../core/transit';
 import { useI18n } from '../../i18n/I18nProvider';
 import { ExportButtons, type ExportTable } from '../calloffs/ExportButtons';
 import { useData } from '../data/DataProvider';
@@ -186,6 +187,7 @@ export function CoveragePage({ today = localToday() }: { today?: DayNumber } = {
         </p>
       </div>
       <MappingNotice module="coverage" />
+      {state.data?.transit && <ExtraTransit entries={state.data.transit.entries} />}
 
       <div className="kpis">
         <div className="kpi">
@@ -334,7 +336,10 @@ export function CoveragePage({ today = localToday() }: { today?: DayNumber } = {
                     <td>{l.location || '—'}</td>
                     <td>{l.project || '—'}</td>
                     <td className="n">{formatQuantity(l.customerStock, locale)}</td>
-                    <td className="n">{l.transit ? formatQuantity(l.transit, locale) : <span className="muted">0</span>}</td>
+                    <td className="n">
+                      {l.transit ? formatQuantity(l.transit, locale) : <span className="muted">0</span>}
+                      {l.extraTransit > 0 && <small className="cell-note">{tc.extraTransit.cell.replace('{n}', formatQuantity(l.extraTransit, locale))}</small>}
+                    </td>
                     {stock && (
                       <td className="n">{l.ourStock === null ? <span className="muted">—</span> : l.ourStock ? formatQuantity(l.ourStock, locale) : <span className="muted">0</span>}</td>
                     )}
@@ -378,5 +383,56 @@ export function CoveragePage({ today = localToday() }: { today?: DayNumber } = {
         </p>
       </div>
     </section>
+  );
+}
+
+/** Doplněný transit ze složky Transit: kolik se přičetlo a proč se něco nepřičetlo. */
+function ExtraTransit({ entries }: { entries: TransitEntry[] }) {
+  const { t, locale } = useI18n();
+  const te = t.coverage.extraTransit;
+  const added = entries.filter((e) => e.status === 'added');
+  const skipped = entries.length - added.length;
+  return (
+    <details className="panel extra-transit">
+      <summary>
+        {te.summary.replace('{added}', formatQuantity(added.length, locale)).replace('{pcs}', formatQuantity(added.reduce((s, e) => s + e.row.qty, 0), locale))}
+        {skipped > 0 && te.skipped.replace('{n}', formatQuantity(skipped, locale))}
+        {' · '}
+        <span className="link-button">{te.details}</span>
+      </summary>
+      <p className="muted">{te.note}</p>
+      <div className="table-scroll">
+        <table className="table">
+          <thead>
+            <tr>
+              <th>{te.item}</th>
+              <th className="n">{te.qty}</th>
+              <th>{te.day}</th>
+              <th>{te.shipment}</th>
+              <th>{te.coverage}</th>
+              <th>{te.status}</th>
+              <th>{te.file}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {entries.map((e, k) => (
+              <tr key={k}>
+                <td>
+                  <strong>{e.row.item}</strong>
+                </td>
+                <td className="n">{formatQuantity(e.row.qty, locale)}</td>
+                <td>
+                  {formatDayShort(dayToIso(e.row.day), locale)} {e.row.time}
+                </td>
+                <td>{e.row.shipment || '—'}</td>
+                <td>{[e.location, e.project].filter(Boolean).join(' / ') || '—'}</td>
+                <td className={e.status === 'added' ? undefined : 'cell-short'}>{te.statuses[e.status]}</td>
+                <td className="muted">{e.file.split('/').pop()}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </details>
   );
 }

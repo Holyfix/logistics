@@ -100,6 +100,8 @@ Filtry projekt, kategorie, strana (LHD/RHD) a varianta z kmenových dat se ovliv
 - ✅ Náš sklad ze souboru Stock (celý sklad po lokacích, sdílený s dalšími moduly)
 - ⏳ Dodatečný transit z naší expedice
 - ✅ Tři formáty souborů zákazníka (Coverage Report Overview, Articles, Bestand); transit se sjednotí
+- ✅ **Doplněný transit** ze složky Transit (naše expedice, které soubor coverage ještě nemá): přičte se k transitu dílu;
+  souhrn s podrobnostmi nad tabulkou, u dílu „+N expedice“; expedice ze dne před souborem coverage se nepřičte
 
 ### Mimořádné přepravy
 - Zápis mimořádné přepravy přímo v aplikaci (do sdílené složky)

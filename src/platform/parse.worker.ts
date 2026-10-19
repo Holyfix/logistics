@@ -11,11 +11,12 @@ import { parsePlanWorkbook, type PlanResult } from '../core/planning/plan';
 import { parseSettings, type PlanSettings } from '../core/planning/settings';
 import { parseKpiWorkbook, type KpiResult } from '../core/kpi';
 import { parseOilWorkbook, type OilResult } from '../core/oil';
+import { parseTransit, type TransitResult } from '../core/transit';
 import { decodeText } from '../core/text';
 import type { SourceFormat } from '../core/sources';
 import type { Cell, DataTable } from '../core/table';
 
-export type ParseRequest = { id: number; kind: 'calloffs' | 'masterdata' | 'coverage' | 'stock' | 'bom' | 'plan' | 'planSettings' | 'oil' | 'kpi'; format: SourceFormat; name: string; buffer: ArrayBuffer };
+export type ParseRequest = { id: number; kind: 'calloffs' | 'masterdata' | 'coverage' | 'stock' | 'bom' | 'plan' | 'planSettings' | 'oil' | 'kpi' | 'transit'; format: SourceFormat; name: string; buffer: ArrayBuffer };
 
 export type ParseResponse =
   | { id: number; kind: 'calloffs'; result: ParseResult<CallOffExport> }
@@ -27,6 +28,7 @@ export type ParseResponse =
   | { id: number; kind: 'planSettings'; result: PlanSettings }
   | { id: number; kind: 'oil'; result: OilResult }
   | { id: number; kind: 'kpi'; result: KpiResult }
+  | { id: number; kind: 'transit'; result: TransitResult }
   | { id: number; kind: 'error'; message: string };
 
 function toTable(data: Cell[][]): DataTable {
@@ -75,8 +77,8 @@ self.onmessage = async (event: MessageEvent<ParseRequest>) => {
       (self as unknown as Worker).postMessage({ id, kind, result } satisfies ParseResponse);
       return;
     }
-    if (kind === 'stock') {
-      // Sklad v Excelu: list „Data“, jinak první list.
+    if (kind === 'stock' || kind === 'transit') {
+      // Sklad a transit v Excelu: list „Data“, jinak první list.
       let table: DataTable;
       if (format === 'csv') table = parseCsv(decodeText(buffer));
       else {
@@ -84,7 +86,8 @@ self.onmessage = async (event: MessageEvent<ParseRequest>) => {
         const sheet = sheets.find((s) => s.sheet.trim().toLowerCase() === 'data') ?? sheets[0];
         table = toTable((sheet?.data ?? []) as Cell[][]);
       }
-      (self as unknown as Worker).postMessage({ id, kind, result: parseStock(table) } satisfies ParseResponse);
+      const response: ParseResponse = kind === 'stock' ? { id, kind, result: parseStock(table) } : { id, kind, result: parseTransit(table) };
+      (self as unknown as Worker).postMessage(response);
       return;
     }
     if (kind === 'masterdata' && format !== 'csv') {
