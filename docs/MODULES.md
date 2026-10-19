@@ -55,7 +55,7 @@ a Dodavatelé odložené. Modul Kapacity (odvolávky vs. kapacita linek) byl zva
 - ⏳ Plnění plánu a prostoje za včerejšek, na kolik dní vystačí obaly (až budou moduly)
 
 ### KPI (SQCDP)
-- Tři karty: **Přehled** (písmena a grafy, později opatření), **Zápis dne**, **Ukazatele a cíle**
+- Čtyři karty: **Přehled** (písmena, grafy a opatření), **Zápis dne**, **Rozbor**, **Ukazatele a cíle**
 - ✅ **Písmena S, Q, C, D, P** (bezpečnost, kvalita, náklady, dodávky, lidé) jako kalendář měsíce: každé políčko
   písmena je den. Barví se jen den: zelená v cíli, žlutá varování, červená za červenou hranicí, čárkovaný rámeček =
   pracovní den bez zápisu. Víkend je šedý, a když je zapsaný (někdy se pracuje), obarví se. Stav dne písmena = nejhorší
@@ -85,6 +85,12 @@ a Dodavatelé odložené. Modul Kapacity (odvolávky vs. kapacita linek) byl zva
 - ✅ **„+ OIL“ v Zápisu dne** u uloženého ukazatele mimo cíl (žlutá i červená): založí v OIL bod s písmenem,
   předvyplněným problémem (hodnota, den, cíl) a zdrojem (den a ukazatel) a otevře ho; existující body k ukazateli
   a dni jsou u ukazatele jako odkazy
+- ✅ **Detail bodu mimo cíl** (nepovinný) v Zápisu dne pod ukazatelem: Projekt, Díl, Osoba (z OIL), Množství, Příčina
+  (volný text s nabídkou dříve zapsaných příčin), víc řádků. Automatické ukazatele uloží detail samy (které díly,
+  komponenty nebo body OIL hodnotu způsobily)
+- ✅ **Rozbor:** body mimo cíl za posledních 7 dní, měsíc nebo vlastní období, filtr písmene a ukazatele. Nahoře „Opakuje
+  se“ – projekty, díly, osoby a příčiny, které se objevily ve víc dnech, s odkazem na otevřené body OIL; pod tím souhrn
+  po projektech, dílech, osobách a příčinách a seznam bodů s detaily (klik na den otevře zápis, export do Excelu)
 ### Call-offs
 Hlavní údaj je **Discrete Qty** (požadavek na den), kumulativy jsou doplňková informace.
 Filtry projekt, kategorie, strana (LHD/RHD) a varianta z kmenových dat se ovlivňují navzájem v libovolném pořadí (každý nabízí jen hodnoty odpovídající ostatním vybraným filtrům; strana a varianta jen tam, kde je díly mají), hledání dílu; díly bez mapování jako volba „Bez kmenových dat“ ve filtru Projekt.

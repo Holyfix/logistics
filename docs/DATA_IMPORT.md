@@ -309,11 +309,15 @@ aplikace nabídne úvodní sadu ukazatelů. Když soubor mezitím změnil někdo
 | **Ukazatele** | ID, Písmeno (S, Q, C, D, P), Ukazatel, Jednotka, Cíl, Červená za, Lepší je (více / méně), Zdroj, Kategorie (oddělené „; “), Den hodnoty (výsledek dne / stav v den zápisu; chybí-li, ruční = výsledek dne, automatické = stav) |
 | **Hodnoty** | Datum, ID, Ukazatel, Kategorie, Hodnota (u ukazatele s kategoriemi řádek za každou kategorii) |
 | **Dny** | Datum, Zapsal, Kdy – které dny jsou zapsané |
+| **Detaily** | Datum, ID, Ukazatel, Projekt, Díl, Osoba, Množství, Příčina, Zdroj detailu (ruční / auto) – upřesnění bodů mimo cíl; list může chybět |
 
 - **Stav dne:** v cíli = zelená; horší než cíl, ale ne za červenou hranicí = žlutá; za hranicí = červená.
   Prázdná „Červená za“ znamená, že ukazatel nikdy nezčervená (jen žlutá).
 - **Zdroj** předvyplní hodnotu z dat: `coverageShortage` (kusy chybějící u zákazníka v prvních 2 dnech, s transitem),
   `componentsShort` (komponenty, které dojdou do 2 dnů), `oilOverdue` (body OIL po termínu); `manual` = jen ruční zápis.
+- **Detaily** (nepovinné): u ručního ukazatele mimo cíl se vyplní v Zápisu dne (víc řádků, nabídky projektů a dílů
+  z mapování, osob z OIL a dříve zapsaných příčin). U automatických ukazatelů je aplikace uloží sama při uložení dne
+  (díly a lokace z Coverage, komponenty s projekty, body OIL po termínu s odpovědným).
 
 ## Testovací data
 
