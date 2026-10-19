@@ -176,7 +176,8 @@ Soubor obsahuje celý sklad, takže ho mohou použít i další moduly (Komponen
 - Čísla v českém formátu (`"1 236,0"`) i anglickém se přečtou; řádek s neplatným množstvím se vypíše v modulu Data.
 - **Pro Coverage** se sečtou kladná množství dílu na lokacích v zónách **INCOME, MEZ, PRE, PURCH, SALE a WRKC**;
   plná i neúplná balení dohromady (bez rozdělení podle Order Multiple). Ostatní zóny (např. karanténa, inventurní rozdíly)
-  a záporné lokace se nepočítají.
+  a záporné lokace se nepočítají. Počítá se jen **domácí závod** (nejčastější Site v souboru); sklady jiných závodů
+  (sekvencéry u zákazníka) už obsahuje coverage od zákazníka. Stejný sklad používají Komponenty a Plánování.
 - **Externí lokace**, kde jsou díly už zamontované ve výrobku odběratele, se nepočítají. Pravidlo je pevně
   v aplikaci (`src/core/stock.ts`); název lokace je firemní, proto je v kódu jen jako otisk (hash) a skutečný
   název ukáže modul Data v panelu „Náš sklad“ (řádek „Vyloučené lokace“). Další lokaci lze přidat jen úpravou aplikace.

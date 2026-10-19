@@ -127,14 +127,23 @@ export function parseStock(table: DataTable): StockResult {
   return { ok: true, value: { rows, descriptions, qtyColumn, issueCount, issues } };
 }
 
+/** Domácí závod: nejčastější Site v souboru skladu. */
+export function homeSite(rows: readonly StockRow[]): string {
+  const counts = new Map<string, number>();
+  for (const r of rows) if (r.site) counts.set(r.site, (counts.get(r.site) ?? 0) + 1);
+  return [...counts].sort((a, b) => b[1] - a[1])[0]?.[0] ?? '';
+}
+
 /**
- * Zásoba po dílech: součet kladných množství na lokacích v zónách STOCK_ZONES, bez vyloučených lokací.
+ * Zásoba po dílech: součet kladných množství na lokacích v zónách STOCK_ZONES domácího závodu, bez vyloučených lokací.
+ * Jiné závody (sekvencéry u zákazníka) se nepočítají – jejich sklad už obsahuje coverage od zákazníka.
  * Plná i neúplná balení se počítají dohromady; záporné a nulové lokace se nepočítají.
  */
 export function stockByItem(stock: StockData, excluded: (location: string) => boolean = isExcludedLocation): Map<string, number> {
+  const home = homeSite(stock.rows);
   const result = new Map<string, number>();
   for (const row of stock.rows) {
-    if (row.qty <= 0 || !STOCK_ZONES.includes(row.zone) || excluded(row.location)) continue;
+    if (row.qty <= 0 || !STOCK_ZONES.includes(row.zone) || excluded(row.location) || (row.site && row.site !== home)) continue;
     result.set(row.item, (result.get(row.item) ?? 0) + row.qty);
   }
   return result;
