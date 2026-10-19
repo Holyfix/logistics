@@ -16,3 +16,4 @@ dist/
 *.ods
 *.edi
 !sample-data/**
+*.tsbuildinfo
