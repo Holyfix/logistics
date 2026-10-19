@@ -97,6 +97,17 @@ describe('KpiPage', () => {
     expect([...document.querySelectorAll('.kpi-missing-days button')].map((b) => b.textContent)).toEqual(['Po 5. 10.']);
   });
 
+  it('tlačítko Zapsat: nejstarší nezapsaný pracovní den, jinak předchozí pracovní den se zaškrtnutím', () => {
+    const entry = (n: number) => ({ day: day(n), author: 'Novák', at: '', values: { s_injury: 0 } });
+    renderPage(withEntry(withEntry(kpi, entry(5)), entry(1)));
+    expect(screen.getByRole('button', { name: 'Po 5. 10. zapsáno ✓' })).toBeTruthy();
+    cleanup();
+    // chybí pátek 2. 10. (1. a 5. 10. zapsané)
+    renderPage(withEntry(withEntry(defaultKpis(cs.kpi.defaults), entry(1)), entry(5)));
+    fireEvent.click(screen.getByRole('button', { name: 'Zapsat Pá 2. 10.' }));
+    expect(screen.getByRole('heading', { level: 2, name: /Zápis za den Pá 2\. 10\./ })).toBeTruthy();
+  });
+
   it('kliknutí na den otevře jeho zápis v kartě Zápis dne', () => {
     renderPage();
     // popisek dne v písmenu vyjmenuje ukazatele mimo cíl
