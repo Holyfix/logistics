@@ -187,7 +187,6 @@ export function CoveragePage({ today = localToday() }: { today?: DayNumber } = {
         </p>
       </div>
       <MappingNotice module="coverage" />
-      {state.data?.transit && <ExtraTransit entries={state.data.transit.entries} />}
 
       <div className="kpis">
         <div className="kpi">
@@ -297,6 +296,7 @@ export function CoveragePage({ today = localToday() }: { today?: DayNumber } = {
         </div>
       </div>
 
+      {state.data?.transit && <ExtraTransit entries={state.data.transit.entries} />}
       <div className="panel">
         <div className="panel-head">
           <h2>{tc.table.heading}</h2>
