@@ -98,7 +98,8 @@ a Dodavatelé odložené. Modul Kapacity (odvolávky vs. kapacita linek) byl zva
 ### Call-offs
 Hlavní údaj je **Discrete Qty** (požadavek na den), kumulativy jsou doplňková informace.
 Filtry projekt, kategorie, strana (LHD/RHD) a varianta z kmenových dat se ovlivňují navzájem v libovolném pořadí (každý nabízí jen hodnoty odpovídající ostatním vybraným filtrům; strana a varianta jen tam, kde je díly mají), hledání dílu; díly bez projektu (bez mapování nebo s prázdným Project) jako volba „Bez projektu“ ve filtru Projekt.
-- ✅ **Přehled po projektech:** strom Projekt → Kategorie → Strana → Varianta (sloupce Project, Category, Side, Variant v mapování; strana a varianta jen tam, kde je díly mají) se součty po týdnech, celkem a změna proti předchozímu exportu; rozbalení po úrovních; Excel pro vedení (titulek s exportem, datem a filtry, barevné záhlaví s pondělky týdnů, oddělovače tisíců, změna v ks i v % zeleně/červeně, ukotvené záhlaví, list Přehled ve zvolené úrovni a list Díly se všemi díly) a CSV
+- ✅ **Přehled po projektech:** strom Projekt → Kategorie → Strana → Varianta (sloupce Project, Category, Side, Variant v mapování; strana a varianta jen tam, kde je díly mají) se součty po týdnech, celkem a změna proti předchozímu exportu; rozbalení po úrovních; Excel pro vedení (titulek s exportem, datem a filtry, barevné záhlaví s pondělky týdnů, oddělovače tisíců, změna v ks i v % zeleně/červeně, ukotvené záhlaví; list Přehled s celým stromem a list Díly seskupený pod projekt a kategorii – řádky jsou v Excelu seskupené (tlačítka −/+ a 1 2 3) a sbalené jako v aplikaci) a CSV
+- ✅ **Směny:** zaškrtávátko „Zobrazit směny“ (v Přehledu po projektech i Aktuálních odvolávkách) přidá pod každý řádek kusů řádek směn = kusy ÷ výkon za směnu kategorie (Plánování → Kapacity, podle projektu a kategorie). Kategorie bez výkonu ukáže „—“ a upozornění. Excel pro vedení má sloupce Ks / směna a Jednotka a pod každým řádkem ks řádek sm.
 
 - ✅ **Aktuální odvolávky:** nejnovější export po týdnech nebo dnech,
   změna proti předchozímu exportu (zvýraznění od 20 %), export do Excelu a CSV
@@ -154,7 +155,7 @@ Filtry projekt, kategorie, strana (LHD/RHD) a varianta z kmenových dat se ovliv
   přidávají a ubírají (výchozí dnes a zítra); automatické směny podle zvolené strany (LHD, RHD, obě; HUD patří
   ke své straně) kryjí první nepokryté dny v rámci kapacity; plán po celých baleních (Order Multiple z mapování);
   vymazání jednotlivé směny; ruční úpravy kterékoli směny, kapacita směn, pořadí stran
-- Kapacity: kusů za směnu a směny po–pá pro linku a projekt, začátek směn (balení je v mapování)
+- Kapacity: kusů za směnu a směny po–pá pro linku a projekt, začátek směn (balení je v mapování); **výkon za směnu podle projektu a kategorie** pro přepočet odvolávek na směny
 - Plán se ukládá jako Excel do složky `Plan` (soubor na linku a projekt), dá se sdílet a aplikace ho zase načte
 - Později: FOA, SLH a IMM navázané na plán montáže přes kusovník, plán vs. skutečnost a prostoje (z MES)
 

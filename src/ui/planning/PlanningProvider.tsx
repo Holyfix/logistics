@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
 import type { LinePlan } from '../../core/planning/plan';
-import type { PlanSettings } from '../../core/planning/settings';
+import { DEFAULT_SETTINGS, type PlanSettings } from '../../core/planning/settings';
 import { useData } from '../data/DataProvider';
 
 export type PlanningTab = 'overview' | 'ASSEMBLY' | 'FOA' | 'SLH' | 'IMM' | 'capacity';
@@ -67,4 +67,11 @@ export function usePlanningDrafts(): PlanningContextValue {
   const context = useContext(PlanningContext);
   if (!context) throw new Error('usePlanningDrafts musí být uvnitř <PlanningProvider>');
   return context;
+}
+
+/** Nastavení plánování: neuložené změny z karty Kapacity, jinak soubor Kapacity.xlsx (i mimo PlanningProvider). */
+export function usePlanSettings(): PlanSettings {
+  const context = useContext(PlanningContext);
+  const { state } = useData();
+  return context?.settings ?? state.data?.planSettings?.settings ?? DEFAULT_SETTINGS;
 }

@@ -270,6 +270,16 @@ const capacityRows = PROJECTS.map(([project]) => {
   const daily = items.filter((it) => it.project === project).reduce((sum, it) => sum + it.base, 0);
   return [text('ASSEMBLY'), text(project), { value: Math.ceil((daily * 1.15) / 3 / 10) * 10, type: Number }, text(project === 'P400' ? 'R O' : 'R O N')];
 });
+// Výkon za směnu podle projektu a kategorie (přepočet odvolávek na směny); P200 bez výkonu, aby bylo vidět upozornění.
+const outputs = new Map();
+for (const it of items.filter((x) => x.project && x.project !== 'P200')) {
+  const key = `${it.project}|${CATEGORY[it.description.split(' ')[1]]}`;
+  outputs.set(key, (outputs.get(key) ?? 0) + it.base);
+}
+const outputRows = [...outputs].map(([key, daily]) => {
+  const [project, category] = key.split('|');
+  return [text(project), text(category), { value: Math.ceil((daily * 1.15) / 2 / 10) * 10, type: Number }];
+});
 mkdirSync('sample-data/Plan', { recursive: true });
 await writeXlsxFile([
   { sheet: 'Linky', data: [head(['Linka', 'Projekt', 'Ks za směnu', 'Směny po–pá']), ...capacityRows] },
@@ -284,6 +294,7 @@ await writeXlsxFile([
     ],
   },
   { sheet: 'Směny', data: [head(['Ranní směna od']), [text('06:00')]] },
+  { sheet: 'Výkon kategorií', data: [head(['Projekt', 'Kategorie', 'Ks za směnu']), ...outputRows] },
 ]).toFile('sample-data/Plan/Kapacity.xlsx');
 
 console.log(`Vytvořeno: 3 exporty, ${items.length} dílů, mapování pro ${items.length - 1} dílů, coverage ve 3 formátech, sklad, kusovník.`);

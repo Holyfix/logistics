@@ -169,4 +169,27 @@ describe('CallOffsPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Projekty' }));
     expect([...table.querySelectorAll('tbody tr')].map((tr) => tr.querySelector('td')!.textContent)).toEqual(['▸P100 · 1 dílů', '▸P300 · 1 dílů', '▸bez projektu · 1 dílů']);
   });
+
+  it('směny: řádek pod kusy (kusy ÷ výkon kategorie), bez výkonu pomlčka a upozornění; vypnutí skryje', () => {
+    const settings = { firstShiftStart: 360, lines: [], destinations: [], outputs: [{ project: 'P100', category: 'DP', perShift: 50 }] };
+    const withOutputs: DataState = { ...state, data: { ...state.data!, planSettings: { path: 'Plan/Kapacity.xlsx', lastModified: 0, settings } } };
+    renderPage(withOutputs);
+    // aktuální odvolávky: díl 1001 = 150 ks ÷ 50 = 3 směny
+    const part = within(screen.getByRole('table')).getByText('1001').closest('tr')!;
+    expect(part.nextElementSibling!.className).toBe('summary-shifts');
+    expect(part.nextElementSibling!.textContent).toContain('3,0');
+    expect(part.nextElementSibling!.textContent).toContain('50 ks/sm.');
+    fireEvent.click(screen.getByRole('tab', { name: 'Přehled po projektech' }));
+    const table = screen.getByRole('table');
+    const text = (tr: Element) => [...tr.querySelectorAll('td')].slice(0, 5).map((td) => td.textContent);
+    const body = [...table.querySelectorAll('tbody tr')];
+    expect(text(body[0]!)).toEqual(['▾P100 · 1 dílů', '50', '150', '0', '150']);
+    expect(text(body[1]!)).toEqual(['směny', '', '3,0', '0,0', '3,0']);
+    const p300 = body.findIndex((tr) => tr.textContent!.startsWith('▾P300'));
+    expect(text(body[p300]!).slice(0, 2)).toEqual(['▾P300 · 1 dílů', 'chybí']);
+    expect(text(body[p300 + 1]!).slice(2, 3)).toEqual(['—']);
+    expect(screen.getByText(/Bez výkonu za směnu/).textContent).toContain('P300 · DP');
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Zobrazit směny' }));
+    expect(table.querySelectorAll('tr.summary-shifts')).toHaveLength(0);
+  });
 });

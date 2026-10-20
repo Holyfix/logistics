@@ -30,14 +30,22 @@ export interface Destination {
   arrival: number;
 }
 
+/** Výkon za směnu podle projektu a kategorie (přepočet odvolávek na směny); prázdný projekt = všechny projekty. */
+export interface CategoryOutput {
+  project: string;
+  category: string;
+  perShift: number;
+}
+
 export interface PlanSettings {
   /** Začátek ranní směny v minutách od půlnoci; směny R, O, N jdou po 8 hodinách za sebou. */
   firstShiftStart: number;
   lines: LineCapacity[];
   destinations: Destination[];
+  outputs: CategoryOutput[];
 }
 
-export const DEFAULT_SETTINGS: PlanSettings = { firstShiftStart: 360, lines: [], destinations: [] };
+export const DEFAULT_SETTINGS: PlanSettings = { firstShiftStart: 360, lines: [], destinations: [], outputs: [] };
 export const DEFAULT_TRANSPORT: Omit<Destination, 'location'> = { coverDays: 2, transitHours: 24, arrival: 360 };
 export const DEFAULT_SHIFTS: ShiftCode[] = [...SHIFT_CODES];
 
@@ -49,6 +57,13 @@ const sameKey = (a: string, b: string) => a.trim().toUpperCase() === b.trim().to
 /** Kapacita linky pro projekt; bez řádku v nastavení 0 ks a všechny tři směny. */
 export function lineCapacity(settings: PlanSettings, line: string, project: string): LineCapacity {
   return settings.lines.find((l) => sameKey(l.line, line) && sameKey(l.project, project)) ?? { line, project, perShift: 0, shifts: DEFAULT_SHIFTS };
+}
+
+/** Kusů za směnu pro projekt a kategorii: řádek projektu, jinak řádek kategorie bez projektu; null = nevyplněno. */
+export function categoryOutput(settings: PlanSettings, project: string, category: string): number | null {
+  if (!category) return null;
+  const rows = settings.outputs.filter((o) => o.perShift > 0 && sameKey(o.category, category));
+  return (rows.find((o) => o.project && sameKey(o.project, project)) ?? rows.find((o) => !o.project))?.perShift ?? null;
 }
 
 /** Doprava pro destinaci: vlastní řádek, jinak řádek „ostatní“, jinak výchozí 2 dny pokrytí, 24 h, příjezd 6:00. */
@@ -102,6 +117,7 @@ const COLUMNS = {
   transit: ['Transit (h)', 'Transit'],
   arrival: ['Příjezd', 'Arrival'],
   firstShift: ['Ranní směna od', 'First shift start'],
+  category: ['Kategorie', 'Category'],
 } as const;
 
 export function settingsSheets(settings: PlanSettings): PlanSheet[] {
@@ -117,6 +133,11 @@ export function settingsSheets(settings: PlanSettings): PlanSheet[] {
       rows: settings.destinations.map((d) => [d.location, d.coverDays, d.transitHours, formatTime(d.arrival)]),
     },
     { name: 'Směny', header: [COLUMNS.firstShift[0]], rows: [[formatTime(settings.firstShiftStart)]] },
+    {
+      name: 'Výkon kategorií',
+      header: [COLUMNS.project[0], COLUMNS.category[0], COLUMNS.perShift[0]],
+      rows: settings.outputs.filter((o) => o.perShift > 0).map((o) => [o.project, o.category, o.perShift]),
+    },
   ];
 }
 
@@ -163,5 +184,13 @@ export function parseSettings(sheets: readonly { name: string; data: Cell[][] }[
 
   const shiftTable = table(COLUMNS.firstShift);
   const firstShiftStart = parseTime(shiftTable?.rows[0]?.[shiftTable.cols[0]!]) ?? DEFAULT_SETTINGS.firstShiftStart;
-  return { firstShiftStart, lines, destinations };
+  const outputs: CategoryOutput[] = [];
+  const outputTable = table(COLUMNS.category, COLUMNS.project, COLUMNS.perShift);
+  for (const row of outputTable?.rows ?? []) {
+    const [category, project, perShift] = outputTable!.cols;
+    const value = perShift === -1 ? null : cellNumber(row[perShift!]);
+    if (!cellText(row[category!]) || value === null || value <= 0) continue;
+    outputs.push({ project: project === -1 ? '' : cellText(row[project!]), category: cellText(row[category!]), perShift: value });
+  }
+  return { firstShiftStart, lines, destinations, outputs };
 }

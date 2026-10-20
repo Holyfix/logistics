@@ -1,15 +1,18 @@
 import { useMemo } from 'react';
 import {
+  categoryOutput,
   formatTime,
   lineCapacity,
   parseTime,
   SHIFT_CODES,
   SHIFT_MINUTES,
+  type CategoryOutput,
   type LineCapacity,
   type PlanSettings,
   type ShiftCode,
 } from '../../core/planning/settings';
 import { useI18n } from '../../i18n/I18nProvider';
+import { useData } from '../data/DataProvider';
 import { usePlanningDrafts } from './PlanningProvider';
 import { usePlanSaving } from './save';
 import { SaveStatus, useSaveFlow } from './SaveStatus';
@@ -41,6 +44,22 @@ export function CapacityPage({ data }: { data: PlanningData }) {
       : [...settings.lines, next];
     update({ ...settings, lines });
   };
+  // Výkon kategorií: každý projekt a kategorie z mapování (hotové díly) a řádky, které už v nastavení jsou.
+  const master = useData().state.data?.master?.data;
+  const outputRows = useMemo(() => {
+    const keys = new Map<string, CategoryOutput>();
+    for (const m of master?.items.values() ?? [])
+      if (m.category && m.project && m.kind !== 'PG') keys.set(`${m.project}|${m.category}`, { project: m.project, category: m.category, perShift: 0 });
+    for (const o of settings.outputs) keys.set(`${o.project}|${o.category}`, o);
+    return [...keys.values()]
+      .map((o) => ({ ...o, perShift: settings.outputs.find((x) => x.project === o.project && x.category === o.category)?.perShift ?? 0 }))
+      .sort((a, b) => a.project.localeCompare(b.project, 'cs', { numeric: true }) || a.category.localeCompare(b.category, 'cs'));
+  }, [master, settings.outputs]);
+  const setOutput = (row: CategoryOutput, perShift: number) => {
+    const others = settings.outputs.filter((o) => !(o.project === row.project && o.category === row.category));
+    update({ ...settings, outputs: perShift > 0 ? [...others, { ...row, perShift }] : others });
+  };
+
   const toggleShift = (row: LineCapacity, code: ShiftCode) =>
     setLine(row, { shifts: SHIFT_CODES.filter((c) => (c === code ? !row.shifts.includes(c) : row.shifts.includes(c))) });
 
@@ -109,6 +128,52 @@ export function CapacityPage({ data }: { data: PlanningData }) {
           </table>
         </div>
         <p className="muted">{tc.linesNote}</p>
+      </div>
+
+      <div className="panel">
+        <div className="panel-head">
+          <h2>{tc.outputs}</h2>
+          <span className="muted">{tc.outputsSub}</span>
+        </div>
+        {outputRows.length === 0 ? (
+          <p className="muted">{tc.outputsEmpty}</p>
+        ) : (
+          <div className="table-scroll">
+            <table className="table table-data">
+              <thead>
+                <tr>
+                  <th>{tc.project}</th>
+                  <th>{tc.category}</th>
+                  <th className="n">{tc.perShift}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {outputRows.map((row) => (
+                  <tr key={`${row.project}|${row.category}`}>
+                    <td>{row.project || tc.allProjects}</td>
+                    <td>
+                      <strong>{row.category}</strong>
+                    </td>
+                    <td className="n">
+                      <input
+                        className="plan-input plan-input-wide"
+                        inputMode="numeric"
+                        aria-label={`${tc.perShift} ${row.project} ${row.category}`}
+                        value={row.perShift || ''}
+                        placeholder={categoryOutput(settings, row.project, row.category) === null ? '—' : '0'}
+                        onChange={(e) => {
+                          const n = num(e.target.value || '0');
+                          if (n !== null) setOutput(row, n);
+                        }}
+                      />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        <p className="muted">{tc.outputsNote}</p>
       </div>
 
       <div className="panel">

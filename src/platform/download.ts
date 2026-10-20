@@ -1,6 +1,7 @@
 // Stažení souboru vytvořeného v prohlížeči (CSV nebo Excel).
 
 import type { ReportSheet } from '../core/calloffs/summaryReport';
+import { outlineFeature } from './xlsxOutline';
 
 /** Název souboru bez diakritiky a zvláštních znaků (některé prohlížeče a systémy s nimi mají potíže). */
 export function safeFileName(name: string): string {
@@ -75,6 +76,7 @@ export async function downloadReport(fileName: string, sheets: ReportSheet[]): P
       showGridLines: sheet.gridLines ?? false,
       orientation: 'landscape' as const,
     })),
+    { features: [outlineFeature(sheets.map((s) => s.outline))] },
   ).toBlob();
   downloadBlob(fileName, blob);
 }
