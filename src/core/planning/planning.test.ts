@@ -5,7 +5,7 @@ import { parseCsv } from '../csv';
 import { assemblyItems, autoPlan, evaluateItem, packOf, plannedTotal, roundUpToPack, slotCapacity, slotSides, type PlanItem } from './assembly';
 import { sideGroup } from '../masterdata';
 import { cellKey, emptyPlan, parsePlanWorkbook, planFileName, planSheets, shiftSlots, sideOrder, slotKey } from './plan';
-import { DEFAULT_SETTINGS, destinationOf, lineCapacity, parseSettings, parseShifts, parseTime, settingsSheets, type PlanSettings } from './settings';
+import { categoryOutput, DEFAULT_SETTINGS, destinationOf, lineCapacity, parseSettings, parseShifts, parseTime, settingsSheets, type PlanSettings } from './settings';
 import type { Cell } from '../table';
 import type { CoverageSource } from '../coverage/compute';
 
@@ -35,8 +35,22 @@ describe('nastavení', () => {
         { location: 'Lokalita A', coverDays: 2, transitHours: 24, arrival: 360 },
         { location: '', coverDays: 3, transitHours: 48, arrival: 420 },
       ],
+      outputs: [
+        { project: 'P100', category: 'IP', perShift: 180 },
+        { project: '', category: 'DP', perShift: 300 },
+      ],
     };
     expect(parseSettings(toSheets(settingsSheets(settings)))).toEqual(settings);
+  });
+
+  it('výkon za směnu: řádek projektu, jinak kategorie pro všechny projekty; nevyplněno = null', () => {
+    const s = { ...DEFAULT_SETTINGS, outputs: [{ project: 'P100', category: 'IP', perShift: 180 }, { project: '', category: 'ip', perShift: 150 }, { project: 'P100', category: 'DP', perShift: 0 }] };
+    expect(categoryOutput(s, 'p100', 'IP')).toBe(180);
+    expect(categoryOutput(s, 'P300', 'IP')).toBe(150);
+    expect(categoryOutput(s, 'P100', 'DP')).toBeNull();
+    expect(categoryOutput(s, 'P100', '')).toBeNull();
+    // starší soubor bez listu Výkon kategorií
+    expect(parseSettings([]).outputs).toEqual([]);
   });
 
   it('bez řádku platí výchozí kapacita 0 a doprava 2 dny / 24 h / 6:00, jinak řádek „ostatní“', () => {

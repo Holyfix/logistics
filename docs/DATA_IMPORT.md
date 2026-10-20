@@ -240,7 +240,7 @@ V prohlížeči bez přístupu ke složce se soubor stáhne a uloží se ručně
 
 | Soubor | Obsah |
 |---|---|
-| `Plan/Kapacity.xlsx` | list **Linky** (Linka, Projekt, Ks za směnu, Směny po–pá, např. `R O N`; starší sloupec Ks v balení se ignoruje), list **Destinace** (Destinace, Pokrytí u zákazníka (dny), Transit (h), Příjezd; zatím se v plánu nepoužívá), list **Směny** (Ranní směna od) |
+| `Plan/Kapacity.xlsx` | list **Linky** (Linka, Projekt, Ks za směnu, Směny po–pá, např. `R O N`; starší sloupec Ks v balení se ignoruje), list **Destinace** (Destinace, Pokrytí u zákazníka (dny), Transit (h), Příjezd; zatím se v plánu nepoužívá), list **Směny** (Ranní směna od), list **Výkon kategorií** (Projekt, Kategorie, Ks za směnu – přepočet odvolávek na směny; prázdný projekt = všechny projekty) |
 | `Plan/<linka>_<projekt>.xlsx`, např. `ASSEMBLY_P100.xlsx` | list **Plán** (Linka, Projekt, Datum, Směna, Pořadí, Strana, Díl, Číslo zákazníka, Popis, Množství; jeden řádek = díl na směně v pořadí výroby), list **Přehled** (díly × směny, jen pro čtení), list **Kapacita směn** (Datum, Směna, Kapacita = ručně zadaná kapacita, Automaticky = `LHD`, `RHD` nebo `LHD+RHD` u směn s automatickým plánem) |
 
 - Jeden soubor na linku a projekt: každou linku plánuje jeden člověk, takže se zápisy nepotkají.

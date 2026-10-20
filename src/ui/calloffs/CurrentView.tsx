@@ -1,5 +1,6 @@
-import { useMemo, useState, type ReactNode } from 'react';
+import { Fragment, useMemo, useState, type ReactNode } from 'react';
 import type { CallOffExport } from '../../core/calloffs/parse';
+import { shiftsOf, type PerShift } from '../../core/calloffs/summary';
 import {
   buildCurrentRows,
   buildPeriods,
@@ -13,7 +14,9 @@ import {
 import { dayToIso, weekday } from '../../core/dates';
 import { formatDayShort, formatQuantity, type Locale } from '../../core/format';
 import type { MasterItem } from '../../core/masterdata';
+import { categoryOutput } from '../../core/planning/settings';
 import { useI18n } from '../../i18n/I18nProvider';
+import { usePlanSettings } from '../planning/PlanningProvider';
 import { ExportButtons, type ExportTable } from './ExportButtons';
 import { ItemFieldCells, ItemFieldHeaders, itemFieldValues, useItemFieldLabels } from './ItemFields';
 
@@ -35,6 +38,7 @@ interface Props {
 
 export function CurrentView({ current, previous, items, master, filters }: Props) {
   const { t, locale } = useI18n();
+  const ts = t.calloffs.summary;
   const fieldLabels = useItemFieldLabels();
   const [granularity, setGranularity] = useState<Granularity>('week');
   const [range, setRange] = useState<Record<Granularity, PeriodCount>>({ week: DEFAULT_WEEKS, day: 15 });
@@ -46,6 +50,17 @@ export function CurrentView({ current, previous, items, master, filters }: Props
   const totals = periods.map((_, k) => rows.reduce((sum, r) => sum + r.values[k]!, 0));
   const total = totals.reduce((a, b) => a + b, 0);
   const significant = countSignificantChanges(rows);
+
+  // Směny: kusy ÷ výkon za směnu kategorie dílu (Plánování → Kapacity).
+  const settings = usePlanSettings();
+  const perShift = useMemo<PerShift>(() => (item) => {
+    const m = master?.get(item);
+    return m ? categoryOutput(settings, m.project, m.category) : null;
+  }, [master, settings]);
+  const [showShifts, setShowShifts] = useState(settings.outputs.length > 0);
+  const totalShifts = shiftsOf(rows, perShift, periods.length)?.values ?? null;
+  const shiftText = (v: number | null) => (v === null ? '—' : v.toLocaleString(locale === 'cs' ? 'cs-CZ' : 'en-GB', { minimumFractionDigits: 1, maximumFractionDigits: 1 }));
+  const round = (v: number) => Math.round(v * 10) / 10;
 
   const periodTitle = (p: Period) => {
     if (granularity === 'week') return p.label;
@@ -61,11 +76,18 @@ export function CurrentView({ current, previous, items, master, filters }: Props
         t.calloffs.table.item,
         t.calloffs.table.description,
         ...fieldLabels,
+        ...(showShifts ? [ts.unit] : []),
         ...periods.map((p) => (granularity === 'week' ? p.label : dayToIso(p.start))),
         t.calloffs.table.total,
       ],
-      rows: rows.map((r) => {
-        return [r.item, r.description, ...itemFieldValues(master?.get(r.item)), ...r.values, r.total];
+      rows: rows.flatMap((r) => {
+        const fields = [r.item, r.description, ...itemFieldValues(master?.get(r.item))];
+        if (!showShifts) return [[...fields, ...r.values, r.total]];
+        const shifts = shiftsOf([r], perShift, periods.length)?.values ?? null;
+        return [
+          [...fields, ts.pcs, ...r.values, r.total],
+          [...fields, ts.shiftsUnit, ...(shifts ? shifts.map(round) : periods.map(() => null)), shifts ? round(shifts.reduce((a, b) => a + b, 0)) : null],
+        ];
       }),
     };
   };
@@ -123,6 +145,10 @@ export function CurrentView({ current, previous, items, master, filters }: Props
               </button>
             ))}
           </span>
+          <label className="check-field">
+            <input type="checkbox" checked={showShifts} onChange={(e) => setShowShifts(e.target.checked)} />
+            {ts.showShifts}
+          </label>
           <ExportButtons build={buildExport} />
         </div>
         {rows.length === 0 ? (
@@ -146,32 +172,52 @@ export function CurrentView({ current, previous, items, master, filters }: Props
               <tbody>
                 {rows.map((r) => {
                   const m = master?.get(r.item);
+                  const shifts = showShifts ? (shiftsOf([r], perShift, periods.length)?.values ?? null) : null;
                   return (
-                    <tr key={r.item}>
-                      <td className="sticky-col">
-                        <strong>{r.item}</strong>
-                      </td>
-                      <td className="desc">{r.description}</td>
-                      <ItemFieldCells m={m} />
-                      {r.values.map((v, k) => {
-                        const prev = r.previous[k]!;
-                        const change = changeOf(v, prev);
-                        const title = prev === null ? undefined : `${t.calloffs.table.previous} CW ${previous?.week}: ${formatQuantity(prev, locale)}`;
-                        return (
-                          <td key={periods[k]!.start} className={`n${change?.significant ? ' cell-changed' : ''}`} title={title}>
-                            {v ? formatQuantity(v, locale) : <span className="muted">0</span>}
-                            {change && (change.significant || Math.abs(change.percent ?? 100) >= 10) && (
-                              <span className={`delta ${change.diff > 0 ? 'delta-up' : 'delta-down'}`}>
-                                {change.diff > 0 ? '▲' : '▼'} {signed(change.diff, locale)}
-                              </span>
-                            )}
+                    <Fragment key={r.item}>
+                      <tr className={showShifts ? 'summary-with-shifts' : undefined}>
+                        <td className="sticky-col">
+                          <strong>{r.item}</strong>
+                        </td>
+                        <td className="desc">{r.description}</td>
+                        <ItemFieldCells m={m} />
+                        {r.values.map((v, k) => {
+                          const prev = r.previous[k]!;
+                          const change = changeOf(v, prev);
+                          const title = prev === null ? undefined : `${t.calloffs.table.previous} CW ${previous?.week}: ${formatQuantity(prev, locale)}`;
+                          return (
+                            <td key={periods[k]!.start} className={`n${change?.significant ? ' cell-changed' : ''}`} title={title}>
+                              {v ? formatQuantity(v, locale) : <span className="muted">0</span>}
+                              {change && (change.significant || Math.abs(change.percent ?? 100) >= 10) && (
+                                <span className={`delta ${change.diff > 0 ? 'delta-up' : 'delta-down'}`}>
+                                  {change.diff > 0 ? '▲' : '▼'} {signed(change.diff, locale)}
+                                </span>
+                              )}
+                            </td>
+                          );
+                        })}
+                        <td className="n">
+                          <strong>{formatQuantity(r.total, locale)}</strong>
+                        </td>
+                      </tr>
+                      {showShifts && (
+                        <tr className="summary-shifts">
+                          <td className="sticky-col">{ts.shiftsRow}</td>
+                          <td className="muted">{m && categoryOutput(settings, m.project, m.category) !== null ? `${formatQuantity(categoryOutput(settings, m.project, m.category)!, locale)} ${ts.perShiftShort}` : ts.missingOutput}</td>
+                          {fieldLabels.map((label) => (
+                            <td key={label} />
+                          ))}
+                          {periods.map((p, k) => (
+                            <td key={p.start} className="n">
+                              {shiftText(shifts ? shifts[k]! : null)}
+                            </td>
+                          ))}
+                          <td className="n">
+                            <strong>{shiftText(shifts ? shifts.reduce((a, b) => a + b, 0) : null)}</strong>
                           </td>
-                        );
-                      })}
-                      <td className="n">
-                        <strong>{formatQuantity(r.total, locale)}</strong>
-                      </td>
-                    </tr>
+                        </tr>
+                      )}
+                    </Fragment>
                   );
                 })}
               </tbody>
@@ -189,6 +235,21 @@ export function CurrentView({ current, previous, items, master, filters }: Props
                   ))}
                   <td className="n">{formatQuantity(total, locale)}</td>
                 </tr>
+                {showShifts && (
+                  <tr className="summary-shifts">
+                    <td className="sticky-col">{ts.shiftsRow}</td>
+                    <td />
+                    {fieldLabels.map((label) => (
+                      <td key={label} />
+                    ))}
+                    {periods.map((p, k) => (
+                      <td key={p.start} className="n">
+                        {shiftText(totalShifts ? totalShifts[k]! : null)}
+                      </td>
+                    ))}
+                    <td className="n">{shiftText(totalShifts ? totalShifts.reduce((a, b) => a + b, 0) : null)}</td>
+                  </tr>
+                )}
               </tfoot>
             </table>
           </div>
