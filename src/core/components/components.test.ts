@@ -105,9 +105,8 @@ describe('odečet našeho skladu hotových dílů a mezivýroby', () => {
     expect(k.usage.slice(0, 5)).toEqual([0, 0, 100, 200, 200]);
     expect(k.balance.slice(0, 5)).toEqual([400, 400, 300, 100, -100]);
     expect(k.shortDay).toBe(4);
-    // zásoba podle odvolávek za prvních 7 dní (5 dní výroby po 200 ks) → 2 dny
-    expect(k.avgDaily).toBe(200);
-    expect(k.productionDays).toBe(2);
+    // vystačí po–čt = 4 pracovní dny (v pátek už chybí)
+    expect(k.workdaysLeft).toBe(4);
     // mezivýroba (SFG) se nesleduje
     expect(net.components.map((c) => c.item)).toEqual(['K']);
   });
@@ -152,12 +151,15 @@ describe('Zákazník pokryt do: sklad a transit u zákazníka podle souboru cove
   const build = (seq: CoverageSource) =>
     buildComponents({ bom: tree.value, master: m.value, coverage: [seq], callOffs: calls, stock: new Map([['A', 150], ['S', 100], ['K', 400]]), today: monday });
 
-  it('výchozí výpočet: jen odvolávky a náš sklad komponenty', () => {
+  it('výchozí výpočet: potřeba podle coverage (zákazník + transit), ne podle odvolávek; náš sklad komponenty', () => {
     const t = build(sequencer([monday, monday + 2], [100, 0], [0, 100], 200));
     const k = t.components.find((c) => c.item === 'K')!;
-    // bez odečtu skladu hotových dílů: K 400 − 200 denně → chybí ve středu
-    expect(k.balance.slice(0, 3)).toEqual([200, 0, -200]);
-    expect(k.shortDay).toBe(2);
+    // zákazník pokrytý do čtvrtka: K se nespotřebuje; pá a po 100 ks hotového dílu = 200 K → v úterý chybí
+    expect(k.balance.slice(0, 9)).toEqual([400, 400, 400, 400, 200, 200, 200, 0, -200]);
+    expect(k.shortDay).toBe(8);
+    // vystačí po–čt a pá a po = 6 pracovních dní; potřeba výroby = co chybí zákazníkovi
+    expect(k.workdaysLeft).toBe(6);
+    expect(t.products[0]!.production.slice(0, 5)).toEqual([0, 0, 0, 0, 100]);
   });
 
   it('Zákazník pokryt do: hotové díly u zákazníka + transit', () => {

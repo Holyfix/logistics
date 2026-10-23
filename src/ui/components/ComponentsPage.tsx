@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { COMPONENT_SOON_DAYS, type ComponentLine } from '../../core/components/compute';
 import { dayToIso, weekday, type DayNumber } from '../../core/dates';
-import { formatAmount, formatDayShort, formatOneDecimal, formatQuantity } from '../../core/format';
+import { formatAmount, formatDayShort, formatQuantity } from '../../core/format';
 import { useI18n } from '../../i18n/I18nProvider';
 import { ExportButtons, type ExportTable } from '../calloffs/ExportButtons';
 import { useData } from '../data/DataProvider';
@@ -102,9 +102,11 @@ export function ComponentsPage({ today = localToday() }: { today?: DayNumber } =
   const withoutProject = products.filter((p) => !p.project).map((p) => p.item);
   const boms = state.data?.boms.length ?? 0;
   const fileBase = `${tc.export.fileName}_${dayToIso(today)}`;
-  const callOffTotals = days.map((_, k) => sum(shownProducts.map((p) => p.callOffs[k]!)));
+  const needTotals = days.map((_, k) => sum(shownProducts.map((p) => p.customerNeed[k]!)));
   const need7 = (c: ComponentLine) => sum(c.usage.slice(0, NEED_DAYS));
-  const reserve = (c: ComponentLine) => (c.productionDays === null ? tc.table.noUsage : `${tc.table.reserve} ${formatOneDecimal(c.productionDays, locale)} ${tc.table.productionDays}`);
+  const workdays = (n: number) => `${n} ${tc.table.workdayForms[n === 1 ? 0 : n >= 2 && n <= 4 ? 1 : 2]}`;
+  const reserve = (c: ComponentLine) => (c.workdaysLeft === null ? tc.table.lastsAll : tc.table.lasts.replace('{n}', workdays(c.workdaysLeft)));
+  const sourceOf = (p: (typeof products)[number]) => (p.hasCoverage ? tc.demand.sources.coverage : tc.demand.sources.calloffs);
   /** Poslední pokrytý den před dnem `short` (index), i víkend (zákazník může mít víkendové směny); null = chybí už dnes. */
   const lastDayBefore = (short: number | null): DayNumber | null => {
     const k = (short ?? days.length) - 1;
@@ -145,7 +147,7 @@ export function ComponentsPage({ today = localToday() }: { today?: DayNumber } =
       c.stock,
       round(need7(c)),
       coveredText(c),
-      c.productionDays === null ? null : Math.round(c.productionDays * 10) / 10,
+      c.workdaysLeft ?? `${days.filter((d) => weekday(d) <= 5).length}+`,
       customerText(c),
       c.products.join(', '),
       ...c.balance.map(round),
@@ -154,10 +156,10 @@ export function ComponentsPage({ today = localToday() }: { today?: DayNumber } =
   const buildDemandExport = (): ExportTable => ({
     fileName: `${fileBase}_${tc.export.demandSheet.toLowerCase()}`,
     sheetName: tc.export.demandSheet,
-    header: [tc.demand.item, tc.demand.description, tc.demand.project, tc.demand.total, ...days.map(dayToIso)],
+    header: [tc.demand.item, tc.demand.description, tc.demand.project, tc.demand.source, tc.demand.total, ...days.map(dayToIso)],
     rows: [
-      ...shownProducts.map((p) => [p.item, p.description, p.project, sum(p.callOffs.slice(0, NEED_DAYS)), ...p.callOffs]),
-      [tc.demand.sum, '', '', sum(callOffTotals.slice(0, NEED_DAYS)), ...callOffTotals],
+      ...shownProducts.map((p) => [p.item, p.description, p.project, sourceOf(p), sum(p.customerNeed.slice(0, NEED_DAYS)), ...p.customerNeed]),
+      [tc.demand.sum, '', '', '', sum(needTotals.slice(0, NEED_DAYS)), ...needTotals],
     ],
   });
 
@@ -372,6 +374,7 @@ export function ComponentsPage({ today = localToday() }: { today?: DayNumber } =
                 <th className="sticky-col">{tc.demand.item}</th>
                 <th>{tc.demand.description}</th>
                 <th>{tc.demand.project}</th>
+                <th>{tc.demand.source}</th>
                 <th className="n">{tc.demand.total}</th>
                 {days.map((d) => (
                   <th key={d} className={`n${weekend(d)}`}>
@@ -388,8 +391,9 @@ export function ComponentsPage({ today = localToday() }: { today?: DayNumber } =
                   </td>
                   <td className="desc">{p.description}</td>
                   <td>{p.project || '—'}</td>
-                  <td className="n">{formatQuantity(sum(p.callOffs.slice(0, NEED_DAYS)), locale)}</td>
-                  {p.callOffs.map((q, k) => (
+                  <td className={p.hasCoverage ? undefined : 'muted'}>{sourceOf(p)}</td>
+                  <td className="n">{formatQuantity(sum(p.customerNeed.slice(0, NEED_DAYS)), locale)}</td>
+                  {p.customerNeed.map((q, k) => (
                     <td key={k} className={`n${weekend(days[k]!)}`}>
                       {q === 0 ? <span className="muted">0</span> : formatQuantity(q, locale)}
                     </td>
@@ -405,8 +409,9 @@ export function ComponentsPage({ today = localToday() }: { today?: DayNumber } =
                   </td>
                   <td />
                   <td />
-                  <td className="n">{formatQuantity(sum(callOffTotals.slice(0, NEED_DAYS)), locale)}</td>
-                  {callOffTotals.map((q, k) => (
+                  <td />
+                  <td className="n">{formatQuantity(sum(needTotals.slice(0, NEED_DAYS)), locale)}</td>
+                  {needTotals.map((q, k) => (
                     <td key={k} className={`n${weekend(days[k]!)}`}>
                       {formatQuantity(q, locale)}
                     </td>
