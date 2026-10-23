@@ -5,7 +5,7 @@ import type { CoverageSource } from '../coverage/compute';
 import { parseCsv } from '../csv';
 import { dayFromParts } from '../dates';
 import { parseMasterData } from '../masterdata';
-import { buildComponents, COMPONENT_DAYS } from './compute';
+import { buildComponents, COMPONENT_DAYS, stockDaysOf } from './compute';
 
 const day = (n: number) => dayFromParts(2026, 10, n)!;
 const today = day(13);
@@ -105,8 +105,9 @@ describe('odečet našeho skladu hotových dílů a mezivýroby', () => {
     expect(k.usage.slice(0, 5)).toEqual([0, 0, 100, 200, 200]);
     expect(k.balance.slice(0, 5)).toEqual([400, 400, 300, 100, -100]);
     expect(k.shortDay).toBe(4);
-    // vystačí po–čt = 4 pracovní dny (v pátek už chybí)
-    expect(k.workdaysLeft).toBe(4);
+    // zásoba 400: st 100 a čt 200 celé, pá 100 z 200 → 2,5 dne potřeby
+    expect(k.stockDays).toBe(2.5);
+    expect(k.stockLastsHorizon).toBe(false);
     // mezivýroba (SFG) se nesleduje
     expect(net.components.map((c) => c.item)).toEqual(['K']);
   });
@@ -157,8 +158,8 @@ describe('Zákazník pokryt do: sklad a transit u zákazníka podle souboru cove
     // zákazník pokrytý do čtvrtka: K se nespotřebuje; pá a po 100 ks hotového dílu = 200 K → v úterý chybí
     expect(k.balance.slice(0, 9)).toEqual([400, 400, 400, 400, 200, 200, 200, 0, -200]);
     expect(k.shortDay).toBe(8);
-    // vystačí po–čt a pá a po = 6 pracovních dní; potřeba výroby = co chybí zákazníkovi
-    expect(k.workdaysLeft).toBe(6);
+    // zásoba 400 na pá a po (po 200) → 2 dny potřeby; potřeba výroby = co chybí zákazníkovi
+    expect(k.stockDays).toBe(2);
     expect(t.products[0]!.production.slice(0, 5)).toEqual([0, 0, 0, 0, 100]);
   });
 
@@ -230,5 +231,16 @@ describe('kategorie komponent', () => {
     ]);
     // jen kategorie hotových dílů (vlastní kategorie komponenty se nepoužívá)
     expect(t.components.find((c) => c.item === 'K')!.categories).toEqual(['DP', 'HB']);
+  });
+});
+
+describe('zásoba ve dnech potřeby', () => {
+  it('od prvního dne s potřebou, dny bez potřeby se nepočítají, poslední den podílem', () => {
+    // coverage kumulativně po −100, út −200 → potřeba 100 a 100; sklad 150 → 1,5 dne
+    expect(stockDaysOf(150, [0, 100, 0, 100, 100])).toEqual({ stockDays: 1.5, stockLastsHorizon: false });
+    expect(stockDaysOf(0, [0, 50])).toEqual({ stockDays: 0, stockLastsHorizon: false });
+    expect(stockDaysOf(1000, [100, 0, 100])).toEqual({ stockDays: 2, stockLastsHorizon: true });
+    expect(stockDaysOf(10, [0, 0])).toEqual({ stockDays: 0, stockLastsHorizon: true });
+    expect(stockDaysOf(-20, [10])).toEqual({ stockDays: 0, stockLastsHorizon: false });
   });
 });

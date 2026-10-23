@@ -6,7 +6,7 @@
 import type { BomData, BomNode } from '../bom';
 import type { CallOffExport } from '../calloffs/parse';
 import type { CoverageSource } from '../coverage/compute';
-import { weekday, type DayNumber } from '../dates';
+import type { DayNumber } from '../dates';
 import { callOffDemand, customerNeed, sequencerPlans } from '../demand';
 import type { MasterData } from '../masterdata';
 
@@ -63,8 +63,13 @@ export interface ComponentLine {
   customerShortDay: number | null;
   /** Aspoň jeden hotový díl s komponentou má soubor coverage. */
   customerKnown: boolean;
-  /** Na kolik pracovních dní (po–pá) od dneška komponenta vystačí, než stav klesne pod 0; null = vystačí celý horizont. */
-  workdaysLeft: number | null;
+  /**
+   * Zásoba ve dnech potřeby: od prvního dne s potřebou se sklad spotřebovává den po dni (dny bez potřeby se nepočítají);
+   * celý pokrytý den = 1, poslední částečně pokrytý den = zbytek skladu ÷ potřeba dne (sklad 150, potřeba 100 a 100 → 1,5).
+   */
+  stockDays: number;
+  /** Zásoba vystačí na celou potřebu horizontu (stockDays je pak počet dní s potřebou, ve skutečnosti víc). */
+  stockLastsHorizon: boolean;
   /** Hotové díly, ve kterých je komponenta. */
   products: string[];
   projects: string[];
@@ -124,6 +129,20 @@ function explode(
     });
   }
   return { usage, production };
+}
+
+/** Zásoba ve dnech potřeby (viz ComponentLine.stockDays). */
+export function stockDaysOf(stock: number, usage: readonly number[]): { stockDays: number; stockLastsHorizon: boolean } {
+  let left = Math.max(0, stock);
+  let days = 0;
+  for (const u of usage) {
+    if (u <= 1e-9) continue;
+    if (left >= u - 1e-9) {
+      left -= u;
+      days++;
+    } else return { stockDays: days + left / u, stockLastsHorizon: false };
+  }
+  return { stockDays: days, stockLastsHorizon: true };
 }
 
 export interface ComponentInputs {
@@ -193,7 +212,8 @@ export function buildComponents({ bom, master, coverage = [], callOffs, stock, t
           shortDay: null,
           customerShortDay: null,
           customerKnown: false,
-          workdaysLeft: null,
+          stockDays: 0,
+          stockLastsHorizon: false,
           products: [],
           projects: [],
           categories: [],
@@ -225,7 +245,7 @@ export function buildComponents({ bom, master, coverage = [], callOffs, stock, t
     line.balance = line.usage.map((u) => (left -= u));
     const k = line.balance.findIndex((v) => v < -1e-9);
     line.shortDay = k === -1 ? null : k;
-    line.workdaysLeft = k === -1 ? null : days.slice(0, k).filter((d) => weekday(d) <= 5).length;
+    Object.assign(line, stockDaysOf(line.stock ?? 0, line.usage));
     const covered = line.products.map((item) => productBy.get(item)!).filter((p) => p.hasCoverage);
     line.customerKnown = covered.length > 0;
     line.customerShortDay = earliest(covered.map((p) => p.customerShortDay));

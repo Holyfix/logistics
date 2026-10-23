@@ -217,9 +217,11 @@ v Komponentách se bere z Item Mappingu (sloupec Project u hotového dílu).
 - Přepínač **„Odečíst náš sklad hotových dílů a mezivýroby“** (výchozí vypnutý): potřeba se nejdřív pokryje naším
   skladem hotových dílů a mezivýroba svým skladem, komponenta se spotřebuje jen na zbytek (jako MRP, den po dni,
   bez doby výroby).
-- Záporné číslo = kolik kusů komponenty chybí. **Pokryto do** = poslední den (i víkend) se stavem ≥ 0; další den je
-  první den, kdy komponenta chybí („Nepokryto“, když chybí už dnes). Když vystačí na celých 14 dní, ukáže se poslední
-  den horizontu s „a déle“.
+- Záporné číslo = kolik kusů komponenty chybí. **Zásoba** = na kolik dní potřeby sklad komponenty vystačí: od prvního
+  dne s potřebou se sklad spotřebovává den po dni (dny bez potřeby, např. víkend nebo dny, kdy je zákazník pokrytý, se
+  nepočítají), celý pokrytý den = 1, poslední částečně pokrytý den = zbytek skladu ÷ potřeba dne. Příklad: coverage
+  po −100, út −200 (potřeba 100 a 100), sklad 150 → **1,5 dne**. Pod tím „chybí od“ (první den v mínusu); „X+ dní“ =
+  vystačí na celou potřebu 14 dní.
 - **Zákazník pokryt do** (rámeček v řádku dnů) = poslední den, kdy je zákazník pokrytý hotovými díly s komponentou:
   jeho sklad + transit podle coverage (za koncem souboru odvolávky po spotřebování zbytku, bez souboru odvolávky);
   se zaškrtnutím „Odečíst náš sklad…“ i náš sklad hotových dílů. Počítá se **každý hotový díl zvlášť**, ne součet
@@ -227,9 +229,8 @@ v Komponentách se bere z Item Mappingu (sloupec Project u hotového dílu).
   nejdřívější. Datum = poslední den (i víkend, zákazník může mít víkendové směny) před prvním dnem, kdy díl chybí;
   „Nepokryto“, když chybí už dnes.
   Hotové díly bez souboru coverage se nepočítají (sklad a transit u zákazníka neznáme); když ho nemá žádný, ukáže se „—“.
-- **Potřeba 7 dní** = potřeba komponenty za prvních 7 dní (stejná potřeba jako čísla ve dnech). **Vystačí** = na
-  kolik pracovních dní (po–pá) od dneška sklad komponenty vystačí, než stav klesne pod 0; „vystačí celý horizont“,
-  když za 14 dní nedojde. Tabulka **Potřeba hotových dílů** ukazuje potřebu po dnech se zdrojem (coverage / odvolávky).
+- **Potřeba 7 dní** = potřeba komponenty za prvních 7 dní (stejná potřeba jako čísla ve dnech). Tabulka pod
+  komponentami ukazuje pro informaci **odvolávky** hotových dílů.
 - Tabulka **Odvolávky hotových dílů** ukazuje čistý požadavek zákazníka (odvolávky po dnech, bez odečtu našeho skladu),
   součet za 7 dní a jako poslední řádek součet dnů; řídí se filtry nad pokrytím komponent.
 - Bez otevřených nákupních objednávek a bez doby výroby.
