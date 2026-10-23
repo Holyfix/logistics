@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { COMPONENT_SOON_DAYS, type ComponentLine } from '../../core/components/compute';
 import { dayToIso, weekday, type DayNumber } from '../../core/dates';
-import { formatAmount, formatDayShort, formatQuantity } from '../../core/format';
+import { formatAmount, formatDayShort, formatOneDecimal, formatQuantity } from '../../core/format';
 import { useI18n } from '../../i18n/I18nProvider';
 import { ExportButtons, type ExportTable } from '../calloffs/ExportButtons';
 import { useData } from '../data/DataProvider';
@@ -102,11 +102,18 @@ export function ComponentsPage({ today = localToday() }: { today?: DayNumber } =
   const withoutProject = products.filter((p) => !p.project).map((p) => p.item);
   const boms = state.data?.boms.length ?? 0;
   const fileBase = `${tc.export.fileName}_${dayToIso(today)}`;
-  const needTotals = days.map((_, k) => sum(shownProducts.map((p) => p.customerNeed[k]!)));
+  const callOffTotals = days.map((_, k) => sum(shownProducts.map((p) => p.callOffs[k]!)));
   const need7 = (c: ComponentLine) => sum(c.usage.slice(0, NEED_DAYS));
-  const workdays = (n: number) => `${n} ${tc.table.workdayForms[n === 1 ? 0 : n >= 2 && n <= 4 ? 1 : 2]}`;
-  const reserve = (c: ComponentLine) => (c.workdaysLeft === null ? tc.table.lastsAll : tc.table.lasts.replace('{n}', workdays(c.workdaysLeft)));
-  const sourceOf = (p: (typeof products)[number]) => (p.hasCoverage ? tc.demand.sources.coverage : tc.demand.sources.calloffs);
+  /** Počet dní česky: desetinné „1,5 dne“, celé „1 den“, „2 dny“, „5 dní“. */
+  const daysText = (n: number) => {
+    const whole = Math.abs(n - Math.round(n)) < 0.05;
+    const v = whole ? Math.round(n) : n;
+    const form = !whole ? tc.table.dayForms[1] : v === 1 ? tc.table.dayForms[0] : v >= 2 && v <= 4 ? tc.table.dayForms[2] : tc.table.dayForms[3];
+    return `${whole ? formatQuantity(v, locale) : formatOneDecimal(v, locale)} ${form}`;
+  };
+  /** Zásoba ve dnech potřeby; vystačí-li na celý horizont, „X+ dní“, bez potřeby „bez potřeby“. */
+  const stockText = (c: ComponentLine) => (c.stockLastsHorizon ? (c.stockDays === 0 ? tc.table.noNeed : `${formatQuantity(c.stockDays, locale)}+ ${tc.table.dayForms[3]}`) : daysText(c.stockDays));
+  const shortText = (c: ComponentLine) => (c.shortDay === null ? tc.table.lastsAll : tc.table.shortFrom.replace('{day}', dayLabel(days[c.shortDay]!)));
   /** Poslední pokrytý den před dnem `short` (index), i víkend (zákazník může mít víkendové směny); null = chybí už dnes. */
   const lastDayBefore = (short: number | null): DayNumber | null => {
     const k = (short ?? days.length) - 1;
@@ -118,7 +125,6 @@ export function ComponentsPage({ today = localToday() }: { today?: DayNumber } =
     const until = lastDayBefore(short);
     return until === null ? tc.table.notCovered : dayLabel(until);
   };
-  const coveredText = (c: ComponentLine) => untilText(c.shortDay);
   const customerText = (c: ComponentLine) => (c.customerKnown ? untilText(c.customerShortDay) : '—');
   /** Den „Zákazník pokryt do“ v řádku dnů (rámeček); null, když pokryje celý horizont nebo chybí už dnes. */
   const customerDay = (c: ComponentLine) => (!c.customerKnown || c.customerShortDay === null ? null : lastDayBefore(c.customerShortDay));
@@ -146,8 +152,8 @@ export function ComponentsPage({ today = localToday() }: { today?: DayNumber } =
       sourceLabel(c),
       c.stock,
       round(need7(c)),
-      coveredText(c),
-      c.workdaysLeft ?? `${days.filter((d) => weekday(d) <= 5).length}+`,
+      c.stockLastsHorizon ? `${c.stockDays}+` : Math.round(c.stockDays * 10) / 10,
+      shortText(c),
       customerText(c),
       c.products.join(', '),
       ...c.balance.map(round),
@@ -156,10 +162,10 @@ export function ComponentsPage({ today = localToday() }: { today?: DayNumber } =
   const buildDemandExport = (): ExportTable => ({
     fileName: `${fileBase}_${tc.export.demandSheet.toLowerCase()}`,
     sheetName: tc.export.demandSheet,
-    header: [tc.demand.item, tc.demand.description, tc.demand.project, tc.demand.source, tc.demand.total, ...days.map(dayToIso)],
+    header: [tc.demand.item, tc.demand.description, tc.demand.project, tc.demand.total, ...days.map(dayToIso)],
     rows: [
-      ...shownProducts.map((p) => [p.item, p.description, p.project, sourceOf(p), sum(p.customerNeed.slice(0, NEED_DAYS)), ...p.customerNeed]),
-      [tc.demand.sum, '', '', '', sum(needTotals.slice(0, NEED_DAYS)), ...needTotals],
+      ...shownProducts.map((p) => [p.item, p.description, p.project, sum(p.callOffs.slice(0, NEED_DAYS)), ...p.callOffs]),
+      [tc.demand.sum, '', '', sum(callOffTotals.slice(0, NEED_DAYS)), ...callOffTotals],
     ],
   });
 
@@ -307,8 +313,8 @@ export function ComponentsPage({ today = localToday() }: { today?: DayNumber } =
                     <td className="n">{c.stock === null ? <span className="muted">—</span> : amount(c.stock, c.um)}</td>
                     <td className="n">{amount(need7(c), c.um)}</td>
                     <td className="cell-until">
-                      <strong className={c.shortDay === null ? undefined : 'cell-short'}>{coveredText(c)}</strong>
-                      <small className="muted cell-note">{reserve(c)}</small>
+                      <strong className={c.shortDay === null ? undefined : 'cell-short'}>{stockText(c)}</strong>
+                      <small className="muted cell-note">{shortText(c)}</small>
                     </td>
                     <td className="cell-until" title={!c.customerKnown ? tc.table.noCoverage : netOwnStock ? tc.table.customerTitleNet : tc.table.customerTitle}>
                       <strong className={!c.customerKnown ? 'muted' : c.customerShortDay === null ? undefined : 'cell-short'}>{customerText(c)}</strong>
@@ -347,8 +353,6 @@ export function ComponentsPage({ today = localToday() }: { today?: DayNumber } =
           <dd>{netOwnStock ? tc.explain.balanceNet : tc.explain.balanceGross}</dd>
           <dt>{tc.table.until}</dt>
           <dd>{tc.explain.until}</dd>
-          <dt>{tc.explain.reserve}</dt>
-          <dd>{tc.explain.reserveText}</dd>
           <dt>{tc.table.customer}</dt>
           <dd>{netOwnStock ? tc.explain.customerNet : tc.explain.customer}</dd>
           <dt>{tc.table.need}</dt>
@@ -374,7 +378,6 @@ export function ComponentsPage({ today = localToday() }: { today?: DayNumber } =
                 <th className="sticky-col">{tc.demand.item}</th>
                 <th>{tc.demand.description}</th>
                 <th>{tc.demand.project}</th>
-                <th>{tc.demand.source}</th>
                 <th className="n">{tc.demand.total}</th>
                 {days.map((d) => (
                   <th key={d} className={`n${weekend(d)}`}>
@@ -391,9 +394,8 @@ export function ComponentsPage({ today = localToday() }: { today?: DayNumber } =
                   </td>
                   <td className="desc">{p.description}</td>
                   <td>{p.project || '—'}</td>
-                  <td className={p.hasCoverage ? undefined : 'muted'}>{sourceOf(p)}</td>
-                  <td className="n">{formatQuantity(sum(p.customerNeed.slice(0, NEED_DAYS)), locale)}</td>
-                  {p.customerNeed.map((q, k) => (
+                  <td className="n">{formatQuantity(sum(p.callOffs.slice(0, NEED_DAYS)), locale)}</td>
+                  {p.callOffs.map((q, k) => (
                     <td key={k} className={`n${weekend(days[k]!)}`}>
                       {q === 0 ? <span className="muted">0</span> : formatQuantity(q, locale)}
                     </td>
@@ -409,9 +411,8 @@ export function ComponentsPage({ today = localToday() }: { today?: DayNumber } =
                   </td>
                   <td />
                   <td />
-                  <td />
-                  <td className="n">{formatQuantity(sum(needTotals.slice(0, NEED_DAYS)), locale)}</td>
-                  {needTotals.map((q, k) => (
+                  <td className="n">{formatQuantity(sum(callOffTotals.slice(0, NEED_DAYS)), locale)}</td>
+                  {callOffTotals.map((q, k) => (
                     <td key={k} className={`n${weekend(days[k]!)}`}>
                       {formatQuantity(q, locale)}
                     </td>
