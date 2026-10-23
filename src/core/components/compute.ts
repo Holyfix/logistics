@@ -43,6 +43,19 @@ export interface ProductDemand {
   customerShortDay: number | null;
   /** Hotový díl má soubor coverage (jinak sklad a transit u zákazníka neznáme a Zákazník pokryt do se neurčuje). */
   hasCoverage: boolean;
+  /** Stav u zákazníka (sklad + transit − plán) na konci dne podle coverage; null za koncem souboru nebo bez coverage. */
+  customerBalance: (number | null)[];
+  /** Náš sklad hotového dílu; null, když soubor skladu není načtený. */
+  ownStock: number | null;
+}
+
+/** Hotový díl, ve kterém komponenta je, a jeho podíl na potřebě komponenty. */
+export interface ComponentProduct {
+  item: string;
+  /** Kusovník: kolik komponenty na 1 ks hotového dílu (přes všechny úrovně). */
+  qty: number;
+  /** Potřeba komponenty po dnech z tohoto hotového dílu (potřeba výroby × kusovník, po odečtu mezivýroby). */
+  usage: number[];
 }
 
 export interface ComponentLine {
@@ -80,6 +93,8 @@ export interface ComponentLine {
   stockShortDate: DayNumber | null;
   /** Hotové díly, ve kterých je komponenta. */
   products: string[];
+  /** Rozpad potřeby po hotových dílech (pořadí jako products). */
+  perProduct: ComponentProduct[];
   projects: string[];
   /** Kategorie hotových dílů, ve kterých komponenta je (z mapování). */
   categories: string[];
@@ -107,14 +122,23 @@ function explode(
   stock: ReadonlyMap<string, number> | undefined,
   netOwnStock: boolean,
   tracked: ReadonlySet<string>,
-): { usage: Map<string, number[]>; production: number[][] } {
+): { usage: Map<string, number[]>; byProduct: Map<string, Map<number, number[]>>; production: number[][] } {
   const production = items.map(() => Array.from({ length: days }, () => 0));
   const left = new Map(netOwnStock ? (stock ?? []) : []);
   const usage = new Map<string, number[]>();
+  // Potřeba sledovaného dílu po hotových dílech (index v items), pro rozpad výpočtu.
+  const byProduct = new Map<string, Map<number, number[]>>();
+  const zeros = () => Array.from({ length: days }, () => 0);
+  let product = 0;
   const record = (item: string, qty: number, day: number) => {
     let u = usage.get(item);
-    if (!u) usage.set(item, (u = Array.from({ length: days }, () => 0)));
+    if (!u) usage.set(item, (u = zeros()));
     u[day]! += qty;
+    let per = byProduct.get(item);
+    if (!per) byProduct.set(item, (per = new Map()));
+    let p = per.get(product);
+    if (!p) per.set(product, (p = zeros()));
+    p[day]! += qty;
   };
   const fromStock = (item: string, qty: number) => {
     const used = Math.min(Math.max(0, left.get(item) ?? 0), qty);
@@ -129,6 +153,7 @@ function explode(
   };
   for (let day = 0; day < days; day++) {
     items.forEach((item, i) => {
+      product = i;
       const q = need[i]![day]!;
       if (q <= 0) return;
       const rest = fromStock(item, q);
@@ -136,7 +161,7 @@ function explode(
       if (rest > 1e-9) for (const child of bom.trees.get(item) ?? []) consume(child.item, rest * child.qty, child.children, day);
     });
   }
-  return { usage, production };
+  return { usage, byProduct, production };
 }
 
 /** Zásoba ve dnech potřeby (viz ComponentLine.stockDays). */
@@ -194,6 +219,11 @@ export function buildComponents({ bom, master, coverage = [], callOffs, stock, t
       customerNeed: customerNeed(callOffQty, days, plans.get(item)).need,
       customerShortDay: null,
       hasCoverage: plans.has(item),
+      customerBalance: days.map((d) => {
+        const plan = plans.get(item);
+        return plan && d <= plan.last ? plan.balance(d) : null;
+      }),
+      ownStock: stock ? (stock.get(item) ?? 0) : null,
     };
   });
 
@@ -224,12 +254,14 @@ export function buildComponents({ bom, master, coverage = [], callOffs, stock, t
           stockLastsHorizon: false,
           stockShortDate: null,
           products: [],
+          perProduct: [],
           projects: [],
           categories: [],
         };
         lines.set(component.item, line);
       }
       line.products.push(product.item);
+      line.perProduct.push({ item: product.item, qty: component.qty, usage: [] });
       if (product.project && !line.projects.includes(product.project)) line.projects.push(product.project);
       if (product.category && !line.categories.includes(product.category)) line.categories.push(product.category);
     }
@@ -238,6 +270,7 @@ export function buildComponents({ bom, master, coverage = [], callOffs, stock, t
   const tracked = new Set(lines.keys());
   const productBy = new Map(products.map((p) => [p.item, p]));
   const items = products.map((p) => p.item);
+  const indexOf = new Map(items.map((item, i) => [item, i]));
   // Zákazník pokryt do: každý hotový díl zvlášť; jeho sklad + transit (chybějící množství), s odečtem i náš sklad.
   for (const p of products) {
     let left = netOwnStock ? Math.max(0, stock?.get(p.item) ?? 0) : 0;
@@ -265,6 +298,8 @@ export function buildComponents({ bom, master, coverage = [], callOffs, stock, t
       : exploded;
   for (const line of lines.values()) {
     line.usage = exploded.usage.get(line.item) ?? days.map(() => 0);
+    const per = exploded.byProduct.get(line.item);
+    for (const p of line.perProduct) p.usage = per?.get(indexOf.get(p.item)!) ?? days.map(() => 0);
     let left = line.stock ?? 0;
     line.balance = line.usage.map((u) => (left -= u));
     const k = line.balance.findIndex((v) => v < -1e-9);

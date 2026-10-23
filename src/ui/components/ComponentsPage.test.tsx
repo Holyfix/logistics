@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { parseBom } from '../../core/bom';
 import type { CallOffExport } from '../../core/calloffs/parse';
 import type { CoverageSource } from '../../core/coverage/compute';
@@ -95,6 +95,35 @@ describe('ComponentsPage', () => {
     // pořadí ukazatelů: v záporu do 2 dnů, v záporu do 14 dní, …
     const kpis = [...document.querySelectorAll('.kpi')].map((k) => `${k.querySelector('.kpi-label')!.textContent}=${k.querySelector('.kpi-value')!.textContent}`);
     expect(kpis.slice(0, 2)).toEqual(['V záporu do 2 dnů=0', 'V záporu do 14 dní=1']);
+  });
+
+  it('rozpad výpočtu: sklad po lokacích, hotové díly × kusovník a zásoba ve dnech', () => {
+    renderWith(<ComponentsPage today={day(13)} />);
+    fireEvent.click(screen.getByRole('button', { name: 'rozpad CLIP-1' }));
+    const panel = within(screen.getByRole('region', { name: 'Rozpad výpočtu CLIP-1' }));
+    const [locations, grid, steps] = panel.getAllByRole('table');
+    expect(cells(locations!.querySelector('tbody tr')!)).toEqual(['A-01', 'PURCH', '30']);
+    expect(cells(locations!.querySelector('tfoot tr')!)).toEqual(['Sklad celkem', '30']);
+    // FG-1 bez coverage: odvolávky × kusovník 2 (přes mezivýrobu); FG-2 komponentu nemá
+    const lines = [...grid!.querySelectorAll('tbody tr, tfoot tr')].map((r) => cells(r).slice(0, 4));
+    expect(lines[0]![0]).toContain('kusovník 2 EA na 1 ks');
+    expect(lines[0]![0]).toContain('bez coverage – podle odvolávek');
+    expect(lines.slice(1)).toEqual([
+      ['Odvolávky', '5', '5', '10'],
+      ['Spotřeba komponenty (× 2)', '10', '10', '20'],
+      ['Spotřeba komponenty celkem', '10', '10', '20'],
+      ['Stav komponenty (sklad 30 − kumulovaně)', '20', '10', '-10'],
+    ]);
+    // zásoba: 1 + 1 + 10/20 = 2,5 dne
+    expect([...steps!.querySelectorAll('tbody tr')].map(cells)).toEqual([
+      ['Út 13. 10.', '10', '20', '1'],
+      ['St 14. 10.', '10', '10', '1'],
+      ['Čt 15. 10.', '20', '0', '0,5'],
+    ]);
+    expect(cells(steps!.querySelector('tfoot tr')!)).toEqual(['Zásoba v prvních 14 dnech', '2,5']);
+    expect(panel.getByText(/Zásoba: 2,5 dne/)).toBeTruthy();
+    fireEvent.click(panel.getByRole('button', { name: 'Zavřít rozpad' }));
+    expect(screen.queryByRole('region', { name: 'Rozpad výpočtu CLIP-1' })).toBeNull();
   });
 
   it('odvolávky hotových dílů (pro informaci)', () => {

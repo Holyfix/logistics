@@ -140,13 +140,22 @@ export function homeSite(rows: readonly StockRow[]): string {
  * Plná i neúplná balení se počítají dohromady; záporné a nulové lokace se nepočítají.
  */
 export function stockByItem(stock: StockData, excluded: (location: string) => boolean = isExcludedLocation): Map<string, number> {
-  const home = homeSite(stock.rows);
+  const counted = countedRow(stock, excluded);
   const result = new Map<string, number>();
-  for (const row of stock.rows) {
-    if (row.qty <= 0 || !STOCK_ZONES.includes(row.zone) || excluded(row.location) || (row.site && row.site !== home)) continue;
-    result.set(row.item, (result.get(row.item) ?? 0) + row.qty);
-  }
+  for (const row of stock.rows) if (counted(row)) result.set(row.item, (result.get(row.item) ?? 0) + row.qty);
   return result;
+}
+
+/** Lokace dílu, které se počítají do zásoby (stejně jako stockByItem), seřazené od největšího množství. */
+export function stockLocations(stock: StockData, item: string, excluded: (location: string) => boolean = isExcludedLocation): StockRow[] {
+  const counted = countedRow(stock, excluded);
+  const key = item.toUpperCase();
+  return stock.rows.filter((row) => row.item === key && counted(row)).sort((a, b) => b.qty - a.qty);
+}
+
+function countedRow(stock: StockData, excluded: (location: string) => boolean): (row: StockRow) => boolean {
+  const home = homeSite(stock.rows);
+  return (row) => row.qty > 0 && STOCK_ZONES.includes(row.zone) && !excluded(row.location) && (!row.site || row.site === home);
 }
 
 /** Vyloučené lokace, které jsou v souboru skladu (názvy tak, jak jsou v souboru, velkými písmeny). */

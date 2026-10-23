@@ -2774,3 +2774,58 @@ button.oil-step:disabled {
     padding-left: 14px;
   }
 }
+
+/* Komponenty: rozpad výpočtu jedné komponenty (sklad, hotové díly, zásoba ve dnech). */
+.link-button.breakdown-open {
+  margin-left: 6px;
+  padding: 0;
+  color: var(--muted);
+  vertical-align: middle;
+}
+
+.link-button.breakdown-open:hover,
+.link-button.breakdown-open[aria-pressed='true'] {
+  color: var(--accent);
+}
+
+.link-button.breakdown-open .icon {
+  display: block;
+  width: 16px;
+  height: 16px;
+}
+
+.table-data tr.row-selected td {
+  background: var(--surface-2);
+}
+
+.breakdown-step {
+  margin: 14px 0 0;
+  font-size: 15px;
+}
+
+/* Panel je flex sloupec: malé tabulky jen na šířku obsahu, součet pod tabulkou (ne přilepený k oknu). */
+.table-data.breakdown-locations,
+.table-data.breakdown-steps {
+  align-self: flex-start;
+  width: auto;
+  min-width: 420px;
+}
+
+.breakdown-locations tfoot td,
+.breakdown-steps tfoot td {
+  position: static;
+}
+
+.breakdown p {
+  margin: 0;
+}
+
+.table-data tr.breakdown-product-head td {
+  padding-top: 14px;
+  border-top: 2px solid var(--line);
+  background: var(--surface);
+}
+
+.table-data tr.breakdown-usage td {
+  font-weight: 600;
+}

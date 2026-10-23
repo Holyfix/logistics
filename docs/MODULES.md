@@ -130,6 +130,7 @@ Filtry projekt, kategorie, strana (LHD/RHD) a varianta z kmenových dat se ovliv
 - ✅ Poptávka hotových dílů se řídí filtrem komponent (projekt, vybraná komponenta → hotové díly, které ji mají v kusovníku)
 - ✅ Filtry Projekt a Kategorie podle hotových dílů, navzájem v libovolném pořadí (kategorie jen z hotových dílů vybraného projektu, projekty jen s hotovými díly vybrané kategorie): komponenty v hotových dílech daného projektu a kategorie; hotové díly podle jejich projektu a kategorie
 - ✅ Sledují se všechny nakupované díly (Item Type = PG); popis jen z mapování
+- ✅ **Rozpad výpočtu** u komponenty (ikona vedle čísla): sklad po lokacích, u každého hotového dílu stav u zákazníka (coverage), odvolávky, chybějící kusy, se zaškrtnutím potřeba výroby po našem skladu, kusovník a spotřeba komponenty po dnech; součet a stav komponenty; postup zásoby ve dnech (celý den = 1, poslední podílem)
 - ⏳ Otevřené nákupní objednávky (pokud jsou v exportu)
 - Shortage list pro ranní poradu
 

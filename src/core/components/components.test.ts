@@ -163,6 +163,16 @@ describe('Zákazník pokryt do: sklad a transit u zákazníka podle souboru cove
     expect(t.products[0]!.production.slice(0, 5)).toEqual([0, 0, 0, 0, 100]);
   });
 
+  it('rozpad výpočtu: stav u zákazníka po dnech souboru, náš sklad hotového dílu a spotřeba komponenty po hotových dílech', () => {
+    const t = build(sequencer([monday, monday + 2], [100, 0], [0, 100], 200));
+    const a = t.products[0]!;
+    // stav platí i mezi dny souboru (út = stav pondělí), za koncem souboru se neurčuje
+    expect(a.customerBalance.slice(0, 5)).toEqual([100, 100, 100, null, null]);
+    expect(a.ownStock).toBe(150);
+    const k = t.components.find((c) => c.item === 'K')!;
+    expect(k.perProduct).toEqual([{ item: 'A', qty: 2, usage: k.usage }]);
+  });
+
   it('Zákazník pokryt do: hotové díly u zákazníka + transit', () => {
     // stav se transitem po 100, st 100 → za koncem souboru (čt) zbytek 100 u zákazníka, od pátku odvolávky na nás
     const t = build(sequencer([monday, monday + 2], [100, 0], [0, 100], 200));
