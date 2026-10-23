@@ -244,3 +244,27 @@ describe('zásoba ve dnech potřeby', () => {
     expect(stockDaysOf(-20, [10])).toEqual({ stockDays: 0, stockLastsHorizon: false });
   });
 });
+
+describe('zásoba ve dnech přes celý výhled odvolávek', () => {
+  it('za 14 dní tabulky pokračuje podle odvolávek až do konce exportu', () => {
+    const tree = parseBom([
+      ['Level', 'Component Item', 'Description', 'Quantity Per', 'UM', 'Purchase/Manufacture'],
+      ['Parent', 'A', 'PRODUCT', null, 'EA', 'L'],
+      ['1', 'K', 'PART', 1, 'EA', 'P'],
+    ]);
+    if (!tree.ok) throw new Error();
+    const m = parseMasterData(parseCsv('Item Number;Item Type\nA;FG\nK;PG'));
+    if (!m.ok) throw new Error();
+    // odvolávka 100 ks každý 5. den po 60 dní; sklad K 1 050 → 10 dní potřeby celých a půl 11.
+    const callDays = Array.from({ length: 12 }, (_, k) => today + k * 5);
+    const calls = { items: ['A'], offsets: Int32Array.from([0, callDays.length]), days: Int32Array.from(callDays), qty: Float64Array.from(callDays.map(() => 100)), lastDay: callDays.at(-1)! } as unknown as CallOffExport;
+    const t = buildComponents({ bom: tree.value, master: m.value, callOffs: calls, stock: new Map([['K', 1050]]), today });
+    const k = t.components[0]!;
+    // tabulka má 14 dní (v nich 3 odvolávky, komponenta tam nedojde), zásoba se počítá dál
+    expect(k.balance).toHaveLength(COMPONENT_DAYS);
+    expect(k.shortDay).toBeNull();
+    expect(k.stockDays).toBe(10.5);
+    expect(k.stockLastsHorizon).toBe(false);
+    expect(k.stockShortDate).toBe(today + 50);
+  });
+});

@@ -13,6 +13,9 @@ import type { MasterData } from '../masterdata';
 /** Horizont pokrytí komponent ve dnech (od dneška). */
 export const COMPONENT_DAYS = 14;
 
+/** Nejdelší výhled pro zásobu ve dnech (dny od dneška): coverage a pak odvolávky až do konce exportu. */
+export const STOCK_OUTLOOK_DAYS = 400;
+
 /** Komponenty v záporu „brzy“: dnes nebo zítra (modul i rozcestník). */
 export const COMPONENT_SOON_DAYS = 2;
 
@@ -68,8 +71,13 @@ export interface ComponentLine {
    * celý pokrytý den = 1, poslední částečně pokrytý den = zbytek skladu ÷ potřeba dne (sklad 150, potřeba 100 a 100 → 1,5).
    */
   stockDays: number;
-  /** Zásoba vystačí na celou potřebu horizontu (stockDays je pak počet dní s potřebou, ve skutečnosti víc). */
+  /**
+   * Zásoba vystačí na celou známou potřebu (stockDays je pak počet dní s potřebou, ve skutečnosti víc). Zásoba se počítá
+   * přes celý výhled (coverage, pak odvolávky do konce exportu), ne jen 14 dní tabulky.
+   */
   stockLastsHorizon: boolean;
+  /** První den, kdy komponenta podle celého výhledu chybí; null = vystačí na celou známou potřebu. */
+  stockShortDate: DayNumber | null;
   /** Hotové díly, ve kterých je komponenta. */
   products: string[];
   projects: string[];
@@ -214,6 +222,7 @@ export function buildComponents({ bom, master, coverage = [], callOffs, stock, t
           customerKnown: false,
           stockDays: 0,
           stockLastsHorizon: false,
+          stockShortDate: null,
           products: [],
           projects: [],
           categories: [],
@@ -239,13 +248,32 @@ export function buildComponents({ bom, master, coverage = [], callOffs, stock, t
   // Potřeba hotových dílů: co zákazníkovi chybí podle coverage, bez souboru coverage odvolávky.
   const exploded = explode(bom, items, products.map((p) => p.customerNeed), days.length, stock, netOwnStock, tracked);
   products.forEach((p, i) => (p.production = exploded.production[i]!));
+  // Zásoba ve dnech přes celý výhled: coverage, za koncem souboru odvolávky až do konce exportu (ne jen 14 dní tabulky).
+  const outlookEnd = Math.min(today + STOCK_OUTLOOK_DAYS - 1, Math.max(days.at(-1)!, callOffs && Number.isFinite(callOffs.lastDay) ? callOffs.lastDay : 0));
+  const outlookDays = Array.from({ length: outlookEnd - today + 1 }, (_, k) => today + k);
+  const outlook =
+    outlookDays.length > days.length
+      ? explode(
+          bom,
+          items,
+          products.map((p) => customerNeed(outlookDays.map((d) => calls.get(p.item)?.get(d) ?? 0), outlookDays, plans.get(p.item)).need),
+          outlookDays.length,
+          stock,
+          netOwnStock,
+          tracked,
+        )
+      : exploded;
   for (const line of lines.values()) {
     line.usage = exploded.usage.get(line.item) ?? days.map(() => 0);
     let left = line.stock ?? 0;
     line.balance = line.usage.map((u) => (left -= u));
     const k = line.balance.findIndex((v) => v < -1e-9);
     line.shortDay = k === -1 ? null : k;
-    Object.assign(line, stockDaysOf(line.stock ?? 0, line.usage));
+    const usage = outlook.usage.get(line.item) ?? line.usage;
+    Object.assign(line, stockDaysOf(line.stock ?? 0, usage));
+    let rest = line.stock ?? 0;
+    const short = usage.findIndex((u) => (rest -= u) < -1e-9);
+    line.stockShortDate = short === -1 ? null : outlookDays[short]!;
     const covered = line.products.map((item) => productBy.get(item)!).filter((p) => p.hasCoverage);
     line.customerKnown = covered.length > 0;
     line.customerShortDay = earliest(covered.map((p) => p.customerShortDay));
