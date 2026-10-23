@@ -113,7 +113,7 @@ export function ComponentsPage({ today = localToday() }: { today?: DayNumber } =
   };
   /** Zásoba ve dnech potřeby; vystačí-li na celý horizont, „X+ dní“, bez potřeby „bez potřeby“. */
   const stockText = (c: ComponentLine) => (c.stockLastsHorizon ? (c.stockDays === 0 ? tc.table.noNeed : `${formatQuantity(c.stockDays, locale)}+ ${tc.table.dayForms[3]}`) : daysText(c.stockDays));
-  const shortText = (c: ComponentLine) => (c.shortDay === null ? tc.table.lastsAll : tc.table.shortFrom.replace('{day}', dayLabel(days[c.shortDay]!)));
+  const shortText = (c: ComponentLine) => (c.stockShortDate === null ? tc.table.lastsAll : tc.table.shortFrom.replace('{day}', dayLabel(c.stockShortDate)));
   /** Poslední pokrytý den před dnem `short` (index), i víkend (zákazník může mít víkendové směny); null = chybí už dnes. */
   const lastDayBefore = (short: number | null): DayNumber | null => {
     const k = (short ?? days.length) - 1;

@@ -220,8 +220,9 @@ v Komponentách se bere z Item Mappingu (sloupec Project u hotového dílu).
 - Záporné číslo = kolik kusů komponenty chybí. **Zásoba** = na kolik dní potřeby sklad komponenty vystačí: od prvního
   dne s potřebou se sklad spotřebovává den po dni (dny bez potřeby, např. víkend nebo dny, kdy je zákazník pokrytý, se
   nepočítají), celý pokrytý den = 1, poslední částečně pokrytý den = zbytek skladu ÷ potřeba dne. Příklad: coverage
-  po −100, út −200 (potřeba 100 a 100), sklad 150 → **1,5 dne**. Pod tím „chybí od“ (první den v mínusu); „X+ dní“ =
-  vystačí na celou potřebu 14 dní.
+  po −100, út −200 (potřeba 100 a 100), sklad 150 → **1,5 dne**. Zásoba se počítá přes **celý výhled** – coverage,
+  za koncem souboru odvolávky až do konce exportu (ne jen 14 dní tabulky). Pod tím „chybí od“; „X+ dní“ = vystačí na
+  celou známou potřebu („vystačí do konce odvolávek“), „bez potřeby“ = v celém výhledu se nespotřebuje.
 - **Zákazník pokryt do** (rámeček v řádku dnů) = poslední den, kdy je zákazník pokrytý hotovými díly s komponentou:
   jeho sklad + transit podle coverage (za koncem souboru odvolávky po spotřebování zbytku, bez souboru odvolávky);
   se zaškrtnutím „Odečíst náš sklad…“ i náš sklad hotových dílů. Počítá se **každý hotový díl zvlášť**, ne součet

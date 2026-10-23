@@ -88,8 +88,8 @@ describe('ComponentsPage', () => {
     expect(clip!.querySelectorAll('td')[10]!.className).toContain('cell-negative');
     expect(clip!.querySelectorAll('td.cell-customer')).toHaveLength(0);
     // pryskyřice v kg na desetinná místa
-    // potřeba jen ve 3 dnech horizontu, sklad vystačí na všechny → „3+ dní“
-    expect(cells(resin!).slice(4, 11)).toEqual(['100', '5', '3+ dnívystačí celý horizont', '—', '98,75', '97,5', '95']);
+    // potřeba jen ve 3 dnech celého výhledu odvolávek, sklad vystačí na všechny → „3+ dní“
+    expect(cells(resin!).slice(4, 11)).toEqual(['100', '5', '3+ dnívystačí do konce odvolávek', '—', '98,75', '97,5', '95']);
     // mezivýroba bez označení se nezobrazí
     expect(screen.queryByText('SUB-1')).toBeNull();
     // pořadí ukazatelů: v záporu do 2 dnů, v záporu do 14 dní, …
