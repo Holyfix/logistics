@@ -2,14 +2,12 @@ import { useMemo, useState } from 'react';
 import { COMPONENT_SOON_DAYS, type ComponentLine } from '../../core/components/compute';
 import { dayToIso, weekday, type DayNumber } from '../../core/dates';
 import { formatAmount, formatDayShort, formatOneDecimal, formatQuantity } from '../../core/format';
-import { stockLocations } from '../../core/stock';
 import { useI18n } from '../../i18n/I18nProvider';
 import { ExportButtons, type ExportTable } from '../calloffs/ExportButtons';
 import { useData } from '../data/DataProvider';
 import { Icon } from '../icons';
 import { localToday, useComponents } from './useComponents';
 import { MappingNotice } from '../data/MappingPanels';
-import { ComponentBreakdown } from './ComponentBreakdown';
 
 /** Za kolik prvních dnů se ukazuje potřeba komponenty. */
 const NEED_DAYS = 7;
@@ -31,7 +29,6 @@ export function ComponentsPage({ today = localToday() }: { today?: DayNumber } =
   const [category, setCategory] = useState('');
   const [query, setQuery] = useState('');
   const [onlyShort, setOnlyShort] = useState(false);
-  const [selected, setSelected] = useState<string | null>(null);
 
   // Filtry Projekt a Kategorie podle hotových dílů, navzájem v libovolném pořadí: kategorie se nabízí jen z hotových
   // dílů vybraného projektu a projekty jen s hotovými díly vybrané kategorie; komponenta odpovídá, když je v hotovém
@@ -130,8 +127,6 @@ export function ComponentsPage({ today = localToday() }: { today?: DayNumber } =
   };
   const customerText = (c: ComponentLine) => (c.customerKnown ? untilText(c.customerShortDay) : '—');
   /** Den „Zákazník pokryt do“ v řádku dnů (rámeček); null, když pokryje celý horizont nebo chybí už dnes. */
-  const selectedLine = selected === null ? undefined : table.components.find((c) => c.item === selected);
-  const stockData = state.data?.stock?.data;
   const customerDay = (c: ComponentLine) => (!c.customerKnown || c.customerShortDay === null ? null : lastDayBefore(c.customerShortDay));
 
   const buildExport = (): ExportTable => ({
@@ -304,20 +299,10 @@ export function ComponentsPage({ today = localToday() }: { today?: DayNumber } =
               </thead>
               <tbody>
                 {lines.map((c) => (
-                  <tr key={c.item} className={c.item === selected ? 'row-selected' : undefined}>
+                  <tr key={c.item}>
                     <td className="sticky-col">
                       <button type="button" className="link-button cell-link" title={tc.table.select} onClick={() => setQuery(c.item)}>
                         <strong>{c.item}</strong>
-                      </button>
-                      <button
-                        type="button"
-                        className="link-button breakdown-open"
-                        title={tc.breakdown.openTitle}
-                        aria-pressed={c.item === selected}
-                        aria-label={`${tc.breakdown.open} ${c.item}`}
-                        onClick={() => setSelected(c.item === selected ? null : c.item)}
-                      >
-                        <Icon name="components" />
                       </button>
                     </td>
                     <td className="desc" title={`${tc.table.products}: ${c.products.join(', ')}`}>
@@ -374,21 +359,6 @@ export function ComponentsPage({ today = localToday() }: { today?: DayNumber } =
           <dd>{tc.explain.need}</dd>
         </dl>
       </div>
-
-      {selectedLine && (
-        <ComponentBreakdown
-          line={selectedLine}
-          products={productBy}
-          days={days}
-          locations={stockData ? stockLocations(stockData, selectedLine.item) : null}
-          netOwnStock={netOwnStock}
-          dayLabel={dayLabel}
-          weekend={weekend}
-          stockText={stockText}
-          shortText={shortText}
-          onClose={() => setSelected(null)}
-        />
-      )}
 
       <div className="panel">
         <div className="panel-head">
