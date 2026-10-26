@@ -118,27 +118,6 @@ describe('CallOffsPage', () => {
     expect(cells(within(matrix!).getByText('CW 41/2026').closest('tr')!)).toEqual(['CW 41/2026', '150', '·']);
   });
 
-  it('vývoj odvolávek: vždy všechny exporty a všechny týdny, nezávisle na výběru exportů', () => {
-    const cw40 = exportOf('Odvolavky_CW40.csv', ['1001,DOOR LH,05.10.2026,80', '1001,DOOR LH,12.10.2026,90']);
-    renderPage({ ...state, data: { ...state.data!, exports: [cw40, cw41, cw42] } });
-    fireEvent.click(screen.getByRole('tab', { name: 'Porovnání exportů' }));
-    const matrix = () => screen.getByRole('heading', { name: 'Vývoj odvolávek' }).closest('.panel')!.querySelector('table')!;
-    const cells = (row: Element) => [...row.querySelectorAll('td')].map((td) => td.textContent);
-    const check = () => {
-      expect([...matrix().querySelectorAll('thead th')].map((th) => th.textContent)).toEqual(['Export', 'CW 41', 'CW 42', 'CW 43']);
-      expect([...matrix().querySelectorAll('tbody tr')].map((r) => cells(r))).toEqual([
-        ['CW 40/2026', '80', '90', '·'],
-        ['CW 41/2026', '·', '150▲ +66,7 %', '·'],
-        ['CW 42/2026', '·', '200▲ +33,3 %', '7'],
-      ]);
-    };
-    check();
-    // Stejný export v obou výběrech: porovnání nic neukáže, vývoj zůstává celý.
-    fireEvent.change(screen.getByLabelText('Starší export'), { target: { value: String(cw42.exportDay) } });
-    expect(screen.getByText('Vyberte dva různé exporty.')).toBeTruthy();
-    check();
-  });
-
   it('jen změněné díly: v součtu skryje díl, jehož změny v týdnech se vyrovnají', () => {
     const older = exportOf('Odvolavky_CW41.csv', ['2001,SHIFT,12.10.2026,10', '2001,SHIFT,19.10.2026,20', '2002,SAME,12.10.2026,5']);
     const newer = exportOf('Odvolavky_CW42.csv', ['2001,SHIFT,12.10.2026,20', '2001,SHIFT,19.10.2026,10', '2002,SAME,12.10.2026,5']);

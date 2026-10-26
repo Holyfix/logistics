@@ -1241,9 +1241,9 @@ export const en: Messages = {
       viewWeeks: 'Difference by week',
       onlyChanged: 'Changed parts only',
       matrixHeading: 'Call-off evolution',
-      matrixSub: 'all exports × all delivery weeks, total of selected parts, pcs; independent of the export selection above',
+      matrixSub: 'last 10 exports × 10 weeks from the newer export, total of selected parts, pcs',
       matrixHelp:
-        'Each row is one export, each column a delivery week. Reading a column top to bottom shows how the customer changed the demand for that week with every new export. A highlighted cell is a change of 5 % or more against the previous export. A dot means the export does not contain the week. The matrix always shows all loaded exports and all weeks, including past ones (the older and newer export selection above does not affect it); it opens scrolled to the current week, older weeks are to the left. For a single part, type its number into the Part or description filter.',
+        'Each row is one export, each column a delivery week. Reading a column top to bottom shows how the customer changed the demand for that week with every new export. A highlighted cell is a change of 5 % or more against the previous export. A dot means the export does not contain the week. For a single part, type its number into the Part or description filter.',
       exportRow: 'Export',
       fileName: 'calloffs-comparison',
       matrixFileName: 'calloffs-evolution',

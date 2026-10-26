@@ -1,9 +1,8 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { buildCompareRows, buildMatrix, compareItems, comparePeriods, exportItems, type CompareRow } from '../../core/calloffs/compare';
+import { useMemo, useState, type ReactNode } from 'react';
+import { buildCompareRows, buildMatrix, compareItems, comparePeriods, type CompareRow } from '../../core/calloffs/compare';
 import { filterItems, type ItemFilter } from '../../core/calloffs/filter';
 import type { CallOffExport } from '../../core/calloffs/parse';
 import { changeOf, type PeriodCount } from '../../core/calloffs/views';
-import { mondayOf } from '../../core/dates';
 import { formatPercent, formatQuantity, formatSigned } from '../../core/format';
 import type { MasterItem } from '../../core/masterdata';
 import { useI18n } from '../../i18n/I18nProvider';
@@ -13,8 +12,6 @@ import { ItemFieldCells, ItemFieldHeaders, itemFieldValues, useItemFieldLabels }
 const RANGES: PeriodCount[] = [12, 26, 'all'];
 /** Od jaké změny proti předchozímu exportu se buňka matice zvýrazní (v %). */
 const MATRIX_THRESHOLD = 5;
-/** Kolik týdnů před aktuálním týdnem je po otevření matice vidět vlevo (starší se odscrolují). */
-const MATRIX_PAST_WEEKS = 4;
 
 type ItemView = 'total' | 'weeks';
 
@@ -55,21 +52,7 @@ export function CompareView({ exports, filter, master, filters }: Props) {
     () => (older && newer && periods.length ? buildCompareRows(older, newer, items.items, items.descriptions, periods) : []),
     [older, newer, items, periods],
   );
-  // Vývoj odvolávek nezávisí na výběru dvou exportů: vždy všechny exporty a všechny týdny, jen podle filtrů dílů.
-  const matrix = useMemo(() => {
-    const all = exportItems(exports);
-    return buildMatrix(exports, filterItems(all.items, all.descriptions, master, filter));
-  }, [exports, master, filter]);
-  const currentWeek = exports.length ? mondayOf(exports.at(-1)!.firstDay) : null;
-  const matrixScroll = useRef<HTMLDivElement>(null);
-  // Po otevření se matice posune na aktuální týden (několik minulých týdnů zůstane vidět), starší týdny jsou vlevo.
-  useEffect(() => {
-    const box = matrixScroll.current;
-    const th = box?.querySelector<HTMLElement>('th[data-current]');
-    const first = box?.querySelector<HTMLElement>('th.sticky-col');
-    if (!box || !th || !first) return;
-    box.scrollLeft = Math.max(0, th.offsetLeft - first.offsetWidth - MATRIX_PAST_WEEKS * th.offsetWidth);
-  }, [matrix.periods.length, currentWeek]);
+  const matrix = useMemo(() => (newer ? buildMatrix(exports, newer, items.items) : null), [exports, newer, items]);
 
   if (exports.length < 2) {
     return (
@@ -78,72 +61,6 @@ export function CompareView({ exports, filter, master, filters }: Props) {
       </div>
     );
   }
-
-  const buildMatrixExport = (): ExportTable => ({
-    fileName: `${tc.matrixFileName}_CW${exports.at(-1)!.week}-${exports.at(-1)!.year}`,
-    sheetName: tc.matrixHeading,
-    header: [tc.exportRow, ...matrix.periods.map((p) => p.label)],
-    rows: matrix.exports.map((e, i) => [exportName(e), ...matrix.values[i]!]),
-  });
-
-  const matrixPanel = matrix.exports.length > 0 && (
-    <div className="panel">
-      <div className="panel-head">
-        <h2>{tc.matrixHeading}</h2>
-        <span className="muted">{tc.matrixSub}</span>
-        <span className="panel-actions">
-          <ExportButtons build={buildMatrixExport} />
-        </span>
-      </div>
-      <p className="muted">{tc.matrixHelp}</p>
-      <div className="table-scroll table-tall" ref={matrixScroll}>
-        <table className="table table-data">
-          <thead>
-            <tr>
-              <th className="sticky-col">{tc.exportRow}</th>
-              {matrix.periods.map((p) => (
-                <th key={p.start} className="n" data-current={p.start === currentWeek ? '' : undefined}>
-                  {p.label}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {matrix.exports.map((e, i) => (
-              <tr key={e.exportDay}>
-                <td className="sticky-col">
-                  <strong>{exportName(e)}</strong>
-                </td>
-                {matrix.values[i]!.map((v, k) => {
-                  const key = matrix.periods[k]!.start;
-                  if (v === null)
-                    return (
-                      <td key={key} className="n muted">
-                        ·
-                      </td>
-                    );
-                  const prev = i > 0 ? matrix.values[i - 1]![k]! : null;
-                  const change = changeOf(v, prev, MATRIX_THRESHOLD);
-                  const prevName = i > 0 ? exportName(matrix.exports[i - 1]!) : '';
-                  const title = change ? `${prevName}: ${formatQuantity(prev!, locale)} → ${formatSigned(change.diff, locale)}` : undefined;
-                  return (
-                    <td key={key} className={`n${change?.significant ? ' cell-changed' : ''}`} title={title}>
-                      {formatQuantity(v, locale)}
-                      {change?.significant && (
-                        <span className={`delta ${change.diff > 0 ? 'delta-up' : 'delta-down'}`}>
-                          {change.diff > 0 ? '▲' : '▼'} {change.percent === null ? formatSigned(change.diff, locale) : formatPercent(change.percent, locale, true)}
-                        </span>
-                      )}
-                    </td>
-                  );
-                })}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
 
   const exportSelect = (label: string, value: number | undefined, onChange: (day: number) => void) => (
     <label className="field">
@@ -188,7 +105,6 @@ export function CompareView({ exports, filter, master, filters }: Props) {
         <div className="panel">
           <p>{older === newer ? tc.same : tc.noOverlap}</p>
         </div>
-        {matrixPanel}
       </div>
     );
   }
@@ -236,6 +152,13 @@ export function CompareView({ exports, filter, master, filters }: Props) {
           header: [...itemHeader, ...periods.map((p) => p.label), t.calloffs.table.total],
           rows: shownRows.map((r) => [r.item, r.description, ...masterCols(r.item), ...r.newer.map((v, k) => v - r.older[k]!), r.diff]),
         };
+
+  const buildMatrixExport = (): ExportTable => ({
+    fileName: `${tc.matrixFileName}_CW${newer.week}-${newer.year}`,
+    sheetName: tc.matrixHeading,
+    header: [tc.exportRow, ...matrix!.periods.map((p) => p.label)],
+    rows: matrix!.exports.map((e, i) => [exportName(e), ...matrix!.values[i]!]),
+  });
 
   const itemCell = (r: CompareRow, k: number) => {
     const a = r.older[k]!;
@@ -437,7 +360,64 @@ export function CompareView({ exports, filter, master, filters }: Props) {
         )}
       </div>
 
-      {matrixPanel}
+      {matrix && (
+        <div className="panel">
+          <div className="panel-head">
+            <h2>{tc.matrixHeading}</h2>
+            <span className="muted">{tc.matrixSub}</span>
+            <span className="panel-actions">
+              <ExportButtons build={buildMatrixExport} />
+            </span>
+          </div>
+          <p className="muted">{tc.matrixHelp}</p>
+          <div className="table-scroll">
+            <table className="table table-data">
+              <thead>
+                <tr>
+                  <th className="sticky-col">{tc.exportRow}</th>
+                  {matrix.periods.map((p) => (
+                    <th key={p.start} className="n">
+                      {p.label}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {matrix.exports.map((e, i) => (
+                  <tr key={e.exportDay}>
+                    <td className="sticky-col">
+                      <strong>{exportName(e)}</strong>
+                    </td>
+                    {matrix.values[i]!.map((v, k) => {
+                      const key = matrix.periods[k]!.start;
+                      if (v === null)
+                        return (
+                          <td key={key} className="n muted">
+                            ·
+                          </td>
+                        );
+                      const prev = i > 0 ? matrix.values[i - 1]![k]! : null;
+                      const change = changeOf(v, prev, MATRIX_THRESHOLD);
+                      const prevName = i > 0 ? exportName(matrix.exports[i - 1]!) : '';
+                      const title = change ? `${prevName}: ${formatQuantity(prev!, locale)} → ${formatSigned(change.diff, locale)}` : undefined;
+                      return (
+                        <td key={key} className={`n${change?.significant ? ' cell-changed' : ''}`} title={title}>
+                          {formatQuantity(v, locale)}
+                          {change?.significant && (
+                            <span className={`delta ${change.diff > 0 ? 'delta-up' : 'delta-down'}`}>
+                              {change.diff > 0 ? '▲' : '▼'} {change.percent === null ? formatSigned(change.diff, locale) : formatPercent(change.percent, locale, true)}
+                            </span>
+                          )}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

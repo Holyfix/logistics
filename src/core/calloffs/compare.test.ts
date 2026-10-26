@@ -51,21 +51,21 @@ describe('buildCompareRows', () => {
 });
 
 describe('buildMatrix', () => {
-  it('řádky jsou všechny exporty, sloupce všechny týdny od nejstaršího exportu', () => {
-    const m = buildMatrix([cw40, cw41, cw42], ['A', 'B', 'C']);
+  it('řádky jsou exporty, sloupce týdny od novějšího exportu', () => {
+    const m = buildMatrix([cw40, cw41, cw42], cw42, ['A', 'B', 'C'], 10, 3);
     expect(m.exports).toEqual([cw40, cw41, cw42]);
-    expect(m.periods.map((p) => p.label)).toEqual(['CW 40', 'CW 41', 'CW 42', 'CW 43', 'CW 44']);
+    expect(m.periods.map((p) => p.label)).toEqual(['CW 42', 'CW 43', 'CW 44']);
     expect(m.values).toEqual([
-      [100, 100, 140, null, null],
-      [null, 110, 130, 100, null],
-      [null, null, 60, 105, 100],
+      [140, null, null],
+      [130, 100, null],
+      [60, 105, 100],
     ]);
   });
 
-  it('export bez řádků se vynechá', () => {
-    const empty = { ...cw41, items: [] } as CallOffExport;
-    const m = buildMatrix([cw40, empty], ['A']);
-    expect(m.exports).toEqual([cw40]);
-    expect(m.periods.map((p) => p.label)).toEqual(['CW 40', 'CW 41', 'CW 42']);
+  it('jen zvolený počet exportů do vybraného', () => {
+    const m = buildMatrix([cw40, cw41, cw42], cw41, ['A'], 1, 2);
+    expect(m.exports).toEqual([cw41]);
+    expect(m.periods.map((p) => p.label)).toEqual(['CW 41', 'CW 42']);
+    expect(m.values).toEqual([[110, 90]]);
   });
 });
