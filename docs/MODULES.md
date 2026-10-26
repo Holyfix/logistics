@@ -105,7 +105,7 @@ Filtry projekt, kategorie, strana (LHD/RHD) a varianta z kmenových dat se ovliv
   změna proti předchozímu exportu (zvýraznění od 20 %), export do Excelu a CSV
 - ⏳ **Přehled od začátku roku:** požadavek na každý týden z exportu téhož týdne, po dílech i celkem;
   odesláno z kumulativu jako doplňková informace
-- ⏳ **Porovnání exportů:** dva libovolné exporty po týdnech a dílech, matice vývoje odvolávek
+- ⏳ **Porovnání exportů:** dva libovolné exporty po týdnech a dílech; matice vývoje odvolávek vždy přes všechny exporty a všechny týdny (i minulé), nezávisle na výběru dvou exportů, po otevření posunutá na aktuální týden
   (řádky = exporty, sloupce = týdny dodání)
 
 ### Coverage

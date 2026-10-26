@@ -26,8 +26,13 @@ export function comparePeriods(older: CallOffExport, newer: CallOffExport, count
 
 /** Díly z obou exportů (seřazené); popis z novějšího exportu, chybí-li, ze staršího. */
 export function compareItems(older: CallOffExport, newer: CallOffExport): { items: string[]; descriptions: string[] } {
+  return exportItems([older, newer]);
+}
+
+/** Díly ze všech exportů (seřazené); popis z nejnovějšího exportu, který ho má. Exporty od nejstaršího. */
+export function exportItems(exports: readonly CallOffExport[]): { items: string[]; descriptions: string[] } {
   const descriptions = new Map<string, string>();
-  for (const exp of [newer, older]) {
+  for (const exp of [...exports].reverse()) {
     exp.items.forEach((item, i) => {
       if (!descriptions.get(item)) descriptions.set(item, exp.descriptions[i]!);
     });
@@ -79,33 +84,28 @@ export function buildCompareRows(
 }
 
 export interface Matrix {
-  /** Řádky: exporty od nejstaršího po zvolený novější. */
+  /** Řádky: všechny exporty od nejstaršího po nejnovější. */
   exports: CallOffExport[];
-  /** Sloupce: týdny dodání od týdne novějšího exportu. */
+  /** Sloupce: všechny týdny dodání od prvního týdne nejstaršího exportu do konce nejdelšího horizontu. */
   periods: Period[];
   /** Součet požadavku dílů; null, když export týden nepokrývá. */
   values: (number | null)[][];
 }
 
 /**
- * Vývoj odvolávek: jak se s každým exportem měnil požadavek na stejné týdny dodání.
- * Exporty musí být seřazené podle týdne exportu.
+ * Vývoj odvolávek: jak se s každým exportem měnil požadavek na stejné týdny dodání, přes všechny exporty a všechny
+ * týdny (i ty, které už v nejnovějším exportu nejsou). Exporty musí být seřazené podle týdne exportu.
  */
-export function buildMatrix(
-  exports: readonly CallOffExport[],
-  newer: CallOffExport,
-  items: readonly string[],
-  rowCount = 10,
-  weekCount = 10,
-): Matrix {
-  const end = exports.indexOf(newer);
-  const rows = exports.slice(Math.max(0, end - rowCount + 1), end + 1);
+export function buildMatrix(exports: readonly CallOffExport[], items: readonly string[]): Matrix {
+  const rows = exports.filter((e) => e.items.length > 0);
   const periods: Period[] = [];
-  const first = mondayOf(newer.firstDay);
-  for (let k = 0; k < weekCount; k++) {
-    const start = first + k * 7;
-    if (start > newer.lastDay) break;
-    periods.push({ start, end: start + 6, label: weekLabel(start, isoWeek(start).year !== newer.year) });
+  const newest = rows.at(-1);
+  if (newest) {
+    const first = mondayOf(Math.min(...rows.map((e) => e.firstDay)));
+    const last = Math.max(...rows.map((e) => e.lastDay));
+    for (let start = first; start <= last; start += 7) {
+      periods.push({ start, end: start + 6, label: weekLabel(start, isoWeek(start).year !== newest.year) });
+    }
   }
   const values = rows.map((exp) => {
     const indexes = items.map((item) => itemIndex(exp, item)).filter((i) => i >= 0);

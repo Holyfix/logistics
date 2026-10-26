@@ -1243,9 +1243,9 @@ export const cs = {
       viewWeeks: 'Rozdíl po týdnech',
       onlyChanged: 'Jen změněné díly',
       matrixHeading: 'Vývoj odvolávek',
-      matrixSub: 'posledních 10 exportů × 10 týdnů od novějšího exportu, součet vybraných dílů, ks',
+      matrixSub: 'všechny exporty × všechny týdny dodání, součet vybraných dílů, ks; nezávisí na výběru exportů výše',
       matrixHelp:
-        'Každý řádek je jeden export, každý sloupec týden dodání. Ve sloupci shora dolů vidíte, jak zákazník s každým novým exportem měnil požadavek na daný týden. Zvýrazněná buňka je změna o 5 % a více proti předchozímu exportu. Tečka znamená, že export týden neobsahuje. Pro jeden díl napište jeho číslo do filtru Díl nebo popis.',
+        'Každý řádek je jeden export, každý sloupec týden dodání. Ve sloupci shora dolů vidíte, jak zákazník s každým novým exportem měnil požadavek na daný týden. Zvýrazněná buňka je změna o 5 % a více proti předchozímu exportu. Tečka znamená, že export týden neobsahuje. Matice vždy ukazuje všechny načtené exporty a všechny týdny, i ty, které už jsou za námi (výběr staršího a novějšího exportu výše na ni nemá vliv); po otevření je posunutá na aktuální týden, starší týdny jsou vlevo. Pro jeden díl napište jeho číslo do filtru Díl nebo popis.',
       exportRow: 'Export',
       fileName: 'odvolavky-porovnani',
       matrixFileName: 'odvolavky-vyvoj',
