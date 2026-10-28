@@ -96,6 +96,8 @@ describe('Zásoby', () => {
     expect(table.negativeRows).toBe(1);
     expect(table.hasCost).toBe(true);
     expect(table.horizonEnd).toBe(day(23));
+    // 12.–23. 10.: 10 pracovních dní; zásoba na celý horizont má dosah 10+
+    expect(table.horizonWorkdays).toBe(10);
     expect(table.lines.map((l) => l.item)).toEqual(['FG-1', 'OTHER-1', 'PG-1', 'PG-2']);
   });
 

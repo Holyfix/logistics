@@ -42,6 +42,11 @@ function moneyShort(value: number, locale: Locale): string {
   return formatQuantity(value, locale);
 }
 
+/** Dosah v pracovních dnech; zásoba na celý horizont odvolávek jako „150+“ (víc dní odvolávky neukazují). */
+function reachDays(days: number | null, horizonWorkdays: number, locale: Locale): string {
+  return days === null ? `${formatQuantity(horizonWorkdays, locale)}+` : formatQuantity(days, locale);
+}
+
 const sum = (lines: readonly InventoryLine[], f: (l: InventoryLine) => number) => lines.reduce((s, l) => s + f(l), 0);
 
 type PluralForms = { one: string; few: string; other: string };
@@ -224,15 +229,15 @@ export function InventoryPage({ today = localToday() }: { today?: DayNumber } = 
       <MoneyPanel totals={totals} known={table.horizonEnd !== null} />
 
       <div className="inv-grid">
-        <ReachPanel lines={lines} today={today} />
+        <ReachPanel lines={lines} today={today} horizonWorkdays={table.horizonWorkdays} />
         <ProjectsPanel lines={lines} />
       </div>
 
-      <Rankings lines={lines} />
+      <Rankings lines={lines} horizonWorkdays={table.horizonWorkdays} />
 
       <div className="panel inv-export">
         <span className="muted">{ti.export.note}</span>
-        <button type="button" className="button" onClick={() => void exportParts(lines, ti, today)}>
+        <button type="button" className="button" onClick={() => void exportParts(lines, ti, today, table.horizonWorkdays)}>
           {ti.export.button}
         </button>
       </div>
@@ -288,7 +293,7 @@ const PERCENT_SHARE = 0.06;
  * Hodnota volné zásoby podle pásma dosahu: FG, SFG a PG každý na celou šířku (úseky = podíl v rámci druhu), pod pruhem
  * částky všech pásem. Klik na pásmo (nebo na „mimo mapování“) ukáže pod grafem největší díly a Excel s díly.
  */
-function ReachPanel({ lines, today }: { lines: InventoryLine[]; today: DayNumber }) {
+function ReachPanel({ lines, today, horizonWorkdays }: { lines: InventoryLine[]; today: DayNumber; horizonWorkdays: number }) {
   const { t, locale } = useI18n();
   const ti = t.inventory;
   const tr = ti.reach;
@@ -358,13 +363,27 @@ function ReachPanel({ lines, today }: { lines: InventoryLine[]; today: DayNumber
           </li>
         ))}
       </ul>
-      {selected && <ReachDetail lines={lines} kind={selected.kind} band={selected.band} today={today} onClose={() => setSelected(null)} />}
+      {selected && <ReachDetail lines={lines} kind={selected.kind} band={selected.band} today={today} horizonWorkdays={horizonWorkdays} onClose={() => setSelected(null)} />}
     </div>
   );
 }
 
 /** Detail pásma: největší díly podle hodnoty, zbytek v jednom řádku, Excel s díly pásma. */
-function ReachDetail({ lines, kind, band, today, onClose }: { lines: InventoryLine[]; kind: Kind; band: Band | null; today: DayNumber; onClose: () => void }) {
+function ReachDetail({
+  lines,
+  kind,
+  band,
+  today,
+  horizonWorkdays,
+  onClose,
+}: {
+  lines: InventoryLine[];
+  kind: Kind;
+  band: Band | null;
+  today: DayNumber;
+  horizonWorkdays: number;
+  onClose: () => void;
+}) {
   const { t, locale } = useI18n();
   const ti = t.inventory;
   const td = ti.reach.detail;
@@ -375,7 +394,7 @@ function ReachDetail({ lines, kind, band, today, onClose }: { lines: InventoryLi
     const p = moneyParts(l);
     return p.overMax + p.surplus;
   };
-  const reach = (l: InventoryLine) => (l.kind === 'other' ? '—' : l.noNeed ? ti.noNeed[l.noNeed] : l.days === null ? td.beyond : td.daysUnit.replace('{n}', formatQuantity(l.days, locale)));
+  const reach = (l: InventoryLine) => (l.kind === 'other' ? '—' : l.noNeed ? ti.noNeed[l.noNeed] : td.daysUnit.replace('{n}', reachDays(l.days, horizonWorkdays, locale)));
   const rest = of.slice(DETAIL_ROWS);
   const m = (v: number) => (Math.abs(v) < 0.5 ? '–' : money(v, locale));
   return (
@@ -384,7 +403,7 @@ function ReachDetail({ lines, kind, band, today, onClose }: { lines: InventoryLi
         <h3>
           {title} · {money(sum(of, (l) => l.value), locale)} · {partsCount(of.length, locale, ti.parts)}
         </h3>
-        <button type="button" className="link-button" onClick={() => void exportParts(of, ti, today, `${kind}_${band ?? 'mimo'}`)}>
+        <button type="button" className="link-button" onClick={() => void exportParts(of, ti, today, horizonWorkdays, `${kind}_${band ?? 'mimo'}`)}>
           {td.excel}
         </button>
         <button type="button" className="link-button" aria-label={td.close} title={td.close} onClick={onClose}>
@@ -515,7 +534,7 @@ interface RankRow {
 }
 
 /** Žebříčky: největší položky nad potřebou, bez potřeby a blokované; zbytek v jednom řádku. */
-function Rankings({ lines }: { lines: InventoryLine[] }) {
+function Rankings({ lines, horizonWorkdays }: { lines: InventoryLine[]; horizonWorkdays: number }) {
   const { t, locale } = useI18n();
   const ti = t.inventory;
   const tt = ti.top;
@@ -524,7 +543,7 @@ function Rankings({ lines }: { lines: InventoryLine[] }) {
     .filter((l) => l.kind !== 'other' && l.band !== 'none')
     .map((l) => {
       const p = moneyParts(l);
-      return { item: l.item, sub: sub(l), amount: p.overMax + p.surplus, note: l.days === null ? tt.beyond : tt.days.replace('{n}', formatQuantity(l.days, locale)) };
+      return { item: l.item, sub: sub(l), amount: p.overMax + p.surplus, note: tt.days.replace('{n}', reachDays(l.days, horizonWorkdays, locale)) };
     });
   const none: RankRow[] = lines.filter((l) => l.band === 'none').map((l) => ({ item: l.item, sub: sub(l), amount: l.value, note: l.noNeed ? ti.noNeed[l.noNeed] : '' }));
   const blocked: RankRow[] = lines.map((l) => {
@@ -585,7 +604,7 @@ function RankList({ title, rows }: { title: string; rows: RankRow[] }) {
   );
 }
 
-function exportParts(lines: InventoryLine[], ti: ReturnType<typeof useI18n>['t']['inventory'], today: DayNumber, suffix = '') {
+function exportParts(lines: InventoryLine[], ti: ReturnType<typeof useI18n>['t']['inventory'], today: DayNumber, horizonWorkdays: number, suffix = '') {
   const tt = ti.table;
   const header = [tt.item, tt.description, tt.kind, ti.filters.project, ti.filters.category, tt.abc, tt.free, tt.external, tt.blocked, tt.min, tt.max, tt.days, tt.toMin, tt.overMax, tt.surplus, tt.value, tt.band];
   const rows = [...lines]
@@ -602,7 +621,7 @@ function exportParts(lines: InventoryLine[], ti: ReturnType<typeof useI18n>['t']
       l.blocked,
       l.kind === 'other' ? null : l.min,
       l.kind === 'other' ? null : l.max,
-      l.days,
+      l.days ?? (l.horizonDemand > 0 && l.kind !== 'other' ? `${horizonWorkdays}+` : null),
       l.toMin,
       l.overMax,
       l.surplus,

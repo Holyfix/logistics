@@ -148,6 +148,7 @@ Filtry projekt, kategorie, strana (LHD/RHD) a varianta z kmenových dat se ovliv
 - ✅ **Hodnota podle dosahu** v Kč pro FG, SFG a PG (pásma kritické pod 2 dny, nízké 2–5, v pořádku 5–20, vysoké 20–40,
   nadbytek nad 40 nebo nad potřebu celého horizontu, bez potřeby): každý druh na celou šířku (podíl v rámci druhu),
   pod pruhem částky všech pásem; klik na pásmo nebo na „mimo mapování“ ukáže 10 největších dílů a Excel s díly
+- ✅ Dosah zásoby, která vystačí na celé odvolávky, jako počet pracovních dní do konce odvolávek s „+“ (např. 150+)
 - ✅ **Po projektech:** hodnota, nad maximem, nad potřebou, bez potřeby a blokováno; díly ve více projektech a bez
   projektu zvlášť
 - ✅ **Žebříčky** (5 největších + zbytek v jednom řádku): nejvíc peněz nad potřebou, bez potřeby (s důvodem), blokováno
