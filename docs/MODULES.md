@@ -134,6 +134,8 @@ Filtry projekt, kategorie, strana (LHD/RHD) a varianta z kmenových dat se ovliv
 - Shortage list pro ranní poradu
 
 ### Zásoby
+- Rozbor **aktuální zásoby**: jen díly, které skladem jsou (volně nebo blokovaně); díly bez zásoby se neukazují –
+  chybějící díly řeší Komponenty a mezivýroba, která se neskladuje (např. pěna ze dvou chemikálií), tu nepřekáží
 - Karty: **Přehled** · **Díly** · **Blokace**; filtry druh (FG, SFG, PG, ostatní), projekt, kategorie, ABC a sklad
   (interní + externí, jen interní, jen externí)
 - ✅ **Dosah zásoby** v pracovních dnech: kolik dní volná zásoba pokryje potřebu den po dni – FG z odvolávek, SFG a PG
@@ -142,11 +144,13 @@ Filtry projekt, kategorie, strana (LHD/RHD) a varianta z kmenových dat se ovliv
 - ✅ **Pásma** (stejná pro všechny druhy): kritické pod 2 dny, nízké 2–5, v pořádku 5–20, vysoké 20–40, nadbytek nad 40
   nebo nad potřebu celého horizontu, bez potřeby v horizontu; díly mimo mapování „ostatní“ jen s hodnotou
 - ✅ **Přehled:** hodnota zásob (z toho externí), kritické, pod minimem (za kolik doplnit), nadbytek (hodnota nad
-  maximem), ležáky (bez pohybu 180+ dní), blokováno podle důvodu; rozložení podle dosahu pro FG, SFG a PG; struktura
-  hodnoty (interní, externí, blokace); díly mimo pásmo v pořádku (klik ukáže lokace se statusem a posledním pohybem)
+  maximem), **bez potřeby** (zásoba, která do konce odvolávek nemá potřebu; důvod: není v kusovníku / hotový díl bez
+  odvolávek), **nad celou potřebu** (hodnota volné zásoby, která se do konce odvolávek nespotřebuje), blokováno podle
+  důvodu; rozložení podle dosahu pro FG, SFG a PG; struktura hodnoty (interní, externí, blokace); díly mimo pásmo
+  v pořádku (klik ukáže lokace se statusem). Poslední pohyb z ERP se nepoužívá (pole není spolehlivé)
 - ✅ **Díly:** všechny díly s filtrem pásma, hledáním a exportem do Excelu
 - ✅ **Blokace:** blokovaná zásoba po lokacích podle hodnoty (QH a QH-TEMP kvalita, DIFF inventura, ClaimS-O logistika)
-- ⏳ Karta Ležáky a bez potřeby, trend ze starších souborů Stock, ukazatel na rozcestníku a v Dashboardu
+- ⏳ Trend ze starších souborů Stock (zásoba, která se nehýbe), ukazatel na rozcestníku a v Dashboardu
 ### Plánování
 - Karty: **Přehled** · **ASSEMBLY** · **FOA** · **SLH** · **IMM** · **Kapacity**
 - Přehled: pro každou linku a projekt nepokryté díly, pokryto do (s plánem a bez něj), naplánované kusy, stav uložení

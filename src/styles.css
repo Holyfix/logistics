@@ -2332,12 +2332,6 @@ button.oil-step:disabled {
   margin-left: 4px;
 }
 
-.inv-idle {
-  --inv: var(--surface-2);
-  --inv-ink: var(--ink-2);
-  border: 1px solid var(--line);
-}
-
 .inv-row {
   cursor: pointer;
 }
