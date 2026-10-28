@@ -1,20 +1,33 @@
-import { Fragment, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { dayToIso, type DayNumber } from '../../core/dates';
 import { formatDayShort, formatOneDecimal, formatQuantity, type Locale } from '../../core/format';
-import { BANDS, BLOCK_REASONS, buildInventory, byUrgency, KINDS, type Band, type InventoryLine, type Kind, type Scope } from '../../core/inventory';
+import {
+  BLOCK_REASONS,
+  buildInventory,
+  KINDS,
+  MONEY_PARTS,
+  moneyParts,
+  moneyTotals,
+  type Band,
+  type InventoryLine,
+  type Kind,
+  type MoneyPart,
+  type Scope,
+} from '../../core/inventory';
 import { useI18n } from '../../i18n/I18nProvider';
 import { downloadXlsx } from '../../platform/download';
 import { localToday } from '../components/useComponents';
 import { useData } from '../data/DataProvider';
 import { Icon } from '../icons';
 
-type Tab = 'overview' | 'parts' | 'blocked';
+/** Kolik největších položek ukazují žebříčky; zbytek se sečte do jednoho řádku. */
+const TOP_ROWS = 5;
 
-/** Kolik dílů ukazuje Přehled v tabulce dílů mimo pásmo v pořádku. */
-const PROBLEM_ROWS = 30;
+/** Pásma dosahu v grafu hodnoty (bez „ostatní“). */
+const REACH_BANDS: readonly Band[] = ['crit', 'low', 'ok', 'high', 'over', 'none'];
 
-/** Pásma s dosahem v pruhu rozložení (bez „ostatní“). */
-const DIST_BANDS: readonly Band[] = ['crit', 'low', 'ok', 'high', 'over', 'none'];
+/** Popisek úseku pruhu jen u úseků aspoň takového podílu (jinak se nevejde). */
+const LABEL_SHARE = 0.1;
 
 /** Hodnota v Kč: miliony s jedním desetinným místem, jinak celé koruny. */
 export function money(value: number, locale: Locale): string {
@@ -22,12 +35,25 @@ export function money(value: number, locale: Locale): string {
   return `${formatQuantity(Math.round(value), locale)} ${locale === 'cs' ? 'Kč' : 'CZK'}`;
 }
 
+/** Krátká částka do pruhu grafu: „1,4 mil.“, „154 tis.“, „800“ (celá částka je v popisku úseku). */
+function moneyShort(value: number, locale: Locale): string {
+  if (Math.abs(value) >= 1_000_000) return `${formatOneDecimal(value / 1_000_000, locale)} ${locale === 'cs' ? 'mil.' : 'M'}`;
+  if (Math.abs(value) >= 1_000) return `${formatQuantity(value / 1_000, locale)} ${locale === 'cs' ? 'tis.' : 'k'}`;
+  return formatQuantity(value, locale);
+}
+
 const sum = (lines: readonly InventoryLine[], f: (l: InventoryLine) => number) => lines.reduce((s, l) => s + f(l), 0);
 
-/** „1 díl“, „3 díly“, „12 dílů“. */
-function partsCount(n: number, locale: Locale, forms: { one: string; few: string; other: string }): string {
+type PluralForms = { one: string; few: string; other: string };
+
+/** Tvar podle počtu: „1 díl“, „3 díly“, „12 dílů“. */
+function plural(n: number, locale: Locale, forms: PluralForms): string {
   const form = new Intl.PluralRules(locale).select(n);
-  return `${formatQuantity(n, locale)} ${form === 'one' ? forms.one : form === 'few' ? forms.few : forms.other}`;
+  return form === 'one' ? forms.one : form === 'few' ? forms.few : forms.other;
+}
+
+function partsCount(n: number, locale: Locale, forms: PluralForms): string {
+  return `${formatQuantity(n, locale)} ${plural(n, locale, forms)}`;
 }
 
 /** Den „5. 4.“, v jiném roce než dnes s rokem „5. 4. 2027“. */
@@ -36,20 +62,19 @@ function dayText(d: DayNumber, today: DayNumber, locale: Locale): string {
   return formatDayShort(iso, locale) + (iso.slice(0, 4) !== dayToIso(today).slice(0, 4) ? ` ${iso.slice(0, 4)}` : '');
 }
 
-/** Zásoby: zdraví skladu – dosah podle potřeby zákazníka, minimum a maximum, nadbytek, blokace a hodnota. */
+/**
+ * Zásoby: přehled aktuální zásoby v penězích – kolik je ve skladu a kolik z toho je navíc (nad maximem, nad celou
+ * potřebu, bez potřeby, blokováno), hodnota podle dosahu, po projektech a největší položky. Detail dílů je v ERP.
+ */
 export function InventoryPage({ today = localToday() }: { today?: DayNumber } = {}) {
   const { t, locale } = useI18n();
   const ti = t.inventory;
   const { state } = useData();
   const data = state.data;
-  const [tab, setTab] = useState<Tab>('overview');
   const [scope, setScope] = useState<Scope>('all');
   const [kind, setKind] = useState<Kind | ''>('');
   const [project, setProject] = useState('');
   const [category, setCategory] = useState('');
-  const [abc, setAbc] = useState('');
-  const [band, setBand] = useState<Band | ''>('');
-  const [query, setQuery] = useState('');
 
   const table = useMemo(
     () =>
@@ -90,26 +115,39 @@ export function InventoryPage({ today = localToday() }: { today?: DayNumber } = 
   const options = (values: Iterable<string>) => [...new Set(values)].filter(Boolean).sort((a, b) => a.localeCompare(b, 'cs'));
   const projects = options(table.lines.flatMap((l) => l.projects));
   const categories = options(table.lines.filter((l) => !project || l.projects.includes(project)).flatMap((l) => l.categories));
-  const abcs = options(table.lines.map((l) => l.abc));
-  // Filtry Přehledu (druh, projekt, kategorie, ABC); karta Díly navíc pásmo a hledání.
-  const filtered = table.lines.filter(
-    (l) => (!kind || l.kind === kind) && (!project || l.projects.includes(project)) && (!category || l.categories.includes(category)) && (!abc || l.abc === abc),
-  );
-  const q = query.trim().toLowerCase();
-  const parts = filtered.filter((l) => (!band || l.band === band) && (!q || `${l.item} ${l.description}`.toLowerCase().includes(q))).sort(byUrgency);
+  const lines = table.lines.filter((l) => (!kind || l.kind === kind) && (!project || l.projects.includes(project)) && (!category || l.categories.includes(category)));
   const latest = data.exports.at(-1);
+  const m = (v: number) => money(v, locale);
+  const totals = moneyTotals(lines);
+  const blocked = Object.fromEntries(BLOCK_REASONS.map((r) => [r, sum(lines, (l) => l.blockedBy[r] * l.unitCost)])) as Record<(typeof BLOCK_REASONS)[number], number>;
+
+  const tiles = [
+    { label: ti.tiles.value, value: m(sum(lines, (l) => l.value)), note: ti.tiles.valueNote.replace('{external}', m(sum(lines, (l) => l.externalValue))) },
+    {
+      label: ti.tiles.toMin,
+      value: m(sum(lines, (l) => l.toMin * l.unitCost)),
+      note: ti.tiles.toMinNote.replace('{crit}', m(sum(lines.filter((l) => l.band === 'crit'), (l) => l.toMin * l.unitCost))),
+      tone: 'risk',
+    },
+    { label: ti.tiles.overMax, value: m(totals.overMax), note: ti.tiles.overMaxNote, tone: 'part-overMax' },
+    { label: ti.tiles.surplus, value: m(totals.surplus), note: ti.tiles.surplusNote, tone: 'part-surplus' },
+    {
+      label: ti.tiles.none,
+      value: m(totals.none),
+      note: ti.tiles.noneNote.replace('{notInBom}', m(sum(lines.filter((l) => l.band === 'none' && l.noNeed === 'notInBom'), (l) => l.value))),
+      tone: 'part-none',
+    },
+    {
+      label: ti.tiles.blocked,
+      value: m(totals.blocked),
+      note: ti.tiles.blockedNote.replace('{quality}', m(blocked.quality)).replace('{inventory}', m(blocked.inventory)).replace('{logistics}', m(blocked.logistics)),
+      tone: 'part-blocked',
+    },
+  ];
 
   return (
     <section className="page" aria-labelledby="page-title">
       {head}
-
-      <div className="tabs" role="tablist" aria-label={t.modules.stock.title}>
-        {(['overview', 'parts', 'blocked'] as const).map((id) => (
-          <button key={id} type="button" role="tab" className="tab" aria-selected={tab === id} onClick={() => setTab(id)}>
-            {ti.tabs[id]}
-          </button>
-        ))}
-      </div>
 
       <div className="filters" role="group" aria-label={ti.filters.label}>
         <label className="inline-field">
@@ -149,17 +187,6 @@ export function InventoryPage({ today = localToday() }: { today?: DayNumber } = 
             </select>
           </label>
         )}
-        {abcs.length > 0 && (
-          <label className="inline-field">
-            <span>{ti.filters.abc}</span>
-            <select value={abc} onChange={(e) => setAbc(e.target.value)}>
-              <option value="">{ti.filters.all}</option>
-              {abcs.map((a) => (
-                <option key={a}>{a}</option>
-              ))}
-            </select>
-          </label>
-        )}
         <label className="inline-field">
           <span>{ti.filters.scope}</span>
           <select value={scope} onChange={(e) => setScope(e.target.value as Scope)}>
@@ -184,334 +211,280 @@ export function InventoryPage({ today = localToday() }: { today?: DayNumber } = 
       {!table.hasCost && <p className="banner banner-warn">{ti.noCost}</p>}
       {table.negativeRows > 0 && <p className="muted">{ti.negative.replace('{n}', formatQuantity(table.negativeRows, locale))}</p>}
 
-      {tab === 'overview' && <Overview lines={filtered} onParts={() => setTab('parts')} />}
-      {tab === 'parts' && (
-        <div className="panel">
-          <div className="filters" role="group" aria-label={ti.tabs.parts}>
-            <label className="inline-field">
-              <span>{ti.filters.band}</span>
-              <select value={band} onChange={(e) => setBand(e.target.value as Band | '')}>
-                <option value="">{ti.filters.all}</option>
-                {BANDS.map((b) => (
-                  <option key={b} value={b}>
-                    {ti.bands[b]}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="inline-field">
-              <span>{ti.filters.search}</span>
-              <input type="search" value={query} placeholder={ti.filters.searchPlaceholder} onChange={(e) => setQuery(e.target.value)} />
-            </label>
-            <span className="muted">{partsCount(parts.length, locale, ti.parts)}</span>
-            <span className="filters-break" role="presentation" />
-            <button type="button" className="button" onClick={() => void exportParts(parts, ti, today)}>
-              {ti.export.button}
-            </button>
-          </div>
-          <PartsTable lines={parts} />
-        </div>
-      )}
-      {tab === 'blocked' && <BlockedTable lines={filtered} />}
-    </section>
-  );
-}
-
-function Overview({ lines, onParts }: { lines: InventoryLine[]; onParts: () => void }) {
-  const { t, locale } = useI18n();
-  const ti = t.inventory;
-  const m = (v: number) => money(v, locale);
-  const crit = lines.filter((l) => l.band === 'crit');
-  const low = lines.filter((l) => l.toMin > 0);
-  const over = lines.filter((l) => l.band === 'over');
-  const none = lines.filter((l) => l.band === 'none');
-  const stockValue = (l: InventoryLine) => l.value + l.blockedValue;
-  const surplus = lines.filter((l) => l.surplus > 0);
-  const blocked = Object.fromEntries(BLOCK_REASONS.map((r) => [r, sum(lines, (l) => l.blockedBy[r] * l.unitCost)])) as Record<(typeof BLOCK_REASONS)[number], number>;
-  const value = sum(lines, (l) => l.value);
-  const external = sum(lines, (l) => l.externalValue);
-  const problems = lines.filter((l) => ['crit', 'low', 'over', 'none'].includes(l.band)).sort(byUrgency);
-
-  const tiles = [
-    { label: ti.tiles.value, value: m(value), note: ti.tiles.valueNote.replace('{external}', m(external)) },
-    { label: ti.tiles.crit, value: formatQuantity(crit.length, locale), note: ti.tiles.critNote.replace('{pcs}', formatQuantity(sum(crit, (l) => l.toMin), locale)), tone: crit.length ? 'cell-short' : '' },
-    { label: ti.tiles.low, value: formatQuantity(low.length, locale), note: ti.tiles.lowNote.replace('{value}', m(sum(low, (l) => l.toMin * l.unitCost))) },
-    { label: ti.tiles.over, value: formatQuantity(over.length, locale), note: ti.tiles.overNote.replace('{value}', m(sum(over, (l) => l.overMax * l.unitCost))) },
-    {
-      label: ti.tiles.none,
-      value: formatQuantity(none.length, locale),
-      note: ti.tiles.noneNote.replace('{value}', m(sum(none, stockValue))).replace('{notInBom}', m(sum(none.filter((l) => l.noNeed === 'notInBom'), stockValue))),
-    },
-    {
-      label: ti.tiles.surplus,
-      value: m(sum(surplus, (l) => l.surplusValue)),
-      note: ti.tiles.surplusNote.replace('{n}', partsCount(surplus.length, locale, ti.parts)),
-    },
-    {
-      label: ti.tiles.blocked,
-      value: m(blocked.quality + blocked.inventory + blocked.logistics),
-      note: ti.tiles.blockedNote.replace('{quality}', m(blocked.quality)).replace('{inventory}', m(blocked.inventory)).replace('{logistics}', m(blocked.logistics)),
-    },
-  ];
-
-  return (
-    <>
       <div className="kpis inv-tiles">
         {tiles.map((tile) => (
-          <div key={tile.label} className="kpi">
+          <div key={tile.label} className={`kpi${tile.tone ? ` inv-tile-${tile.tone}` : ''}`}>
             <span className="kpi-label">{tile.label}</span>
-            <span className={`kpi-value${tile.tone ? ` ${tile.tone}` : ''}`}>{tile.value}</span>
+            <span className="kpi-value">{tile.value}</span>
             <span className="kpi-note">{tile.note}</span>
           </div>
         ))}
       </div>
 
+      <MoneyPanel totals={totals} known={table.horizonEnd !== null} />
+
       <div className="inv-grid">
-        <div className="panel">
-          <h2>{ti.distribution.heading}</h2>
-          <p className="muted">{ti.distribution.note}</p>
-          {(['FG', 'SFG', 'PG'] as const).map((k) => {
-            const of = lines.filter((l) => l.kind === k);
-            return (
-              <div key={k} className="inv-dist-row">
-                <b>{ti.kinds[k]}</b>
-                <div className="inv-stack" role="img" aria-label={`${ti.kinds[k]}: ${DIST_BANDS.map((b) => `${ti.bands[b]} ${of.filter((l) => l.band === b).length}`).join(', ')}`}>
-                  {DIST_BANDS.map((b) => {
-                    const n = of.filter((l) => l.band === b).length;
-                    return n ? (
-                      <span key={b} className={`inv-band-${b}`} style={{ flex: n }} title={`${ti.bands[b]}: ${n} · ${ti.bandHint[b]}`}>
-                        {n}
-                      </span>
-                    ) : null;
-                  })}
-                </div>
-                <span className="muted">{ti.distribution.summary.replace('{n}', partsCount(of.length, locale, ti.parts)).replace('{value}', m(sum(of, (l) => l.value)))}</span>
-              </div>
-            );
-          })}
-          {(() => {
-            const other = lines.filter((l) => l.kind === 'other');
-            return (
-              <div className="inv-dist-row">
-                <b className="muted">{ti.kinds.other}</b>
-                <span className="muted">{ti.distribution.other}</span>
-                <span className="muted">{ti.distribution.summary.replace('{n}', partsCount(other.length, locale, ti.parts)).replace('{value}', m(sum(other, (l) => l.value)))}</span>
-              </div>
-            );
-          })()}
-          <ul className="inv-legend">
-            {DIST_BANDS.map((b) => (
-              <li key={b} title={ti.bandHint[b]}>
-                <i className={`inv-band-${b}`} /> {ti.bands[b]}
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        <div className="panel">
-          <h2>{ti.structure.heading}</h2>
-          <p className="muted">{ti.structure.note}</p>
-          <table className="table inv-structure">
-            <tbody>
-              <tr>
-                <td>{ti.structure.internal}</td>
-                <td className="n">{m(value - external)}</td>
-              </tr>
-              <tr>
-                <td>{ti.structure.external}</td>
-                <td className="n">{m(external)}</td>
-              </tr>
-              {BLOCK_REASONS.map((r) => (
-                <tr key={r}>
-                  <td>{ti.structure.blocked.replace('{reason}', ti.reasons[r])}</td>
-                  <td className="n">{m(blocked[r])}</td>
-                </tr>
-              ))}
-              <tr className="inv-total">
-                <td>{ti.structure.total}</td>
-                <td className="n">{m(value + blocked.quality + blocked.inventory + blocked.logistics)}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+        <ReachPanel lines={lines} />
+        <ProjectsPanel lines={lines} />
       </div>
 
-      <div className="panel">
-        <h2>{ti.problems.heading}</h2>
-        <p className="muted">{ti.problems.note}</p>
-        <PartsTable lines={problems.slice(0, PROBLEM_ROWS)} />
-        {problems.length > PROBLEM_ROWS && (
-          <p>
-            <button type="button" className="link-button" onClick={onParts}>
-              {ti.problems.more.replace('{n}', formatQuantity(problems.length, locale))}
-            </button>
-          </p>
-        )}
+      <Rankings lines={lines} />
+
+      <div className="panel inv-export">
+        <span className="muted">{ti.export.note}</span>
+        <button type="button" className="button" onClick={() => void exportParts(lines, ti, today)}>
+          {ti.export.button}
+        </button>
       </div>
-    </>
+    </section>
   );
 }
 
-/** Tabulka dílů; klik na řádek ukáže lokace dílu. */
-function PartsTable({ lines }: { lines: InventoryLine[] }) {
+/** Pruh: celá hodnota zásoby rozdělená podle potřeby, pod ním částky. */
+function MoneyPanel({ totals, known }: { totals: Record<MoneyPart, number>; known: boolean }) {
   const { t, locale } = useI18n();
-  const ti = t.inventory;
-  const tt = ti.table;
-  const [open, setOpen] = useState<string | null>(null);
-  const qty = (n: number) => formatQuantity(n, locale);
-  if (!lines.length) return <p className="muted">{tt.empty}</p>;
+  const tm = t.inventory.money;
+  const total = MONEY_PARTS.reduce((s, k) => s + totals[k], 0);
+  const parts = MONEY_PARTS.filter((k) => k !== 'other' || totals.other > 0);
   return (
-    <div className="table-scroll">
-      <table className="table table-data inv-table">
-        <thead>
-          <tr>
-            <th>{tt.item}</th>
-            <th>{tt.description}</th>
-            <th>{tt.kind}</th>
-            <th>{tt.abc}</th>
-            <th className="n">{tt.free}</th>
-            <th className="n">{tt.blocked}</th>
-            <th className="n">{tt.min}</th>
-            <th className="n">{tt.max}</th>
-            <th className="n">{tt.days}</th>
-            <th className="n">{tt.toMin}</th>
-            <th className="n">{tt.overMax}</th>
-            <th className="n" title={tt.surplusTitle}>
-              {tt.surplus}
-            </th>
-            <th className="n">{tt.value}</th>
-            <th>{tt.band}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {lines.map((l) => {
-            const expanded = open === l.item;
-            const other = l.kind === 'other';
-            return (
-              <Fragment key={l.item}>
-                <tr className={`inv-row${expanded ? ' inv-row-open' : ''}`} onClick={() => setOpen(expanded ? null : l.item)}>
-                  <td>
-                    <strong>{l.item}</strong>
-                  </td>
-                  <td className="inv-desc" title={l.description}>
-                    {l.description}
-                  </td>
-                  <td>{ti.kinds[l.kind]}</td>
-                  <td>{l.abc}</td>
-                  <td className="n">
-                    {qty(l.free)}
-                    {l.external > 0 && (
-                      <small className="cell-note">
-                        {tt.external} {qty(l.external)}
-                      </small>
-                    )}
-                  </td>
-                  <td className="n">{l.blocked ? qty(l.blocked) : '—'}</td>
-                  <td className="n">{other ? '' : qty(l.min)}</td>
-                  <td className="n">{other ? '' : qty(l.max)}</td>
-                  <td className={`n${l.band === 'crit' ? ' cell-short' : ''}`}>
-                    {other || l.band === 'none' ? '—' : l.days === null ? tt.beyond : tt.daysUnit.replace('{n}', qty(l.days))}
-                  </td>
-                  <td className={`n${l.band === 'crit' ? ' cell-short' : ''}`}>{l.toMin ? qty(l.toMin) : '—'}</td>
-                  <td className="n">{l.overMax ? qty(l.overMax) : '—'}</td>
-                  <td className="n">{l.surplus ? qty(l.surplus) : '—'}</td>
-                  <td className="n">{money(l.value, locale)}</td>
-                  <td>
-                    <span className={`inv-chip inv-band-${l.band}`} title={ti.bandHint[l.band]}>
-                      {ti.bands[l.band]}
-                    </span>
-                    {l.noNeed && <small className="cell-note muted">{ti.noNeed[l.noNeed]}</small>}
-                  </td>
-                </tr>
-                {expanded && (
-                  <tr className="inv-detail">
-                    <td colSpan={14}>
-                      <table className="table inv-locations">
-                        <thead>
-                          <tr>
-                            <th>{ti.locations.location}</th>
-                            <th>{ti.locations.status}</th>
-                            <th>{ti.locations.zone}</th>
-                            <th className="n">{ti.locations.qty}</th>
-                            <th className="n">{ti.locations.value}</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {l.locations.map((loc, k) => (
-                            <tr key={k}>
-                              <td>
-                                {loc.location}
-                                {loc.external && <small className="cell-note"> {ti.locations.external}</small>}
-                              </td>
-                              <td>
-                                {loc.status}
-                                <small className="cell-note"> {loc.blocked ? ti.reasons[loc.blocked] : ti.locations.free}</small>
-                              </td>
-                              <td>{loc.zone}</td>
-                              <td className="n">{qty(loc.qty)}</td>
-                              <td className="n">{money(loc.value, locale)}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </td>
-                  </tr>
-                )}
-              </Fragment>
-            );
-          })}
-        </tbody>
-      </table>
+    <div className="panel">
+      <div className="panel-head">
+        <h2>{tm.heading}</h2>
+        <span className="muted">{tm.note.replace('{total}', money(total, locale))}</span>
+      </div>
+      {!known && <p className="muted">{tm.noCallOffs}</p>}
+      {total > 0 && (
+        <div className="inv-money-bar" role="img" aria-label={parts.map((k) => `${tm.parts[k]} ${money(totals[k], locale)}`).join(', ')}>
+          {parts.map((k) =>
+            totals[k] > 0 ? (
+              <span key={k} className={`inv-part-${k}`} style={{ flex: totals[k] }} title={`${tm.parts[k]}: ${money(totals[k], locale)}`}>
+                {totals[k] / total >= LABEL_SHARE ? `${moneyShort(totals[k], locale)} · ${Math.round((totals[k] / total) * 100)} %` : ''}
+              </span>
+            ) : null,
+          )}
+        </div>
+      )}
+      <ul className="inv-money-split">
+        {parts.map((k) => (
+          <li key={k} title={tm.hints[k]}>
+            <span>
+              <i className={`inv-part-${k}`} /> {tm.parts[k]}
+            </span>
+            <b>{money(totals[k], locale)}</b>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
 
-/** Blokovaná zásoba po lokacích, podle hodnoty. */
-function BlockedTable({ lines }: { lines: InventoryLine[] }) {
+/** Hodnota volné zásoby podle pásma dosahu pro FG, SFG a PG; délka pruhu podle hodnoty druhu. */
+function ReachPanel({ lines }: { lines: InventoryLine[] }) {
   const { t, locale } = useI18n();
   const ti = t.inventory;
-  const rows = lines
-    .flatMap((l) => l.locations.filter((loc) => loc.blocked).map((loc) => ({ line: l, loc })))
-    .sort((a, b) => b.loc.value - a.loc.value || a.line.item.localeCompare(b.line.item));
+  const kinds = (['FG', 'SFG', 'PG'] as const).map((k) => {
+    const of = lines.filter((l) => l.kind === k);
+    return { kind: k, bands: REACH_BANDS.map((b) => sum(of.filter((l) => l.band === b), (l) => l.value)), total: sum(of, (l) => l.value) };
+  });
+  const widest = Math.max(1, ...kinds.map((k) => k.total));
+  const other = sum(
+    lines.filter((l) => l.kind === 'other'),
+    (l) => l.value,
+  );
   return (
     <div className="panel">
-      <h2>{ti.blockedTab.heading}</h2>
-      <p className="muted">{ti.blockedTab.note}</p>
+      <div className="panel-head">
+        <h2>{ti.reach.heading}</h2>
+      </div>
+      <p className="muted">{ti.reach.note}</p>
+      {kinds.map(({ kind, bands, total }) => (
+        <div key={kind} className="inv-dist-row">
+          <b>{ti.kinds[kind]}</b>
+          <div className="inv-stack-track">
+            <div
+              className="inv-stack"
+              style={{ width: `${(total / widest) * 100}%` }}
+              role="img"
+              aria-label={`${ti.kinds[kind]}: ${REACH_BANDS.map((b, i) => `${ti.bands[b]} ${money(bands[i]!, locale)}`).join(', ')}`}
+            >
+              {REACH_BANDS.map((b, i) =>
+                bands[i]! > 0 ? (
+                  <span key={b} className={`inv-band-${b}`} style={{ flex: bands[i] }} title={`${ti.bands[b]}: ${money(bands[i]!, locale)} · ${ti.bandHint[b]}`}>
+                    {bands[i]! / widest >= LABEL_SHARE ? moneyShort(bands[i]!, locale) : ''}
+                  </span>
+                ) : null,
+              )}
+            </div>
+          </div>
+          <span className="muted">{money(total, locale)}</span>
+        </div>
+      ))}
+      {other > 0 && (
+        <div className="inv-dist-row">
+          <b className="muted">{ti.kinds.other}</b>
+          <span className="muted">{ti.reach.other}</span>
+          <span className="muted">{money(other, locale)}</span>
+        </div>
+      )}
+      <ul className="inv-legend">
+        {REACH_BANDS.map((b) => (
+          <li key={b} title={ti.bandHint[b]}>
+            <i className={`inv-band-${b}`} /> {ti.bands[b]}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+/** Krátká tabulka po projektech: díl s více projekty zvlášť (hodnota se nedělí), díly bez projektu zvlášť. */
+function ProjectsPanel({ lines }: { lines: InventoryLine[] }) {
+  const { t, locale } = useI18n();
+  const tp = t.inventory.projects;
+  const m = (v: number) => (Math.abs(v) < 0.5 ? '–' : money(v, locale));
+  const groups = new Map<string, InventoryLine[]>();
+  for (const l of lines) {
+    const key = l.projects.length === 1 ? l.projects[0]! : l.projects.length === 0 ? '' : '*';
+    (groups.get(key) ?? groups.set(key, []).get(key)!).push(l);
+  }
+  const rows = [...groups].map(([key, of]) => ({ key, totals: moneyTotals(of), value: sum(of, (l) => l.value) }));
+  // Projekty podle hodnoty, společné díly a díly bez projektu na konec.
+  rows.sort((a, b) => Number(a.key === '' || a.key === '*') - Number(b.key === '' || b.key === '*') || b.value - a.value || a.key.localeCompare(b.key, 'cs'));
+  const all = moneyTotals(lines);
+  const cols: MoneyPart[] = ['overMax', 'surplus', 'none', 'blocked'];
+  const barParts: MoneyPart[] = ['needed', 'overMax', 'surplus', 'none', 'blocked'];
+  return (
+    <div className="panel">
+      <div className="panel-head">
+        <h2>{tp.heading}</h2>
+      </div>
       {rows.length === 0 ? (
-        <p className="muted">{ti.blockedTab.empty}</p>
+        <p className="muted">{tp.empty}</p>
       ) : (
         <div className="table-scroll">
-          <table className="table table-data inv-table">
+          <table className="table table-data inv-projects">
             <thead>
               <tr>
-                <th>{ti.table.item}</th>
-                <th>{ti.table.description}</th>
-                <th>{ti.table.kind}</th>
-                <th>{ti.blockedTab.reason}</th>
-                <th>{ti.locations.status}</th>
-                <th>{ti.locations.location}</th>
-                <th className="n">{ti.locations.qty}</th>
-                <th className="n">{ti.locations.value}</th>
+                <th>{tp.project}</th>
+                <th className="n">{tp.value}</th>
+                {cols.map((c) => (
+                  <th key={c} className="n">
+                    {tp.cols[c as keyof typeof tp.cols]}
+                  </th>
+                ))}
+                <th />
               </tr>
             </thead>
             <tbody>
-              {rows.map(({ line, loc }, k) => (
-                <tr key={k}>
+              {rows.map((r) => (
+                <tr key={r.key}>
+                  <td className={r.key === '' || r.key === '*' ? 'muted' : undefined}>{r.key === '' ? tp.noProject : r.key === '*' ? tp.shared : <strong>{r.key}</strong>}</td>
+                  <td className="n">{m(r.value)}</td>
+                  {cols.map((c) => (
+                    <td key={c} className="n">
+                      {m(r.totals[c])}
+                    </td>
+                  ))}
                   <td>
-                    <strong>{line.item}</strong>
+                    <div className="inv-mini" aria-hidden="true">
+                      {barParts.map((k) => (r.totals[k] > 0 ? <span key={k} className={`inv-part-${k}`} style={{ flex: r.totals[k] }} /> : null))}
+                    </div>
                   </td>
-                  <td className="inv-desc">{line.description}</td>
-                  <td>{ti.kinds[line.kind]}</td>
-                  <td>{ti.reasons[loc.blocked!]}</td>
-                  <td>{loc.status}</td>
-                  <td>{loc.location}</td>
-                  <td className="n">{formatQuantity(loc.qty, locale)}</td>
-                  <td className="n">{money(loc.value, locale)}</td>
                 </tr>
               ))}
             </tbody>
+            <tfoot>
+              <tr>
+                <td>{tp.total}</td>
+                <td className="n">{m(sum(lines, (l) => l.value))}</td>
+                {cols.map((c) => (
+                  <td key={c} className="n">
+                    {m(all[c])}
+                  </td>
+                ))}
+                <td />
+              </tr>
+            </tfoot>
           </table>
         </div>
+      )}
+    </div>
+  );
+}
+
+interface RankRow {
+  item: string;
+  sub: string;
+  amount: number;
+  note: string;
+}
+
+/** Žebříčky: největší položky nad potřebou, bez potřeby a blokované; zbytek v jednom řádku. */
+function Rankings({ lines }: { lines: InventoryLine[] }) {
+  const { t, locale } = useI18n();
+  const ti = t.inventory;
+  const tt = ti.top;
+  const sub = (l: InventoryLine) => [l.description, l.projects.join(', ')].filter(Boolean).join(' · ');
+  const over: RankRow[] = lines
+    .filter((l) => l.kind !== 'other' && l.band !== 'none')
+    .map((l) => {
+      const p = moneyParts(l);
+      return { item: l.item, sub: sub(l), amount: p.overMax + p.surplus, note: l.days === null ? tt.beyond : tt.days.replace('{n}', formatQuantity(l.days, locale)) };
+    });
+  const none: RankRow[] = lines.filter((l) => l.band === 'none').map((l) => ({ item: l.item, sub: sub(l), amount: l.value, note: l.noNeed ? ti.noNeed[l.noNeed] : '' }));
+  const blocked: RankRow[] = lines.map((l) => {
+    const locs = l.locations.filter((loc) => loc.blocked);
+    return {
+      item: l.item,
+      sub: [l.description, ...new Set(locs.map((loc) => loc.status))].filter(Boolean).join(' · '),
+      amount: l.blockedValue,
+      note: [...new Set(locs.map((loc) => ti.reasons[loc.blocked!]))].join(', '),
+    };
+  });
+  return (
+    <div className="inv-top">
+      <RankList title={tt.over} rows={over} />
+      <RankList title={tt.none} rows={none} />
+      <RankList title={tt.blocked} rows={blocked} />
+    </div>
+  );
+}
+
+function RankList({ title, rows }: { title: string; rows: RankRow[] }) {
+  const { t, locale } = useI18n();
+  const ti = t.inventory;
+  const shown = rows.filter((r) => r.amount >= 0.5).sort((a, b) => b.amount - a.amount || a.item.localeCompare(b.item));
+  const rest = shown.slice(TOP_ROWS);
+  return (
+    <div className="panel">
+      <div className="panel-head">
+        <h2>{title}</h2>
+      </div>
+      {shown.length === 0 ? (
+        <p className="muted">{ti.top.empty}</p>
+      ) : (
+        <table className="table inv-rank">
+          <tbody>
+            {shown.slice(0, TOP_ROWS).map((r) => (
+              <tr key={r.item}>
+                <td>
+                  <strong>{r.item}</strong>
+                  {r.sub && <small className="cell-note muted">{r.sub}</small>}
+                </td>
+                <td className="n">
+                  {money(r.amount, locale)}
+                  {r.note && <small className="cell-note muted">{r.note}</small>}
+                </td>
+              </tr>
+            ))}
+            {rest.length > 0 && (
+              <tr>
+                <td className="muted">{plural(rest.length, locale, ti.top.rest).replace('{n}', partsCount(rest.length, locale, ti.parts))}</td>
+                <td className="n muted">{money(rest.reduce((s, r) => s + r.amount, 0), locale)}</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
       )}
     </div>
   );
@@ -520,24 +493,26 @@ function BlockedTable({ lines }: { lines: InventoryLine[] }) {
 function exportParts(lines: InventoryLine[], ti: ReturnType<typeof useI18n>['t']['inventory'], today: DayNumber) {
   const tt = ti.table;
   const header = [tt.item, tt.description, tt.kind, ti.filters.project, ti.filters.category, tt.abc, tt.free, tt.external, tt.blocked, tt.min, tt.max, tt.days, tt.toMin, tt.overMax, tt.surplus, tt.value, tt.band];
-  const rows = lines.map((l) => [
-    l.item,
-    l.description,
-    ti.kinds[l.kind],
-    l.projects.join(', '),
-    l.categories.join(', '),
-    l.abc,
-    l.free,
-    l.external,
-    l.blocked,
-    l.kind === 'other' ? null : l.min,
-    l.kind === 'other' ? null : l.max,
-    l.days,
-    l.toMin,
-    l.overMax,
-    l.surplus,
-    Math.round(l.value),
-    ti.bands[l.band] + (l.noNeed ? ` – ${ti.noNeed[l.noNeed]}` : ''),
-  ]);
+  const rows = [...lines]
+    .sort((a, b) => b.value + b.blockedValue - (a.value + a.blockedValue) || a.item.localeCompare(b.item))
+    .map((l) => [
+      l.item,
+      l.description,
+      ti.kinds[l.kind],
+      l.projects.join(', '),
+      l.categories.join(', '),
+      l.abc,
+      l.free,
+      l.external,
+      l.blocked,
+      l.kind === 'other' ? null : l.min,
+      l.kind === 'other' ? null : l.max,
+      l.days,
+      l.toMin,
+      l.overMax,
+      l.surplus,
+      Math.round(l.value),
+      ti.bands[l.band] + (l.noNeed ? ` – ${ti.noNeed[l.noNeed]}` : ''),
+    ]);
   return downloadXlsx(`${ti.export.fileName}_${dayToIso(today)}.xlsx`, ti.export.sheet, header, rows);
 }

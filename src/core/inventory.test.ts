@@ -3,7 +3,7 @@ import { parseBom } from './bom';
 import { parseCallOffExport } from './calloffs/parse';
 import { parseCsv } from './csv';
 import { dayFromParts } from './dates';
-import { bandOf, buildInventory, byUrgency, coverageDays, demandForWorkdays, homeSite, isExternal } from './inventory';
+import { bandOf, buildInventory, coverageDays, demandForWorkdays, homeSite, isExternal, moneyParts, moneyTotals, type InventoryLine } from './inventory';
 import { parseMasterData } from './masterdata';
 import { parseStock, type StockRow } from './stock';
 
@@ -96,8 +96,19 @@ describe('Zásoby', () => {
     expect(table.negativeRows).toBe(1);
     expect(table.hasCost).toBe(true);
     expect(table.horizonEnd).toBe(day(23));
-    // naléhavost: kritické, nízké, nadbytek, bez potřeby, ostatní
-    expect([...table.lines].sort(byUrgency).map((l) => l.item)).toEqual(['FG-1', 'PG-1', 'PG-2', 'OTHER-1']);
+    expect(table.lines.map((l) => l.item)).toEqual(['FG-1', 'OTHER-1', 'PG-1', 'PG-2']);
+  });
+
+  it('kam jsou peníze: hodnota rozdělená podle potřeby, součet = volná + blokovaná hodnota', () => {
+    // 300 ks po 2 Kč, maximum 100 ks, celá potřeba 250 ks → potřebná 200 Kč, nad maximem 300 Kč, nad celou potřebu 100 Kč
+    const l = { kind: 'PG', band: 'over', free: 300, max: 100, unitCost: 2, value: 600, surplusValue: 100, blockedValue: 10 } as InventoryLine;
+    expect(moneyParts(l)).toEqual({ needed: 200, overMax: 300, surplus: 100, none: 0, blocked: 10, other: 0 });
+    // testovací sklad: FG-1 potřebná 35 × 100 a blokace 500, PG-1 do maxima 200 ks po 0,5 a nad potřebu 1800 ks,
+    // PG-2 bez potřeby, paleta mimo mapování
+    const table = buildInventory(inputs);
+    expect(moneyTotals(table.lines)).toEqual({ needed: 3600, overMax: 0, surplus: 900, none: 100, blocked: 500, other: 50 });
+    const value = table.lines.reduce((s, x) => s + x.value + x.blockedValue, 0);
+    expect(Object.values(moneyTotals(table.lines)).reduce((a, b) => a + b, 0)).toBe(value);
   });
 
   it('bez odvolávek nemá žádný díl potřebu', () => {
