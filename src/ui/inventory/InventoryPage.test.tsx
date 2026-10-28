@@ -82,7 +82,7 @@ describe('InventoryPage', () => {
     expect(value('Hodnota zásob')).toBe('4 550 Kč');
     expect(tile('Hodnota zásob').textContent).toMatch(/z toho externí 1\s000 Kč/);
     // FG-1: do minima 50 chybí 15 ks po 100 Kč
-    expect(value('Doplnit do minima')).toBe('1 500 Kč');
+    expect(value('Doplnit do 5 dní')).toBe('1 500 Kč');
     expect(value('Nad maximem (20 dní)')).toBe('0 Kč');
     // PG-1: 2000 ks, celá potřeba 200 ks → 1800 ks po 0,5 Kč
     expect(value('Nad celou potřebu')).toBe('900 Kč');
@@ -102,7 +102,7 @@ describe('InventoryPage', () => {
       ['bez projektu', '50 Kč', '–', '–', '–', '100 Kč', ''],
       ['Celkem', '4 550 Kč', '–', '900 Kč', '–', '600 Kč', ''],
     ]);
-    expect(texts(panel('Nejvíc peněz nad potřebou').querySelectorAll('tr'))).toEqual([['PG-1CLIP · P1', '900 Kčnad celou potřebu']]);
+    expect(texts(panel('Nejvíc peněz nad potřebou').querySelectorAll('tr'))).toEqual([['PG-1CLIP · P1', '900 Kčdosah 10+ dní']]);
     expect(within(panel('Bez potřeby')).getByText('Nic.')).toBeTruthy();
     expect(texts(panel('Blokováno').querySelectorAll('tr'))).toEqual([
       ['FG-1PANEL LHD · QH', '500 Kčkvalita'],
@@ -118,7 +118,7 @@ describe('InventoryPage', () => {
     expect(reach.getByTitle(/^FG · nízké: 3\s500 Kč/).textContent).toBe('100 %');
     fireEvent.click(reach.getByRole('button', { name: /^PG · nadbytek 1\s000 Kč$/ }));
     const detail = within(screen.getByRole('region', { name: 'PG · nadbytek' }));
-    expect(texts(detail.getAllByRole('row').slice(1))).toEqual([['PG-1', 'CLIP', 'P1', 'celý horizont', '900 Kč', '1 000 Kč']]);
+    expect(texts(detail.getAllByRole('row').slice(1))).toEqual([['PG-1', 'CLIP', 'P1', '10+ d', '900 Kč', '1 000 Kč']]);
     expect(detail.getByRole('button', { name: 'Excel – díly' })).toBeTruthy();
     fireEvent.click(detail.getByRole('button', { name: 'Zavřít detail' }));
     expect(screen.queryByRole('region', { name: 'PG · nadbytek' })).toBeNull();

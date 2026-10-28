@@ -113,6 +113,8 @@ export interface InventoryTable {
   lines: InventoryLine[];
   /** Poslední den potřeby (konec exportu odvolávek); null bez odvolávek. */
   horizonEnd: DayNumber | null;
+  /** Počet pracovních dní od dneška do konce odvolávek: zásoba na celý horizont má dosah „aspoň tolik“ (např. 150+). */
+  horizonWorkdays: number;
   /** Řádky se záporným množstvím (do zásoby se nepočítají). */
   negativeRows: number;
   /** Export obsahuje ceny (sloupec Standard Cost). */
@@ -265,7 +267,7 @@ export function buildInventory({ stock, master, boms, callOffs, today, scope = '
     });
   }
   lines.sort((a, b) => a.item.localeCompare(b.item));
-  return { lines, horizonEnd: last, negativeRows, hasCost: stock.rows.some((r) => r.cost !== null) };
+  return { lines, horizonEnd: last, horizonWorkdays: days.filter((d) => weekday(d) <= 5).length, negativeRows, hasCost: stock.rows.some((r) => r.cost !== null) };
 }
 
 /**

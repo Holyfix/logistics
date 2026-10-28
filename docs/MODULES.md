@@ -140,7 +140,7 @@ Filtry projekt, kategorie, strana (LHD/RHD) a varianta z kmenových dat se ovliv
 - ✅ **Dosah zásoby** v pracovních dnech: kolik dní volná zásoba pokryje potřebu den po dni – FG z odvolávek, SFG a PG
   přes kusovník (odvolávky × množství na 1 ks hotového dílu, bez odečtu skladu hotových dílů jako v Komponentách);
   **minimum** = potřeba na 5 pracovních dní, **maximum** = na 20 pracovních dní
-- ✅ **Dlaždice v Kč:** hodnota zásob (z toho externí), doplnit do minima (z toho kritické), nad maximem (spotřebuje se
+- ✅ **Dlaždice v Kč:** hodnota zásob (z toho externí), doplnit do 5 dní (z toho kritické), nad maximem (spotřebuje se
   později), nad celou potřebu (do konce odvolávek se nespotřebuje), bez potřeby (z toho není v kusovníku), blokováno
   podle důvodu. Poslední pohyb z ERP se nepoužívá (pole není spolehlivé)
 - ✅ **Kam jsou peníze uložené:** pruh celé hodnoty zásoby – potřebná (do maxima), nad maximem, nad celou potřebu,
@@ -148,6 +148,7 @@ Filtry projekt, kategorie, strana (LHD/RHD) a varianta z kmenových dat se ovliv
 - ✅ **Hodnota podle dosahu** v Kč pro FG, SFG a PG (pásma kritické pod 2 dny, nízké 2–5, v pořádku 5–20, vysoké 20–40,
   nadbytek nad 40 nebo nad potřebu celého horizontu, bez potřeby): každý druh na celou šířku (podíl v rámci druhu),
   pod pruhem částky všech pásem; klik na pásmo nebo na „mimo mapování“ ukáže 10 největších dílů a Excel s díly
+- ✅ Dosah zásoby, která vystačí na celé odvolávky, jako počet pracovních dní do konce odvolávek s „+“ (např. 150+)
 - ✅ **Po projektech:** hodnota, nad maximem, nad potřebou, bez potřeby a blokováno; díly ve více projektech a bez
   projektu zvlášť
 - ✅ **Žebříčky** (5 největších + zbytek v jednom řádku): nejvíc peněz nad potřebou, bez potřeby (s důvodem), blokováno

@@ -559,8 +559,8 @@ export const cs = {
     tiles: {
       value: 'Hodnota zásob',
       valueNote: 'volná · z toho externí {external}',
-      toMin: 'Doplnit do minima',
-      toMinNote: 'z toho kritické (pod 2 dny) {crit}',
+      toMin: 'Doplnit do 5 dní',
+      toMinNote: 'chybí do zásoby na 5 prac. dní · z toho díly s dosahem pod 2 dny {crit}',
       overMax: 'Nad maximem (20 dní)',
       overMaxNote: 'spotřebuje se, ale později',
       surplus: 'Nad celou potřebu',
@@ -612,7 +612,6 @@ export const cs = {
         close: 'Zavřít detail',
         reach: 'Dosah',
         over: 'Nad max.',
-        beyond: 'celý horizont',
         daysUnit: '{n} d',
       },
     },
@@ -632,7 +631,6 @@ export const cs = {
       blocked: 'Blokováno',
       rest: { one: 'další {n}', few: 'další {n}', other: 'dalších {n}' },
       days: 'dosah {n} dní',
-      beyond: 'nad celou potřebu',
       empty: 'Nic.',
     },
     table: {
