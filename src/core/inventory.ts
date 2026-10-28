@@ -1,4 +1,5 @@
-// Zásoby (zdraví skladu): dosah zásoby podle potřeby zákazníka, minimum a maximum, nadbytek, blokace a hodnota.
+// Zásoby (zdraví skladu): rozbor aktuální zásoby – jen díly, které skladem jsou (chybějící díly řeší Komponenty).
+// Dosah zásoby podle potřeby zákazníka, minimum a maximum, nadbytek, zásoba nad celou potřebu, blokace a hodnota.
 // Potřeba den po dni: hotové díly (FG) z odvolávek, polotovary (SFG) a nakupované díly (PG) přes kusovník
 // (odvolávky × množství na 1 ks hotového dílu, bez odečtu skladu hotových dílů – stejně jako modul Komponenty).
 
@@ -17,9 +18,6 @@ export const OVER_DAYS = 40;
 /** Minimum = potřeba na 5 pracovních dní, maximum = na 20 pracovních dní. */
 export const MIN_DAYS = LOW_DAYS;
 export const MAX_DAYS = HIGH_DAYS;
-/** Ležák: bez pohybu aspoň 180 dní. */
-export const IDLE_DAYS = 180;
-
 export type Band = 'crit' | 'low' | 'ok' | 'high' | 'over' | 'none' | 'other';
 export const BANDS: readonly Band[] = ['crit', 'low', 'ok', 'high', 'over', 'none', 'other'];
 
@@ -46,6 +44,12 @@ export const isExternal = (row: StockRow, home: string, excluded: (location: str
 
 export type Scope = 'all' | 'internal' | 'external';
 
+/**
+ * Proč díl se zásobou nemá do konce odvolávek potřebu: není v kusovníku žádného načteného hotového dílu (doběhlý díl,
+ * kandidát na odpis), nebo je hotový díl / jeho hotové díly teď nemají odvolávky.
+ */
+export type NoNeedReason = 'notInBom' | 'noCallOffs';
+
 export interface InventoryLocation {
   location: string;
   status: string;
@@ -54,7 +58,6 @@ export interface InventoryLocation {
   value: number;
   external: boolean;
   blocked: BlockReason | null;
-  lastMove: DayNumber | null;
 }
 
 export interface InventoryLine {
@@ -87,10 +90,11 @@ export interface InventoryLine {
   /** Kolik kusů chybí do minima a kolik je nad maximem. */
   toMin: number;
   overMax: number;
-  /** Nejnovější pohyb na lokacích se zásobou. */
-  lastMove: DayNumber | null;
-  /** Ležák: zásoba bez pohybu aspoň IDLE_DAYS. */
-  idle: boolean;
+  /** Zásoba nad celou potřebu do konce odvolávek: volná zásoba, která se podle odvolávek nespotřebuje (kusy a hodnota). */
+  surplus: number;
+  surplusValue: number;
+  /** U pásma „bez potřeby“ důvod; jinak null. */
+  noNeed: NoNeedReason | null;
   locations: InventoryLocation[];
 }
 
@@ -153,9 +157,9 @@ export function demandForWorkdays(demand: readonly number[], days: readonly DayN
 }
 
 /**
- * Zásoby po dílech: volná a blokovaná zásoba (interní i externí lokace podle `scope`), hodnota, potřeba po dnech
- * z odvolávek a kusovníku, dosah, minimum a maximum. Díly z mapování s potřebou se ukážou i bez zásoby (kritické);
- * díly mimo mapování jsou „ostatní“ jen s hodnotou.
+ * Zásoby po dílech: jen díly se zásobou (volnou nebo blokovanou) na lokacích podle `scope`; díly bez zásoby se neukazují
+ * (chybějící díly řeší Komponenty, mezivýroba, která se neskladuje, tu nepřekáží). Hodnota, potřeba po dnech
+ * z odvolávek a kusovníku, dosah, minimum a maximum, zásoba nad celou potřebu; díly mimo mapování jsou „ostatní“ jen s hodnotou.
  */
 export function buildInventory({ stock, master, boms, callOffs, today, scope = 'all', excludedLocation = isExcludedLocation }: InventoryInputs): InventoryTable {
   const home = homeSite(stock.rows);
@@ -205,17 +209,14 @@ export function buildInventory({ stock, master, boms, callOffs, today, scope = '
     (byItem.get(row.item) ?? byItem.set(row.item, []).get(row.item)!).push(row);
   }
 
-  const items = new Set([...byItem.keys(), ...[...demand.keys()].filter((i) => masterByItem.get(i)?.kind)]);
   const lines: InventoryLine[] = [];
-  for (const item of items) {
-    const rows = byItem.get(item) ?? [];
+  for (const [item, rows] of byItem) {
     const m = masterByItem.get(item);
     const kind: Kind = m?.kind || 'other';
     const unitCost = rows.find((r) => r.cost)?.cost ?? 0;
     const blockedBy: Record<BlockReason, number> = { quality: 0, inventory: 0, logistics: 0 };
     let free = 0;
     let external = 0;
-    let lastMove: DayNumber | null = null;
     const locations: InventoryLocation[] = rows.map((r) => {
       const ext = isExternal(r, home, excludedLocation);
       const blocked = blockReason(r.status);
@@ -224,8 +225,7 @@ export function buildInventory({ stock, master, boms, callOffs, today, scope = '
         free += r.qty;
         if (ext) external += r.qty;
       }
-      if (r.lastMove !== null && (lastMove === null || r.lastMove > lastMove)) lastMove = r.lastMove;
-      return { location: r.location, status: r.status, zone: r.zone, qty: r.qty, value: r.qty * (r.cost ?? unitCost), external: ext, blocked, lastMove: r.lastMove };
+      return { location: r.location, status: r.status, zone: r.zone, qty: r.qty, value: r.qty * (r.cost ?? unitCost), external: ext, blocked };
     });
     const blocked = blockedBy.quality + blockedBy.inventory + blockedBy.logistics;
     const need = kind === 'other' ? days.map(() => 0) : (demand.get(item) ?? days.map(() => 0));
@@ -233,6 +233,9 @@ export function buildInventory({ stock, master, boms, callOffs, today, scope = '
     const min = demandForWorkdays(need, days, MIN_DAYS);
     const max = demandForWorkdays(need, days, MAX_DAYS);
     const covered = horizonDemand > 0 ? coverageDays(free, need, days) : null;
+    const band = kind === 'other' ? 'other' : bandOf(covered, horizonDemand);
+    // Bez odvolávek se potřeba nedá posoudit: nad potřebu ani důvod „bez potřeby“ se neurčují.
+    const surplus = kind === 'other' || last === null ? 0 : Math.max(0, free - horizonDemand);
     lines.push({
       item,
       description: m?.description || stock.descriptions.get(item) || '',
@@ -252,11 +255,12 @@ export function buildInventory({ stock, master, boms, callOffs, today, scope = '
       max,
       horizonDemand,
       days: covered,
-      band: kind === 'other' ? 'other' : bandOf(covered, horizonDemand),
+      band,
       toMin: Math.max(0, min - free),
       overMax: kind === 'other' || horizonDemand <= 0 ? 0 : Math.max(0, free - max),
-      lastMove,
-      idle: free + blocked > 0 && lastMove !== null && today - lastMove >= IDLE_DAYS,
+      surplus,
+      surplusValue: surplus * unitCost,
+      noNeed: band === 'none' && last !== null ? (kind !== 'FG' && !usedIn.has(item) ? 'notInBom' : 'noCallOffs') : null,
       locations,
     });
   }

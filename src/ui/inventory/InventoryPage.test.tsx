@@ -81,16 +81,18 @@ describe('InventoryPage', () => {
     expect(tile('Kritické · pod 2 dny').querySelector('.kpi-value')!.textContent).toBe('0');
     expect(tile('Pod minimem · 5 dní').querySelector('.kpi-value')!.textContent).toBe('1');
     expect(tile('Nadbytek · nad 40 dní').querySelector('.kpi-value')!.textContent).toBe('1');
-    expect(tile('Ležáky · 180+ dní').querySelector('.kpi-value')!.textContent).toBe('1');
+    // bez potřeby: PG-2 (jen blokovaná zásoba, není v kusovníku); nad celou potřebu: PG-1 1800 ks po 0,5 Kč
+    expect(tile('Bez potřeby').textContent).toMatch(/^Bez potřeby1dílů · 100 Kč, z toho není v kusovníku 100 Kč$/);
+    expect(tile('Nad celou potřebu').textContent).toMatch(/900 Kč1 díl · zásoba/);
     expect(tile('Blokováno').textContent).toMatch(/600 Kč.*kvalita 500 Kč · inventura 100 Kč/);
     expect(screen.getByRole('img', { name: /^FG: kritické 0, nízké 1/ })).toBeTruthy();
     // díly mimo pásmo v pořádku: nízké, nadbytek, bez potřeby
     const fg = rowOf('FG-1');
     expect([...fg.querySelectorAll('td')].map((td) => td.textContent!.replace(/\u00a0/g, ' '))).toEqual([
-      'FG-1', 'PANEL LHD', 'FG', 'A', '35z toho externí 10', '5', '50', '100', '3 d', '15', '—', '3 500 Kč', '11. 10.', 'nízké',
+      'FG-1', 'PANEL LHD', 'FG', 'A', '35z toho externí 10', '5', '50', '100', '3 d', '15', '—', '—', '3 500 Kč', 'nízké',
     ]);
     expect(rowOf('PG-1').textContent).toContain('nadbytek');
-    expect(rowOf('PG-2').textContent).toContain('bez potřeby');
+    expect(rowOf('PG-2').textContent).toContain('bez potřebynení v kusovníku');
     // lokace po kliknutí
     fireEvent.click(fg);
     const detail = fg.nextElementSibling as HTMLElement;

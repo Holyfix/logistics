@@ -184,7 +184,7 @@ export function InventoryPage({ today = localToday() }: { today?: DayNumber } = 
       {!table.hasCost && <p className="banner banner-warn">{ti.noCost}</p>}
       {table.negativeRows > 0 && <p className="muted">{ti.negative.replace('{n}', formatQuantity(table.negativeRows, locale))}</p>}
 
-      {tab === 'overview' && <Overview lines={filtered} today={today} onParts={() => setTab('parts')} />}
+      {tab === 'overview' && <Overview lines={filtered} onParts={() => setTab('parts')} />}
       {tab === 'parts' && (
         <div className="panel">
           <div className="filters" role="group" aria-label={ti.tabs.parts}>
@@ -209,23 +209,24 @@ export function InventoryPage({ today = localToday() }: { today?: DayNumber } = 
               {ti.export.button}
             </button>
           </div>
-          <PartsTable lines={parts} today={today} />
+          <PartsTable lines={parts} />
         </div>
       )}
-      {tab === 'blocked' && <BlockedTable lines={filtered} today={today} />}
+      {tab === 'blocked' && <BlockedTable lines={filtered} />}
     </section>
   );
 }
 
-function Overview({ lines, today, onParts }: { lines: InventoryLine[]; today: DayNumber; onParts: () => void }) {
+function Overview({ lines, onParts }: { lines: InventoryLine[]; onParts: () => void }) {
   const { t, locale } = useI18n();
   const ti = t.inventory;
   const m = (v: number) => money(v, locale);
   const crit = lines.filter((l) => l.band === 'crit');
   const low = lines.filter((l) => l.toMin > 0);
   const over = lines.filter((l) => l.band === 'over');
-  const idle = lines.filter((l) => l.idle);
-  const idleValue = (l: InventoryLine) => l.value + l.blockedValue;
+  const none = lines.filter((l) => l.band === 'none');
+  const stockValue = (l: InventoryLine) => l.value + l.blockedValue;
+  const surplus = lines.filter((l) => l.surplus > 0);
   const blocked = Object.fromEntries(BLOCK_REASONS.map((r) => [r, sum(lines, (l) => l.blockedBy[r] * l.unitCost)])) as Record<(typeof BLOCK_REASONS)[number], number>;
   const value = sum(lines, (l) => l.value);
   const external = sum(lines, (l) => l.externalValue);
@@ -237,9 +238,14 @@ function Overview({ lines, today, onParts }: { lines: InventoryLine[]; today: Da
     { label: ti.tiles.low, value: formatQuantity(low.length, locale), note: ti.tiles.lowNote.replace('{value}', m(sum(low, (l) => l.toMin * l.unitCost))) },
     { label: ti.tiles.over, value: formatQuantity(over.length, locale), note: ti.tiles.overNote.replace('{value}', m(sum(over, (l) => l.overMax * l.unitCost))) },
     {
-      label: ti.tiles.idle,
-      value: formatQuantity(idle.length, locale),
-      note: ti.tiles.idleNote.replace('{value}', m(sum(idle, idleValue))).replace('{none}', m(sum(idle.filter((l) => l.band === 'none'), idleValue))),
+      label: ti.tiles.none,
+      value: formatQuantity(none.length, locale),
+      note: ti.tiles.noneNote.replace('{value}', m(sum(none, stockValue))).replace('{notInBom}', m(sum(none.filter((l) => l.noNeed === 'notInBom'), stockValue))),
+    },
+    {
+      label: ti.tiles.surplus,
+      value: m(sum(surplus, (l) => l.surplusValue)),
+      note: ti.tiles.surplusNote.replace('{n}', partsCount(surplus.length, locale, ti.parts)),
     },
     {
       label: ti.tiles.blocked,
@@ -333,7 +339,7 @@ function Overview({ lines, today, onParts }: { lines: InventoryLine[]; today: Da
       <div className="panel">
         <h2>{ti.problems.heading}</h2>
         <p className="muted">{ti.problems.note}</p>
-        <PartsTable lines={problems.slice(0, PROBLEM_ROWS)} today={today} />
+        <PartsTable lines={problems.slice(0, PROBLEM_ROWS)} />
         {problems.length > PROBLEM_ROWS && (
           <p>
             <button type="button" className="link-button" onClick={onParts}>
@@ -347,13 +353,12 @@ function Overview({ lines, today, onParts }: { lines: InventoryLine[]; today: Da
 }
 
 /** Tabulka dílů; klik na řádek ukáže lokace dílu. */
-function PartsTable({ lines, today }: { lines: InventoryLine[]; today: DayNumber }) {
+function PartsTable({ lines }: { lines: InventoryLine[] }) {
   const { t, locale } = useI18n();
   const ti = t.inventory;
   const tt = ti.table;
   const [open, setOpen] = useState<string | null>(null);
   const qty = (n: number) => formatQuantity(n, locale);
-  const date = (d: DayNumber | null) => (d === null ? '—' : dayText(d, today, locale));
   if (!lines.length) return <p className="muted">{tt.empty}</p>;
   return (
     <div className="table-scroll">
@@ -371,8 +376,10 @@ function PartsTable({ lines, today }: { lines: InventoryLine[]; today: DayNumber
             <th className="n">{tt.days}</th>
             <th className="n">{tt.toMin}</th>
             <th className="n">{tt.overMax}</th>
+            <th className="n" title={tt.surplusTitle}>
+              {tt.surplus}
+            </th>
             <th className="n">{tt.value}</th>
-            <th className="n">{tt.lastMove}</th>
             <th>{tt.band}</th>
           </tr>
         </thead>
@@ -407,23 +414,18 @@ function PartsTable({ lines, today }: { lines: InventoryLine[]; today: DayNumber
                   </td>
                   <td className={`n${l.band === 'crit' ? ' cell-short' : ''}`}>{l.toMin ? qty(l.toMin) : '—'}</td>
                   <td className="n">{l.overMax ? qty(l.overMax) : '—'}</td>
+                  <td className="n">{l.surplus ? qty(l.surplus) : '—'}</td>
                   <td className="n">{money(l.value, locale)}</td>
-                  <td className={`n${l.idle ? ' cell-short' : ''}`} title={l.idle ? tt.idle : undefined}>
-                    {date(l.lastMove)}
-                  </td>
                   <td>
                     <span className={`inv-chip inv-band-${l.band}`} title={ti.bandHint[l.band]}>
                       {ti.bands[l.band]}
                     </span>
-                    {l.idle && <span className="inv-chip inv-idle">{tt.idle}</span>}
+                    {l.noNeed && <small className="cell-note muted">{ti.noNeed[l.noNeed]}</small>}
                   </td>
                 </tr>
                 {expanded && (
                   <tr className="inv-detail">
                     <td colSpan={14}>
-                      {l.locations.length === 0 ? (
-                        <p className="muted">{ti.locations.none}</p>
-                      ) : (
                       <table className="table inv-locations">
                         <thead>
                           <tr>
@@ -432,7 +434,6 @@ function PartsTable({ lines, today }: { lines: InventoryLine[]; today: DayNumber
                             <th>{ti.locations.zone}</th>
                             <th className="n">{ti.locations.qty}</th>
                             <th className="n">{ti.locations.value}</th>
-                            <th className="n">{ti.locations.lastMove}</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -449,12 +450,10 @@ function PartsTable({ lines, today }: { lines: InventoryLine[]; today: DayNumber
                               <td>{loc.zone}</td>
                               <td className="n">{qty(loc.qty)}</td>
                               <td className="n">{money(loc.value, locale)}</td>
-                              <td className="n">{date(loc.lastMove)}</td>
                             </tr>
                           ))}
                         </tbody>
                       </table>
-                      )}
                     </td>
                   </tr>
                 )}
@@ -468,7 +467,7 @@ function PartsTable({ lines, today }: { lines: InventoryLine[]; today: DayNumber
 }
 
 /** Blokovaná zásoba po lokacích, podle hodnoty. */
-function BlockedTable({ lines, today }: { lines: InventoryLine[]; today: DayNumber }) {
+function BlockedTable({ lines }: { lines: InventoryLine[] }) {
   const { t, locale } = useI18n();
   const ti = t.inventory;
   const rows = lines
@@ -493,7 +492,6 @@ function BlockedTable({ lines, today }: { lines: InventoryLine[]; today: DayNumb
                 <th>{ti.locations.location}</th>
                 <th className="n">{ti.locations.qty}</th>
                 <th className="n">{ti.locations.value}</th>
-                <th className="n">{ti.locations.lastMove}</th>
               </tr>
             </thead>
             <tbody>
@@ -509,7 +507,6 @@ function BlockedTable({ lines, today }: { lines: InventoryLine[]; today: DayNumb
                   <td>{loc.location}</td>
                   <td className="n">{formatQuantity(loc.qty, locale)}</td>
                   <td className="n">{money(loc.value, locale)}</td>
-                  <td className="n">{loc.lastMove === null ? '—' : dayText(loc.lastMove, today, locale)}</td>
                 </tr>
               ))}
             </tbody>
@@ -522,7 +519,7 @@ function BlockedTable({ lines, today }: { lines: InventoryLine[]; today: DayNumb
 
 function exportParts(lines: InventoryLine[], ti: ReturnType<typeof useI18n>['t']['inventory'], today: DayNumber) {
   const tt = ti.table;
-  const header = [tt.item, tt.description, tt.kind, ti.filters.project, ti.filters.category, tt.abc, tt.free, tt.external, tt.blocked, tt.min, tt.max, tt.days, tt.toMin, tt.overMax, tt.value, tt.lastMove, tt.band];
+  const header = [tt.item, tt.description, tt.kind, ti.filters.project, ti.filters.category, tt.abc, tt.free, tt.external, tt.blocked, tt.min, tt.max, tt.days, tt.toMin, tt.overMax, tt.surplus, tt.value, tt.band];
   const rows = lines.map((l) => [
     l.item,
     l.description,
@@ -538,9 +535,9 @@ function exportParts(lines: InventoryLine[], ti: ReturnType<typeof useI18n>['t']
     l.days,
     l.toMin,
     l.overMax,
+    l.surplus,
     Math.round(l.value),
-    l.lastMove === null ? null : dayToIso(l.lastMove),
-    ti.bands[l.band] + (l.idle ? `, ${tt.idle}` : ''),
+    ti.bands[l.band] + (l.noNeed ? ` – ${ti.noNeed[l.noNeed]}` : ''),
   ]);
   return downloadXlsx(`${ti.export.fileName}_${dayToIso(today)}.xlsx`, ti.export.sheet, header, rows);
 }

@@ -72,7 +72,7 @@ describe('Zásoby', () => {
     const fg = line('FG-1');
     expect(fg).toMatchObject({ kind: 'FG', projects: ['P1'], categories: ['DP'], abc: 'A', free: 35, external: 10, blocked: 5, value: 3500, externalValue: 1000, blockedValue: 500 });
     expect(fg.blockedBy).toEqual({ quality: 5, inventory: 0, logistics: 0 });
-    expect(fg).toMatchObject({ days: 3, band: 'low', min: 50, max: 100, toMin: 15, overMax: 0, lastMove: dayFromParts(2026, 10, 11), idle: false });
+    expect(fg).toMatchObject({ days: 3, band: 'low', min: 50, max: 100, toMin: 15, overMax: 0, surplus: 0, noNeed: null });
     expect(fg.locations.map((l) => [l.location, l.external, l.blocked])).toEqual([
       ['A-01', false, null],
       ['SEQ-1', true, null],
@@ -83,22 +83,36 @@ describe('Zásoby', () => {
     expect(line('FG-1', 'external')).toMatchObject({ free: 10, external: 10, blocked: 0 });
   });
 
-  it('SFG a PG přes kusovník; bez zásoby kritické, zásoba na celý horizont nadbytek; bez potřeby a ležák; ostatní jen hodnota', () => {
-    expect(line('SFG-1')).toMatchObject({ kind: 'SFG', projects: ['P1'], free: 0, days: 0, band: 'crit', min: 50, toMin: 50 });
+  it('jen díly se zásobou; PG přes kusovník, zásoba nad celou potřebu; bez potřeby s důvodem; ostatní jen hodnota', () => {
+    // SFG-1 má potřebu, ale skladem není (mezivýroba): v Zásobách se neukáže, chybějící díly řeší Komponenty
+    expect(line('SFG-1')).toBeUndefined();
     expect(line('PG-1')).toMatchObject({ kind: 'PG', projects: ['P1'], categories: ['DP'], free: 2000, value: 1000, horizonDemand: 200, days: null, band: 'over', max: 200, overMax: 1800 });
-    expect(line('PG-2')).toMatchObject({ band: 'none', horizonDemand: 0, overMax: 0, idle: true });
-    expect(line('OTHER-1')).toMatchObject({ kind: 'other', band: 'other', value: 50, description: 'PALLET' });
+    // nad celou potřebu do konce odvolávek: 2000 − 200 = 1800 ks po 0,5
+    expect(line('PG-1')).toMatchObject({ surplus: 1800, surplusValue: 900, noNeed: null });
+    // PG-2 není v žádném kusovníku: bez potřeby, celá zásoba nad potřebu
+    expect(line('PG-2')).toMatchObject({ band: 'none', horizonDemand: 0, overMax: 0, surplus: 50, noNeed: 'notInBom' });
+    expect(line('OTHER-1')).toMatchObject({ kind: 'other', band: 'other', value: 50, description: 'PALLET', surplus: 0, noNeed: null });
     const table = buildInventory(inputs);
     expect(table.negativeRows).toBe(1);
     expect(table.hasCost).toBe(true);
     expect(table.horizonEnd).toBe(day(23));
     // naléhavost: kritické, nízké, nadbytek, bez potřeby, ostatní
-    expect([...table.lines].sort(byUrgency).map((l) => l.item)).toEqual(['SFG-1', 'FG-1', 'PG-1', 'PG-2', 'OTHER-1']);
+    expect([...table.lines].sort(byUrgency).map((l) => l.item)).toEqual(['FG-1', 'PG-1', 'PG-2', 'OTHER-1']);
   });
 
   it('bez odvolávek nemá žádný díl potřebu', () => {
     const table = buildInventory({ ...inputs, callOffs: undefined });
     expect(table.horizonEnd).toBeNull();
-    expect(table.lines.find((l) => l.item === 'FG-1')!.band).toBe('none');
+    expect(table.lines.find((l) => l.item === 'FG-1')).toMatchObject({ band: 'none', surplus: 0, noNeed: null });
+  });
+
+  it('bez potřeby: hotový díl bez odvolávek a komponenta jeho kusovníku', () => {
+    const other = parseCallOffExport(parseCsv('Item Number,Date,Discrete Qty\nFG-9,12.10.2026,10'), 'Odvolavky_CW42.csv');
+    if (!other.ok) throw new Error();
+    const table = buildInventory({ ...inputs, callOffs: other.value });
+    const by = (item: string) => table.lines.find((l) => l.item === item)!;
+    expect(by('FG-1')).toMatchObject({ band: 'none', noNeed: 'noCallOffs', surplus: 35 });
+    expect(by('PG-1')).toMatchObject({ band: 'none', noNeed: 'noCallOffs' });
+    expect(by('PG-2')).toMatchObject({ band: 'none', noNeed: 'notInBom' });
   });
 });

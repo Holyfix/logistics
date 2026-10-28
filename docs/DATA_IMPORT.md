@@ -168,7 +168,7 @@ Soubor obsahuje celý sklad, takže ho mohou použít i další moduly (Komponen
 | Status | Inventory Status | pro Zásoby (blokace) |
 | Standard Cost | Unit Cost, Cena | pro Zásoby (hodnota, Kč za jednotku) |
 | Site | Závod | pro Zásoby (externí sklady) |
-| OID Date (Last Transaction Date) | Last Transaction Date, Poslední pohyb | pro Zásoby (ležáky) |
+| OID Date (Last Transaction Date) | Last Transaction Date, Poslední pohyb | načte se, Zásoby ho nepoužívají (pole v ERP není spolehlivé) |
 | ABC Class | ABC | ne (filtr v Zásobách) |
 | Area ID, Warehouse ID, Description | | ne |
 
