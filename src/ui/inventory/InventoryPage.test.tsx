@@ -116,15 +116,17 @@ describe('InventoryPage', () => {
     const reach = within(panel('Hodnota podle dosahu'));
     // FG-1 je celý v pásmu nízké: úsek přes celou šířku se 100 %
     expect(reach.getByTitle(/^FG · nízké: 3\s500 Kč/).textContent).toBe('100 %');
-    fireEvent.click(reach.getByRole('button', { name: /^PG · nadbytek 1\s000 Kč$/ }));
-    const detail = within(screen.getByRole('region', { name: 'PG · nadbytek' }));
+    // PG-1: 200 ks na celou potřebu (do 20 dní) za 100 Kč, 1800 ks nad celou potřebu za 900 Kč
+    expect(reach.getByRole('button', { name: /^PG · do 20 dní 100 Kč$/ })).toBeTruthy();
+    fireEvent.click(reach.getByRole('button', { name: /^PG · nad celou potřebu 900 Kč$/ }));
+    const detail = within(screen.getByRole('region', { name: 'PG · nad celou potřebu' }));
     expect(texts(detail.getAllByRole('row').slice(1))).toEqual([['PG-1', 'CLIP', 'P1', '10+ d', '900 Kč', '1 000 Kč']]);
     expect(detail.getByRole('button', { name: 'Excel – díly' })).toBeTruthy();
     fireEvent.click(detail.getByRole('button', { name: 'Zavřít detail' }));
-    expect(screen.queryByRole('region', { name: 'PG · nadbytek' })).toBeNull();
+    expect(screen.queryByRole('region', { name: 'PG · nad celou potřebu' })).toBeNull();
     // mimo mapování: paleta
     fireEvent.click(reach.getByRole('button', { name: /50 Kč · 1 díl/ }));
-    expect(texts(within(screen.getByRole('region', { name: 'Mimo mapování (obaly, palety…)' })).getAllByRole('row').slice(1))).toEqual([['PAL-1', 'PALLET', '–', '—', '—', '50 Kč']]);
+    expect(texts(within(screen.getByRole('region', { name: 'Mimo mapování (obaly, palety…)' })).getAllByRole('row').slice(1))).toEqual([['PAL-1', 'PALLET', '–', '—', '50 Kč', '50 Kč']]);
   });
 
   it('sklad jen interní a filtr druhu', () => {

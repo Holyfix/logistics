@@ -2226,6 +2226,11 @@ button.oil-step:disabled {
 }
 
 .inv-band-over {
+  --inv: #b9a3e0;
+  --inv-ink: #2e1c52;
+}
+
+.inv-band-surplus {
   --inv: #8a5cc7;
 }
 

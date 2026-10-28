@@ -8,10 +8,11 @@ import {
   MONEY_PARTS,
   moneyParts,
   moneyTotals,
-  type Band,
+  REACH_SLICES,
   type InventoryLine,
   type Kind,
   type MoneyPart,
+  type ReachSlice,
   type Scope,
 } from '../../core/inventory';
 import { useI18n } from '../../i18n/I18nProvider';
@@ -22,9 +23,6 @@ import { Icon } from '../icons';
 
 /** Kolik největších položek ukazují žebříčky; zbytek se sečte do jednoho řádku. */
 const TOP_ROWS = 5;
-
-/** Pásma dosahu v grafu hodnoty (bez „ostatní“). */
-const REACH_BANDS: readonly Band[] = ['crit', 'low', 'ok', 'high', 'over', 'none'];
 
 /** Popisek úseku pruhu jen u úseků aspoň takového podílu (jinak se nevejde). */
 const LABEL_SHARE = 0.1;
@@ -290,22 +288,23 @@ const DETAIL_ROWS = 10;
 const PERCENT_SHARE = 0.06;
 
 /**
- * Hodnota volné zásoby podle pásma dosahu: FG, SFG a PG každý na celou šířku (úseky = podíl v rámci druhu), pod pruhem
- * částky všech pásem. Klik na pásmo (nebo na „mimo mapování“) ukáže pod grafem největší díly a Excel s díly.
+ * Hodnota volné zásoby podle doby spotřeby (ReachSlice): díl se rozdělí do pásem podle toho, kdy se jeho zásoba
+ * spotřebuje, ne celou hodnotou do jednoho pásma. FG, SFG a PG každý na celou šířku (úseky = podíl v rámci druhu), pod
+ * pruhem částky všech pásem. Klik na pásmo (nebo na „mimo mapování“) ukáže pod grafem největší díly a Excel s díly.
  */
 function ReachPanel({ lines, today, horizonWorkdays }: { lines: InventoryLine[]; today: DayNumber; horizonWorkdays: number }) {
   const { t, locale } = useI18n();
   const ti = t.inventory;
   const tr = ti.reach;
-  const [selected, setSelected] = useState<{ kind: Kind; band: Band | null } | null>(null);
+  const [selected, setSelected] = useState<{ kind: Kind; band: ReachSlice | null } | null>(null);
   const kinds = (['FG', 'SFG', 'PG'] as const).map((k) => {
     const of = lines.filter((l) => l.kind === k);
-    return { kind: k, bands: REACH_BANDS.map((b) => sum(of.filter((l) => l.band === b), (l) => l.value)), total: sum(of, (l) => l.value) };
+    return { kind: k, bands: REACH_SLICES.map((b) => sum(of, (l) => l.reach[b])), total: sum(of, (l) => l.value) };
   });
   const others = lines.filter((l) => l.kind === 'other');
-  const isSelected = (kind: Kind, band: Band | null) => selected?.kind === kind && selected.band === band;
-  const toggle = (kind: Kind, band: Band | null) => setSelected(isSelected(kind, band) ? null : { kind, band });
-  const label = (kind: Kind, band: Band) => `${ti.kinds[kind]} · ${ti.bands[band]}`;
+  const isSelected = (kind: Kind, band: ReachSlice | null) => selected?.kind === kind && selected.band === band;
+  const toggle = (kind: Kind, band: ReachSlice | null) => setSelected(isSelected(kind, band) ? null : { kind, band });
+  const label = (kind: Kind, band: ReachSlice) => `${ti.kinds[kind]} · ${tr.slices[band]}`;
   return (
     <div className="panel">
       <div className="panel-head">
@@ -317,15 +316,15 @@ function ReachPanel({ lines, today, horizonWorkdays }: { lines: InventoryLine[];
           <b>{ti.kinds[kind]}</b>
           <div className="inv-reach-bars">
             <div className="inv-stack">
-              {REACH_BANDS.map((b, i) =>
-                bands[i]! > 0 ? (
+              {REACH_SLICES.map((b, i) =>
+                bands[i]! > 0.5 ? (
                   <button
                     key={b}
                     type="button"
                     className={`inv-band-${b}`}
                     style={{ flex: bands[i] }}
                     aria-pressed={isSelected(kind, b)}
-                    title={`${label(kind, b)}: ${money(bands[i]!, locale)} · ${ti.bandHint[b]}`}
+                    title={`${label(kind, b)}: ${money(bands[i]!, locale)} · ${tr.hints[b]}`}
                     onClick={() => toggle(kind, b)}
                   >
                     {bands[i]! / total >= PERCENT_SHARE ? `${Math.round((bands[i]! / total) * 100)} %` : ''}
@@ -334,8 +333,8 @@ function ReachPanel({ lines, today, horizonWorkdays }: { lines: InventoryLine[];
               )}
             </div>
             <ul className="inv-reach-values">
-              {REACH_BANDS.map((b, i) =>
-                bands[i]! > 0 ? (
+              {REACH_SLICES.map((b, i) =>
+                bands[i]! > 0.5 ? (
                   <li key={b}>
                     <button type="button" className="link-button" aria-pressed={isSelected(kind, b)} aria-label={`${label(kind, b)} ${money(bands[i]!, locale)}`} onClick={() => toggle(kind, b)}>
                       <i className={`inv-band-${b}`} /> {moneyShort(bands[i]!, locale)}
@@ -357,9 +356,9 @@ function ReachPanel({ lines, today, horizonWorkdays }: { lines: InventoryLine[];
         </p>
       )}
       <ul className="inv-legend">
-        {REACH_BANDS.map((b) => (
-          <li key={b} title={ti.bandHint[b]}>
-            <i className={`inv-band-${b}`} /> {ti.bands[b]}
+        {REACH_SLICES.map((b) => (
+          <li key={b} title={tr.hints[b]}>
+            <i className={`inv-band-${b}`} /> {tr.slices[b]}
           </li>
         ))}
       </ul>
@@ -379,7 +378,7 @@ function ReachDetail({
 }: {
   lines: InventoryLine[];
   kind: Kind;
-  band: Band | null;
+  band: ReachSlice | null;
   today: DayNumber;
   horizonWorkdays: number;
   onClose: () => void;
@@ -387,13 +386,11 @@ function ReachDetail({
   const { t, locale } = useI18n();
   const ti = t.inventory;
   const td = ti.reach.detail;
-  const of = lines.filter((l) => l.kind === kind && (band === null || l.band === band)).sort((a, b) => b.value - a.value || a.item.localeCompare(b.item));
+  // Hodnota dílu v pásmu (část podle doby spotřeby); mimo mapování celá hodnota.
+  const inBand = (l: InventoryLine) => (band === null ? l.value : l.reach[band]);
+  const of = lines.filter((l) => l.kind === kind && inBand(l) >= 0.5).sort((a, b) => inBand(b) - inBand(a) || a.item.localeCompare(b.item));
   if (of.length === 0) return null;
-  const title = band === null ? ti.reach.other : `${ti.kinds[kind]} · ${ti.bands[band]}`;
-  const over = (l: InventoryLine) => {
-    const p = moneyParts(l);
-    return p.overMax + p.surplus;
-  };
+  const title = band === null ? ti.reach.other : `${ti.kinds[kind]} · ${ti.reach.slices[band]}`;
   const reach = (l: InventoryLine) => (l.kind === 'other' ? '—' : l.noNeed ? ti.noNeed[l.noNeed] : td.daysUnit.replace('{n}', reachDays(l.days, horizonWorkdays, locale)));
   const rest = of.slice(DETAIL_ROWS);
   const m = (v: number) => (Math.abs(v) < 0.5 ? '–' : money(v, locale));
@@ -401,7 +398,7 @@ function ReachDetail({
     <div className="inv-reach-detail" role="region" aria-label={title}>
       <div className="inv-reach-detail-head">
         <h3>
-          {title} · {money(sum(of, (l) => l.value), locale)} · {partsCount(of.length, locale, ti.parts)}
+          {title} · {money(sum(of, inBand), locale)} · {partsCount(of.length, locale, ti.parts)}
         </h3>
         <button type="button" className="link-button" onClick={() => void exportParts(of, ti, today, horizonWorkdays, `${kind}_${band ?? 'mimo'}`)}>
           {td.excel}
@@ -418,8 +415,8 @@ function ReachDetail({
               <th>{ti.table.description}</th>
               <th>{ti.filters.project}</th>
               <th className="n">{td.reach}</th>
-              <th className="n">{td.over}</th>
-              <th className="n">{ti.table.value}</th>
+              <th className="n">{td.inBand}</th>
+              <th className="n">{td.value}</th>
             </tr>
           </thead>
           <tbody>
@@ -431,7 +428,7 @@ function ReachDetail({
                 <td className="desc">{l.description}</td>
                 <td>{l.projects.length > 1 ? ti.projects.shared : l.projects[0] ?? '–'}</td>
                 <td className="n">{reach(l)}</td>
-                <td className="n">{l.kind === 'other' ? '—' : m(over(l))}</td>
+                <td className="n">{m(inBand(l))}</td>
                 <td className="n">{money(l.value, locale)}</td>
               </tr>
             ))}
@@ -440,7 +437,7 @@ function ReachDetail({
                 <td className="muted" colSpan={4}>
                   {plural(rest.length, locale, ti.top.rest).replace('{n}', partsCount(rest.length, locale, ti.parts))}
                 </td>
-                <td className="n muted">{kind === 'other' ? '—' : m(sum(rest, over))}</td>
+                <td className="n muted">{m(sum(rest, inBand))}</td>
                 <td className="n muted">{money(sum(rest, (l) => l.value), locale)}</td>
               </tr>
             )}

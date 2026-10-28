@@ -3,7 +3,7 @@ import { parseBom } from './bom';
 import { parseCallOffExport } from './calloffs/parse';
 import { parseCsv } from './csv';
 import { dayFromParts } from './dates';
-import { bandOf, buildInventory, coverageDays, demandForWorkdays, homeSite, isExternal, moneyParts, moneyTotals, type InventoryLine } from './inventory';
+import { bandOf, buildInventory, coverageDays, demandForWorkdays, homeSite, isExternal, moneyParts, moneyTotals, reachSlices, type InventoryLine } from './inventory';
 import { parseMasterData } from './masterdata';
 import { parseStock, type StockRow } from './stock';
 
@@ -99,6 +99,15 @@ describe('Zásoby', () => {
     // 12.–23. 10.: 10 pracovních dní; zásoba na celý horizont má dosah 10+
     expect(table.horizonWorkdays).toBe(10);
     expect(table.lines.map((l) => l.item)).toEqual(['FG-1', 'OTHER-1', 'PG-1', 'PG-2']);
+  });
+
+  it('hodnota podle dosahu: díl se rozdělí podle doby spotřeby, ne celou hodnotou do jednoho pásma', () => {
+    // 80 ks po 1 Kč: potřeba na 20 dní 20 ks, na 40 dní 35 ks, celá potřeba 70 ks → 20 / 15 / 35 / 10
+    expect(reachSlices('PG', 'over', 80, [20, 35, 70], 1)).toEqual({ crit: 0, low: 0, ok: 20, high: 15, over: 35, surplus: 10, none: 0 });
+    // kritický díl: celá zásoba do kritických
+    expect(reachSlices('FG', 'crit', 5, [100, 200, 300], 10)).toMatchObject({ crit: 50, ok: 0, surplus: 0 });
+    expect(reachSlices('PG', 'none', 4, [0, 0, 0], 2)).toMatchObject({ none: 8, ok: 0 });
+    expect(Object.values(reachSlices('other', 'other', 4, [0, 0, 0], 2)).every((v) => v === 0)).toBe(true);
   });
 
   it('kam jsou peníze: hodnota rozdělená podle potřeby, součet = volná + blokovaná hodnota', () => {
