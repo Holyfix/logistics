@@ -224,7 +224,7 @@ export function InventoryPage({ today = localToday() }: { today?: DayNumber } = 
       <MoneyPanel totals={totals} known={table.horizonEnd !== null} />
 
       <div className="inv-grid">
-        <ReachPanel lines={lines} />
+        <ReachPanel lines={lines} today={today} />
         <ProjectsPanel lines={lines} />
       </div>
 
@@ -278,53 +278,78 @@ function MoneyPanel({ totals, known }: { totals: Record<MoneyPart, number>; know
   );
 }
 
-/** Hodnota volné zásoby podle pásma dosahu pro FG, SFG a PG; délka pruhu podle hodnoty druhu. */
-function ReachPanel({ lines }: { lines: InventoryLine[] }) {
+/** Kolik dílů ukazuje detail pásma; zbytek se sečte do jednoho řádku (celý seznam v Excelu). */
+const DETAIL_ROWS = 10;
+
+/** Popisek procent v úseku pruhu jen u úseků aspoň takového podílu druhu. */
+const PERCENT_SHARE = 0.06;
+
+/**
+ * Hodnota volné zásoby podle pásma dosahu: FG, SFG a PG každý na celou šířku (úseky = podíl v rámci druhu), pod pruhem
+ * částky všech pásem. Klik na pásmo (nebo na „mimo mapování“) ukáže pod grafem největší díly a Excel s díly.
+ */
+function ReachPanel({ lines, today }: { lines: InventoryLine[]; today: DayNumber }) {
   const { t, locale } = useI18n();
   const ti = t.inventory;
+  const tr = ti.reach;
+  const [selected, setSelected] = useState<{ kind: Kind; band: Band | null } | null>(null);
   const kinds = (['FG', 'SFG', 'PG'] as const).map((k) => {
     const of = lines.filter((l) => l.kind === k);
     return { kind: k, bands: REACH_BANDS.map((b) => sum(of.filter((l) => l.band === b), (l) => l.value)), total: sum(of, (l) => l.value) };
   });
-  const widest = Math.max(1, ...kinds.map((k) => k.total));
-  const other = sum(
-    lines.filter((l) => l.kind === 'other'),
-    (l) => l.value,
-  );
+  const others = lines.filter((l) => l.kind === 'other');
+  const isSelected = (kind: Kind, band: Band | null) => selected?.kind === kind && selected.band === band;
+  const toggle = (kind: Kind, band: Band | null) => setSelected(isSelected(kind, band) ? null : { kind, band });
+  const label = (kind: Kind, band: Band) => `${ti.kinds[kind]} · ${ti.bands[band]}`;
   return (
     <div className="panel">
       <div className="panel-head">
-        <h2>{ti.reach.heading}</h2>
+        <h2>{tr.heading}</h2>
       </div>
-      <p className="muted">{ti.reach.note}</p>
+      <p className="muted">{tr.note}</p>
       {kinds.map(({ kind, bands, total }) => (
-        <div key={kind} className="inv-dist-row">
+        <div key={kind} className="inv-reach-row">
           <b>{ti.kinds[kind]}</b>
-          <div className="inv-stack-track">
-            <div
-              className="inv-stack"
-              style={{ width: `${(total / widest) * 100}%` }}
-              role="img"
-              aria-label={`${ti.kinds[kind]}: ${REACH_BANDS.map((b, i) => `${ti.bands[b]} ${money(bands[i]!, locale)}`).join(', ')}`}
-            >
+          <div className="inv-reach-bars">
+            <div className="inv-stack">
               {REACH_BANDS.map((b, i) =>
                 bands[i]! > 0 ? (
-                  <span key={b} className={`inv-band-${b}`} style={{ flex: bands[i] }} title={`${ti.bands[b]}: ${money(bands[i]!, locale)} · ${ti.bandHint[b]}`}>
-                    {bands[i]! / widest >= LABEL_SHARE ? moneyShort(bands[i]!, locale) : ''}
-                  </span>
+                  <button
+                    key={b}
+                    type="button"
+                    className={`inv-band-${b}`}
+                    style={{ flex: bands[i] }}
+                    aria-pressed={isSelected(kind, b)}
+                    title={`${label(kind, b)}: ${money(bands[i]!, locale)} · ${ti.bandHint[b]}`}
+                    onClick={() => toggle(kind, b)}
+                  >
+                    {bands[i]! / total >= PERCENT_SHARE ? `${Math.round((bands[i]! / total) * 100)} %` : ''}
+                  </button>
                 ) : null,
               )}
             </div>
+            <ul className="inv-reach-values">
+              {REACH_BANDS.map((b, i) =>
+                bands[i]! > 0 ? (
+                  <li key={b}>
+                    <button type="button" className="link-button" aria-pressed={isSelected(kind, b)} aria-label={`${label(kind, b)} ${money(bands[i]!, locale)}`} onClick={() => toggle(kind, b)}>
+                      <i className={`inv-band-${b}`} /> {moneyShort(bands[i]!, locale)}
+                    </button>
+                  </li>
+                ) : null,
+              )}
+            </ul>
           </div>
           <span className="muted">{money(total, locale)}</span>
         </div>
       ))}
-      {other > 0 && (
-        <div className="inv-dist-row">
-          <b className="muted">{ti.kinds.other}</b>
-          <span className="muted">{ti.reach.other}</span>
-          <span className="muted">{money(other, locale)}</span>
-        </div>
+      {others.length > 0 && (
+        <p className="inv-reach-other">
+          {tr.other}:{' '}
+          <button type="button" className="link-button" aria-pressed={isSelected('other', null)} onClick={() => toggle('other', null)}>
+            {money(sum(others, (l) => l.value), locale)} · {partsCount(others.length, locale, ti.parts)}
+          </button>
+        </p>
       )}
       <ul className="inv-legend">
         {REACH_BANDS.map((b) => (
@@ -333,6 +358,76 @@ function ReachPanel({ lines }: { lines: InventoryLine[] }) {
           </li>
         ))}
       </ul>
+      {selected && <ReachDetail lines={lines} kind={selected.kind} band={selected.band} today={today} onClose={() => setSelected(null)} />}
+    </div>
+  );
+}
+
+/** Detail pásma: největší díly podle hodnoty, zbytek v jednom řádku, Excel s díly pásma. */
+function ReachDetail({ lines, kind, band, today, onClose }: { lines: InventoryLine[]; kind: Kind; band: Band | null; today: DayNumber; onClose: () => void }) {
+  const { t, locale } = useI18n();
+  const ti = t.inventory;
+  const td = ti.reach.detail;
+  const of = lines.filter((l) => l.kind === kind && (band === null || l.band === band)).sort((a, b) => b.value - a.value || a.item.localeCompare(b.item));
+  if (of.length === 0) return null;
+  const title = band === null ? ti.reach.other : `${ti.kinds[kind]} · ${ti.bands[band]}`;
+  const over = (l: InventoryLine) => {
+    const p = moneyParts(l);
+    return p.overMax + p.surplus;
+  };
+  const reach = (l: InventoryLine) => (l.kind === 'other' ? '—' : l.noNeed ? ti.noNeed[l.noNeed] : l.days === null ? td.beyond : td.daysUnit.replace('{n}', formatQuantity(l.days, locale)));
+  const rest = of.slice(DETAIL_ROWS);
+  const m = (v: number) => (Math.abs(v) < 0.5 ? '–' : money(v, locale));
+  return (
+    <div className="inv-reach-detail" role="region" aria-label={title}>
+      <div className="inv-reach-detail-head">
+        <h3>
+          {title} · {money(sum(of, (l) => l.value), locale)} · {partsCount(of.length, locale, ti.parts)}
+        </h3>
+        <button type="button" className="link-button" onClick={() => void exportParts(of, ti, today, `${kind}_${band ?? 'mimo'}`)}>
+          {td.excel}
+        </button>
+        <button type="button" className="link-button" aria-label={td.close} title={td.close} onClick={onClose}>
+          ✕
+        </button>
+      </div>
+      <div className="table-scroll">
+        <table className="table table-data">
+          <thead>
+            <tr>
+              <th>{ti.table.item}</th>
+              <th>{ti.table.description}</th>
+              <th>{ti.filters.project}</th>
+              <th className="n">{td.reach}</th>
+              <th className="n">{td.over}</th>
+              <th className="n">{ti.table.value}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {of.slice(0, DETAIL_ROWS).map((l) => (
+              <tr key={l.item}>
+                <td>
+                  <strong>{l.item}</strong>
+                </td>
+                <td className="desc">{l.description}</td>
+                <td>{l.projects.length > 1 ? ti.projects.shared : l.projects[0] ?? '–'}</td>
+                <td className="n">{reach(l)}</td>
+                <td className="n">{l.kind === 'other' ? '—' : m(over(l))}</td>
+                <td className="n">{money(l.value, locale)}</td>
+              </tr>
+            ))}
+            {rest.length > 0 && (
+              <tr>
+                <td className="muted" colSpan={4}>
+                  {plural(rest.length, locale, ti.top.rest).replace('{n}', partsCount(rest.length, locale, ti.parts))}
+                </td>
+                <td className="n muted">{kind === 'other' ? '—' : m(sum(rest, over))}</td>
+                <td className="n muted">{money(sum(rest, (l) => l.value), locale)}</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
@@ -490,7 +585,7 @@ function RankList({ title, rows }: { title: string; rows: RankRow[] }) {
   );
 }
 
-function exportParts(lines: InventoryLine[], ti: ReturnType<typeof useI18n>['t']['inventory'], today: DayNumber) {
+function exportParts(lines: InventoryLine[], ti: ReturnType<typeof useI18n>['t']['inventory'], today: DayNumber, suffix = '') {
   const tt = ti.table;
   const header = [tt.item, tt.description, tt.kind, ti.filters.project, ti.filters.category, tt.abc, tt.free, tt.external, tt.blocked, tt.min, tt.max, tt.days, tt.toMin, tt.overMax, tt.surplus, tt.value, tt.band];
   const rows = [...lines]
@@ -514,5 +609,5 @@ function exportParts(lines: InventoryLine[], ti: ReturnType<typeof useI18n>['t']
       Math.round(l.value),
       ti.bands[l.band] + (l.noNeed ? ` – ${ti.noNeed[l.noNeed]}` : ''),
     ]);
-  return downloadXlsx(`${ti.export.fileName}_${dayToIso(today)}.xlsx`, ti.export.sheet, header, rows);
+  return downloadXlsx(`${ti.export.fileName}${suffix ? `_${suffix}` : ''}_${dayToIso(today)}.xlsx`, ti.export.sheet, header, rows);
 }

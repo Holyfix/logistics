@@ -603,8 +603,16 @@ export const en: Messages = {
     reasons: { quality: 'quality', inventory: 'inventory', logistics: 'logistics' },
     reach: {
       heading: 'Value by coverage',
-      note: 'value of free stock in each coverage band · coverage = how many working days the stock covers the demand (FG from call-offs, SFG and PG via BOM)',
-      other: 'not in mapping (packaging, pallets…), no coverage',
+      note: 'value of free stock in each coverage band · each kind across the full width (share within the kind) · click a band to see the largest parts',
+      other: 'Not in mapping (packaging, pallets…)',
+      detail: {
+        excel: 'Excel – parts',
+        close: 'Close detail',
+        reach: 'Coverage',
+        over: 'Above max',
+        beyond: 'whole horizon',
+        daysUnit: '{n} d',
+      },
     },
     projects: {
       heading: 'By project',
