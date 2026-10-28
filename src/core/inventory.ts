@@ -45,6 +45,14 @@ export const isExternal = (row: StockRow, home: string, excluded: (location: str
 export type Scope = 'all' | 'internal' | 'external';
 
 /**
+ * Část hodnoty zásoby podle doby spotřeby: zásoba na prvních 20 pracovních dní patří do pásma dílu (kritické, nízké),
+ * jinak „v pořádku“; zásoba na dny 20–40 „vysoké“, spotřebovaná až po 40 dnech „nadbytek“, nespotřebovaná do konce
+ * odvolávek „nad celou potřebu“, díl bez potřeby „bez potřeby“. Díl se tak nepočítá celou hodnotou do jednoho pásma.
+ */
+export type ReachSlice = 'crit' | 'low' | 'ok' | 'high' | 'over' | 'surplus' | 'none';
+export const REACH_SLICES: readonly ReachSlice[] = ['crit', 'low', 'ok', 'high', 'over', 'surplus', 'none'];
+
+/**
  * Proč díl se zásobou nemá do konce odvolávek potřebu: není v kusovníku žádného načteného hotového dílu (doběhlý díl,
  * kandidát na odpis), nebo je hotový díl / jeho hotové díly teď nemají odvolávky.
  */
@@ -95,6 +103,8 @@ export interface InventoryLine {
   surplusValue: number;
   /** U pásma „bez potřeby“ důvod; jinak null. */
   noNeed: NoNeedReason | null;
+  /** Hodnota volné zásoby rozdělená podle toho, kdy se spotřebuje (graf Hodnota podle dosahu); u ostatních prázdné. */
+  reach: Record<ReachSlice, number>;
   locations: InventoryLocation[];
 }
 
@@ -234,6 +244,7 @@ export function buildInventory({ stock, master, boms, callOffs, today, scope = '
     const horizonDemand = need.reduce((a, b) => a + b, 0);
     const min = demandForWorkdays(need, days, MIN_DAYS);
     const max = demandForWorkdays(need, days, MAX_DAYS);
+    const over = demandForWorkdays(need, days, OVER_DAYS);
     const covered = horizonDemand > 0 ? coverageDays(free, need, days) : null;
     const band = kind === 'other' ? 'other' : bandOf(covered, horizonDemand);
     // Bez odvolávek se potřeba nedá posoudit: nad potřebu ani důvod „bez potřeby“ se neurčují.
@@ -262,12 +273,29 @@ export function buildInventory({ stock, master, boms, callOffs, today, scope = '
       overMax: kind === 'other' || horizonDemand <= 0 ? 0 : Math.max(0, free - max),
       surplus,
       surplusValue: surplus * unitCost,
+      reach: reachSlices(kind, band, free, [max, over, horizonDemand], unitCost),
       noNeed: band === 'none' && last !== null ? (kind !== 'FG' && !usedIn.has(item) ? 'notInBom' : 'noCallOffs') : null,
       locations,
     });
   }
   lines.sort((a, b) => a.item.localeCompare(b.item));
   return { lines, horizonEnd: last, horizonWorkdays: days.filter((d) => weekday(d) <= 5).length, negativeRows, hasCost: stock.rows.some((r) => r.cost !== null) };
+}
+
+/** Rozdělení volné zásoby podle doby spotřeby (viz ReachSlice); `limits` = potřeba na 20 a 40 pracovních dní a celá potřeba. */
+export function reachSlices(kind: Kind, band: Band, free: number, limits: readonly [number, number, number], unitCost: number): Record<ReachSlice, number> {
+  const slices: Record<ReachSlice, number> = { crit: 0, low: 0, ok: 0, high: 0, over: 0, surplus: 0, none: 0 };
+  if (kind === 'other') return slices;
+  if (band === 'none') {
+    slices.none = free * unitCost;
+    return slices;
+  }
+  const [s1, s2, s3] = limits.map((l) => Math.min(free, l)) as [number, number, number];
+  slices[band === 'crit' || band === 'low' ? band : 'ok'] = s1 * unitCost;
+  slices.high = (s2 - s1) * unitCost;
+  slices.over = (s3 - s2) * unitCost;
+  slices.surplus = (free - s3) * unitCost;
+  return slices;
 }
 
 /**
