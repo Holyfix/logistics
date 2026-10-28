@@ -605,8 +605,16 @@ export const cs = {
     reasons: { quality: 'kvalita', inventory: 'inventura', logistics: 'logistika' },
     reach: {
       heading: 'Hodnota podle dosahu',
-      note: 'Kč volné zásoby v pásmu dosahu · dosah = kolik pracovních dní zásoba pokryje potřebu (FG z odvolávek, SFG a PG přes kusovník)',
-      other: 'mimo mapování (obaly, palety…), bez dosahu',
+      note: 'Kč volné zásoby v pásmu dosahu · každý druh na celou šířku (podíl v rámci druhu) · klik na pásmo ukáže největší díly',
+      other: 'Mimo mapování (obaly, palety…)',
+      detail: {
+        excel: 'Excel – díly',
+        close: 'Zavřít detail',
+        reach: 'Dosah',
+        over: 'Nad max.',
+        beyond: 'celý horizont',
+        daysUnit: '{n} d',
+      },
     },
     projects: {
       heading: 'Po projektech',

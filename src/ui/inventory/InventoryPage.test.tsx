@@ -94,10 +94,9 @@ describe('InventoryPage', () => {
     expect(screen.queryByRole('tab')).toBeNull();
   });
 
-  it('kam jsou peníze, dosah v Kč, po projektech a žebříčky', () => {
+  it('kam jsou peníze, po projektech a žebříčky', () => {
     renderPage();
     expect(screen.getByRole('img', { name: /^Potřebná \(do 20 dní\) 3\s600 Kč, Nad maximem, spotřebuje se 0 Kč, Nad celou potřebu 900 Kč, Bez potřeby 0 Kč, Blokováno 600 Kč, Mimo mapování 50 Kč$/ })).toBeTruthy();
-    expect(screen.getByRole('img', { name: /^FG: kritické 0 Kč, nízké 3\s500 Kč/ })).toBeTruthy();
     expect(texts(panel('Po projektech').querySelectorAll('tbody tr, tfoot tr'))).toEqual([
       ['P1', '4 500 Kč', '–', '900 Kč', '–', '500 Kč', ''],
       ['bez projektu', '50 Kč', '–', '–', '–', '100 Kč', ''],
@@ -110,6 +109,22 @@ describe('InventoryPage', () => {
       ['PG-2OLD CLIP · DIFF', '100 Kčinventura'],
     ]);
     expect(screen.getByRole('button', { name: 'Excel – všechny díly' })).toBeTruthy();
+  });
+
+  it('hodnota podle dosahu: částky pásem pod pruhem, klik na pásmo ukáže díly', () => {
+    renderPage();
+    const reach = within(panel('Hodnota podle dosahu'));
+    // FG-1 je celý v pásmu nízké: úsek přes celou šířku se 100 %
+    expect(reach.getByTitle(/^FG · nízké: 3\s500 Kč/).textContent).toBe('100 %');
+    fireEvent.click(reach.getByRole('button', { name: /^PG · nadbytek 1\s000 Kč$/ }));
+    const detail = within(screen.getByRole('region', { name: 'PG · nadbytek' }));
+    expect(texts(detail.getAllByRole('row').slice(1))).toEqual([['PG-1', 'CLIP', 'P1', 'celý horizont', '900 Kč', '1 000 Kč']]);
+    expect(detail.getByRole('button', { name: 'Excel – díly' })).toBeTruthy();
+    fireEvent.click(detail.getByRole('button', { name: 'Zavřít detail' }));
+    expect(screen.queryByRole('region', { name: 'PG · nadbytek' })).toBeNull();
+    // mimo mapování: paleta
+    fireEvent.click(reach.getByRole('button', { name: /50 Kč · 1 díl/ }));
+    expect(texts(within(screen.getByRole('region', { name: 'Mimo mapování (obaly, palety…)' })).getAllByRole('row').slice(1))).toEqual([['PAL-1', 'PALLET', '–', '—', '—', '50 Kč']]);
   });
 
   it('sklad jen interní a filtr druhu', () => {

@@ -2263,22 +2263,14 @@ button.oil-step:disabled {
   }
 }
 
-.inv-dist-row {
-  display: grid;
-  grid-template-columns: 44px minmax(0, 1fr) 110px;
-  gap: 10px;
-  align-items: center;
-  margin: 8px 0;
-  font-size: 13px;
-}
-
 .inv-stack {
   display: flex;
   gap: 2px;
   height: 24px;
 }
 
-.inv-stack span {
+.inv-stack > span,
+.inv-stack > button {
   display: grid;
   place-items: center;
   min-width: 18px;
@@ -2401,8 +2393,98 @@ button.oil-step:disabled {
   vertical-align: -1px;
 }
 
-.inv-stack-track {
-  min-width: 0;
+.inv-stack > button {
+  padding: 0;
+  border: 0;
+  cursor: pointer;
+}
+
+.inv-stack > button:hover,
+.inv-stack > button[aria-pressed='true'] {
+  outline: 2px solid var(--ink);
+  outline-offset: 1px;
+}
+
+/* Hodnota podle dosahu: řádek druhu (pruh na celou šířku, pod ním částky pásem), detail pásma. */
+.inv-reach-row {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) 110px;
+  gap: 10px;
+  align-items: start;
+  margin: 10px 0;
+  font-size: 13px;
+}
+
+.inv-reach-row > b,
+.inv-reach-row > span {
+  line-height: 24px;
+}
+
+.inv-reach-row > span {
+  text-align: right;
+}
+
+.inv-reach-row .inv-stack > button {
+  min-width: 3px;
+}
+
+.inv-reach-values {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 12px;
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 12px;
+}
+
+.inv-reach-values .link-button {
+  padding: 0;
+  color: var(--ink-2);
+  font: inherit;
+}
+
+.inv-reach-values .link-button[aria-pressed='true'] {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.inv-reach-values i {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+  background: var(--inv);
+}
+
+.inv-reach-other {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--ink-2);
+}
+
+.inv-reach-other .link-button {
+  padding: 0;
+  font-weight: 600;
+}
+
+.inv-reach-detail {
+  margin-top: 8px;
+  padding-top: 10px;
+  border-top: 2px solid var(--accent);
+}
+
+.inv-reach-detail-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 14px;
+}
+
+.inv-reach-detail-head h3 {
+  flex: 1;
+  margin: 0;
+  font-size: 15px;
 }
 
 .table-data.inv-projects td:first-child {
