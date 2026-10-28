@@ -67,7 +67,9 @@ function renderPage(initial: DataState = state) {
 }
 
 const tile = (label: string) => screen.getAllByText(label).find((el) => el.classList.contains('kpi-label'))!.closest('.kpi')!;
-const rowOf = (item: string) => screen.getAllByText(item).find((el) => el.tagName === 'STRONG')!.closest('tr')!;
+const value = (label: string) => tile(label).querySelector('.kpi-value')!.textContent!.replace(/\u00a0/g, ' ');
+const panel = (heading: string) => screen.getByRole('heading', { name: heading }).closest('.panel') as HTMLElement;
+const texts = (rows: Iterable<Element>) => [...rows].map((tr) => [...tr.querySelectorAll('td')].map((td) => td.textContent!.replace(/\u00a0/g, ' ')));
 
 describe('InventoryPage', () => {
   afterEach(() => {
@@ -75,48 +77,48 @@ describe('InventoryPage', () => {
     localStorage.clear();
   });
 
-  it('přehled: hodnota s externí zvlášť, kritické, nadbytek, blokace a rozložení podle dosahu', () => {
+  it('dlaždice v Kč: hodnota, doplnit do minima, nad maximem, nad celou potřebu, bez potřeby, blokováno', () => {
     renderPage();
-    expect(tile('Hodnota zásob').textContent).toMatch(/4\s550 Kč.*z toho externí 1\s000 Kč/);
-    expect(tile('Kritické · pod 2 dny').querySelector('.kpi-value')!.textContent).toBe('0');
-    expect(tile('Pod minimem · 5 dní').querySelector('.kpi-value')!.textContent).toBe('1');
-    expect(tile('Nadbytek · nad 40 dní').querySelector('.kpi-value')!.textContent).toBe('1');
-    // bez potřeby: PG-2 (jen blokovaná zásoba, není v kusovníku); nad celou potřebu: PG-1 1800 ks po 0,5 Kč
-    expect(tile('Bez potřeby').textContent).toMatch(/^Bez potřeby1dílů · 100 Kč, z toho není v kusovníku 100 Kč$/);
-    expect(tile('Nad celou potřebu').textContent).toMatch(/900 Kč1 díl · zásoba/);
-    expect(tile('Blokováno').textContent).toMatch(/600 Kč.*kvalita 500 Kč · inventura 100 Kč/);
-    expect(screen.getByRole('img', { name: /^FG: kritické 0, nízké 1/ })).toBeTruthy();
-    // díly mimo pásmo v pořádku: nízké, nadbytek, bez potřeby
-    const fg = rowOf('FG-1');
-    expect([...fg.querySelectorAll('td')].map((td) => td.textContent!.replace(/\u00a0/g, ' '))).toEqual([
-      'FG-1', 'PANEL LHD', 'FG', 'A', '35z toho externí 10', '5', '50', '100', '3 d', '15', '—', '—', '3 500 Kč', 'nízké',
-    ]);
-    expect(rowOf('PG-1').textContent).toContain('nadbytek');
-    expect(rowOf('PG-2').textContent).toContain('bez potřebynení v kusovníku');
-    // lokace po kliknutí
-    fireEvent.click(fg);
-    const detail = fg.nextElementSibling as HTMLElement;
-    expect(within(detail).getByText('SEQ-1').closest('td')!.textContent).toBe('SEQ-1 externí');
-    expect(within(detail).getByText('QH').closest('td')!.textContent).toBe('QH kvalita');
+    expect(value('Hodnota zásob')).toBe('4 550 Kč');
+    expect(tile('Hodnota zásob').textContent).toMatch(/z toho externí 1\s000 Kč/);
+    // FG-1: do minima 50 chybí 15 ks po 100 Kč
+    expect(value('Doplnit do minima')).toBe('1 500 Kč');
+    expect(value('Nad maximem (20 dní)')).toBe('0 Kč');
+    // PG-1: 2000 ks, celá potřeba 200 ks → 1800 ks po 0,5 Kč
+    expect(value('Nad celou potřebu')).toBe('900 Kč');
+    // PG-2 má jen blokovanou zásobu: bez potřeby 0 Kč, blokace v Blokováno
+    expect(value('Bez potřeby')).toBe('0 Kč');
+    expect(value('Blokováno')).toBe('600 Kč');
+    expect(tile('Blokováno').textContent).toMatch(/kvalita 500 Kč · inventura 100 Kč/);
+    // žádné karty ani dlouhé tabulky dílů
+    expect(screen.queryByRole('tab')).toBeNull();
   });
 
-  it('sklad jen interní nebo jen externí; karta Díly s pásmem a hledáním; karta Blokace', () => {
+  it('kam jsou peníze, dosah v Kč, po projektech a žebříčky', () => {
+    renderPage();
+    expect(screen.getByRole('img', { name: /^Potřebná \(do 20 dní\) 3\s600 Kč, Nad maximem, spotřebuje se 0 Kč, Nad celou potřebu 900 Kč, Bez potřeby 0 Kč, Blokováno 600 Kč, Mimo mapování 50 Kč$/ })).toBeTruthy();
+    expect(screen.getByRole('img', { name: /^FG: kritické 0 Kč, nízké 3\s500 Kč/ })).toBeTruthy();
+    expect(texts(panel('Po projektech').querySelectorAll('tbody tr, tfoot tr'))).toEqual([
+      ['P1', '4 500 Kč', '–', '900 Kč', '–', '500 Kč', ''],
+      ['bez projektu', '50 Kč', '–', '–', '–', '100 Kč', ''],
+      ['Celkem', '4 550 Kč', '–', '900 Kč', '–', '600 Kč', ''],
+    ]);
+    expect(texts(panel('Nejvíc peněz nad potřebou').querySelectorAll('tr'))).toEqual([['PG-1CLIP · P1', '900 Kčnad celou potřebu']]);
+    expect(within(panel('Bez potřeby')).getByText('Nic.')).toBeTruthy();
+    expect(texts(panel('Blokováno').querySelectorAll('tr'))).toEqual([
+      ['FG-1PANEL LHD · QH', '500 Kčkvalita'],
+      ['PG-2OLD CLIP · DIFF', '100 Kčinventura'],
+    ]);
+    expect(screen.getByRole('button', { name: 'Excel – všechny díly' })).toBeTruthy();
+  });
+
+  it('sklad jen interní a filtr druhu', () => {
     renderPage();
     fireEvent.change(screen.getByLabelText('Sklad'), { target: { value: 'internal' } });
     expect(tile('Hodnota zásob').textContent).toMatch(/3\s550 Kč.*z toho externí 0 Kč/);
-    fireEvent.click(screen.getByRole('tab', { name: 'Díly' }));
-    expect(screen.getByText('4 díly')).toBeTruthy();
-    fireEvent.change(screen.getByLabelText('Pásmo'), { target: { value: 'other' } });
-    expect(rowOf('PAL-1').textContent).toContain('ostatní');
-    fireEvent.change(screen.getByLabelText('Pásmo'), { target: { value: '' } });
-    fireEvent.change(screen.getByLabelText('Hledat'), { target: { value: 'clip' } });
-    expect(screen.getByText('2 díly')).toBeTruthy();
-    fireEvent.click(screen.getByRole('tab', { name: 'Blokace' }));
-    const rows = [...document.querySelectorAll('.inv-table tbody tr')].map((tr) => [...tr.querySelectorAll('td')].slice(0, 6).map((td) => td.textContent));
-    expect(rows).toEqual([
-      ['FG-1', 'PANEL LHD', 'FG', 'kvalita', 'QH', 'Q-01'],
-      ['PG-2', 'OLD CLIP', 'PG', 'inventura', 'DIFF', 'C-03'],
-    ]);
+    fireEvent.change(screen.getByLabelText('Druh'), { target: { value: 'PG' } });
+    expect(value('Hodnota zásob')).toBe('1 000 Kč');
+    expect(value('Blokováno')).toBe('100 Kč');
   });
 
   it('bez souboru skladu odkáže na Data', () => {

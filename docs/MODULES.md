@@ -134,22 +134,23 @@ Filtry projekt, kategorie, strana (LHD/RHD) a varianta z kmenových dat se ovliv
 - Shortage list pro ranní poradu
 
 ### Zásoby
-- Rozbor **aktuální zásoby**: jen díly, které skladem jsou (volně nebo blokovaně); díly bez zásoby se neukazují –
-  chybějící díly řeší Komponenty a mezivýroba, která se neskladuje (např. pěna ze dvou chemikálií), tu nepřekáží
-- Karty: **Přehled** · **Díly** · **Blokace**; filtry druh (FG, SFG, PG, ostatní), projekt, kategorie, ABC a sklad
-  (interní + externí, jen interní, jen externí)
+- **Přehled aktuální zásoby v penězích** na jedné stránce (bez karet a dlouhých seznamů dílů – detail je v ERP):
+  jen díly, které skladem jsou; chybějící díly řeší Komponenty a mezivýroba, která se neskladuje, tu nepřekáží
+- Filtry druh (FG, SFG, PG, ostatní), projekt, kategorie a sklad (interní + externí, jen interní, jen externí)
 - ✅ **Dosah zásoby** v pracovních dnech: kolik dní volná zásoba pokryje potřebu den po dni – FG z odvolávek, SFG a PG
-  přes kusovník (odvolávky × množství na 1 ks hotového dílu, bez odečtu skladu hotových dílů jako v Komponentách)
-- ✅ **Minimum** = potřeba na 5 pracovních dní, **maximum** = na 20 pracovních dní; kusy do minima a nad maximem
-- ✅ **Pásma** (stejná pro všechny druhy): kritické pod 2 dny, nízké 2–5, v pořádku 5–20, vysoké 20–40, nadbytek nad 40
-  nebo nad potřebu celého horizontu, bez potřeby v horizontu; díly mimo mapování „ostatní“ jen s hodnotou
-- ✅ **Přehled:** hodnota zásob (z toho externí), kritické, pod minimem (za kolik doplnit), nadbytek (hodnota nad
-  maximem), **bez potřeby** (zásoba, která do konce odvolávek nemá potřebu; důvod: není v kusovníku / hotový díl bez
-  odvolávek), **nad celou potřebu** (hodnota volné zásoby, která se do konce odvolávek nespotřebuje), blokováno podle
-  důvodu; rozložení podle dosahu pro FG, SFG a PG; struktura hodnoty (interní, externí, blokace); díly mimo pásmo
-  v pořádku (klik ukáže lokace se statusem). Poslední pohyb z ERP se nepoužívá (pole není spolehlivé)
-- ✅ **Díly:** všechny díly s filtrem pásma, hledáním a exportem do Excelu
-- ✅ **Blokace:** blokovaná zásoba po lokacích podle hodnoty (QH a QH-TEMP kvalita, DIFF inventura, ClaimS-O logistika)
+  přes kusovník (odvolávky × množství na 1 ks hotového dílu, bez odečtu skladu hotových dílů jako v Komponentách);
+  **minimum** = potřeba na 5 pracovních dní, **maximum** = na 20 pracovních dní
+- ✅ **Dlaždice v Kč:** hodnota zásob (z toho externí), doplnit do minima (z toho kritické), nad maximem (spotřebuje se
+  později), nad celou potřebu (do konce odvolávek se nespotřebuje), bez potřeby (z toho není v kusovníku), blokováno
+  podle důvodu. Poslední pohyb z ERP se nepoužívá (pole není spolehlivé)
+- ✅ **Kam jsou peníze uložené:** pruh celé hodnoty zásoby – potřebná (do maxima), nad maximem, nad celou potřebu,
+  bez potřeby, blokováno, mimo mapování
+- ✅ **Hodnota podle dosahu** v Kč pro FG, SFG a PG (pásma kritické pod 2 dny, nízké 2–5, v pořádku 5–20, vysoké 20–40,
+  nadbytek nad 40 nebo nad potřebu celého horizontu, bez potřeby)
+- ✅ **Po projektech:** hodnota, nad maximem, nad potřebou, bez potřeby a blokováno; díly ve více projektech a bez
+  projektu zvlášť
+- ✅ **Žebříčky** (5 největších + zbytek v jednom řádku): nejvíc peněz nad potřebou, bez potřeby (s důvodem), blokováno
+- ✅ Export všech dílů do Excelu podle filtrů
 - ⏳ Trend ze starších souborů Stock (zásoba, která se nehýbe), ukazatel na rozcestníku a v Dashboardu
 ### Plánování
 - Karty: **Přehled** · **ASSEMBLY** · **FOA** · **SLH** · **IMM** · **Kapacity**

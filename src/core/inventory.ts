@@ -268,9 +268,32 @@ export function buildInventory({ stock, master, boms, callOffs, today, scope = '
   return { lines, horizonEnd: last, negativeRows, hasCost: stock.rows.some((r) => r.cost !== null) };
 }
 
-/** Pořadí pro „problémové“ díly: kritické, nízké, nadbytek, bez potřeby (v rámci pásma podle hodnoty / dosahu). */
-const BAND_ORDER: Record<Band, number> = { crit: 0, low: 1, over: 2, none: 3, high: 4, ok: 5, other: 6 };
+/**
+ * Kam jsou peníze uložené: hodnota zásoby dílu (volná + blokovaná) rozdělená podle potřeby z odvolávek. Potřebná =
+ * do maxima (20 pracovních dní potřeby), nad maximem = spotřebuje se, ale později, nad celou potřebu = do konce
+ * odvolávek se nespotřebuje (díly s potřebou), bez potřeby (celá volná zásoba), blokováno, mimo mapování (ostatní).
+ */
+export type MoneyPart = 'needed' | 'overMax' | 'surplus' | 'none' | 'blocked' | 'other';
+export const MONEY_PARTS: readonly MoneyPart[] = ['needed', 'overMax', 'surplus', 'none', 'blocked', 'other'];
 
-export function byUrgency(a: InventoryLine, b: InventoryLine): number {
-  return BAND_ORDER[a.band] - BAND_ORDER[b.band] || (a.band === 'crit' || a.band === 'low' ? (a.days ?? 0) - (b.days ?? 0) || b.toMin - a.toMin : b.value - a.value) || a.item.localeCompare(b.item);
+export function moneyParts(l: InventoryLine): Record<MoneyPart, number> {
+  const parts: Record<MoneyPart, number> = { needed: 0, overMax: 0, surplus: 0, none: 0, blocked: l.blockedValue, other: 0 };
+  if (l.kind === 'other') parts.other = l.value;
+  else if (l.band === 'none') parts.none = l.value;
+  else {
+    parts.needed = Math.min(l.free, l.max) * l.unitCost;
+    parts.surplus = l.surplusValue;
+    parts.overMax = Math.max(0, l.value - parts.needed - parts.surplus);
+  }
+  return parts;
+}
+
+/** Součet rozdělení hodnoty přes díly. */
+export function moneyTotals(lines: readonly InventoryLine[]): Record<MoneyPart, number> {
+  const total: Record<MoneyPart, number> = { needed: 0, overMax: 0, surplus: 0, none: 0, blocked: 0, other: 0 };
+  for (const l of lines) {
+    const parts = moneyParts(l);
+    for (const k of MONEY_PARTS) total[k] += parts[k];
+  }
+  return total;
 }
