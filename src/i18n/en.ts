@@ -557,8 +557,8 @@ export const en: Messages = {
     tiles: {
       value: 'Inventory value',
       valueNote: 'free · of which external {external}',
-      toMin: 'Refill to minimum',
-      toMinNote: 'up to stock for 5 working days · of which parts with coverage under 2 days {crit}',
+      toMin: 'Refill to 5 days',
+      toMinNote: 'missing to stock for 5 working days · of which parts with coverage under 2 days {crit}',
       overMax: 'Above maximum (20 days)',
       overMaxNote: 'will be used, but later',
       surplus: 'Above total demand',

@@ -559,8 +559,8 @@ export const cs = {
     tiles: {
       value: 'Hodnota zásob',
       valueNote: 'volná · z toho externí {external}',
-      toMin: 'Doplnit do minima',
-      toMinNote: 'do zásoby na 5 prac. dní · z toho díly s dosahem pod 2 dny {crit}',
+      toMin: 'Doplnit do 5 dní',
+      toMinNote: 'chybí do zásoby na 5 prac. dní · z toho díly s dosahem pod 2 dny {crit}',
       overMax: 'Nad maximem (20 dní)',
       overMaxNote: 'spotřebuje se, ale později',
       surplus: 'Nad celou potřebu',

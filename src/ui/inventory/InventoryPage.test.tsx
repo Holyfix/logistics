@@ -82,7 +82,7 @@ describe('InventoryPage', () => {
     expect(value('Hodnota zásob')).toBe('4 550 Kč');
     expect(tile('Hodnota zásob').textContent).toMatch(/z toho externí 1\s000 Kč/);
     // FG-1: do minima 50 chybí 15 ks po 100 Kč
-    expect(value('Doplnit do minima')).toBe('1 500 Kč');
+    expect(value('Doplnit do 5 dní')).toBe('1 500 Kč');
     expect(value('Nad maximem (20 dní)')).toBe('0 Kč');
     // PG-1: 2000 ks, celá potřeba 200 ks → 1800 ks po 0,5 Kč
     expect(value('Nad celou potřebu')).toBe('900 Kč');

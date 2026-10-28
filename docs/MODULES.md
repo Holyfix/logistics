@@ -140,7 +140,7 @@ Filtry projekt, kategorie, strana (LHD/RHD) a varianta z kmenových dat se ovliv
 - ✅ **Dosah zásoby** v pracovních dnech: kolik dní volná zásoba pokryje potřebu den po dni – FG z odvolávek, SFG a PG
   přes kusovník (odvolávky × množství na 1 ks hotového dílu, bez odečtu skladu hotových dílů jako v Komponentách);
   **minimum** = potřeba na 5 pracovních dní, **maximum** = na 20 pracovních dní
-- ✅ **Dlaždice v Kč:** hodnota zásob (z toho externí), doplnit do minima (z toho kritické), nad maximem (spotřebuje se
+- ✅ **Dlaždice v Kč:** hodnota zásob (z toho externí), doplnit do 5 dní (z toho kritické), nad maximem (spotřebuje se
   později), nad celou potřebu (do konce odvolávek se nespotřebuje), bez potřeby (z toho není v kusovníku), blokováno
   podle důvodu. Poslední pohyb z ERP se nepoužívá (pole není spolehlivé)
 - ✅ **Kam jsou peníze uložené:** pruh celé hodnoty zásoby – potřebná (do maxima), nad maximem, nad celou potřebu,
