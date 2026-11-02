@@ -763,16 +763,17 @@ button:focus-visible {
   color: var(--ink-2);
 }
 
-.table-data tfoot td {
+/* Patička se přilepí ke spodku jako celek, aby se víc řádků (např. Celkem a Směny) nepřekrývalo. */
+.table-data tfoot {
   position: sticky;
   bottom: 0;
+  z-index: 3;
+}
+
+.table-data tfoot td {
   font-weight: 700;
   background: var(--surface-2);
   border-top: 1px solid var(--line);
-}
-
-.table-data tfoot td.sticky-col {
-  z-index: 3;
 }
 
 .table-data td.cell-changed {
