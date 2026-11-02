@@ -51,6 +51,27 @@ describe('CallOffsPage', () => {
     expect(within(table).getByText('1003')).toBeTruthy();
   });
 
+  it('klik na buňku zvýrazní řádek a sloupec, druhý klik zvýraznění zruší', () => {
+    renderPage(state);
+    const table = screen.getByRole('table');
+    const row = within(table).getByText('1001').closest('tr')!;
+    const cell = row.querySelectorAll('td')[3]!;
+    fireEvent.click(cell);
+    expect(row.hasAttribute('data-crosshair')).toBe(true);
+    // sloupec: stejná buňka ve všech řádcích včetně záhlaví a součtu
+    const column = [...table.querySelectorAll('[data-crosshair-col]')];
+    expect(column).toHaveLength(table.querySelectorAll('tr').length);
+    expect(column.every((c) => (c as HTMLTableCellElement).cellIndex === 3)).toBe(true);
+    // jiný řádek: zvýraznění se přesune
+    const other = within(table).getByText('1002').closest('tr')!;
+    fireEvent.click(other.querySelectorAll('td')[3]!);
+    expect(row.hasAttribute('data-crosshair')).toBe(false);
+    expect(other.hasAttribute('data-crosshair')).toBe(true);
+    fireEvent.click(other.querySelectorAll('td')[3]!);
+    expect(other.hasAttribute('data-crosshair')).toBe(false);
+    expect(table.querySelector('[data-crosshair-col]')).toBeNull();
+  });
+
   it('filtruje podle kmenových dat a ukáže díly bez nich', () => {
     renderPage(state);
     fireEvent.change(screen.getByLabelText('Strana'), { target: { value: 'RHD' } });

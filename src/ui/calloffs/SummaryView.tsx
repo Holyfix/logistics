@@ -1,4 +1,5 @@
 import { Fragment, useMemo, useState, type ReactNode } from 'react';
+import { useCrosshair } from '../useCrosshair';
 import { ITEM_FIELDS, MISSING_MASTER, type ItemField, type ItemFilter } from '../../core/calloffs/filter';
 import type { CallOffExport } from '../../core/calloffs/parse';
 import { summarize, visibleNodes, type PerShift, type SummaryNode } from '../../core/calloffs/summary';
@@ -37,6 +38,7 @@ export function SummaryView({ current, previous, items, master, filter, filters 
     return m ? categoryOutput(settings, m.project, m.category) : null;
   }, [master, settings]);
   const [showShifts, setShowShifts] = useState(settings.outputs.length > 0);
+  const crosshair = useCrosshair();
 
   const periods = useMemo(() => buildPeriods(current, 'week', range), [current, range]);
   const currentRows = useMemo(() => buildCurrentRows(current, previous, items, periods), [current, previous, items, periods]);
@@ -194,7 +196,7 @@ export function SummaryView({ current, previous, items, master, filter, filters 
           <p>{t.calloffs.table.empty}</p>
         ) : (
           <div className="table-scroll table-tall">
-            <table className="table table-data summary-tree">
+            <table className="table table-data summary-tree" {...crosshair.tableProps}>
               <thead>
                 <tr>
                   <th className="sticky-col">{ts.tree}</th>
