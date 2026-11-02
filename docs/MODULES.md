@@ -103,6 +103,8 @@ Filtry projekt, kategorie, strana (LHD/RHD) a varianta z kmenových dat se ovliv
 
 - ✅ **Aktuální odvolávky:** nejnovější export po týdnech nebo dnech,
   změna proti předchozímu exportu (zvýraznění od 20 %), export do Excelu a CSV
+- ✅ **Zvýraznění řádku a sloupce** kliknutím na buňku (ve všech tabulkách odvolávek), druhý klik zruší; řádky Celkem a
+  Směny v patičce zůstávají při posouvání vidět
 - ⏳ **Přehled od začátku roku:** požadavek na každý týden z exportu téhož týdne, po dílech i celkem;
   odesláno z kumulativu jako doplňková informace
 - ⏳ **Porovnání exportů:** dva libovolné exporty po týdnech a dílech, matice vývoje odvolávek

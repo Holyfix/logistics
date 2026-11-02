@@ -1,4 +1,5 @@
 import { useMemo, useState, type ReactNode } from 'react';
+import { useCrosshair } from '../useCrosshair';
 import { buildCompareRows, buildMatrix, compareItems, comparePeriods, type CompareRow } from '../../core/calloffs/compare';
 import { filterItems, type ItemFilter } from '../../core/calloffs/filter';
 import type { CallOffExport } from '../../core/calloffs/parse';
@@ -34,6 +35,9 @@ export function CompareView({ exports, filter, master, filters }: Props) {
   const [range, setRange] = useState<PeriodCount>(12);
   const [view, setView] = useState<ItemView>('total');
   const [onlyChanged, setOnlyChanged] = useState(true);
+  const summaryCrosshair = useCrosshair();
+  const itemsCrosshair = useCrosshair();
+  const matrixCrosshair = useCrosshair();
 
   // Výběr se vždy srovná tak, aby starší byl opravdu starší.
   // Po novém načtení složky nemusí vybraný export existovat; pak platí výchozí dvojice.
@@ -214,7 +218,7 @@ export function CompareView({ exports, filter, master, filters }: Props) {
           </span>
         </div>
         <div className="table-scroll">
-          <table className="table table-data">
+          <table className="table table-data" {...summaryCrosshair.tableProps}>
             <thead>
               <tr>
                 <th className="sticky-col">{tc.week}</th>
@@ -299,7 +303,7 @@ export function CompareView({ exports, filter, master, filters }: Props) {
           <p>{rows.length > 0 ? tc.noChanges : t.calloffs.table.empty}</p>
         ) : (
           <div className="table-scroll table-tall">
-            <table className="table table-data">
+            <table className="table table-data" {...itemsCrosshair.tableProps}>
               <thead>
                 <tr>
                   <th className="sticky-col">{t.calloffs.table.item}</th>
@@ -371,7 +375,7 @@ export function CompareView({ exports, filter, master, filters }: Props) {
           </div>
           <p className="muted">{tc.matrixHelp}</p>
           <div className="table-scroll">
-            <table className="table table-data">
+            <table className="table table-data" {...matrixCrosshair.tableProps}>
               <thead>
                 <tr>
                   <th className="sticky-col">{tc.exportRow}</th>

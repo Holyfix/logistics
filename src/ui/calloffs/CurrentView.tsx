@@ -1,4 +1,5 @@
 import { Fragment, useMemo, useState, type ReactNode } from 'react';
+import { useCrosshair } from '../useCrosshair';
 import type { CallOffExport } from '../../core/calloffs/parse';
 import { shiftsOf, type PerShift } from '../../core/calloffs/summary';
 import {
@@ -58,6 +59,7 @@ export function CurrentView({ current, previous, items, master, filters }: Props
     return m ? categoryOutput(settings, m.project, m.category) : null;
   }, [master, settings]);
   const [showShifts, setShowShifts] = useState(settings.outputs.length > 0);
+  const crosshair = useCrosshair();
   const totalShifts = shiftsOf(rows, perShift, periods.length)?.values ?? null;
   const shiftText = (v: number | null) => (v === null ? '—' : v.toLocaleString(locale === 'cs' ? 'cs-CZ' : 'en-GB', { minimumFractionDigits: 1, maximumFractionDigits: 1 }));
   const round = (v: number) => Math.round(v * 10) / 10;
@@ -155,7 +157,7 @@ export function CurrentView({ current, previous, items, master, filters }: Props
           <p>{t.calloffs.table.empty}</p>
         ) : (
           <div className="table-scroll table-tall">
-            <table className="table table-data">
+            <table className="table table-data" {...crosshair.tableProps}>
               <thead>
                 <tr>
                   <th className="sticky-col">{t.calloffs.table.item}</th>

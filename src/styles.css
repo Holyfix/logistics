@@ -19,6 +19,8 @@
   --up: #006300;
   --down: #b42d2d;
   --changed: #fff4d6;
+  --crosshair: rgba(29, 92, 158, 0.09);
+  --crosshair-cell: rgba(29, 92, 158, 0.22);
   --negative-bg: #fdecec;
   --weekend-bg: #eceff3;
   --uncovered-bg: #ffe0b2;
@@ -50,6 +52,8 @@
     --up: #2fbf2f;
     --down: #ef7070;
     --changed: #3a3115;
+    --crosshair: rgba(111, 168, 232, 0.14);
+    --crosshair-cell: rgba(111, 168, 232, 0.3);
     --negative-bg: #3a1c1c;
     --weekend-bg: #1f2a34;
     --uncovered-bg: #4d3510;
@@ -763,16 +767,17 @@ button:focus-visible {
   color: var(--ink-2);
 }
 
-.table-data tfoot td {
+/* Patička se přilepí ke spodku jako celek, aby se víc řádků (např. Celkem a Směny) nepřekrývalo. */
+.table-data tfoot {
   position: sticky;
   bottom: 0;
+  z-index: 3;
+}
+
+.table-data tfoot td {
   font-weight: 700;
   background: var(--surface-2);
   border-top: 1px solid var(--line);
-}
-
-.table-data tfoot td.sticky-col {
-  z-index: 3;
 }
 
 .table-data td.cell-changed {
@@ -2954,4 +2959,14 @@ button.oil-step:disabled {
   .kpi-off-body {
     padding-left: 14px;
   }
+}
+
+/* Zvýraznění řádku a sloupce kliknutím na buňku (useCrosshair): průhledná vrstva nad pozadím buňky. */
+.table-data tr[data-crosshair] > td,
+.table-data tr > [data-crosshair-col] {
+  background-image: linear-gradient(var(--crosshair), var(--crosshair));
+}
+
+.table-data tr[data-crosshair] > [data-crosshair-col] {
+  background-image: linear-gradient(var(--crosshair-cell), var(--crosshair-cell));
 }
