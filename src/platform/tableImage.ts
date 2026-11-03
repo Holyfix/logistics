@@ -27,12 +27,31 @@ function fit(ctx: CanvasRenderingContext2D, text: string, width: number): string
   return `${s}…`;
 }
 
+/** Sloupce s `fit` zúží na nejširší text (záhlaví tučně, buňky podle tučnosti), nejvýš na zadanou šířku. */
+function fitColumns(table: ImageTable, f: { body: string; display: string }): ImageColumn[] {
+  const ctx = document.createElement('canvas').getContext('2d');
+  if (!ctx) return table.columns;
+  return table.columns.map((col, k) => {
+    if (!col.fit) return col;
+    ctx.font = `700 12px ${f.display}`;
+    let widest = ctx.measureText(col.label).width;
+    for (const row of table.rows) {
+      const cell = row[k];
+      if (!cell?.text) continue;
+      ctx.font = `${cell.bold ? 700 : 400} 12px ${f.body}`;
+      widest = Math.max(widest, ctx.measureText(cell.text).width);
+    }
+    return { ...col, width: Math.min(col.width, Math.ceil(widest) + 14) };
+  });
+}
+
 /** Vykreslí tabulku na plátno a vrátí PNG; ostrý obrázek i na displejích s vyšší hustotou (dvojnásobné rozlišení). */
 export async function tableImage(table: ImageTable): Promise<Blob> {
   await document.fonts?.ready;
   const f = fonts();
-  const hasSub = table.columns.some((c) => c.sub);
-  const width = PAD * 2 + table.columns.reduce((s, c) => s + c.width, 0);
+  const columns = fitColumns(table, f);
+  const hasSub = columns.some((c) => c.sub);
+  const width = PAD * 2 + columns.reduce((s, c) => s + c.width, 0);
   const top = PAD + 24 + 18 + 10;
   const headHeight = HEAD + (hasSub ? SUB : 0);
   const height = top + headHeight + table.rows.length * ROW + (table.note ? 28 : 0) + PAD;
@@ -64,7 +83,7 @@ export async function tableImage(table: ImageTable): Promise<Blob> {
 
   // Záhlaví.
   let x = PAD;
-  for (const col of table.columns) {
+  for (const col of columns) {
     ctx.fillStyle = col.headerBackground ?? C.header;
     ctx.fillRect(x, top, col.width, HEAD);
     ctx.fillStyle = C.headerText;
@@ -87,7 +106,7 @@ export async function tableImage(table: ImageTable): Promise<Blob> {
     const y = top + headHeight + r * ROW;
     let cx = PAD;
     row.forEach((cell, k) => {
-      const col = table.columns[k]!;
+      const col = columns[k]!;
       if (cell.background) {
         ctx.fillStyle = cell.background;
         ctx.fillRect(cx, y, col.width, ROW);
@@ -103,7 +122,7 @@ export async function tableImage(table: ImageTable): Promise<Blob> {
 
   // Rámeček zvýrazněných sloupců přes celou výšku tabulky.
   x = PAD;
-  for (const col of table.columns) {
+  for (const col of columns) {
     if (col.edge) {
       ctx.fillStyle = col.edge;
       ctx.fillRect(x - 1, top, 2, headHeight + table.rows.length * ROW);
