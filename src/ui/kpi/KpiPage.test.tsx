@@ -81,7 +81,7 @@ describe('KpiPage', () => {
 
   it('zápis nabízí předchozí pracovní den, stav se počítá při psaní', () => {
     renderPage();
-    fireEvent.click(screen.getByRole('button', { name: 'Zapsat Po 5. 10.' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Zapsat Út 6. 10.' }));
     expect(screen.getByRole('tab', { name: 'Zápis dne' }).getAttribute('aria-selected')).toBe('true');
     // ranní zápis: výsledky za předchozí pracovní den, stav k dnešku (automatické ukazatele)
     expect(screen.getByRole('heading', { level: 2, name: 'Ranní zápis: výsledky za Po 5. 10. · stav Út 6. 10.' })).toBeTruthy();
@@ -102,18 +102,18 @@ describe('KpiPage', () => {
     expect([...document.querySelectorAll('.kpi-missing-days button')].map((b) => b.textContent)).toEqual(['Po 5. 10.']);
   });
 
-  it('tlačítko Zapsat: nejstarší nezapsaný pracovní den, jinak předchozí pracovní den se zaškrtnutím', () => {
+  it('tlačítko Zapsat s dnešním dnem: výsledky za předchozí pracovní den, nezapsaný starší den „doplnit“, hotovo se zaškrtnutím', () => {
     const entry = (n: number) => ({ day: day(n), author: 'Novák', at: '', values: { s_injury: 0 } });
     // výsledky za 5. 10. zapsané, dnešní stav ještě ne → Zapsat; s dnešním stavem → zapsáno ✓
     renderPage(withEntry(withEntry(kpi, entry(5)), entry(1)));
-    expect(screen.getByRole('button', { name: 'Zapsat Po 5. 10.' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Zapsat Út 6. 10.' }).getAttribute('title')).toBe('Ranní zápis Út 6. 10.: výsledky za Po 5. 10. a stav dnes');
     cleanup();
     renderPage(withEntry(withEntry(withEntry(kpi, entry(5)), entry(1)), { day: day(6), author: 'Novák', at: '', values: { d_customer: 0 } }));
-    expect(screen.getByRole('button', { name: 'Po 5. 10. zapsáno ✓' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Út 6. 10. zapsáno ✓' })).toBeTruthy();
     cleanup();
     // chybí pátek 2. 10. (1. a 5. 10. zapsané)
     renderPage(withEntry(withEntry(defaultKpis(cs.kpi.defaults), entry(1)), entry(5)));
-    fireEvent.click(screen.getByRole('button', { name: 'Zapsat Pá 2. 10.' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Zapsat Út 6. 10. · doplnit Pá 2. 10.' }));
     expect(screen.getByRole('heading', { level: 2, name: 'Ranní zápis: výsledky za Pá 2. 10. · stav Út 6. 10.' })).toBeTruthy();
   });
 

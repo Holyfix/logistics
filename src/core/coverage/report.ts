@@ -31,8 +31,8 @@ export interface CoverageReportTexts {
 
 const C = {
   ink: '#13202A',
-  boundary: '#E8590C',
-  boundarySub: '#FDE3CF',
+  boundary: '#2E8B3E',
+  boundarySub: '#DDF0DF',
   muted: '#6F7E8B',
   header: '#1D5C9E',
   headerText: '#FFFFFF',
@@ -65,10 +65,10 @@ function titleRows(texts: CoverageReportTexts, width: number): (ReportCell | nul
   ];
 }
 
-/** Okraje sloupce hranice pokrytí 2 dny (dnes + 1): oranžově zleva i zprava. */
+/** Okraje sloupce hranice pokrytí 2 dny (dnes + 1): zeleně zleva i zprava. */
 const BOUNDARY_EDGE: ReportCell = { leftBorderColor: C.boundary, leftBorderStyle: 'medium', rightBorderColor: C.boundary, rightBorderStyle: 'medium' };
 
-/** Záhlaví: popisky sloupců, u dnů zkratka dne a pod ní datum; víkend v jiném odstínu, hranice 2 dny oranžově. */
+/** Záhlaví: popisky sloupců, u dnů zkratka dne a pod ní datum; víkend v jiném odstínu, hranice 2 dny zeleně. */
 function headerRows(labels: string[], days: readonly DayNumber[], boundary: DayNumber | null, texts: CoverageReportTexts): (ReportCell | null)[][] {
   const head: ReportCell = { fontWeight: 'bold', textColor: C.headerText, backgroundColor: C.header, align: 'center', alignVertical: 'center', wrap: true, height: 30 };
   const sub: ReportCell = { fontSize: 9, textColor: C.ink, backgroundColor: C.subHeader, align: 'center', bottomBorderColor: C.header, bottomBorderStyle: 'medium' };
@@ -105,7 +105,7 @@ function valueCell(v: number | null, d: DayNumber, style: ReportCell = {}): Repo
 /**
  * Sešit Coverage: list s díly (jako tabulka Pokrytí po dílech, s filtry z aplikace) a list se souhrnem po stranách.
  * `ourStock` = sloupec Náš sklad (jen když je sklad načtený); `boundary` = den hranice pokrytí 2 dny (dnes + 1), sloupec
- * se orámuje oranžově, aby bylo vidět, které díly nejsou pokryté na 2 dny.
+ * se orámuje zeleně, aby bylo vidět, které díly nejsou pokryté na 2 dny.
  */
 export function coverageReport(
   lines: readonly CoverageLine[],
