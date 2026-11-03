@@ -10,6 +10,7 @@ import {
   type CoverageField,
   type CoverageFilter,
 } from '../../core/coverage/compute';
+import { coverageLinesImage, coverageSidesImage, type CoverageImageTexts } from '../../core/coverage/image';
 import { coverageReport } from '../../core/coverage/report';
 import { dayToIso, parseDay, weekday, type DayNumber } from '../../core/dates';
 import { formatDate, formatDayShort, formatQuantity } from '../../core/format';
@@ -22,6 +23,7 @@ import { downloadReport } from '../../platform/download';
 import { localToday } from '../components/useComponents';
 import { Icon } from '../icons';
 import { MappingNotice } from '../data/MappingPanels';
+import { CopyImageButton } from '../CopyImageButton';
 
 type RowsMode = 'all' | 'negativeAny' | 'negativeOn';
 
@@ -153,8 +155,8 @@ export function CoveragePage({ today = localToday() }: { today?: DayNumber } = {
       ...l.values,
     ]),
   });
-  // Formátovaný Excel (díly a souhrn po stranách) s filtry a volbami výpočtu z aplikace.
-  const downloadExcel = () => {
+  // Titulek Excelu a obrázku: datum, soubory, volby výpočtu a filtry z aplikace.
+  const reportHead = () => {
     const tr = tc.report;
     const updated = new Date(newest).toLocaleString(locale === 'cs' ? 'cs-CZ' : 'en-GB', { dateStyle: 'short', timeStyle: 'short' });
     const active = [
@@ -162,6 +164,20 @@ export function CoveragePage({ today = localToday() }: { today?: DayNumber } = {
       ...(filter.query.trim() ? [`${tc.filters.search} „${filter.query.trim()}“`] : []),
       ...(rowsMode === 'all' ? [] : [rowsMode === 'negativeAny' ? tc.options.negativeAny : `${tc.options.negativeOn} ${dayLabel(selectedDay)}`]),
     ];
+    return {
+      subtitle: tr.subtitle
+        .replace('{date}', formatDate(dayToIso(today), locale))
+        .replace('{files}', String(sources.length))
+        .replace('{updated}', updated)
+        .replace('{mode}', transitNote)
+        .replace('{parts}', formatQuantity(lines.length, locale)),
+      filters: tr.filters.replace('{list}', active.length ? active.join(' · ') : tr.noFilters),
+    };
+  };
+  // Formátovaný Excel (díly a souhrn po stranách) s filtry a volbami výpočtu z aplikace.
+  const downloadExcel = () => {
+    const tr = tc.report;
+    const { subtitle, filters } = reportHead();
     return downloadReport(
       `${fileBase}.xlsx`,
       coverageReport(
@@ -171,13 +187,8 @@ export function CoveragePage({ today = localToday() }: { today?: DayNumber } = {
         {
           ...tc.table,
           title: tr.title,
-          subtitle: tr.subtitle
-            .replace('{date}', formatDate(dayToIso(today), locale))
-            .replace('{files}', String(sources.length))
-            .replace('{updated}', updated)
-            .replace('{mode}', transitNote)
-            .replace('{parts}', formatQuantity(lines.length, locale)),
-          filters: tr.filters.replace('{list}', active.length ? active.join(' · ') : tr.noFilters),
+          subtitle,
+          filters,
           note: tr.note,
           weekdays: t.calloffs.weekdays,
           sheetLines: tc.export.sheet,
@@ -188,6 +199,21 @@ export function CoveragePage({ today = localToday() }: { today?: DayNumber } = {
       ),
     );
   };
+  // Obrázek tabulky (kopírovat do schránky): titulek s volbami a filtry, barvy jako v Excelu.
+  const imageTexts = (): CoverageImageTexts => {
+    const { subtitle, filters } = reportHead();
+    return {
+      ...tc.table,
+      title: tc.report.title,
+      subtitle: `${subtitle} · ${filters}`,
+      note: tc.report.imageNote,
+      weekdays: t.calloffs.weekdays,
+      sideNone: tc.summary.none,
+    };
+  };
+  const format = (v: number) => formatQuantity(v, locale);
+  const buildLinesImage = () => coverageLinesImage(lines, table.days, imageTexts(), format, today + 1, (n) => tc.report.more.replace('{n}', formatQuantity(n, locale)));
+  const buildSidesImage = () => coverageSidesImage(summary, table.days, imageTexts(), format, today + 1);
   const buildSummaryExport = (): ExportTable => ({
     fileName: `${fileBase}_${tc.export.summarySheet.toLowerCase()}`,
     sheetName: tc.export.summarySheet,
@@ -310,6 +336,7 @@ export function CoveragePage({ today = localToday() }: { today?: DayNumber } = {
           <h2>{tc.summary.heading}</h2>
           <span className="muted">{tc.table.sub}</span>
           <span className="panel-actions">
+            <CopyImageButton build={buildSidesImage} fileName={`${fileBase}_${tc.export.summarySheet.toLowerCase()}.png`} />
             <ExportButtons build={buildSummaryExport} excel={downloadExcel} />
           </span>
         </div>
@@ -339,6 +366,7 @@ export function CoveragePage({ today = localToday() }: { today?: DayNumber } = {
           <h2>{tc.table.heading}</h2>
           <span className="muted">{tc.table.sub}</span>
           <span className="panel-actions">
+            <CopyImageButton build={buildLinesImage} fileName={`${fileBase}.png`} />
             <ExportButtons build={buildLinesExport} excel={downloadExcel} />
           </span>
         </div>
