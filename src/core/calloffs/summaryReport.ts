@@ -27,6 +27,10 @@ export interface ReportCell {
   topBorderStyle?: 'thin' | 'medium';
   bottomBorderColor?: string;
   bottomBorderStyle?: 'thin' | 'medium';
+  leftBorderColor?: string;
+  leftBorderStyle?: 'thin' | 'medium';
+  rightBorderColor?: string;
+  rightBorderStyle?: 'thin' | 'medium';
 }
 
 export interface ReportSheet {

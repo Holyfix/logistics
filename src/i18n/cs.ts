@@ -546,7 +546,7 @@ export const cs = {
       subtitle: 'Export {date} · soubory coverage: {files}, nejnovější z {updated} · {mode} · {parts} dílů · ks na konci dne',
       filters: 'Filtry: {list}',
       noFilters: 'žádné (všechny díly)',
-      note: 'Pokrytí = stav u zákazníka na konci dne (jeho sklad − plán), podle volby s transitem a naším skladem. Záporné = chybí (červeně), víkend šedě, prázdná buňka = den mimo horizont souboru zákazníka. List Strany = součet po stranách.',
+      note: 'Pokrytí = stav u zákazníka na konci dne (jeho sklad − plán), podle volby s transitem a naším skladem. Záporné = chybí (červeně), oranžově orámovaný den = hranice pokrytí 2 dny (dnes + 1), víkend šedě, prázdná buňka = den mimo horizont souboru zákazníka. List Strany = součet po stranách.',
     },
     export: { fileName: 'coverage', sheet: 'Coverage', summarySheet: 'Strany' },
     hub: { withoutTransit: 'bez transitu', withTransit: 's transitem', parts: 'dílů', title: 'Chybějící kusy v prvních 2 dnech podle souborů zákazníka' },

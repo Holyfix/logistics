@@ -544,7 +544,7 @@ export const en: Messages = {
       subtitle: 'Export {date} · coverage files: {files}, newest from {updated} · {mode} · {parts} parts · pcs at end of day',
       filters: 'Filters: {list}',
       noFilters: 'none (all parts)',
-      note: 'Coverage = customer balance at the end of the day (their stock − plan), with transit and our stock per the options. Negative = short (red), weekend grey, empty cell = day outside the customer file horizon. Sheet Sides = total by side.',
+      note: 'Coverage = customer balance at the end of the day (their stock − plan), with transit and our stock per the options. Negative = short (red), day framed in orange = 2-day coverage limit (today + 1), weekend grey, empty cell = day outside the customer file horizon. Sheet Sides = total by side.',
     },
     export: { fileName: 'coverage', sheet: 'Coverage', summarySheet: 'Sides' },
     hub: { withoutTransit: 'without transit', withTransit: 'with transit', parts: 'parts', title: 'Pieces missing in the first 2 days according to customer files' },

@@ -69,6 +69,15 @@ describe('coverageReport', () => {
     expect(row[0]).toMatchObject({ value: 'FG-1', fontWeight: 'bold' });
   });
 
+  it('hranice pokrytí 2 dny (dnes + 1): sloupec orámovaný oranžově, záhlaví oranžové', () => {
+    const [framed] = coverageReport([line], [], days, texts, { ourStock: false, boundary: day(17) });
+    const header = framed!.data[4]!.slice(-3);
+    expect(header.map((c) => c?.backgroundColor)).toEqual(['#1D5C9E', '#E8590C', '#4F7BAA']);
+    const [fri, sat] = framed!.data[6]!.slice(-3);
+    expect(sat).toMatchObject({ value: -5, backgroundColor: '#FDECEC', leftBorderColor: '#E8590C', rightBorderColor: '#E8590C', rightBorderStyle: 'medium' });
+    expect(fri!.leftBorderColor).toBeUndefined();
+  });
+
   it('list se souhrnem po stranách', () => {
     expect(sides!.name).toBe('Strany');
     expect(sides!.data[6]!.map((c) => c?.value)).toEqual(['LHD', 10, -5, 0]);

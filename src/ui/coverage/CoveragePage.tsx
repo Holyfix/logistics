@@ -184,7 +184,7 @@ export function CoveragePage({ today = localToday() }: { today?: DayNumber } = {
           sheetSides: tc.export.summarySheet,
           sideNone: tc.summary.none,
         },
-        { ourStock: stock !== undefined },
+        { ourStock: stock !== undefined, boundary: today + 1 },
       ),
     );
   };

@@ -31,6 +31,8 @@ export interface CoverageReportTexts {
 
 const C = {
   ink: '#13202A',
+  boundary: '#E8590C',
+  boundarySub: '#FDE3CF',
   muted: '#6F7E8B',
   header: '#1D5C9E',
   headerText: '#FFFFFF',
@@ -63,16 +65,32 @@ function titleRows(texts: CoverageReportTexts, width: number): (ReportCell | nul
   ];
 }
 
-/** Záhlaví: popisky sloupců, u dnů zkratka dne a pod ní datum; víkend v jiném odstínu. */
-function headerRows(labels: string[], days: readonly DayNumber[], texts: CoverageReportTexts): (ReportCell | null)[][] {
+/** Okraje sloupce hranice pokrytí 2 dny (dnes + 1): oranžově zleva i zprava. */
+const BOUNDARY_EDGE: ReportCell = { leftBorderColor: C.boundary, leftBorderStyle: 'medium', rightBorderColor: C.boundary, rightBorderStyle: 'medium' };
+
+/** Záhlaví: popisky sloupců, u dnů zkratka dne a pod ní datum; víkend v jiném odstínu, hranice 2 dny oranžově. */
+function headerRows(labels: string[], days: readonly DayNumber[], boundary: DayNumber | null, texts: CoverageReportTexts): (ReportCell | null)[][] {
   const head: ReportCell = { fontWeight: 'bold', textColor: C.headerText, backgroundColor: C.header, align: 'center', alignVertical: 'center', wrap: true, height: 30 };
   const sub: ReportCell = { fontSize: 9, textColor: C.ink, backgroundColor: C.subHeader, align: 'center', bottomBorderColor: C.header, bottomBorderStyle: 'medium' };
   return [
     [
       ...labels.map((value) => ({ ...head, value, align: 'left' as const })),
-      ...days.map((d) => ({ ...head, value: texts.weekdays[weekday(d) - 1] ?? '', ...(isWeekend(d) ? { backgroundColor: C.weekendHead } : {}) })),
+      ...days.map((d) => ({
+        ...head,
+        value: texts.weekdays[weekday(d) - 1] ?? '',
+        ...(isWeekend(d) ? { backgroundColor: C.weekendHead } : {}),
+        ...(d === boundary ? { ...BOUNDARY_EDGE, backgroundColor: C.boundary } : {}),
+      })),
     ],
-    [...labels.map(() => ({ ...sub, value: '' })), ...days.map((d) => ({ ...sub, value: dayMonth(d), ...(isWeekend(d) ? { backgroundColor: C.weekendHeader } : {}) }))],
+    [
+      ...labels.map(() => ({ ...sub, value: '' })),
+      ...days.map((d) => ({
+        ...sub,
+        value: dayMonth(d),
+        ...(isWeekend(d) ? { backgroundColor: C.weekendHeader } : {}),
+        ...(d === boundary ? { ...BOUNDARY_EDGE, backgroundColor: C.boundarySub, fontWeight: 'bold' as const } : {}),
+      })),
+    ],
   ];
 }
 
@@ -86,15 +104,17 @@ function valueCell(v: number | null, d: DayNumber, style: ReportCell = {}): Repo
 
 /**
  * Sešit Coverage: list s díly (jako tabulka Pokrytí po dílech, s filtry z aplikace) a list se souhrnem po stranách.
- * `ourStock` = sloupec Náš sklad (jen když je sklad načtený).
+ * `ourStock` = sloupec Náš sklad (jen když je sklad načtený); `boundary` = den hranice pokrytí 2 dny (dnes + 1), sloupec
+ * se orámuje oranžově, aby bylo vidět, které díly nejsou pokryté na 2 dny.
  */
 export function coverageReport(
   lines: readonly CoverageLine[],
   sides: readonly { side: string; values: (number | null)[] }[],
   days: readonly DayNumber[],
   texts: CoverageReportTexts,
-  { ourStock }: { ourStock: boolean },
+  { ourStock, boundary = null }: { ourStock: boolean; boundary?: DayNumber | null },
 ): ReportSheet[] {
+  const edge = (d: DayNumber): ReportCell => (d === boundary ? BOUNDARY_EDGE : {});
   const labels = [
     texts.item,
     texts.customerNumber,
@@ -124,12 +144,12 @@ export function coverageReport(
     qty(l.transit),
     ...(ourStock ? [qty(l.ourStock)] : []),
     { value: [l.uncoveredAt.replace('T', ' '), l.firstUncovered].filter(Boolean).join(' · '), textColor: C.muted },
-    ...l.values.map((v, k) => valueCell(v, days[k]!)),
+    ...l.values.map((v, k) => valueCell(v, days[k]!, edge(days[k]!))),
   ]);
   const note: (ReportCell | null)[] = [{ value: texts.note, textColor: C.muted, fontStyle: 'italic', columnSpan: width, wrap: true, height: 30, alignVertical: 'top' }, ...Array.from({ length: width - 1 }, () => null)];
   const linesSheet: ReportSheet = {
     name: texts.sheetLines,
-    data: [...titleRows(texts, width), ...headerRows(labels, days, texts), ...rows, [], note],
+    data: [...titleRows(texts, width), ...headerRows(labels, days, boundary, texts), ...rows, [], note],
     columns: [
       { width: 14 },
       { width: 20 },
@@ -156,10 +176,10 @@ export function coverageReport(
     name: texts.sheetSides,
     data: [
       ...titleRows(texts, sideWidth),
-      ...headerRows(sideLabels, days, texts),
+      ...headerRows(sideLabels, days, boundary, texts),
       ...sides.map((s): (ReportCell | null)[] => [
         { value: s.side || texts.sideNone, fontWeight: 'bold', ...(s.side ? {} : { textColor: C.muted, fontStyle: 'italic' }) },
-        ...s.values.map((v, k) => valueCell(v, days[k]!)),
+        ...s.values.map((v, k) => valueCell(v, days[k]!, edge(days[k]!))),
       ]),
     ],
     columns: [{ width: 16 }, ...days.map(() => ({ width: 8 }))],
