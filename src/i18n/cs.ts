@@ -402,6 +402,7 @@ export const cs = {
       modified: 'Změněno',
       projects: 'Projekty hotových dílů (podle Item Mappingu)',
       noProject: 'bez projektu',
+      expired: 'Vynecháno řádků s ukončenou platností (End Eff před dneškem, i s díly pod nimi): {n}',
       marked: 'Sledované komponenty – nakupované díly v Item_Mapping (Item Type = PG)',
       noColumn: 'Item_Mapping neuvádí druh dílu (Item Type), v modulu Komponenty se proto nesleduje žádná komponenta. Nakupované díly patří na list PG.',
     },

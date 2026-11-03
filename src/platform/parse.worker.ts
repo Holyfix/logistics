@@ -71,7 +71,7 @@ self.onmessage = async (event: MessageEvent<ParseRequest>) => {
     if (kind === 'bom') {
       // Kusovník: všechny listy sešitu (např. list na projekt), záhlaví může být o pár řádků níž.
       const sheets = format === 'csv' ? [(({ header, rows }) => [header, ...rows])(parseCsv(decodeText(buffer)))] : (await readXlsxFile(buffer)).map((s) => s.data as Cell[][]);
-      const results = sheets.map(parseBom);
+      const results = sheets.map((sheet) => parseBom(sheet));
       const ok = results.flatMap((r) => (r.ok ? [r.value] : []));
       const result: BomResult = ok.length === 0 ? results[0]! : { ok: true, value: mergeBoms(ok) };
       (self as unknown as Worker).postMessage({ id, kind, result } satisfies ParseResponse);

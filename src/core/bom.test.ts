@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { bomParts, mergeBoms, parseBom } from './bom';
+import { dayFromParts } from './dates';
 import type { Cell } from './table';
 
 // Smyšlený odsazený kusovník ve formátu z ERP (dva hotové díly).
@@ -33,6 +34,35 @@ describe('parseBom', () => {
     expect(r.value.parents.get('FG-2')!.map((c) => c.item)).toEqual(['SUB-1', 'CLIP-1']);
     expect(r.value.info.get('1000100')).toEqual({ description: 'GRANULATE', um: 'KG', source: 'P', project: '' });
     expect(r.value.issues).toEqual([{ row: 13, column: 'Quantity Per', value: 'abc', message: 'invalidNumber' }]);
+  });
+
+  it('ukončená platnost (End Eff před dneškem) vynechá řádek i všechny díly pod ním', () => {
+    const today = dayFromParts(2026, 11, 3)!;
+    const r = parseBom(
+      [
+        ['Level', 'Component Item', 'Quantity Per', 'Purchase/Manufacture', 'End Eff'],
+        ['Parent', 'FG-1', null, 'L', null],
+        // ukončená mezivýroba: její komponenty datum konce nemají, přesto se vynechají
+        ['1', 'SUB-OLD', 1, 'L', '31.10.2026'],
+        ['.2', 'K-OLD', 2, 'P', null],
+        ['..3', 'K-DEEP', 1, 'P', null],
+        // platí ještě dnes a v budoucnu
+        ['1', 'SUB-NEW', 1, 'L', '03.11.2026'],
+        ['.2', 'K-NEW', 2, 'P', null],
+        ['.2', 'K-ENDED', 3, 'P', '01.01.2026'],
+        ['.2', 'K-STILL', 1, 'P', null],
+        ['1', 'LABEL', 1, 'P', new Date(Date.UTC(2027, 0, 1))],
+      ],
+      today,
+    );
+    if (!r.ok) throw new Error();
+    expect(r.value.parents.get('FG-1')!.map((c) => c.item)).toEqual(['SUB-NEW', 'K-NEW', 'K-STILL', 'LABEL']);
+    expect(r.value.trees.get('FG-1')!.map((n) => [n.item, n.children.map((c) => c.item)])).toEqual([
+      ['SUB-NEW', ['K-NEW', 'K-STILL']],
+      ['LABEL', []],
+    ]);
+    expect(r.value.expired).toBe(4);
+    expect(r.value.info.has('K-OLD')).toBe(false);
   });
 
   it('úroveň 0 je hotový díl stejně jako „Parent“', () => {
