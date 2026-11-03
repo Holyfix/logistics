@@ -3,7 +3,7 @@ import { parseCsv } from '../csv';
 import { dayFromParts, dayToIso } from '../dates';
 import { parseMasterData } from '../masterdata';
 import type { Cell } from '../table';
-import { buildCoverage, coverageOptions, EMPTY_COVERAGE_FILTER, filterCoverage, shortage, summarizeBySide, type CoverageLine, type CoverageSource } from './compute';
+import { buildCoverage, coverageOptions, EMPTY_COVERAGE_FILTER, filterCoverage, shortage, summarizeBySide, trimEmptyDays, type CoverageLine, type CoverageSource } from './compute';
 import { parseCoverageWorkbook } from './parse';
 
 const d = (day: number) => new Date(Date.UTC(2026, 9, day));
@@ -247,5 +247,22 @@ describe('navazující filtry', () => {
     expect(coverageOptions(t, { ...EMPTY_COVERAGE_FILTER, side: 'RHD' })).toMatchObject({ locations: ['L1'], projects: ['P1'], categories: ['DP'] });
     // vybraný projekt nabízí jen svoje destinace
     expect(coverageOptions(t, { ...EMPTY_COVERAGE_FILTER, project: 'P1' }).locations).toEqual(['L1']);
+  });
+});
+
+describe('trimEmptyDays', () => {
+  const line = (values: (number | null)[]) => ({ values }) as CoverageLine;
+  const days = [1, 2, 3, 4];
+  it('vynechá dny na konci, které žádný zobrazený díl nemá', () => {
+    const r = trimEmptyDays(days, [line([5, -1, null, null]), line([3, null, null, null])]);
+    expect(r.days).toEqual([1, 2]);
+    expect(r.lines.map((l) => l.values)).toEqual([
+      [5, -1],
+      [3, null],
+    ]);
+  });
+  it('den, který má aspoň jeden díl, zůstane; bez dílů všechny dny', () => {
+    expect(trimEmptyDays(days, [line([1, null, null, 0])]).days).toEqual(days);
+    expect(trimEmptyDays(days, []).days).toEqual(days);
   });
 });
