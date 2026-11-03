@@ -400,6 +400,7 @@ export const en: Messages = {
       modified: 'Modified',
       projects: 'Finished part projects (per Item Mapping)',
       noProject: 'no project',
+      expired: 'Rows skipped as no longer effective (End Eff before today, including parts below them): {n}',
       marked: 'Tracked components – purchased parts in Item_Mapping (Item Type = PG)',
       noColumn: 'Item_Mapping has no item type (Item Type), so the Components module tracks no component. Purchased parts go on the PG sheet.',
     },

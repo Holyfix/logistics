@@ -204,9 +204,13 @@ v Komponentách se bere z Item Mappingu (sloupec Project u hotového dílu).
 | Quantity Per | Qty Per, Množství (na 1 ks nadřazeného dílu) | ano |
 | Description, UM, Purchase/Manufacture | Popis, MJ, P/M nebo sloupec s „Purchased“ v názvu, např. „P = Purchased / L = Line manufactured“ (P = nákup, L = výroba) | ne |
 | Project | Projekt; nepoužívá se – projekt je jen z Item Mappingu | ne |
+| End Eff | End Effective, Effective End, End Date, Platnost do (datum konce platnosti) | ne |
 
 - **Množství na hotový díl** = součin „Quantity Per“ od hotového dílu dolů; stejná komponenta na víc místech se sečte.
   Rozpad je hrubý: zásoba mezivýrob se neodečítá. „Start Eff“ se nepoužívá.
+- **Ukončená platnost:** řádek s „End Eff“ před dneškem se vynechá i se všemi díly pod ním (vyšší úrovně), i když ty
+  datum konce nemají – např. ukončená mezivýroba na úrovni 1 vyřadí i své komponenty na úrovni 2. Datum dnes a později
+  platí. Modul Data u souboru ukáže, kolik řádků se vynechalo.
 - **Které komponenty se zobrazí:** ty, které mají v Item Mappingu ve sloupci „Component Coverage“ hodnotu „Ano“.
   Když sloupec v mappingu není, nesleduje se žádná komponenta (Kontrola mapování na to upozorní).
 - **Horizont** je 14 dní od dneška. Pokrytí komponent se počítá **podle coverage**: potřeba hotového dílu = co

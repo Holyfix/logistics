@@ -310,7 +310,10 @@ export function DataPage() {
                         <td className="n">{formatQuantity(new Set([...b.data.parents.values()].flat().map((c) => c.item)).size, locale)}</td>
                         <td className="wrap">{bomProjects(b.data)}</td>
                         <td>{new Date(b.lastModified).toLocaleString(locale === 'cs' ? 'cs-CZ' : 'en-GB', { dateStyle: 'short', timeStyle: 'short' })}</td>
-                        <td className="wrap">{b.data.issueCount === 0 ? <span className="muted">{t.data.calloffs.noIssues}</span> : <IssueList issues={b.data.issues} count={b.data.issueCount} />}</td>
+                        <td className="wrap">
+                          {b.data.issueCount === 0 ? <span className="muted">{t.data.calloffs.noIssues}</span> : <IssueList issues={b.data.issues} count={b.data.issueCount} />}
+                          {b.data.expired > 0 && <small className="cell-note muted">{t.data.bom.expired.replace('{n}', formatQuantity(b.data.expired, locale))}</small>}
+                        </td>
                       </tr>
                     ))}
                   </tbody>

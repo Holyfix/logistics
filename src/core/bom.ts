@@ -1,7 +1,8 @@
 // Kusovník (BOM) z ERP: víceúrovňový rozpad hotových dílů na komponenty.
 
 import { findColumn } from './csv';
-import { cellNumber, cellText, MAX_ISSUES, type Cell, type DataIssue } from './table';
+import { dayFromParts, type DayNumber } from './dates';
+import { cellDay, cellNumber, cellText, MAX_ISSUES, type Cell, type DataIssue } from './table';
 
 export const BOM_COLUMNS = {
   level: ['Level', 'Úroveň'],
@@ -11,6 +12,7 @@ export const BOM_COLUMNS = {
   um: ['UM', 'Unit of Measure', 'MJ'],
   source: ['Purchase/Manufacture', 'Pur/Mfg', 'P/M', 'P = Purchased / L = Line manufactured', 'Purchased/Manufactured'],
   project: ['Project', 'Projekt'],
+  endEffective: ['End Eff', 'End Effective', 'End Effectivity', 'Effective End', 'End Date', 'Platnost do'],
 } as const;
 
 /** Komponenta s množstvím na 1 ks hotového dílu (přes všechny úrovně). */
@@ -46,6 +48,8 @@ export interface BomData {
   trees: Map<string, BomNode[]>;
   /** Popis, jednotka a druh podle čísla dílu (komponenty i hotové díly). */
   info: Map<string, BomItemInfo>;
+  /** Vynechané řádky s ukončenou platností (End Eff před dneškem) včetně všech dílů pod nimi. */
+  expired: number;
   issueCount: number;
   issues: DataIssue[];
 }
@@ -62,11 +66,19 @@ function levelOf(cell: Cell | undefined): number | null {
   return Number.isInteger(n) && n >= 0 ? n : null;
 }
 
+/** Dnešní den podle místního času počítače. */
+function localDay(): DayNumber {
+  const now = new Date();
+  return dayFromParts(now.getFullYear(), now.getMonth() + 1, now.getDate())!;
+}
+
 /**
  * Načte odsazený kusovník: řádek „Parent“ začíná hotový díl, pod ním komponenty s úrovní 1, .2, ..3 …
  * Množství na hotový díl je součin „Quantity Per“ od hotového dílu dolů. Záhlaví může být v prvních 10 řádcích.
+ * Řádek s ukončenou platností (End Eff před `asOf`) se vynechá i se všemi díly pod ním, i když ty datum konce nemají
+ * (např. ukončená mezivýroba na úrovni 1 a její komponenty na úrovni 2).
  */
-export function parseBom(data: readonly Cell[][]): BomResult {
+export function parseBom(data: readonly Cell[][], asOf: DayNumber = localDay()): BomResult {
   const headerIndex = data.slice(0, 10).findIndex((row) => {
     const header = row.map((c) => cellText(c));
     return findColumn(header, BOM_COLUMNS.level) !== -1 && findColumn(header, BOM_COLUMNS.item) !== -1;
@@ -102,6 +114,9 @@ export function parseBom(data: readonly Cell[][]): BomResult {
     if (parent && components) parents.set(parent, [...components.values()]);
   };
   let parent: string | null = null;
+  // Úroveň ukončeného řádku: díly pod ním (vyšší úroveň) se vynechají; null = nic se nevynechává.
+  let endedLevel: number | null = null;
+  let expired = 0;
 
   for (let r = headerIndex + 1; r < data.length; r++) {
     const row = data[r]!;
@@ -111,6 +126,17 @@ export function parseBom(data: readonly Cell[][]): BomResult {
     const level = levelOf(row[col.level]);
     if (level === null) {
       issue({ row: rowNo, column: BOM_COLUMNS.level[0], value: text(row, col.level), message: 'invalidNumber' });
+      continue;
+    }
+    if (endedLevel !== null && level > endedLevel) {
+      expired++;
+      continue;
+    }
+    endedLevel = null;
+    const end = col.endEffective === -1 ? null : cellDay(row[col.endEffective]);
+    if (level > 0 && end !== null && end < asOf) {
+      endedLevel = level;
+      expired++;
       continue;
     }
     if (!info.has(item))
@@ -153,7 +179,7 @@ export function parseBom(data: readonly Cell[][]): BomResult {
   }
   finish(parent, current);
 
-  return { ok: true, value: { parents, trees, info, issueCount, issues } };
+  return { ok: true, value: { parents, trees, info, expired, issueCount, issues } };
 }
 
 /** Spojí kusovníky z víc souborů; když je hotový díl ve víc souborech, platí soubor uvedený dřív (nejnovější). */
@@ -169,7 +195,14 @@ export function mergeBoms(boms: readonly BomData[]): BomData {
     }
     for (const [item, i] of bom.info) if (!info.has(item)) info.set(item, i);
   }
-  return { parents, trees, info, issueCount: boms.reduce((n, b) => n + b.issueCount, 0), issues: boms.flatMap((b) => b.issues).slice(0, MAX_ISSUES) };
+  return {
+    parents,
+    trees,
+    info,
+    expired: boms.reduce((n, b) => n + b.expired, 0),
+    issueCount: boms.reduce((n, b) => n + b.issueCount, 0),
+    issues: boms.flatMap((b) => b.issues).slice(0, MAX_ISSUES),
+  };
 }
 
 /** Díl z kusovníku pod hotovým dílem: nakupovaný (P), nebo vyráběný (mezivýroba). */
