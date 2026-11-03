@@ -7,6 +7,7 @@ import {
   SHORTAGE_DAYS,
   shortage,
   summarizeBySide,
+  trimEmptyDays,
   type CoverageField,
   type CoverageFilter,
 } from '../../core/coverage/compute';
@@ -59,11 +60,13 @@ export function CoveragePage({ today = localToday() }: { today?: DayNumber } = {
   const table = useMemo(() => buildCoverage(sources, master, { transit, ourStock: withStock }, stock), [sources, master, transit, withStock, stock]);
   const options = useMemo(() => coverageOptions(table, filter), [table, filter]);
   const selectedDay = day !== null && table.days.includes(day) ? day : (table.days[0] ?? 0);
-  const lines = useMemo(
+  const filtered = useMemo(
     () => filterCoverage(table, { ...filter, rows: rowsMode === 'negativeOn' ? { kind: 'negativeOn', day: selectedDay } : { kind: rowsMode } }),
     [table, filter, rowsMode, selectedDay],
   );
-  const summary = useMemo(() => summarizeBySide(table.days, lines), [table.days, lines]);
+  // Dny na konci, které vybrané díly nemají (jejich soubory končí dřív), se nezobrazí ani neexportují.
+  const { days, lines } = useMemo(() => trimEmptyDays(table.days, filtered), [table.days, filtered]);
+  const summary = useMemo(() => summarizeBySide(days, lines), [days, lines]);
 
   const dayLabel = (d: DayNumber) => `${t.calloffs.weekdays[weekday(d) - 1]} ${formatDayShort(dayToIso(d), locale)}`;
 
@@ -117,10 +120,10 @@ export function CoveragePage({ today = localToday() }: { today?: DayNumber } = {
 
   const soon = shortage(lines, SHORTAGE_DAYS);
   const anyNegative = lines.filter((l) => l.values.some(isNegative)).length;
-  const lastDay = table.days.at(-1);
+  const lastDay = days.at(-1);
   const transitNote = `${transit ? tc.kpi.withTransit : tc.kpi.withoutTransit}${withStock ? `, ${tc.kpi.withStock}` : ''}`;
 
-  const fileBase = `${tc.export.fileName}_${dayToIso(table.days[0] ?? 0)}${transit ? '_transit' : ''}${withStock ? '_sklad' : ''}`;
+  const fileBase = `${tc.export.fileName}_${dayToIso(days[0] ?? 0)}${transit ? '_transit' : ''}${withStock ? '_sklad' : ''}`;
   const buildLinesExport = (): ExportTable => ({
     fileName: fileBase,
     sheetName: tc.export.sheet,
@@ -137,7 +140,7 @@ export function CoveragePage({ today = localToday() }: { today?: DayNumber } = {
       tc.table.transit,
       ...(stock ? [tc.table.ourStock] : []),
       tc.table.firstUncovered,
-      ...table.days.map(dayToIso),
+      ...days.map(dayToIso),
     ],
     rows: lines.map((l) => [
       l.item,
@@ -183,7 +186,7 @@ export function CoveragePage({ today = localToday() }: { today?: DayNumber } = {
       coverageReport(
         lines,
         summary,
-        table.days,
+        days,
         {
           ...tc.table,
           title: tr.title,
@@ -212,12 +215,12 @@ export function CoveragePage({ today = localToday() }: { today?: DayNumber } = {
     };
   };
   const format = (v: number) => formatQuantity(v, locale);
-  const buildLinesImage = () => coverageLinesImage(lines, table.days, imageTexts(), format, today + 1, (n) => tc.report.more.replace('{n}', formatQuantity(n, locale)));
-  const buildSidesImage = () => coverageSidesImage(summary, table.days, imageTexts(), format, today + 1);
+  const buildLinesImage = () => coverageLinesImage(lines, days, imageTexts(), format, today + 1, (n) => tc.report.more.replace('{n}', formatQuantity(n, locale)));
+  const buildSidesImage = () => coverageSidesImage(summary, days, imageTexts(), format, today + 1);
   const buildSummaryExport = (): ExportTable => ({
     fileName: `${fileBase}_${tc.export.summarySheet.toLowerCase()}`,
     sheetName: tc.export.summarySheet,
-    header: [tc.summary.side, ...table.days.map(dayToIso)],
+    header: [tc.summary.side, ...days.map(dayToIso)],
     rows: summary.map((s) => [s.side || tc.summary.none, ...s.values]),
   });
 
@@ -231,7 +234,7 @@ export function CoveragePage({ today = localToday() }: { today?: DayNumber } = {
   );
   /** Buňka pokrytí; `uncoveredDay` je den, kdy zákazník hlásí první nepokrytí. */
   const valueCell = (v: number | null, k: number, uncoveredDay: DayNumber | null = null) => {
-    const day = table.days[k]!;
+    const day = days[k]!;
     const state = isNegative(v) ? ' cell-negative' : v !== null && day === uncoveredDay ? ' cell-uncovered' : '';
     return (
       <td key={k} className={`n${dayClass(day)}${state}`} title={state === ' cell-uncovered' ? tc.legend.uncovered : undefined}>
@@ -255,7 +258,7 @@ export function CoveragePage({ today = localToday() }: { today?: DayNumber } = {
         <div className="kpi">
           <span className="kpi-label">
             {tc.kpi.shortage}
-            {table.days.length > 0 && ` (${table.days.slice(0, SHORTAGE_DAYS).map(dayLabel).join(', ')})`}
+            {days.length > 0 && ` (${days.slice(0, SHORTAGE_DAYS).map(dayLabel).join(', ')})`}
           </span>
           <span className="kpi-value">
             {formatQuantity(soon.pieces, locale)} {t.calloffs.table.unit}
@@ -345,7 +348,7 @@ export function CoveragePage({ today = localToday() }: { today?: DayNumber } = {
             <thead>
               <tr>
                 <th className="sticky-col">{tc.summary.side}</th>
-                {table.days.map(dayHead)}
+                {days.map(dayHead)}
               </tr>
             </thead>
             <tbody>
@@ -386,7 +389,7 @@ export function CoveragePage({ today = localToday() }: { today?: DayNumber } = {
                   <th className="n">{tc.table.transit}</th>
                   {stock && <th className="n">{tc.table.ourStock}</th>}
                   <th>{tc.table.firstUncovered}</th>
-                  {table.days.map(dayHead)}
+                  {days.map(dayHead)}
                 </tr>
               </thead>
               <tbody>

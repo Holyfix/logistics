@@ -165,6 +165,18 @@ export interface SideSummary {
 }
 
 /** Součet pokrytí po stranách LHD / RHD (dny mimo horizont souboru se nepočítají). */
+/**
+ * Vynechá dny na konci horizontu, které žádný ze zobrazených dílů nemá (soubory coverage vybraných dílů končí dřív než
+ * nejdelší soubor). Bez dílů zůstanou všechny dny.
+ */
+export function trimEmptyDays(days: readonly DayNumber[], lines: readonly CoverageLine[]): { days: DayNumber[]; lines: CoverageLine[] } {
+  if (lines.length === 0) return { days: [...days], lines: [...lines] };
+  let count = days.length;
+  while (count > 0 && lines.every((l) => l.values[count - 1] === null || l.values[count - 1] === undefined)) count--;
+  if (count === days.length) return { days: [...days], lines: [...lines] };
+  return { days: days.slice(0, count), lines: lines.map((l) => ({ ...l, values: l.values.slice(0, count) })) };
+}
+
 export function summarizeBySide(days: readonly DayNumber[], lines: readonly CoverageLine[]): SideSummary[] {
   const groups = new Map<string, number[]>();
   for (const line of lines) {
