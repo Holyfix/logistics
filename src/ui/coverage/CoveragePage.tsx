@@ -10,13 +10,15 @@ import {
   type CoverageField,
   type CoverageFilter,
 } from '../../core/coverage/compute';
+import { coverageReport } from '../../core/coverage/report';
 import { dayToIso, parseDay, weekday, type DayNumber } from '../../core/dates';
-import { formatDayShort, formatQuantity } from '../../core/format';
+import { formatDate, formatDayShort, formatQuantity } from '../../core/format';
 import { excludedLocationsIn, STOCK_ZONES, stockByItem } from '../../core/stock';
 import type { TransitEntry } from '../../core/transit';
 import { useI18n } from '../../i18n/I18nProvider';
 import { ExportButtons, type ExportTable } from '../calloffs/ExportButtons';
 import { useData } from '../data/DataProvider';
+import { downloadReport } from '../../platform/download';
 import { localToday } from '../components/useComponents';
 import { Icon } from '../icons';
 import { MappingNotice } from '../data/MappingPanels';
@@ -151,6 +153,41 @@ export function CoveragePage({ today = localToday() }: { today?: DayNumber } = {
       ...l.values,
     ]),
   });
+  // Formátovaný Excel (díly a souhrn po stranách) s filtry a volbami výpočtu z aplikace.
+  const downloadExcel = () => {
+    const tr = tc.report;
+    const updated = new Date(newest).toLocaleString(locale === 'cs' ? 'cs-CZ' : 'en-GB', { dateStyle: 'short', timeStyle: 'short' });
+    const active = [
+      ...(['location', 'project', 'category', 'side', 'variant'] as const).filter((k) => filter[k]).map((k) => `${tc.filters[k]} ${filter[k]}`),
+      ...(filter.query.trim() ? [`${tc.filters.search} „${filter.query.trim()}“`] : []),
+      ...(rowsMode === 'all' ? [] : [rowsMode === 'negativeAny' ? tc.options.negativeAny : `${tc.options.negativeOn} ${dayLabel(selectedDay)}`]),
+    ];
+    return downloadReport(
+      `${fileBase}.xlsx`,
+      coverageReport(
+        lines,
+        summary,
+        table.days,
+        {
+          ...tc.table,
+          title: tr.title,
+          subtitle: tr.subtitle
+            .replace('{date}', formatDate(dayToIso(today), locale))
+            .replace('{files}', String(sources.length))
+            .replace('{updated}', updated)
+            .replace('{mode}', transitNote)
+            .replace('{parts}', formatQuantity(lines.length, locale)),
+          filters: tr.filters.replace('{list}', active.length ? active.join(' · ') : tr.noFilters),
+          note: tr.note,
+          weekdays: t.calloffs.weekdays,
+          sheetLines: tc.export.sheet,
+          sheetSides: tc.export.summarySheet,
+          sideNone: tc.summary.none,
+        },
+        { ourStock: stock !== undefined, boundary: today + 1 },
+      ),
+    );
+  };
   const buildSummaryExport = (): ExportTable => ({
     fileName: `${fileBase}_${tc.export.summarySheet.toLowerCase()}`,
     sheetName: tc.export.summarySheet,
@@ -273,7 +310,7 @@ export function CoveragePage({ today = localToday() }: { today?: DayNumber } = {
           <h2>{tc.summary.heading}</h2>
           <span className="muted">{tc.table.sub}</span>
           <span className="panel-actions">
-            <ExportButtons build={buildSummaryExport} />
+            <ExportButtons build={buildSummaryExport} excel={downloadExcel} />
           </span>
         </div>
         <div className="table-scroll">
@@ -302,7 +339,7 @@ export function CoveragePage({ today = localToday() }: { today?: DayNumber } = {
           <h2>{tc.table.heading}</h2>
           <span className="muted">{tc.table.sub}</span>
           <span className="panel-actions">
-            <ExportButtons build={buildLinesExport} />
+            <ExportButtons build={buildLinesExport} excel={downloadExcel} />
           </span>
         </div>
         {lines.length === 0 ? (

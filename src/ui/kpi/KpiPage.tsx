@@ -327,8 +327,8 @@ export function KpiPage({ today = localToday() }: { today?: DayNumber } = {}) {
   const missing: DayNumber[] = [];
   if (firstDay !== undefined)
     for (let d = Math.max(today - MISSING_LOOKBACK, firstDay); d < today; d++) if (weekday(d) <= 5 && !hasResults(kpi, d)) missing.push(d);
-  // Tlačítko Zapsat (ranní zápis): výsledky za nejstarší nezapsaný pracovní den za 30 dní, jinak za předchozí pracovní
-  // den, a stav dnes. Hotovo (✓), když jsou výsledky i dnešní stav zapsané.
+  // Tlačítko Zapsat (ranní zápis) s dnešním dnem: výsledky za nejstarší nezapsaný pracovní den za 30 dní (v popisku
+  // „doplnit …“), jinak za předchozí pracovní den, a stav dnes. Hotovo (✓), když jsou výsledky i dnešní stav zapsané.
   const writeDay = missing[0] ?? previousWorkday(today);
   const stateDefs = kpi.defs.filter((d) => d.timing === 'state');
   const todayEntry = entryOf(kpi, today);
@@ -412,8 +412,14 @@ export function KpiPage({ today = localToday() }: { today?: DayNumber } = {}) {
           </button>
         ))}
         <span className="tabs-actions">
-          <button type="button" className={`button${writeDone ? '' : ' button-primary'}`} onClick={() => openDay(writeDay, today)}>
-            {(writeDone ? tk.written : tk.write).replace('{day}', dayLabel(writeDay))}
+          <button
+            type="button"
+            className={`button${writeDone ? '' : ' button-primary'}`}
+            title={tk.writeTitle.replace('{result}', dayLabel(writeDay)).replace('{today}', dayLabel(today))}
+            onClick={() => openDay(writeDay, today)}
+          >
+            {(writeDone ? tk.written : tk.write).replace('{day}', dayLabel(today))}
+            {!writeDone && writeDay !== previousWorkday(today) && tk.writeMissing.replace('{day}', dayLabel(writeDay))}
           </button>
         </span>
       </div>

@@ -119,6 +119,7 @@ Filtry projekt, kategorie, strana (LHD/RHD) a varianta z kmenových dat se ovliv
 - ✅ Tři formáty souborů zákazníka (Coverage Report Overview, Articles, Bestand); transit se sjednotí
 - ✅ **Doplněný transit** ze složky Transit (naše expedice, které soubor coverage ještě nemá): přičte se k transitu dílu;
   souhrn s podrobnostmi nad tabulkou, u dílu „+N expedice“; expedice ze dne před souborem coverage se nepřičte
+- ✅ **Excel** formátovaný jako report: titulek s datem, soubory, volbami (transit, náš sklad) a filtry, barevné záhlaví se zkratkou a datem dne, den dnes + 1 (hranice pokrytí 2 dny) orámovaný zeleně, záporné pokrytí červeně, víkendy šedě, ukotvené záhlaví a díl; list Strany se souhrnem po stranách (CSV zůstává prostá tabulka)
 
 ### Mimořádné přepravy
 - Zápis mimořádné přepravy přímo v aplikaci (do sdílené složky)
