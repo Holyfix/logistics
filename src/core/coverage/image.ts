@@ -60,10 +60,11 @@ export function coverageLinesImage(
     title: texts.title,
     subtitle: texts.subtitle,
     columns: [
-      { label: texts.item, width: 96, align: 'left' },
-      { label: texts.description, width: 230, align: 'left' },
-      { label: texts.project, width: 70, align: 'left' },
-      { label: texts.side, width: 50, align: 'left' },
+      // Šířka podle obsahu: číslo dílu celé, popis jen tak široký, jak je potřeba.
+      { label: texts.item, width: 240, fit: true, align: 'left' },
+      { label: texts.description, width: 260, fit: true, align: 'left' },
+      { label: texts.project, width: 120, fit: true, align: 'left' },
+      { label: texts.side, width: 80, fit: true, align: 'left' },
       ...dayColumns(days, boundary, texts),
     ],
     rows: shown.map((l) => [
@@ -88,7 +89,7 @@ export function coverageSidesImage(
   return {
     title: texts.title,
     subtitle: texts.subtitle,
-    columns: [{ label: texts.side, width: 110, align: 'left' }, ...dayColumns(days, boundary, texts)],
+    columns: [{ label: texts.side, width: 160, fit: true, align: 'left' }, ...dayColumns(days, boundary, texts)],
     rows: sides.map((s) => [
       { text: s.side || texts.sideNone, bold: true, ...(s.side ? {} : { color: C.muted }) },
       ...valueCells(s.values, days, format),
