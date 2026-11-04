@@ -29,7 +29,8 @@ export interface CoverageReportTexts {
   sideNone: string;
 }
 
-const C = {
+/** Barvy formátovaných sešitů (Coverage, Sekvence). */
+export const REPORT_COLORS = {
   ink: '#13202A',
   boundary: '#2E8B3E',
   boundarySub: '#DDF0DF',
@@ -44,8 +45,10 @@ const C = {
   down: '#B42D2D',
 };
 
+const C = REPORT_COLORS;
+
 /** Celá čísla s oddělovači tisíců; nula zůstává nulou (pokrytí přesně na nulu). */
-const QTY = '#,##0;-#,##0;0';
+export const QTY = '#,##0;-#,##0;0';
 
 /** Den „2.11.“ (druhý řádek záhlaví). */
 const dayMonth = (d: DayNumber) => {
@@ -53,9 +56,10 @@ const dayMonth = (d: DayNumber) => {
   return `${Number(day)}.${Number(m)}.`;
 };
 
-const isWeekend = (d: DayNumber) => weekday(d) >= 6;
+export const isWeekend = (d: DayNumber) => weekday(d) >= 6;
 
-function titleRows(texts: CoverageReportTexts, width: number): (ReportCell | null)[][] {
+/** Titulek, podtitulek a filtry přes celou šířku listu a prázdný řádek. */
+export function titleRows(texts: { title: string; subtitle: string; filters: string }, width: number): (ReportCell | null)[][] {
   const span = (cell: ReportCell): (ReportCell | null)[] => [{ ...cell, columnSpan: width }, ...Array.from({ length: width - 1 }, () => null)];
   return [
     span({ value: texts.title, fontWeight: 'bold', fontSize: 16, textColor: C.ink, height: 26, alignVertical: 'center' }),
@@ -66,10 +70,10 @@ function titleRows(texts: CoverageReportTexts, width: number): (ReportCell | nul
 }
 
 /** Okraje sloupce hranice pokrytí 2 dny (dnes + 1): zeleně zleva i zprava. */
-const BOUNDARY_EDGE: ReportCell = { leftBorderColor: C.boundary, leftBorderStyle: 'medium', rightBorderColor: C.boundary, rightBorderStyle: 'medium' };
+export const BOUNDARY_EDGE: ReportCell = { leftBorderColor: C.boundary, leftBorderStyle: 'medium', rightBorderColor: C.boundary, rightBorderStyle: 'medium' };
 
 /** Záhlaví: popisky sloupců, u dnů zkratka dne a pod ní datum; víkend v jiném odstínu, hranice 2 dny zeleně. */
-function headerRows(labels: string[], days: readonly DayNumber[], boundary: DayNumber | null, texts: CoverageReportTexts): (ReportCell | null)[][] {
+export function headerRows(labels: string[], days: readonly DayNumber[], boundary: DayNumber | null, texts: { weekdays: readonly string[] }): (ReportCell | null)[][] {
   const head: ReportCell = { fontWeight: 'bold', textColor: C.headerText, backgroundColor: C.header, align: 'center', alignVertical: 'center', wrap: true, height: 30 };
   const sub: ReportCell = { fontSize: 9, textColor: C.ink, backgroundColor: C.subHeader, align: 'center', bottomBorderColor: C.header, bottomBorderStyle: 'medium' };
   return [
@@ -95,7 +99,7 @@ function headerRows(labels: string[], days: readonly DayNumber[], boundary: DayN
 }
 
 /** Buňka pokrytí: záporné červeně na světle červeném podkladu, víkend šedě, mimo horizont souboru prázdná. */
-function valueCell(v: number | null, d: DayNumber, style: ReportCell = {}): ReportCell {
+export function valueCell(v: number | null, d: DayNumber, style: ReportCell = {}): ReportCell {
   const weekend: ReportCell = isWeekend(d) ? { backgroundColor: C.weekend } : {};
   if (v === null) return { value: '', ...weekend, ...style };
   if (v < 0) return { value: v, type: Number, format: QTY, ...weekend, ...style, textColor: C.down, backgroundColor: C.negative, fontWeight: 'bold' };
