@@ -1358,7 +1358,7 @@ export const cs = {
     },
     tiles: {
       cars: 'Vozů v matici',
-      carsNote: '{doors} dveří se stavem',
+      carsNote: '{doors} dveří se stavem, z toho {done} zabalených nebo odeslaných (nepočítají se)',
       known: 'Dveří s panelem z JIT',
       knownNote: 'bez JIT (panel neznámý): {n}',
       short: 'Nepokryté dveře',
@@ -1378,7 +1378,6 @@ export const cs = {
       searchCar: 'Production number, Lot nebo díl MF',
       onlyShortCars: 'Jen vozy s nepokrytými dveřmi',
       onlyShort: 'Jen chybějící',
-      skipDone: 'Nepočítat zabalené a odeslané dveře (stav 50+ podle Order Status Matrix)',
     },
     tabs: { matrix: 'Matrix', parts: 'Díly a sklad' },
     matrix: {
@@ -1399,7 +1398,8 @@ export const cs = {
       legendOk: 'na skladě',
       legendShort: 'chybí',
       legendUnknown: 'dveře nejsou v JIT (díly nelze určit)',
-      note: 'Vozy v pořadí plánované stavby u zákazníka (Planned customer built), stav dveří v barvách Order Status Matrix. Dveřní panel pro Production number a dveře je z JIT Overview, Middlefield z kusovníku (úroveň 1). Sklad zadaný v kartě Díly a sklad se spotřebovává v pořadí stavby; do potřeby se počítají všechny dveře bez ohledu na stav. Sloupec Materiál vyjmenuje chybějící MF vozu; najetím myší na dveře uvidíte díl a zbývající sklad. Excel obsahuje prioritní seznam chybějících MF podle data.',
+      legendDone: 'bez štítku: zabaleno nebo odesláno (stav 50+), do potřeby se nepočítá',
+      note: 'Vozy v pořadí plánované stavby u zákazníka (Planned customer built), stav dveří v barvách Order Status Matrix. Dveřní panel pro Production number a dveře je z JIT Overview, Middlefield z kusovníku (úroveň 1). Sklad zadaný v kartě Díly a sklad se spotřebovává v pořadí stavby; do potřeby se nepočítají zabalené a odeslané dveře (stav 50 a víc). Sloupec Materiál vyjmenuje chybějící MF vozu; najetím myší na dveře uvidíte díl a zbývající sklad. Excel obsahuje prioritní seznam chybějících MF podle data.',
     },
     table: {
       heading: 'Pokrytí po dílech',
@@ -1451,7 +1451,7 @@ export const cs = {
       missing: 'Chybí ks',
       lastShort: 'Poslední chybějící',
     },
-    legend: 'Záporné číslo = kolik kusů chybí na konci dne. Potřeba je v čase plánované stavby u zákazníka podle Order Status Matrix; dřívější stavby jsou „po termínu“. Počítají se všechny dveře v matici, u kterých je dveřní panel v JIT.',
+    legend: 'Záporné číslo = kolik kusů chybí na konci dne. Potřeba je v čase plánované stavby u zákazníka podle Order Status Matrix; dřívější stavby jsou „po termínu“. Počítají se dveře v matici, u kterých je dveřní panel v JIT, kromě zabalených a odeslaných (stav 50 a víc).',
   },
   footer: {
     privacy: 'Aplikace nikam neodesílá vaše data.',

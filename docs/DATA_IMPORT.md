@@ -340,9 +340,8 @@ přetáhnout); druh souboru se pozná podle obsahu. Logistická aplikace složku
 | Kusovník dveřních panelů (MBOM, Excel nebo CSV) | jako u Komponent; End Eff se bere v potaz | ano |
 
 - **Vozy a pořadí** jsou z matice (Planned customer built); zakázky, které v matici nejsou (např. staré zakázky v JIT),
-  se nepočítají. U každých dveří se stavem z matice se počítá potřeba bez ohledu na stav; volitelně bez zabalených
-  a odeslaných (stav 50 a víc): ty se nepočítají do potřeby a sklad se na ně nespotřebuje (vhodné, když zadaný sklad
-  už tyto dveře neobsahuje).
+  se nepočítají. Zabalené a odeslané dveře (stav 50 a víc) se do potřeby nikdy nepočítají (MF už
+  je v nich zabudovaný), a to ani když vůz v JIT už není; ostatní dveře se stavem z matice se počítají.
 - **JIT** slouží jen k dohledání dveřního panelu pro Production number a dveře: pozice, která je v kusovníku jako hotový
   díl; dveře (FL, FR, RL, RR, HB) se poznají z popisu panelu („FRT LH“, „RR RH“, „HB“). Dveře vozu, který v JIT ještě
   není, se ukážou šedě („není v JIT“) a do potřeby se nepočítají.

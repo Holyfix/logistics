@@ -54,7 +54,6 @@ export function MaterialApp({ today = localToday() }: { today?: DayNumber } = {}
   const [filter, setFilter] = useState<CarFilter>(NO_FILTER);
   const [query, setQuery] = useState('');
   const [onlyShort, setOnlyShort] = useState(false);
-  const [skipDone, setSkipDone] = useState(false);
   const [selected, setSelected] = useState<string | null>(null);
   const [paste, setPaste] = useState<string | null>(null);
 
@@ -68,9 +67,9 @@ export function MaterialApp({ today = localToday() }: { today?: DayNumber } = {}
   const coverage = useMemo(
     () =>
       jit?.kind === 'jit' && matrix?.kind === 'matrix' && bom
-        ? buildMaterialCoverage({ matrix: matrix.orders, positions: jit.positions, bom, stock: stockMap, today, skipDone })
+        ? buildMaterialCoverage({ matrix: matrix.orders, positions: jit.positions, bom, stock: stockMap, today })
         : null,
-    [jit, bom, matrix, stockMap, today, skipDone],
+    [jit, bom, matrix, stockMap, today],
   );
 
   const load = async (list: FileList | File[] | null) => {
@@ -265,7 +264,7 @@ export function MaterialApp({ today = localToday() }: { today?: DayNumber } = {}
                 <div className="kpi">
                   <span className="kpi-label">{tm.tiles.cars}</span>
                   <span className="kpi-value">{qty(coverage.cars.length)}</span>
-                  <span className="kpi-note">{tm.tiles.carsNote.replace('{doors}', qty(coverage.doors))}</span>
+                  <span className="kpi-note">{tm.tiles.carsNote.replace('{doors}', qty(coverage.doors)).replace('{done}', qty(coverage.skippedDone))}</span>
                 </div>
                 <div className="kpi">
                   <span className="kpi-label">{tm.tiles.known}</span>
@@ -330,10 +329,6 @@ export function MaterialApp({ today = localToday() }: { today?: DayNumber } = {}
                       </select>
                     </label>
                   ))}
-                <label className="check-field">
-                  <input type="checkbox" checked={skipDone} onChange={(e) => setSkipDone(e.target.checked)} />
-                  {tm.filters.skipDone}
-                </label>
                 <span className="filters-break" role="presentation" />
                 <span className="muted">{stockInfo}</span>
                 <button type="button" className="button button-small" onClick={exportExcel}>
@@ -408,6 +403,7 @@ export function MaterialApp({ today = localToday() }: { today?: DayNumber } = {}
                     <li>
                       <i className="mat-badge mat-badge-unknown">MF</i> {tm.matrix.legendUnknown}
                     </li>
+                    <li>{tm.matrix.legendDone}</li>
                   </ul>
                   <p className="muted">{tm.matrix.note}</p>
                 </div>

@@ -7,7 +7,7 @@ import type { DayNumber } from '../dates';
 import { dayOfStamp, doorOf, DOORS, type Door, type JitPosition, type Stamp } from './jit';
 import { statusCode, type MatrixOrder } from './matrix';
 
-/** Stav „Packed“ a vyšší: dveře jsou hotové (lze je volitelně nepočítat do potřeby). */
+/** Stav „Packed“ a vyšší: dveře jsou hotové, MF už je spotřebovaný a do potřeby se nepočítají. */
 export const DONE_STATUS = 50;
 
 /** Middlefield podle popisu v kusovníku („ASSY MF …“). */
@@ -38,7 +38,7 @@ export interface DoorPart {
 
 /**
  * Pokrytí dveří: ok = MF na skladě, short = chybí, unknown = dveřní panel není v JIT, none = dveře bez MF (panel bez
- * něj, nebo výklopné dveře), skipped = hotové dveře se nepočítají.
+ * něj, nebo výklopné dveře), skipped = zabalené nebo odeslané dveře (stav 50+) se nepočítají.
  */
 export type DoorState = 'ok' | 'short' | 'unknown' | 'none' | 'skipped';
 
@@ -95,7 +95,7 @@ export interface MaterialCoverage {
   days: DayNumber[];
   cars: CarCoverage[];
   parts: PartCoverage[];
-  /** Dveře v matici (se stavem), z nich s dveřním panelem z JIT a bez něj (bez výklopných), nepočítané hotové. */
+  /** Dveře v matici (se stavem); z nich hotové (stav 50+, nepočítají se) a z ostatních s dveřním panelem z JIT a bez něj (bez výklopných). */
   doors: number;
   known: number;
   unknown: number;
@@ -108,11 +108,9 @@ export interface MaterialInputs {
   bom: BomData;
   stock: ReadonlyMap<string, number>;
   today: DayNumber;
-  /** Nepočítat dveře, které jsou podle matice zabalené nebo odeslané (stav 50 a víc). */
-  skipDone?: boolean;
 }
 
-export function buildMaterialCoverage({ matrix, positions, bom, stock, today, skipDone = false }: MaterialInputs): MaterialCoverage {
+export function buildMaterialCoverage({ matrix, positions, bom, stock, today }: MaterialInputs): MaterialCoverage {
   const panels = panelsFromJit(positions, bom);
   // Vozy v pořadí plánované stavby (při shodě v pořadí matice); vůz bez data na začátek.
   const orders = [...matrix.values()].map((o, i) => ({ o, i })).sort((a, b) => (a.o.planned ?? -Infinity) - (b.o.planned ?? -Infinity) || a.i - b.i);
@@ -132,16 +130,17 @@ export function buildMaterialCoverage({ matrix, positions, bom, stock, today, sk
       // Výklopné dveře MF nemají: bez panelu z JIT nejsou „neznámé“, jen bez MF.
       const cell: DoorCoverage = { door, status, panel, parts: [], state: panel || door === 'HB' ? 'none' : 'unknown' };
       car.doors[door] = cell;
+      // Zabalené a odeslané dveře (stav 50+) už MF spotřebovaly: nepočítají se, ani když nejsou v JIT.
+      if ((statusCode(status) ?? 0) >= DONE_STATUS) {
+        cell.state = 'skipped';
+        skippedDone++;
+        continue;
+      }
       if (!panel) {
         if (door !== 'HB') unknown++;
         continue;
       }
       known++;
-      if (skipDone && (statusCode(status) ?? 0) >= DONE_STATUS) {
-        cell.state = 'skipped';
-        skippedDone++;
-        continue;
-      }
       for (const node of bom.trees.get(panel) ?? []) {
         if (!isMiddlefield(bom.info.get(node.item)?.description ?? '')) continue;
         const rest = (left.has(node.item) ? left.get(node.item)! : (stock.get(node.item) ?? 0)) - node.qty;

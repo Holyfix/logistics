@@ -1356,7 +1356,7 @@ export const en: Messages = {
     },
     tiles: {
       cars: 'Cars in the matrix',
-      carsNote: '{doors} doors with status',
+      carsNote: '{doors} doors with status, {done} of them packed or shipped (not counted)',
       known: 'Doors with panel from JIT',
       knownNote: 'not in JIT (panel unknown): {n}',
       short: 'Doors not covered',
@@ -1376,7 +1376,6 @@ export const en: Messages = {
       searchCar: 'Production number, lot or MF part',
       onlyShortCars: 'Only cars with doors not covered',
       onlyShort: 'Short only',
-      skipDone: 'Do not count packed and shipped doors (status 50+ per Order Status Matrix)',
     },
     tabs: { matrix: 'Matrix', parts: 'Parts and stock' },
     matrix: {
@@ -1397,7 +1396,8 @@ export const en: Messages = {
       legendOk: 'in stock',
       legendShort: 'short',
       legendUnknown: 'door not in JIT (parts unknown)',
-      note: 'Cars in the order of planned customer build, door status in the Order Status Matrix colours. The door panel for the production number and door comes from the JIT Overview, the Middlefield from the BOM (level 1). Stock entered in Parts and stock is used up in build order; all doors count regardless of status. The Material column lists the missing MF of the car; hover a door to see the part and remaining stock. The Excel file contains a priority list of missing MF by date.',
+      legendDone: 'no badge: packed or shipped (status 50+), not counted in demand',
+      note: 'Cars in the order of planned customer build, door status in the Order Status Matrix colours. The door panel for the production number and door comes from the JIT Overview, the Middlefield from the BOM (level 1). Stock entered in Parts and stock is used up in build order; packed and shipped doors (status 50 and above) do not count. The Material column lists the missing MF of the car; hover a door to see the part and remaining stock. The Excel file contains a priority list of missing MF by date.',
     },
     table: {
       heading: 'Coverage by part',
@@ -1449,7 +1449,7 @@ export const en: Messages = {
       missing: 'Pcs short',
       lastShort: 'Last short',
     },
-    legend: 'Negative number = pieces short at the end of the day. Demand is at the planned customer build time from the Order Status Matrix; earlier builds are “overdue”. All doors in the matrix whose door panel is in JIT count.',
+    legend: 'Negative number = pieces short at the end of the day. Demand is at the planned customer build time from the Order Status Matrix; earlier builds are “overdue”. Doors in the matrix whose door panel is in JIT count, except packed and shipped ones (status 50 and above).',
   },
   footer: {
     privacy: 'The app never sends your data anywhere.',
