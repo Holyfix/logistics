@@ -5,6 +5,7 @@ import { formatDayShort, formatQuantity } from '../../core/format';
 import { buildMaterialCoverage, carMissing, DONE_STATUS, shortages, type CarCoverage, type DoorCoverage } from '../../core/material/coverage';
 import { dayOfStamp, DOORS, MINUTES_PER_DAY, type Door, type Stamp } from '../../core/material/jit';
 import { statusCode } from '../../core/material/matrix';
+import { PART_KINDS, type PartKind } from '../../core/material/partKey';
 import { isExcludedLocation, locationsOf, STOCK_ZONES, stockByItem } from '../../core/stock';
 import { useI18n } from '../../i18n/I18nProvider';
 import { downloadXlsxSheets } from '../../platform/download';
@@ -28,19 +29,23 @@ const unbuilt = (c: CarCoverage) => DOORS.some((d) => {
   return status !== undefined && (statusCode(status) ?? 0) < DONE_STATUS;
 });
 
-/** Lokace, které uživatel nechce počítat do skladu MF (pamatují se v prohlížeči). */
-const EXCLUDED_KEY = 'sequence-excluded-locations';
-function loadExcluded(): Set<string> {
-  try {
-    const saved = JSON.parse(localStorage.getItem(EXCLUDED_KEY) ?? '[]') as unknown;
-    return new Set(Array.isArray(saved) ? saved.filter((v): v is string => typeof v === 'string') : []);
-  } catch {
-    return new Set();
-  }
+/** Lokace, které uživatel nechce počítat do skladu MC a MF (zvlášť pro každý druh; pamatují se v prohlížeči). */
+const EXCLUDED_KEYS: Record<PartKind, string> = { MC: 'sequence-excluded-locations-mc', MF: 'sequence-excluded-locations' };
+type Excluded = Record<PartKind, Set<string>>;
+function loadExcluded(): Excluded {
+  const load = (kind: PartKind) => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(EXCLUDED_KEYS[kind]) ?? '[]') as unknown;
+      return new Set(Array.isArray(saved) ? saved.filter((v): v is string => typeof v === 'string') : []);
+    } catch {
+      return new Set<string>();
+    }
+  };
+  return { MC: load('MC'), MF: load('MF') };
 }
-function saveExcluded(excluded: ReadonlySet<string>) {
+function saveExcluded(kind: PartKind, excluded: ReadonlySet<string>) {
   try {
-    localStorage.setItem(EXCLUDED_KEY, JSON.stringify([...excluded].sort()));
+    localStorage.setItem(EXCLUDED_KEYS[kind], JSON.stringify([...excluded].sort()));
   } catch {
     // Volba se jen nezapamatuje.
   }
@@ -53,17 +58,17 @@ const statusClass = (status: string) => {
   return code !== null && STATUS_COLORS.includes(code) ? ` mat-s${code}` : '';
 };
 
-/** Chybějící MF vozu po dveřích, např. „FL: 456“. */
+/** Chybějící MC a MF vozu po dveřích, např. „FL: MC 123, MF 456“. */
 function missingByDoor(car: CarCoverage): string[] {
   const doors = new Map<Door, string[]>();
-  for (const m of carMissing(car)) (doors.get(m.door) ?? doors.set(m.door, []).get(m.door)!).push(m.item);
+  for (const m of carMissing(car)) (doors.get(m.door) ?? doors.set(m.door, []).get(m.door)!).push(`${m.kind} ${m.item}`);
   return [...doors].map(([door, parts]) => `${door}: ${parts.join(', ')}`);
 }
 
 /**
- * Sekvence (karta v Komponentách): pokrytí Middlefieldu ve formátu Order Status Matrix. Vozy a stav dveří z matice,
- * MF podle klíče MC/MF (složka Sekvence), co v klíči není, podle JIT Overview a načtených kusovníků; sklad
- * z načteného souboru skladu.
+ * Sekvence (karta v Komponentách): pokrytí Maincarrieru a Middlefieldu ve formátu Order Status Matrix. Vozy a stav
+ * dveří z matice, MC a MF podle klíče MC/MF (složka Sekvence), co v klíči není, podle JIT Overview a načtených
+ * kusovníků; sklad z načteného souboru skladu (lokace se dají vyřadit zvlášť pro MC a MF).
  */
 export function SequenceView({ today }: { today: DayNumber }) {
   const { t, locale } = useI18n();
@@ -75,14 +80,18 @@ export function SequenceView({ today }: { today: DayNumber }) {
   const [query, setQuery] = useState('');
   const [onlyShort, setOnlyShort] = useState(false);
   const [onlyUnbuilt, setOnlyUnbuilt] = useState(false);
-  const [excluded, setExcluded] = useState<Set<string>>(loadExcluded);
+  const [excludedAll, setExcludedAll] = useState<Excluded>(loadExcluded);
+  const [locationKind, setLocationKind] = useState<PartKind>('MC');
   const [locationQuery, setLocationQuery] = useState('');
+  const excluded = excludedAll[locationKind];
   const updateExcluded = (next: Set<string>) => {
-    setExcluded(next);
-    saveExcluded(next);
+    setExcludedAll({ ...excludedAll, [locationKind]: next });
+    saveExcluded(locationKind, next);
   };
 
   const coverage = useMemo(() => {
+    const stockOf = (kind: PartKind) =>
+      data?.stock ? stockByItem(data.stock.data, (location) => isExcludedLocation(location) || excludedAll[kind].has(location.trim().toUpperCase())) : new Map<string, number>();
     const bom = data?.boms.length ? mergeBoms(data.boms.map((b) => b.data)) : undefined;
     if (!sequence?.matrix || !(sequence.key || (sequence.jit && bom))) return null;
     return buildMaterialCoverage({
@@ -90,15 +99,16 @@ export function SequenceView({ today }: { today: DayNumber }) {
       key: sequence.key?.key,
       positions: sequence.jit?.positions,
       bom,
-      stock: data?.stock ? stockByItem(data.stock.data, (location) => isExcludedLocation(location) || excluded.has(location.trim().toUpperCase())) : new Map(),
+      stock: { MC: stockOf('MC'), MF: stockOf('MF') },
       today,
     });
-  }, [sequence, data, today, excluded]);
-  // Lokace se skladem MF (bez lokací, které aplikace vylučuje vždy); na výběr, které se nepočítají.
-  const locations = useMemo(
-    () => (coverage && data?.stock ? locationsOf(data.stock.data, new Set(coverage.parts.map((p) => p.item))) : []),
-    [coverage, data],
-  );
+  }, [sequence, data, today, excludedAll]);
+  // Lokace se skladem MC, resp. MF (bez lokací, které aplikace vylučuje vždy); na výběr, které se nepočítají.
+  const locationsByKind = useMemo(() => {
+    const of = (kind: PartKind) => (coverage && data?.stock ? locationsOf(data.stock.data, new Set(coverage.parts.filter((p) => p.kind === kind).map((p) => p.item))) : []);
+    return { MC: of('MC'), MF: of('MF') };
+  }, [coverage, data]);
+  const locations = locationsByKind[locationKind];
 
   if (!coverage) {
     return (
@@ -122,8 +132,9 @@ export function SequenceView({ today }: { today: DayNumber }) {
   };
   const doorTitle = (cell: DoorCoverage) =>
     [
-      cell.source === 'key' ? ts.matrix.fromKey : cell.panel ? `${ts.matrix.panel}: ${cell.panel}` : ts.matrix.unknown,
-      ...cell.parts.map((p) => `MF ${p.item}: ${ts.matrix.left} ${qty(p.left)}`),
+      ...(cell.parts.some((p) => p.source === 'jit') ? [`${ts.matrix.panel}: ${cell.panel}`] : []),
+      ...cell.parts.map((p) => `${p.kind} ${p.item}${p.source === 'key' ? ` (${ts.matrix.fromKey})` : ''}: ${ts.matrix.left} ${qty(p.left)}`),
+      ...cell.unknown.map((kind) => `${kind}: ${ts.matrix.unknown}`),
     ].join('\n');
 
   const q = query.trim().toLowerCase();
@@ -162,7 +173,7 @@ export function SequenceView({ today }: { today: DayNumber }) {
     const minute = st - day * MINUTES_PER_DAY;
     return `${dayToIso(day)} ${String(Math.floor(minute / 60)).padStart(2, '0')}:${String(minute % 60).padStart(2, '0')}`;
   };
-  // Excel: prioritní seznam chybějících MF podle data, chybějící dveře a Matrix (podle filtrů).
+  // Excel: prioritní seznam chybějících MC a MF podle data, chybějící dveře a Matrix (podle filtrů).
   const exportExcel = () => {
     const te = ts.export;
     const tm = ts.matrix;
@@ -170,20 +181,20 @@ export function SequenceView({ today }: { today: DayNumber }) {
     void downloadXlsxSheets(`${te.fileName}_${dayToIso(today)}.xlsx`, [
       {
         name: te.priority,
-        header: [te.order, te.shortFrom, tm.productionNumber, te.door, te.item, te.description, te.stock, te.demand, te.missing, te.lastShort],
+        header: [te.order, te.shortFrom, tm.productionNumber, te.door, te.kind, te.item, te.description, te.stock, te.demand, te.missing, te.lastShort],
         rows: list.map((s, i) => {
           const first = s.part.firstShort!;
-          return [i + 1, isoTime(first.planned), first.productionNumber, first.door, s.part.item, s.part.description, s.part.stock, s.part.total, s.missing, isoTime(s.demands.at(-1)!.planned)];
+          return [i + 1, isoTime(first.planned), first.productionNumber, first.door, ts.kinds[s.part.kind], s.part.item, s.part.description, s.part.stock, s.part.total, s.missing, isoTime(s.demands.at(-1)!.planned)];
         }),
         stickyColumns: 2,
       },
       {
         name: te.missingDoors,
-        header: [tm.planned, tm.lot, tm.productionNumber, te.door, te.item, te.description, te.status, te.missing],
+        header: [tm.planned, tm.lot, tm.productionNumber, te.door, te.kind, te.item, te.description, te.status, te.missing],
         rows: list
           .flatMap((s) => s.demands.map((d) => ({ s, d })))
           .sort((x, y) => (x.d.planned ?? -Infinity) - (y.d.planned ?? -Infinity) || x.d.productionNumber.localeCompare(y.d.productionNumber))
-          .map(({ s, d }) => [isoTime(d.planned), d.lot, d.productionNumber, d.door, s.part.item, s.part.description, d.status, d.missing]),
+          .map(({ s, d }) => [isoTime(d.planned), d.lot, d.productionNumber, d.door, ts.kinds[s.part.kind], s.part.item, s.part.description, d.status, d.missing]),
         stickyColumns: 1,
       },
       {
@@ -213,11 +224,24 @@ export function SequenceView({ today }: { today: DayNumber }) {
         <details className="panel mat-locations">
           <summary>
             {ts.locations.summary
+              .replace('{mc}', qty(locationsByKind.MC.filter((l) => excludedAll.MC.has(l.location)).length))
+              .replace('{mf}', qty(locationsByKind.MF.filter((l) => excludedAll.MF.has(l.location)).length))}
+          </summary>
+          <p className="muted">{ts.locations.hint.replace('{zones}', STOCK_ZONES.join(', '))}</p>
+          <div className="segmented" role="group" aria-label={ts.locations.kind}>
+            {PART_KINDS.map((kind) => (
+              <button key={kind} type="button" aria-pressed={locationKind === kind} onClick={() => setLocationKind(kind)}>
+                {ts.kinds[kind]}
+              </button>
+            ))}
+          </div>
+          <p className="muted">
+            {ts.locations.kindSummary
+              .replace('{kind}', ts.kinds[locationKind])
               .replace('{n}', qty(locations.filter((l) => excluded.has(l.location)).length))
               .replace('{total}', qty(locations.length))
               .replace('{qty}', qty(locations.filter((l) => excluded.has(l.location)).reduce((sum, l) => sum + l.qty, 0)))}
-          </summary>
-          <p className="muted">{ts.locations.hint.replace('{zones}', STOCK_ZONES.join(', '))}</p>
+          </p>
           {locations.length === 0 ? (
             <p className="muted">{ts.locations.none}</p>
           ) : (
@@ -286,12 +310,16 @@ export function SequenceView({ today }: { today: DayNumber }) {
         <div className="kpi">
           <span className="kpi-label">{ts.tiles.known}</span>
           <span className="kpi-value">{qty(coverage.known)}</span>
-          <span className="kpi-note">{ts.tiles.knownNote.replace('{n}', qty(coverage.unknown))}</span>
+          <span className="kpi-note">{ts.tiles.knownNote.replace('{mc}', qty(coverage.unknownByKind.MC)).replace('{mf}', qty(coverage.unknownByKind.MF))}</span>
         </div>
         <div className="kpi">
           <span className="kpi-label">{ts.tiles.short}</span>
           <span className={`kpi-value${shortDoors ? ' cell-short' : ''}`}>{qty(shortDoors)}</span>
-          <span className="kpi-note">{ts.tiles.shortParts.replace('{n}', qty(coverage.parts.filter((p) => p.firstShort).length))}</span>
+          <span className="kpi-note">
+            {ts.tiles.shortParts
+              .replace('{mc}', qty(coverage.parts.filter((p) => p.kind === 'MC' && p.firstShort).length))
+              .replace('{mf}', qty(coverage.parts.filter((p) => p.kind === 'MF' && p.firstShort).length))}
+          </span>
         </div>
         <div className="kpi">
           <span className="kpi-label">{ts.tiles.first}</span>
@@ -404,13 +432,13 @@ export function SequenceView({ today }: { today: DayNumber }) {
         </ul>
         <ul className="cov-legend">
           <li>
-            <i className="mat-badge mat-badge-ok">MF</i> {ts.matrix.legendOk}
+            <i className="mat-badge mat-badge-ok">MC</i> {ts.matrix.legendOk}
           </li>
           <li>
             <i className="mat-badge mat-badge-short">MF</i> {ts.matrix.legendShort}
           </li>
           <li>
-            <i className="mat-badge mat-badge-unknown">MF</i> {ts.matrix.legendUnknown}
+            <i className="mat-badge mat-badge-unknown">MC</i> {ts.matrix.legendUnknown}
           </li>
           <li>{ts.matrix.legendDone}</li>
         </ul>
@@ -420,7 +448,7 @@ export function SequenceView({ today }: { today: DayNumber }) {
   );
 }
 
-/** Řádek vozu jako v Order Status Matrix: stav dveří v barvě matice se štítkem MF, vpravo chybějící MF. */
+/** Řádek vozu jako v Order Status Matrix: stav dveří v barvě matice se štítky MC a MF, vpravo chybějící díly. */
 function CarRow({ car, time, title }: { car: CarCoverage; time: (s: Stamp | null) => string; title: (cell: DoorCoverage) => string }) {
   const { t } = useI18n();
   const tm = t.sequence.matrix;
@@ -443,7 +471,7 @@ function CarRow({ car, time, title }: { car: CarCoverage; time: (s: Stamp | null
           <td key={d} className={`mat-door${statusClass(cell.status)}`} title={title(cell)}>
             <span className="mat-door-in">
               <span>{cell.status}</span>
-              <DoorBadge cell={cell} />
+              <DoorBadges cell={cell} />
             </span>
           </td>
         );
@@ -463,7 +491,7 @@ function CarRow({ car, time, title }: { car: CarCoverage; time: (s: Stamp | null
         {unknown.length > 0 && (
           <span className="muted">
             {missing.length > 0 || counted ? ' · ' : ''}
-            {tm.unknown}
+            {tm.undetermined}
             {unknown.length < DOORS.filter((d) => car.doors[d] && d !== 'HB').length ? `: ${unknown.join(', ')}` : ''}
           </span>
         )}
@@ -472,12 +500,22 @@ function CarRow({ car, time, title }: { car: CarCoverage; time: (s: Stamp | null
   );
 }
 
-/** Štítek MF v buňce dveří: zelený na skladě, červený chybí, šedý neznámý (dveře nejsou v JIT). */
-function DoorBadge({ cell }: { cell: DoorCoverage }) {
+/** Štítky MC a MF v buňce dveří: zelený na skladě, červený chybí, šedý neurčený (není v klíči ani v JIT). */
+function DoorBadges({ cell }: { cell: DoorCoverage }) {
   if (cell.state === 'none' || cell.state === 'skipped') return null;
   return (
     <span className="mat-badges">
-      <i className={`mat-badge mat-badge-${cell.state}`}>MF</i>
+      {PART_KINDS.map((kind) => {
+        const parts = cell.parts.filter((p) => p.kind === kind);
+        const state = parts.length ? (parts.some((p) => p.left < -1e-9) ? 'short' : 'ok') : cell.unknown.includes(kind) ? 'unknown' : null;
+        return (
+          state && (
+            <i key={kind} className={`mat-badge mat-badge-${state}`}>
+              {kind}
+            </i>
+          )
+        );
+      })}
     </span>
   );
 }

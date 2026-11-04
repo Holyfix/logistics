@@ -331,36 +331,37 @@ aplikace nabídne úvodní sadu ukazatelů. Když soubor mezitím změnil někdo
 
 ## Sekvence (karta v Komponentách)
 
-Pokrytí **Middlefieldu (MF)** dveřních panelů ve formátu **Order Status Matrix**: karta **Sekvence** v modulu
+Pokrytí **Maincarrieru (MC)** a **Middlefieldu (MF)** dveřních panelů ve formátu **Order Status Matrix**: karta **Sekvence** v modulu
 Komponenty. Soubory leží ve složce `Sekvence`; druh souboru se pozná podle obsahu. **Sklad** je z načteného souboru
 skladu (stejně jako v Komponentách), nic se nezadává ručně.
 
 | Soubor | Potřebné sloupce | Povinný |
 |---|---|---|
 | Order Status Matrix (Excel nebo CSV) | Production number, Planned customer built, Status FL / FR / RL / RR / HB, Option Type, MC / MF; Lot se zobrazí (záhlaví může být pod titulkem) | ano |
-| Klíč MC/MF (Excel nebo CSV) | Side (FL, FR, RL, RR), Item Number, Type (Option Type z matice), Colour; Description (bere se jen MF, tj. popis s „MF“) | ano (nebo JIT) |
+| Klíč MC/MF (Excel nebo CSV) | Side (FL, FR, RL, RR), Item Number, Type (Option Type z matice), Colour (prázdná = všechny barvy); Description (druh dílu podle „MC“ / „MF“) | ano (nebo JIT) |
 | JIT Overview (CSV z ERP, každý řádek může být celý v uvozovkách) | Production number, Article number (Pos), Article description (Pos) | ne – jen pro dveře, které v klíči nejsou (pak je potřeba i kusovník dveřních panelů) |
 
 Klíč MC/MF musí ležet ve složce `Sekvence`: mimo ni by se podle „Mapping“ v názvu načetl jako Item Mapping.
 
 - **Vozy a pořadí** jsou z matice (Planned customer built). Zabalené a odeslané dveře (stav 50 a víc) se do potřeby
-  nikdy nepočítají (MF už je v nich zabudovaný); ostatní dveře se stavem z matice se počítají.
-- **MF pro dveře** podle klíče: dveře (Side), výbava (Option Type = Type) a barva MF (druhá hodnota ve sloupci
-  MC / MF, např. „C9 / C1“ → C1), 1 ks na dveře. Dveře, které v klíči vyhřívanou výbavu nemají (typicky zadní),
-  se hledají bez „-HT“ (SR2-HT → SR2). Maincarrier (MC) se nepočítá.
+  nikdy nepočítají (MC a MF už jsou v nich zabudované); ostatní dveře se stavem z matice se počítají.
+- **MC a MF pro dveře** podle klíče: dveře (Side), výbava (Option Type = Type) a barva ze sloupce MC / MF (první
+  hodnota pro MC, druhá pro MF, např. „C9 / C1“ → MC C9, MF C1), 1 ks na dveře. Řádek klíče bez barvy platí pro
+  všechny barvy (např. MC, který barvu nerozlišuje). Dveře, které v klíči vyhřívanou výbavu daného druhu nemají
+  (typicky zadní), se hledají bez „-HT“ (SR2-HT → SR2).
 - Co v klíči není, se dohledá přes **JIT** (dveřní panel pro Production number a dveře, dveře z popisu panelu „FRT LH“,
-  „RR RH“) a **kusovník** (MF na úrovni 1 pod panelem). Dveře bez MF v klíči i v JIT se ukážou šedě („MF neurčen“)
-  a do potřeby se nepočítají; výklopné dveře (HB) MF nemají.
+  „RR RH“) a **kusovník** (MC a MF na úrovni 1 pod panelem). Díl, který není v klíči ani v JIT, se ukáže šedě
+  a do potřeby se nepočítá; výklopné dveře (HB) MC ani MF nemají.
 - **Sklad** dílu (stejné lokace jako v Komponentách) se spotřebovává v pořadí stavby. V rozbalovacím seznamu **Lokace
-  skladu MF** lze zaškrtnout lokace, které se do skladu MF nepočítají (např. linka nebo příjem); volba se pamatuje
-  v prohlížeči.
+  skladu** lze zvlášť pro MC a MF zaškrtnout lokace, které se do skladu nepočítají (např. linka nebo příjem); volba
+  se pamatuje v prohlížeči.
 - **Tabulka:** řádky jako v matici (Lot, Production number, Option Type, MC / MF, Planned customer built, stav
-  dveří v barvách matice podle čísla stavu 20–60); v buňce štítek **MF** (zelený na skladě, červený chybí,
-  šedý MF neurčen); sloupec **Materiál** vyjmenuje chybějící MF vozu („FR: …“). Filtry: Option Type, den
+  dveří v barvách matice podle čísla stavu 20–60); v buňce štítky **MC** a **MF** (zelený na skladě, červený chybí,
+  šedý díl neurčen); sloupec **Materiál** vyjmenuje chybějící díly vozu („FR: MC …, MF …“). Filtry: Option Type, den
   stavby, stav dveří (vozy, které mají aspoň jedny dveře v daném stavu), hledání podle Production number, Lotu nebo
-  dílu MF, jen vozy s nepokrytými dveřmi a jen nevyrobené carsety (aspoň jedny dveře ve stavu 45 a méně).
-- **Excel:** list Priority (chybějící MF seřazené podle stavby prvních nepokrytých dveří: chybí od, vůz a dveře,
-  sklad, potřeba, chybí ks, poslední chybějící), list Chybějící dveře (každé nepokryté dveře podle data) a Matrix
+  dílu, jen vozy s nepokrytými dveřmi a jen nevyrobené carsety (aspoň jedny dveře ve stavu 45 a méně).
+- **Excel:** list Priority (chybějící MC a MF seřazené podle stavby prvních nepokrytých dveří: chybí od, vůz a dveře,
+  druh, sklad, potřeba, chybí ks, poslední chybějící), list Chybějící dveře (každé nepokryté dveře podle data) a Matrix
   (podle filtrů).
 - Smyšlená ukázka: `sample-data/Sekvence/` (vytvoří `node scripts/generate-material-sample.mjs`).
 

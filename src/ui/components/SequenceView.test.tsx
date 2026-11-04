@@ -92,20 +92,21 @@ describe('Komponenty – karta Sekvence', () => {
     localStorage.clear();
   });
 
-  it('matice a JIT ze složky Sekvence, MF z kusovníku a sklad ze souboru skladu', () => {
+  it('matice a JIT ze složky Sekvence, MC a MF z kusovníku a sklad ze souboru skladu', () => {
     renderPage();
     expect(screen.getByText(/OrderStatusMatrixOverview\.xlsx · klíč MC\/MF: — · JIT Overview: JIT_Overview\.csv · sklad: Stock_1\.csv/)).toBeTruthy();
     expect(shown()).toEqual(['V0', 'V1', 'V2', 'V3', 'V9']);
-    // V0 je odeslaný: nepočítá se; sklad MF 2 pokryje V1 a V2, V3 chybí; V9 není v JIT; MC se nepočítá
+    // V0 je odeslaný: nepočítá se; sklad MF 2 pokryje V1 a V2, V3 chybí MF; MC 10 pokryje všechny; V9 není v JIT
     expect(badges('V0')).toEqual([]);
-    expect(badges('V1')).toEqual(['MF ok']);
-    expect(badges('V2')).toEqual(['MF ok']);
-    expect(badges('V3')).toEqual(['MF short']);
-    expect(badges('V9')).toEqual(['MF unknown']);
+    expect(badges('V1')).toEqual(['MC ok', 'MF ok']);
+    expect(badges('V2')).toEqual(['MC ok', 'MF ok']);
+    expect(badges('V3')).toEqual(['MC ok', 'MF short']);
+    expect(badges('V9')).toEqual(['MC unknown', 'MF unknown']);
     expect(material('V2')).toBe('vše na skladě');
-    expect(material('V3')).toBe('FL: MF-1');
-    expect(material('V9')).toBe('MF neurčen');
+    expect(material('V3')).toBe('FL: MF MF-1');
+    expect(material('V9')).toBe('díly neurčeny');
     expect(screen.getByText(/z toho 1 zabalených nebo odeslaných/)).toBeTruthy();
+    expect(screen.getByText('chybí dílů: MC 0 · MF 1')).toBeTruthy();
     // filtry: Lot a MC / MF ve filtrech nejsou; nevyrobené carsety (aspoň jedny dveře ve stavu 45 a méně)
     expect(screen.queryByLabelText('Lot')).toBeNull();
     expect(screen.queryByLabelText('MC / MF')).toBeNull();
@@ -114,36 +115,44 @@ describe('Komponenty – karta Sekvence', () => {
     expect(screen.getByText('Zobrazeno 4 z 5 vozů')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Zrušit filtry' }));
     expect(shown()).toEqual(['V0', 'V1', 'V2', 'V3', 'V9']);
-    fireEvent.change(screen.getByLabelText('Production number, Lot nebo díl MF'), { target: { value: 'mf-1' } });
+    fireEvent.change(screen.getByLabelText('Production number, Lot nebo díl'), { target: { value: 'mc-1' } });
     expect(shown()).toEqual(['V1', 'V2', 'V3']);
     fireEvent.click(screen.getByLabelText('Jen vozy s nepokrytými dveřmi'));
     expect(shown()).toEqual(['V3']);
   });
 
-  it('vybrané lokace se do skladu MF nepočítají a volba se pamatuje', () => {
+  it('lokace, které se do skladu nepočítají, zvlášť pro MC a MF; volba se pamatuje', () => {
     renderPage();
-    expect(screen.getByText('Lokace skladu MF: nepočítá se 0 z 1 lokací (0 ks)')).toBeTruthy();
-    // v seznamu jsou jen lokace se skladem MF (A-02 má jen MC)
+    expect(screen.getByText('Lokace skladu: nepočítá se MC 0 · MF 0 lokací')).toBeTruthy();
+    // MC: jen lokace se skladem MC (A-01 má jen MF)
+    expect(screen.getByText('Maincarrier: nepočítá se 0 z 1 lokací (0 ks)')).toBeTruthy();
+    expect(screen.queryByLabelText('Nepočítat A-01')).toBeNull();
+    fireEvent.click(screen.getByLabelText('Nepočítat A-02'));
+    expect(badges('V1')).toEqual(['MC short', 'MF ok']);
+    // MF: jiný seznam a jiný výběr
+    fireEvent.click(screen.getByRole('button', { name: 'Middlefield' }));
     expect(screen.queryByLabelText('Nepočítat A-02')).toBeNull();
     fireEvent.click(screen.getByLabelText('Nepočítat A-01'));
-    expect(screen.getByText('Lokace skladu MF: nepočítá se 1 z 1 lokací (2 ks)')).toBeTruthy();
-    expect(badges('V1')).toEqual(['MF short']);
+    expect(screen.getByText('Middlefield: nepočítá se 1 z 1 lokací (2 ks)')).toBeTruthy();
+    expect(screen.getByText('Lokace skladu: nepočítá se MC 1 · MF 1 lokací')).toBeTruthy();
+    expect(badges('V1')).toEqual(['MC short', 'MF short']);
+    expect(JSON.parse(localStorage.getItem('sequence-excluded-locations-mc')!)).toEqual(['A-02']);
     expect(JSON.parse(localStorage.getItem('sequence-excluded-locations')!)).toEqual(['A-01']);
     cleanup();
     renderPage();
-    expect(badges('V1')).toEqual(['MF short']);
-    fireEvent.click(screen.getByLabelText('Nepočítat A-01'));
-    expect(badges('V1')).toEqual(['MF ok']);
+    expect(badges('V1')).toEqual(['MC short', 'MF short']);
+    fireEvent.click(screen.getByLabelText('Nepočítat A-02'));
+    expect(badges('V1')).toEqual(['MC ok', 'MF short']);
   });
 
-  it('klíč MC/MF místo JIT: MF podle výbavy, dveří a barvy', () => {
+  it('klíč MC/MF místo JIT: MC a MF podle výbavy, dveří a barvy', () => {
     renderPage(true, true);
     expect(screen.getByText(/klíč MC\/MF: MC_MF_klic\.xlsx · JIT Overview: —/)).toBeTruthy();
-    // sklad MF-K1 není: všechny počítané dveře chybí, i V9, který v JIT není
-    expect(badges('V1')).toEqual(['MF short']);
-    expect(badges('V9')).toEqual(['MF short']);
-    expect(material('V9')).toBe('FL: MF-K1');
-    expect(rowOf('V1').querySelectorAll('td')[5]!.title).toBe('MF podle klíče (Type, Side, Colour)\nMF MF-K1: zbývá skladu -1');
+    // MC-K1 ani MF-K1 skladem nejsou: všechny počítané dveře chybí, i V9, který v JIT není
+    expect(badges('V1')).toEqual(['MC short', 'MF short']);
+    expect(badges('V9')).toEqual(['MC short', 'MF short']);
+    expect(material('V9')).toBe('FL: MC MC-K1, MF MF-K1');
+    expect(rowOf('V1').querySelectorAll('td')[5]!.title).toBe('MC MC-K1 (z klíče): zbývá skladu -1\nMF MF-K1 (z klíče): zbývá skladu -1');
   });
 
   it('bez souborů ve složce Sekvence poradí, co uložit', () => {
