@@ -361,11 +361,14 @@ Klíč MC/MF musí ležet ve složce `Sekvence`: mimo ni by se podle „Mapping�
   šedý díl neurčen); sloupec **Materiál** vyjmenuje chybějící díly vozu („FR: MC …, MF …“). Filtry: Option Type, den
   stavby, stav dveří (vozy, které mají aspoň jedny dveře v daném stavu), hledání podle Production number, Lotu nebo
   dílu, jen vozy s nepokrytými dveřmi a jen nevyrobené carsety (aspoň jedny dveře ve stavu 45 a méně).
-- **Excel:** list Priority (chybějící MC a MF seřazené podle stavby prvních nepokrytých dveří: chybí od, vůz a dveře,
-  druh, sklad, potřeba, chybí ks, poslední chybějící), list Chybějící dveře (každé nepokryté dveře podle data), Matrix
-  (podle filtrů) a Bez klíče (kombinace druhu, dveří, výbavy a barvy, které v klíči chybí – výbava tak, jak ji zapsat do klíče, u zadních
-  dveří bez „-HT“ –, s počtem dveří a první
-  stavbou – podklad pro doplnění klíče).
+- **Excel** (formátovaný jako Coverage): list **Coverage** (sklad MC a MF na konci dne po odečtení potřeby v pořadí
+  stavby, záporné červeně, zítřek zeleně orámovaný) a list **Potřeba po dnech** (kusy dílu sečtené po dnech plánované
+  stavby, červeně dny, kdy sklad nestačí, součet za Maincarrier a Middlefield); díly v pořadí priority (druh, pak
+  díly, které chybí nejdřív) s „chybí od“ (čas stavby, vůz a dveře).
+- **Chybějící klíč** ukazuje modul **Data** (panel Sekvence) jako u kontroly mapování ostatních modulů: kombinace druhu,
+  dveří, výbavy a barvy z matice, pro které klíč nemá díl (výbava tak, jak ji zapsat do klíče, u zadních dveří bez
+  „-HT“), s počtem dveří a první stavbou; seznam jde stáhnout do Excelu. V Sekvenci na něj vede odkaz z dlaždice Díly
+  bez klíče.
 - Smyšlená ukázka: `sample-data/Sekvence/` (vytvoří `node scripts/generate-material-sample.mjs`).
 
 ## Testovací data

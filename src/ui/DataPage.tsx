@@ -10,6 +10,7 @@ import { downloadReport } from '../platform/download';
 import { useData } from './data/DataProvider';
 import { FolderPicker } from './data/FolderPicker';
 import { DataMapPanel, MappingCheckPanel, useMappingCheck } from './data/MappingPanels';
+import { SequenceKeyCheck } from './data/SequenceKeyCheck';
 
 function IssueList({ issues, count }: { issues: DataIssue[]; count: number }) {
   const { t } = useI18n();
@@ -370,6 +371,7 @@ export function DataPage() {
                 </table>
               </div>
               {(!data.sequence.matrix || !data.sequence.key) && <p className="muted">{t.data.sequence.incomplete}</p>}
+              <SequenceKeyCheck />
             </div>
           )}
 

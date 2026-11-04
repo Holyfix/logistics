@@ -9,6 +9,7 @@ import { parseStock } from '../../core/stock';
 import { I18nProvider } from '../../i18n/I18nProvider';
 import { DataProvider, type DataState } from '../data/DataProvider';
 import { ComponentsPage } from './ComponentsPage';
+import { DataPage } from '../DataPage';
 
 const matrix = parseSequenceCsv(
   [
@@ -150,6 +151,27 @@ describe('Komponenty – karta Sekvence', () => {
     expect(material('V3')).toBe('FL: MF MF-1 · chybí v klíči: MC FL');
     expect(rowOf('V1').className).not.toContain('mat-car-short');
     expect(screen.getByText('chybí dílů: MC 0 · MF 1')).toBeTruthy();
+  });
+
+  it('chybějící klíč: odkaz z Sekvence a seznam kombinací v modulu Data', () => {
+    renderPage();
+    expect(screen.getByRole('link', { name: 'Kontrola klíče →' }).getAttribute('href')).toBe('#data');
+    cleanup();
+    localStorage.setItem('logistics-locale', 'cs');
+    render(
+      <I18nProvider>
+        <DataProvider initial={state(true)}>
+          <DataPage />
+        </DataProvider>
+      </I18nProvider>,
+    );
+    // V9 FR v klíči není: MC i MF
+    expect(screen.getByText('Chybí v klíči MC/MF: 2 kombinací (MC 1 · MF 1) · 2 dveří se nepočítá')).toBeTruthy();
+    const rows = [...document.querySelectorAll('.check-parts-box tbody tr')].map((r) => [...r.querySelectorAll('td')].slice(0, 5).map((td) => td.textContent));
+    expect(rows).toEqual([
+      ['MC', 'FR', 'SR1', 'C1', '1'],
+      ['MF', 'FR', 'SR1', 'C1', '1'],
+    ]);
   });
 
   it('bez souborů ve složce Sekvence poradí, co uložit', () => {

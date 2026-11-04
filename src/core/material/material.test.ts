@@ -5,6 +5,8 @@ import { MINUTES_PER_DAY, parseStamp } from './doors';
 import { parseStatusMatrix, statusCode } from './matrix';
 import { keyType, lookupPart, partColour, partKind, parsePartKey } from './partKey';
 import { parseSequenceCsv, parseSequenceSheets } from './sequence';
+import { sequenceReport } from './report';
+import type { ReportCell } from '../calloffs/summaryReport';
 
 const day = (n: number) => dayFromParts(2026, 11, n)!;
 const at = (n: number, h: number, m = 0) => day(n) * MINUTES_PER_DAY + h * 60 + m;
@@ -200,5 +202,54 @@ describe('klíč MC/MF (dveře, výbava, barva)', () => {
       'MF FR SR1-HT C1 1',
     ]);
     expect(t.parts.find((p) => p.item === 'MF-KEY-FL-HT')).toMatchObject({ kind: 'MF', description: 'ASSY MF SR1 HEAT. FRT LH' });
+  });
+});
+
+describe('export Sekvence', () => {
+  const key = parsePartKey([
+    ['Side', 'Item Number', 'Type', 'Colour', 'Description'],
+    ['FL', 'MC-1', 'SR1', 'C1', 'ASSY MC'],
+    ['FL', 'MF-1', 'SR1', 'C1', 'ASSY MF'],
+  ]);
+  if (!key.ok) throw new Error();
+  const car = (pn: string, planned: number) => ({ lot: '1', productionNumber: pn, planned, optionType: 'SR1', colors: 'C1 / C1', status: { FL: '20 - Container planned' } });
+  const matrix = new Map([car('T1', at(5, 8)), car('T2', at(6, 8)), car('T3', at(6, 9))].map((c) => [c.productionNumber, c]));
+  const t = buildMaterialCoverage({ matrix, key: key.value, stock: { MC: new Map([['MC-1', 5]]), MF: new Map([['MF-1', 1]]) }, today: day(5) });
+  const texts = {
+    title: 'Sekvence',
+    subtitle: 'sub',
+    filters: 'filtry',
+    note: 'pozn.',
+    weekdays: ['Po', 'Út', 'St', 'Čt', 'Pá', 'So', 'Ne'],
+    kinds: { MC: 'Maincarrier', MF: 'Middlefield' },
+    item: 'Díl',
+    description: 'Popis',
+    stock: 'Sklad',
+    total: 'Potřeba',
+    overdue: 'Po termínu',
+    shortFrom: 'Chybí od',
+    sum: 'Celkem',
+    sheetCoverage: 'Coverage',
+    sheetDemand: 'Potreba po dnech',
+  };
+  const [coverage, demand] = sequenceReport(t.parts, t.days, texts, { boundary: day(6), shortText: (p) => (p.firstShort ? `od ${p.firstShort.productionNumber}` : '') });
+  const values = (row: (ReportCell | null)[] | undefined) => (row ?? []).map((c) => c?.value ?? null);
+
+  it('list Coverage: stav skladu na konci dne po druzích, záporné červeně, zítřek orámovaný', () => {
+    expect([coverage!.name, demand!.name]).toEqual(['Coverage', 'Potreba po dnech']);
+    expect(values(coverage!.data[4])).toEqual(['Díl', 'Popis', 'Sklad', 'Potřeba', 'Chybí od', 'Čt', 'Pá']);
+    expect(values(coverage!.data[6])[0]).toBe('Maincarrier');
+    expect(values(coverage!.data[7])).toEqual(['MC-1', 'ASSY MC', 5, 3, '', 4, 2]);
+    expect(values(coverage!.data[8])[0]).toBe('Middlefield');
+    expect(values(coverage!.data[9])).toEqual(['MF-1', 'ASSY MF', 1, 3, 'od T2', 0, -2]);
+    expect(coverage!.data[9]![6]).toMatchObject({ backgroundColor: '#FDECEC', leftBorderColor: '#2E8B3E' });
+  });
+
+  it('list Potřeba po dnech: kusy sečtené po dnech, červeně nepokryté dny, součet za druh', () => {
+    expect(values(demand!.data[7])).toEqual(['MC-1', 'ASSY MC', 5, 3, '', 1, 2]);
+    expect(values(demand!.data[8])).toEqual(['Celkem Maincarrier', '', '', 3, '', 1, 2]);
+    expect(values(demand!.data[10])).toEqual(['MF-1', 'ASSY MF', 1, 3, 'od T2', 1, 2]);
+    expect(demand!.data[10]![5]).not.toHaveProperty('textColor');
+    expect(demand!.data[10]![6]).toMatchObject({ textColor: '#B42D2D' });
   });
 });

@@ -1,13 +1,14 @@
 import { Fragment, useMemo, useState } from 'react';
 import { dayToIso, weekday, type DayNumber } from '../../core/dates';
 import { formatDayShort, formatQuantity } from '../../core/format';
-import { buildMaterialCoverage, carMissing, carUndetermined, DONE_STATUS, missingKeys, shortages, type CarCoverage, type DoorCoverage } from '../../core/material/coverage';
+import { buildMaterialCoverage, carMissing, carUndetermined, DONE_STATUS, missingKeys, type CarCoverage, type DoorCoverage } from '../../core/material/coverage';
+import { sequenceReport } from '../../core/material/report';
 import { dayOfStamp, DOORS, MINUTES_PER_DAY, type Door, type Stamp } from '../../core/material/doors';
 import { statusCode } from '../../core/material/matrix';
 import { PART_KINDS, type PartKind } from '../../core/material/partKey';
 import { isExcludedLocation, locationsOf, STOCK_ZONES, stockByItem } from '../../core/stock';
 import { useI18n } from '../../i18n/I18nProvider';
-import { downloadXlsxSheets } from '../../platform/download';
+import { downloadReport } from '../../platform/download';
 import { useData } from '../data/DataProvider';
 
 /** Filtry Matrixu: hodnota sloupce ('' = vše). */
@@ -167,54 +168,39 @@ export function SequenceView({ today }: { today: DayNumber }) {
   })();
   const shortDoors = allCars.reduce((n, c) => n + DOORS.filter((d) => c.doors[d]?.state === 'short').length, 0);
 
-  /** Datum a čas do Excelu: „2026-11-04 16:15“ (řadí se správně i jako text). */
-  const isoTime = (st: Stamp | null) => {
-    if (st === null) return null;
-    const day = dayOfStamp(st);
-    const minute = st - day * MINUTES_PER_DAY;
-    return `${dayToIso(day)} ${String(Math.floor(minute / 60)).padStart(2, '0')}:${String(minute % 60).padStart(2, '0')}`;
-  };
-  // Excel: prioritní seznam chybějících MC a MF podle data, chybějící dveře a Matrix (podle filtrů).
+  // Excel: formátovaný sešit (jako Coverage) – stav skladu po dnech a potřeba dílů sečtená po dnech, v pořadí priority.
   const exportExcel = () => {
     const te = ts.export;
-    const tm = ts.matrix;
-    const list = shortages(coverage.parts);
-    void downloadXlsxSheets(`${te.fileName}_${dayToIso(today)}.xlsx`, [
-      {
-        name: te.priority,
-        header: [te.order, te.shortFrom, tm.productionNumber, te.door, te.kind, te.item, te.description, te.stock, te.demand, te.missing, te.lastShort],
-        rows: list.map((s, i) => {
-          const first = s.part.firstShort!;
-          return [i + 1, isoTime(first.planned), first.productionNumber, first.door, ts.kinds[s.part.kind], s.part.item, s.part.description, s.part.stock, s.part.total, s.missing, isoTime(s.demands.at(-1)!.planned)];
-        }),
-        stickyColumns: 2,
-      },
-      {
-        name: te.missingDoors,
-        header: [tm.planned, tm.lot, tm.productionNumber, te.door, te.kind, te.item, te.description, te.status, te.missing],
-        rows: list
-          .flatMap((s) => s.demands.map((d) => ({ s, d })))
-          .sort((x, y) => (x.d.planned ?? -Infinity) - (y.d.planned ?? -Infinity) || x.d.productionNumber.localeCompare(y.d.productionNumber))
-          .map(({ s, d }) => [isoTime(d.planned), d.lot, d.productionNumber, d.door, ts.kinds[s.part.kind], s.part.item, s.part.description, d.status, d.missing]),
-        stickyColumns: 1,
-      },
-      {
-        name: te.matrix,
-        header: [tm.lot, tm.productionNumber, tm.optionType, tm.colors, tm.planned, ...DOORS.map((d) => `${tm.status} ${d}`), tm.material],
-        rows: cars.map((c) => {
-          const undetermined = undeterminedText(c);
-          const material = [missingByDoor(c).join(' · '), undetermined && `${tm.undetermined}: ${undetermined}`].filter(Boolean).join(' · ');
-          return [c.lot, c.productionNumber, c.optionType, c.colors, isoTime(c.planned), ...DOORS.map((d) => c.doors[d]?.status ?? null), material || null];
-        }),
-        stickyColumns: 2,
-      },
-      {
-        name: te.missingKeys,
-        header: [te.kind, te.door, te.keyType, te.colour, te.doors, te.firstBuild],
-        rows: missingKeys(coverage.cars).map((m) => [ts.kinds[m.kind], m.door, m.optionType, m.colour, m.doors, isoTime(m.first)]),
-        stickyColumns: 0,
-      },
-    ]);
+    const excludedCount = (kind: PartKind) => locationsByKind[kind].filter((l) => excludedAll[kind].has(l.location)).length;
+    void downloadReport(
+      `${te.fileName}_${dayToIso(today)}.xlsx`,
+      sequenceReport(
+        coverage.parts,
+        coverage.days,
+        {
+          title: te.title,
+          subtitle: te.subtitle
+            .replace('{date}', dayLabel(today))
+            .replace('{matrix}', fileName(sequence?.matrix?.path))
+            .replace('{key}', fileName(sequence?.key?.path))
+            .replace('{stock}', fileName(data?.stock?.path)),
+          filters: te.filters.replace('{mc}', qty(excludedCount('MC'))).replace('{mf}', qty(excludedCount('MF'))),
+          note: te.note,
+          weekdays: t.calloffs.weekdays,
+          kinds: ts.kinds,
+          item: te.item,
+          description: te.description,
+          stock: te.stock,
+          total: te.demand,
+          overdue: te.overdue,
+          shortFrom: te.shortFrom,
+          sum: te.sum,
+          sheetCoverage: te.sheetCoverage,
+          sheetDemand: te.sheetDemand,
+        },
+        { boundary: today + 1, shortText: (p) => (p.firstShort ? `${time(p.firstShort.planned)} · ${p.firstShort.productionNumber} ${p.firstShort.door}` : te.covered) },
+      ),
+    );
   };
 
   const fileName = (path: string | undefined) => path?.split('/').pop() ?? '—';
@@ -324,7 +310,8 @@ export function SequenceView({ today }: { today: DayNumber }) {
             {ts.tiles.undeterminedNote
               .replace('{mc}', qty(coverage.unknownByKind.MC))
               .replace('{mf}', qty(coverage.unknownByKind.MF))
-              .replace('{combos}', qty(missingKeys(coverage.cars).length))}
+              .replace('{combos}', qty(missingKeys(coverage.cars).length))}{' '}
+            {coverage.unknown > 0 && <a href="#data">{ts.tiles.keyCheck} →</a>}
           </span>
         </div>
         <div className="kpi">
