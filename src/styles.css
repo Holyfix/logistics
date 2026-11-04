@@ -3096,6 +3096,16 @@ button.oil-step:disabled {
   white-space: nowrap;
 }
 
+.mat-undetermined {
+  color: #7b8794;
+  font-style: italic;
+}
+
+.kpi-value.mat-undetermined {
+  color: #7b8794;
+  font-style: normal;
+}
+
 .mat-all {
   color: #2e8b3e;
 }

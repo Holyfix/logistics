@@ -7,7 +7,7 @@ import type { BomData } from '../bom';
 import type { DayNumber } from '../dates';
 import { dayOfStamp, doorOf, DOORS, type Door, type JitPosition, type Stamp } from './jit';
 import { statusCode, type MatrixOrder } from './matrix';
-import { lookupPart, PART_KINDS, partKind, type PartKey, type PartKind } from './partKey';
+import { lookupPart, PART_KINDS, partColour, partKind, type PartKey, type PartKind } from './partKey';
 
 /** Stav „Packed“ a vyšší: dveře jsou hotové, MC a MF už jsou spotřebované a do potřeby se nepočítají. */
 export const DONE_STATUS = 50;
@@ -233,6 +233,41 @@ export function buildMaterialCoverage({ matrix, key, positions, bom, stock, toda
 /** Chybějící MC a MF vozu po dveřích (pro sloupec Materiál). */
 export function carMissing(car: CarCoverage): { door: Door; kind: PartKind; item: string }[] {
   return DOORS.flatMap((door) => (car.doors[door]?.parts ?? []).filter((p) => p.left < -1e-9).map((p) => ({ door, kind: p.kind, item: p.item })));
+}
+
+/** Díly vozu, které nejde určit (nejsou v klíči ani v JIT), po druzích: MC → [FL, FR]. Do potřeby se nepočítají. */
+export function carUndetermined(car: CarCoverage): { kind: PartKind; doors: Door[] }[] {
+  return PART_KINDS.map((kind) => ({ kind, doors: DOORS.filter((d) => car.doors[d]?.unknown.includes(kind)) })).filter((u) => u.doors.length > 0);
+}
+
+/** Kombinace dveří, výbavy a barvy, které v klíči MC/MF chybí: kolik dveří se kvůli nim nepočítá a od kdy. */
+export interface MissingKey {
+  kind: PartKind;
+  door: Door;
+  optionType: string;
+  colour: string;
+  doors: number;
+  first: Stamp | null;
+}
+
+export function missingKeys(cars: readonly CarCoverage[]): MissingKey[] {
+  const byKey = new Map<string, MissingKey>();
+  // Vozy jsou v pořadí stavby: první výskyt kombinace je nejdřívější.
+  for (const car of cars)
+    for (const door of DOORS)
+      for (const kind of car.doors[door]?.unknown ?? []) {
+        const colour = partColour(car.colors, kind);
+        const id = `${kind}|${door}|${car.optionType}|${colour}`;
+        const entry = byKey.get(id) ?? byKey.set(id, { kind, door, optionType: car.optionType, colour, doors: 0, first: car.planned }).get(id)!;
+        entry.doors++;
+      }
+  return [...byKey.values()].sort(
+    (a, b) =>
+      PART_KINDS.indexOf(a.kind) - PART_KINDS.indexOf(b.kind) ||
+      a.optionType.localeCompare(b.optionType, 'en', { numeric: true }) ||
+      DOORS.indexOf(a.door) - DOORS.indexOf(b.door) ||
+      a.colour.localeCompare(b.colour, 'en', { numeric: true }),
+  );
 }
 
 /** Dveře, na které sklad dílu nestačí, s chybějícím množstvím (v pořadí stavby). */

@@ -2,7 +2,7 @@ import { Fragment, useMemo, useState } from 'react';
 import { mergeBoms } from '../../core/bom';
 import { dayToIso, weekday, type DayNumber } from '../../core/dates';
 import { formatDayShort, formatQuantity } from '../../core/format';
-import { buildMaterialCoverage, carMissing, DONE_STATUS, shortages, type CarCoverage, type DoorCoverage } from '../../core/material/coverage';
+import { buildMaterialCoverage, carMissing, carUndetermined, DONE_STATUS, missingKeys, shortages, type CarCoverage, type DoorCoverage } from '../../core/material/coverage';
 import { dayOfStamp, DOORS, MINUTES_PER_DAY, type Door, type Stamp } from '../../core/material/jit';
 import { statusCode } from '../../core/material/matrix';
 import { PART_KINDS, type PartKind } from '../../core/material/partKey';
@@ -57,6 +57,12 @@ const statusClass = (status: string) => {
   const code = statusCode(status);
   return code !== null && STATUS_COLORS.includes(code) ? ` mat-s${code}` : '';
 };
+
+/** Díly vozu bez klíče po druzích, např. „MC FL, FR · MF RR“. */
+const undeterminedText = (car: CarCoverage) =>
+  carUndetermined(car)
+    .map((u) => `${u.kind} ${u.doors.join(', ')}`)
+    .join(' · ');
 
 /** Chybějící MC a MF vozu po dveřích, např. „FL: MC 123, MF 456“. */
 function missingByDoor(car: CarCoverage): string[] {
@@ -200,8 +206,18 @@ export function SequenceView({ today }: { today: DayNumber }) {
       {
         name: te.matrix,
         header: [tm.lot, tm.productionNumber, tm.optionType, tm.colors, tm.planned, ...DOORS.map((d) => `${tm.status} ${d}`), tm.material],
-        rows: cars.map((c) => [c.lot, c.productionNumber, c.optionType, c.colors, isoTime(c.planned), ...DOORS.map((d) => c.doors[d]?.status ?? null), missingByDoor(c).join(' · ') || null]),
+        rows: cars.map((c) => {
+          const undetermined = undeterminedText(c);
+          const material = [missingByDoor(c).join(' · '), undetermined && `${tm.undetermined}: ${undetermined}`].filter(Boolean).join(' · ');
+          return [c.lot, c.productionNumber, c.optionType, c.colors, isoTime(c.planned), ...DOORS.map((d) => c.doors[d]?.status ?? null), material || null];
+        }),
         stickyColumns: 2,
+      },
+      {
+        name: te.missingKeys,
+        header: [te.kind, te.door, tm.optionType, te.colour, te.doors, te.firstBuild],
+        rows: missingKeys(coverage.cars).map((m) => [ts.kinds[m.kind], m.door, m.optionType, m.colour, m.doors, isoTime(m.first)]),
+        stickyColumns: 0,
       },
     ]);
   };
@@ -308,9 +324,14 @@ export function SequenceView({ today }: { today: DayNumber }) {
           <span className="kpi-note">{ts.tiles.carsNote.replace('{doors}', qty(coverage.doors)).replace('{done}', qty(coverage.skippedDone))}</span>
         </div>
         <div className="kpi">
-          <span className="kpi-label">{ts.tiles.known}</span>
-          <span className="kpi-value">{qty(coverage.known)}</span>
-          <span className="kpi-note">{ts.tiles.knownNote.replace('{mc}', qty(coverage.unknownByKind.MC)).replace('{mf}', qty(coverage.unknownByKind.MF))}</span>
+          <span className="kpi-label">{ts.tiles.undetermined}</span>
+          <span className="kpi-value mat-undetermined">{qty(coverage.unknownByKind.MC + coverage.unknownByKind.MF)}</span>
+          <span className="kpi-note">
+            {ts.tiles.undeterminedNote
+              .replace('{mc}', qty(coverage.unknownByKind.MC))
+              .replace('{mf}', qty(coverage.unknownByKind.MF))
+              .replace('{combos}', qty(missingKeys(coverage.cars).length))}
+          </span>
         </div>
         <div className="kpi">
           <span className="kpi-label">{ts.tiles.short}</span>
@@ -453,7 +474,7 @@ function CarRow({ car, time, title }: { car: CarCoverage; time: (s: Stamp | null
   const { t } = useI18n();
   const tm = t.sequence.matrix;
   const missing = missingByDoor(car);
-  const unknown = DOORS.filter((d) => car.doors[d]?.state === 'unknown');
+  const undetermined = undeterminedText(car);
   const counted = DOORS.some((d) => car.doors[d]?.parts.length);
   return (
     <tr className={car.short ? 'mat-car-short' : undefined}>
@@ -487,12 +508,11 @@ function CarRow({ car, time, title }: { car: CarCoverage; time: (s: Stamp | null
             ))}
           </span>
         )}
-        {missing.length === 0 && counted && <span className="mat-all">{tm.allInStock}</span>}
-        {unknown.length > 0 && (
-          <span className="muted">
-            {missing.length > 0 || counted ? ' · ' : ''}
-            {tm.undetermined}
-            {unknown.length < DOORS.filter((d) => car.doors[d] && d !== 'HB').length ? `: ${unknown.join(', ')}` : ''}
+        {missing.length === 0 && !undetermined && counted && <span className="mat-all">{tm.allInStock}</span>}
+        {undetermined && (
+          <span className="mat-undetermined">
+            {missing.length > 0 ? ' · ' : ''}
+            {tm.undetermined}: {undetermined}
           </span>
         )}
       </td>

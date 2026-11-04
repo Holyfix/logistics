@@ -350,8 +350,9 @@ Klíč MC/MF musí ležet ve složce `Sekvence`: mimo ni by se podle „Mapping�
   všechny barvy (např. MC, který barvu nerozlišuje). Dveře, které v klíči vyhřívanou výbavu daného druhu nemají
   (typicky zadní), se hledají bez „-HT“ (SR2-HT → SR2).
 - Co v klíči není, se dohledá přes **JIT** (dveřní panel pro Production number a dveře, dveře z popisu panelu „FRT LH“,
-  „RR RH“) a **kusovník** (MC a MF na úrovni 1 pod panelem). Díl, který není v klíči ani v JIT, se ukáže šedě
-  a do potřeby se nepočítá; výklopné dveře (HB) MC ani MF nemají.
+  „RR RH“) a **kusovník** (MC a MF na úrovni 1 pod panelem). Díl, který není v klíči ani v JIT, nejde určit: ukáže
+  se šedě (štítek, ve sloupci Materiál „chybí v klíči: MC FL, FR“, dlaždice Díly bez klíče) a do potřeby ani mezi
+  chybějící se nepočítá; výklopné dveře (HB) MC ani MF nemají.
 - **Sklad** dílu (stejné lokace jako v Komponentách) se spotřebovává v pořadí stavby. V rozbalovacím seznamu **Lokace
   skladu** lze zvlášť pro MC a MF zaškrtnout lokace, které se do skladu nepočítají (např. linka nebo příjem); volba
   se pamatuje v prohlížeči.
@@ -361,8 +362,9 @@ Klíč MC/MF musí ležet ve složce `Sekvence`: mimo ni by se podle „Mapping�
   stavby, stav dveří (vozy, které mají aspoň jedny dveře v daném stavu), hledání podle Production number, Lotu nebo
   dílu, jen vozy s nepokrytými dveřmi a jen nevyrobené carsety (aspoň jedny dveře ve stavu 45 a méně).
 - **Excel:** list Priority (chybějící MC a MF seřazené podle stavby prvních nepokrytých dveří: chybí od, vůz a dveře,
-  druh, sklad, potřeba, chybí ks, poslední chybějící), list Chybějící dveře (každé nepokryté dveře podle data) a Matrix
-  (podle filtrů).
+  druh, sklad, potřeba, chybí ks, poslední chybějící), list Chybějící dveře (každé nepokryté dveře podle data), Matrix
+  (podle filtrů) a Bez klíče (kombinace druhu, dveří, výbavy a barvy, které v klíči chybí, s počtem dveří a první
+  stavbou – podklad pro doplnění klíče).
 - Smyšlená ukázka: `sample-data/Sekvence/` (vytvoří `node scripts/generate-material-sample.mjs`).
 
 ## Testovací data

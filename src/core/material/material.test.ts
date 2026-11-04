@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { parseBom } from '../bom';
 import { dayFromParts } from '../dates';
-import { buildMaterialCoverage, carMissing, shortages } from './coverage';
+import { buildMaterialCoverage, carMissing, carUndetermined, missingKeys, shortages } from './coverage';
 import { lookupPart, partColour, partKind, parsePartKey } from './partKey';
 import { doorOf, MINUTES_PER_DAY, parseJit, parseStamp } from './jit';
 import { parseStatusMatrix, statusCode } from './matrix';
@@ -208,6 +208,16 @@ describe('klíč MC/MF (dveře, výbava, barva)', () => {
     expect(t9!.doors.FL).toMatchObject({ state: 'short', parts: [{ item: 'MC-KEY-FL', left: 3 }, { item: 'MF-KEY-FL-HT', left: -1 }] });
     expect(t9!.doors.FR).toMatchObject({ state: 'unknown', unknown: ['MC', 'MF'] });
     expect(t).toMatchObject({ known: 3, unknown: 1 });
+    // neurčené díly se nepočítají do potřeby; kombinace, které v klíči chybí
+    expect(carUndetermined(t9!)).toEqual([
+      { kind: 'MC', doors: ['FR'] },
+      { kind: 'MF', doors: ['FR'] },
+    ]);
+    expect(t.parts.every((p) => p.demands.every((d) => d.door !== 'FR'))).toBe(true);
+    expect(missingKeys(t.cars)).toEqual([
+      { kind: 'MC', door: 'FR', optionType: 'SR1-HT', colour: 'C9', doors: 1, first: at(6, 11) },
+      { kind: 'MF', door: 'FR', optionType: 'SR1-HT', colour: 'C1', doors: 1, first: at(6, 11) },
+    ]);
     expect(t.parts.find((p) => p.item === 'MF-KEY-FL-HT')).toMatchObject({ kind: 'MF', description: 'ASSY MF SR1 HEAT. FRT LH' });
     // jen klíč, bez JIT a kusovníku
     const only = buildMaterialCoverage({ matrix, key: key.value, stock, today: day(5) });

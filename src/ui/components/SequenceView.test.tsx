@@ -104,7 +104,8 @@ describe('Komponenty – karta Sekvence', () => {
     expect(badges('V9')).toEqual(['MC unknown', 'MF unknown']);
     expect(material('V2')).toBe('vše na skladě');
     expect(material('V3')).toBe('FL: MF MF-1');
-    expect(material('V9')).toBe('díly neurčeny');
+    expect(material('V9')).toBe('chybí v klíči: MC FL · MF FL');
+    expect(screen.getByText(/nepočítají se do potřeby · MC 1 · MF 1 · 2 kombinací chybí v klíči/)).toBeTruthy();
     expect(screen.getByText(/z toho 1 zabalených nebo odeslaných/)).toBeTruthy();
     expect(screen.getByText('chybí dílů: MC 0 · MF 1')).toBeTruthy();
     // filtry: Lot a MC / MF ve filtrech nejsou; nevyrobené carsety (aspoň jedny dveře ve stavu 45 a méně)
@@ -153,6 +154,28 @@ describe('Komponenty – karta Sekvence', () => {
     expect(badges('V9')).toEqual(['MC short', 'MF short']);
     expect(material('V9')).toBe('FL: MC MC-K1, MF MF-K1');
     expect(rowOf('V1').querySelectorAll('td')[5]!.title).toBe('MC MC-K1 (z klíče): zbývá skladu -1\nMF MF-K1 (z klíče): zbývá skladu -1');
+  });
+
+  it('díl, který v klíči chybí, je šedý a do potřeby se nepočítá', () => {
+    localStorage.setItem('logistics-locale', 'cs');
+    // klíč jen s MF: MC nejde určit
+    const onlyMf = parseSequenceCsv('Side;Item Number;Type;Colour;Description\nFL;MF-1;SR1;C1;ASSY MF SR1 FRT LH');
+    if (onlyMf.type !== 'key') throw new Error();
+    const base = state(true, true);
+    render(
+      <I18nProvider>
+        <DataProvider initial={{ ...base, data: { ...base.data!, sequence: { ...base.data!.sequence!, key: { path: 'Sekvence/klic.xlsx', lastModified: 0, key: onlyMf.key } } } }}>
+          <ComponentsPage today={dayFromParts(2026, 11, 5)!} />
+        </DataProvider>
+      </I18nProvider>,
+    );
+    fireEvent.click(screen.getByRole('tab', { name: 'Sekvence' }));
+    // sklad MF-1 2: V1 a V2 pokryté, V3 a V9 chybí; MC šedý u všech a nikde se nepočítá jako chybějící
+    expect(badges('V1')).toEqual(['MC unknown', 'MF ok']);
+    expect(material('V1')).toBe('chybí v klíči: MC FL');
+    expect(material('V3')).toBe('FL: MF MF-1 · chybí v klíči: MC FL');
+    expect(rowOf('V1').className).not.toContain('mat-car-short');
+    expect(screen.getByText('chybí dílů: MC 0 · MF 1')).toBeTruthy();
   });
 
   it('bez souborů ve složce Sekvence poradí, co uložit', () => {
