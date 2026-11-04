@@ -40,7 +40,8 @@ function missingByDoor(car: CarCoverage): string[] {
 
 /**
  * Sekvence (karta v Komponentách): pokrytí Middlefieldu ve formátu Order Status Matrix. Vozy a stav dveří z matice,
- * dveřní panel z JIT Overview (složka Sekvence), MF z načtených kusovníků a sklad z načteného souboru skladu.
+ * MF podle klíče MC/MF (složka Sekvence), co v klíči není, podle JIT Overview a načtených kusovníků; sklad
+ * z načteného souboru skladu.
  */
 export function SequenceView({ today }: { today: DayNumber }) {
   const { t, locale } = useI18n();
@@ -53,12 +54,14 @@ export function SequenceView({ today }: { today: DayNumber }) {
   const [onlyShort, setOnlyShort] = useState(false);
 
   const coverage = useMemo(() => {
-    if (!sequence?.matrix || !sequence.jit || !data?.boms.length) return null;
+    const bom = data?.boms.length ? mergeBoms(data.boms.map((b) => b.data)) : undefined;
+    if (!sequence?.matrix || !(sequence.key || (sequence.jit && bom))) return null;
     return buildMaterialCoverage({
       matrix: sequence.matrix.orders,
-      positions: sequence.jit.positions,
-      bom: mergeBoms(data.boms.map((b) => b.data)),
-      stock: data.stock ? stockByItem(data.stock.data) : new Map(),
+      key: sequence.key?.key,
+      positions: sequence.jit?.positions,
+      bom,
+      stock: data?.stock ? stockByItem(data.stock.data) : new Map(),
       today,
     });
   }, [sequence, data, today]);
@@ -68,7 +71,7 @@ export function SequenceView({ today }: { today: DayNumber }) {
       <div className="panel">
         <p>{ts.noFiles}</p>
         {sequence && !sequence.matrix && <p className="banner banner-warn">{ts.needMatrix}</p>}
-        {sequence && !sequence.jit && <p className="banner banner-warn">{ts.needJit}</p>}
+        {sequence && !sequence.key && !sequence.jit && <p className="banner banner-warn">{ts.needKey}</p>}
       </div>
     );
   }
@@ -84,7 +87,10 @@ export function SequenceView({ today }: { today: DayNumber }) {
     return `${dayLabel(day)}${year !== dayToIso(today).slice(0, 4) ? ` ${year}` : ''} ${String(Math.floor(minute / 60)).padStart(2, '0')}:${String(minute % 60).padStart(2, '0')}`;
   };
   const doorTitle = (cell: DoorCoverage) =>
-    [cell.panel ? `${ts.matrix.panel}: ${cell.panel}` : ts.matrix.notInJit, ...cell.parts.map((p) => `MF ${p.item}: ${ts.matrix.left} ${qty(p.left)}`)].join('\n');
+    [
+      cell.source === 'key' ? ts.matrix.fromKey : cell.panel ? `${ts.matrix.panel}: ${cell.panel}` : ts.matrix.unknown,
+      ...cell.parts.map((p) => `MF ${p.item}: ${ts.matrix.left} ${qty(p.left)}`),
+    ].join('\n');
 
   const q = query.trim().toLowerCase();
   const allCars = coverage.cars;
@@ -165,6 +171,7 @@ export function SequenceView({ today }: { today: DayNumber }) {
       <p className="muted">
         {ts.sources
           .replace('{matrix}', fileName(sequence?.matrix?.path))
+          .replace('{key}', fileName(sequence?.key?.path))
           .replace('{jit}', fileName(sequence?.jit?.path))
           .replace('{stock}', fileName(data?.stock?.path))}
       </p>
@@ -353,7 +360,7 @@ function CarRow({ car, time, title }: { car: CarCoverage; time: (s: Stamp | null
         {unknown.length > 0 && (
           <span className="muted">
             {missing.length > 0 || counted ? ' · ' : ''}
-            {tm.notInJit}
+            {tm.unknown}
             {unknown.length < DOORS.filter((d) => car.doors[d] && d !== 'HB').length ? `: ${unknown.join(', ')}` : ''}
           </span>
         )}

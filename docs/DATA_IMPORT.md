@@ -19,7 +19,7 @@ Soubory se rozpoznají podle názvu (nezáleží na velikosti písmen ani diakri
 | OIL (Open Issue List) | leží ve složce `OIL`, nebo název začíná „OIL“; platí nejnovější soubor | XLSX (zapisuje aplikace) |
 | KPI (SQCDP) | leží ve složce `KPI`, nebo název začíná „KPI“; platí nejnovější soubor | XLSX (zapisuje aplikace) |
 | Doplněný transit (naše expedice, které coverage ještě nemá) | leží ve složce `Transit`, nebo název začíná „Transit“; všechny soubory | XLSX nebo CSV |
-| Sekvence: Order Status Matrix a JIT Overview | leží ve složce `Sekvence` (nebo `Sequence`); platí nejnovější matice a nejnovější JIT | XLSX nebo CSV |
+| Sekvence: Order Status Matrix, klíč MC/MF, volitelně JIT Overview | leží ve složce `Sekvence` (nebo `Sequence`); platí nejnovější soubor každého druhu | XLSX nebo CSV |
 
 Doporučená struktura (složka se v aplikaci vybírá celá, podsložky se prohledají):
 
@@ -35,7 +35,7 @@ Logistics/
 ├── OIL/                  OIL.xlsx (Open Issue List), zapisuje aplikace
 ├── KPI/                  KPI.xlsx (ukazatele SQCDP a denní zápisy), zapisuje aplikace
 ├── Transit/              doplněný transit: ranní expedice, které soubor coverage ještě nemá
-├── Sekvence/             Order Status Matrix a JIT Overview pro kartu Sekvence v Komponentách
+├── Sekvence/             Order Status Matrix a klíč MC/MF pro kartu Sekvence v Komponentách
 └── Obaly/                později: Obaly
 ```
 
@@ -333,32 +333,34 @@ aplikace nabídne úvodní sadu ukazatelů. Když soubor mezitím změnil někdo
 
 Pokrytí **Middlefieldu (MF)** dveřních panelů ve formátu **Order Status Matrix**: karta **Sekvence** v modulu
 Komponenty. Soubory leží ve složce `Sekvence`; druh souboru se pozná podle obsahu. **Sklad** je z načteného souboru
-skladu (stejně jako v Komponentách) a **kusovník** z načtených kusovníků (složka `BOM`), nic se nezadává ručně.
+skladu (stejně jako v Komponentách), nic se nezadává ručně.
 
-| Soubor | Potřebné sloupce |
-|---|---|
-| Order Status Matrix (Excel nebo CSV) | Production number, Planned customer built, Status FL / FR / RL / RR / HB; Lot, Option Type, MC / MF se zobrazí (záhlaví může být pod titulkem) |
-| JIT Overview (CSV z ERP, každý řádek může být celý v uvozovkách) | Production number, Article number (Pos), Article description (Pos); JIT order number, Item, Assembly date, Last priority |
+| Soubor | Potřebné sloupce | Povinný |
+|---|---|---|
+| Order Status Matrix (Excel nebo CSV) | Production number, Planned customer built, Status FL / FR / RL / RR / HB, Option Type, MC / MF; Lot se zobrazí (záhlaví může být pod titulkem) | ano |
+| Klíč MC/MF (Excel nebo CSV) | Side (FL, FR, RL, RR), Item Number, Type (Option Type z matice), Colour; Description (bere se jen MF, tj. popis s „MF“) | ano (nebo JIT) |
+| JIT Overview (CSV z ERP, každý řádek může být celý v uvozovkách) | Production number, Article number (Pos), Article description (Pos) | ne – jen pro dveře, které v klíči nejsou (pak je potřeba i kusovník dveřních panelů) |
 
-- **Vozy a pořadí** jsou z matice (Planned customer built); zakázky, které v matici nejsou (např. staré zakázky v JIT),
-  se nepočítají. Zabalené a odeslané dveře (stav 50 a víc) se do potřeby nikdy nepočítají (MF už
-  je v nich zabudovaný), a to ani když vůz v JIT už není; ostatní dveře se stavem z matice se počítají.
-- **JIT** slouží jen k dohledání dveřního panelu pro Production number a dveře: pozice, která je v kusovníku jako hotový
-  díl; dveře (FL, FR, RL, RR, HB) se poznají z popisu panelu („FRT LH“, „RR RH“, „HB“). Dveře vozu, který v JIT ještě
-  není, se ukážou šedě („není v JIT“) a do potřeby se nepočítají.
-- **MF** jsou díly na úrovni 1 pod panelem s „MF“ v popisu (např. „ASSY MF …“), s množstvím z kusovníku (End Eff
-  se bere v potaz). Maincarrier (MC) ani ostatní díly se nepočítají.
+Klíč MC/MF musí ležet ve složce `Sekvence`: mimo ni by se podle „Mapping“ v názvu načetl jako Item Mapping.
+
+- **Vozy a pořadí** jsou z matice (Planned customer built). Zabalené a odeslané dveře (stav 50 a víc) se do potřeby
+  nikdy nepočítají (MF už je v nich zabudovaný); ostatní dveře se stavem z matice se počítají.
+- **MF pro dveře** podle klíče: dveře (Side), výbava (Option Type = Type) a barva MF (druhá hodnota ve sloupci
+  MC / MF, např. „C9 / C1“ → C1), 1 ks na dveře. Dveře, které v klíči vyhřívanou výbavu nemají (typicky zadní),
+  se hledají bez „-HT“ (SR2-HT → SR2). Maincarrier (MC) se nepočítá.
+- Co v klíči není, se dohledá přes **JIT** (dveřní panel pro Production number a dveře, dveře z popisu panelu „FRT LH“,
+  „RR RH“) a **kusovník** (MF na úrovni 1 pod panelem). Dveře bez MF v klíči i v JIT se ukážou šedě („MF neurčen“)
+  a do potřeby se nepočítají; výklopné dveře (HB) MF nemají.
 - **Sklad** dílu (stejné lokace jako v Komponentách) se spotřebovává v pořadí stavby.
 - **Tabulka:** řádky jako v matici (Lot, Production number, Option Type, MC / MF, Planned customer built, stav
   dveří v barvách matice podle čísla stavu 20–60); v buňce štítek **MF** (zelený na skladě, červený chybí,
-  šedý dveře nejsou v JIT); sloupec **Materiál** vyjmenuje chybějící MF vozu („FR: …“). Filtry: Lot, Option Type,
+  šedý MF neurčen); sloupec **Materiál** vyjmenuje chybějící MF vozu („FR: …“). Filtry: Lot, Option Type,
   MC / MF (barva), den stavby, stav dveří (vozy, které mají aspoň jedny dveře v daném stavu), hledání podle Production
   number, Lotu nebo dílu MF a jen vozy s nepokrytými dveřmi.
 - **Excel:** list Priority (chybějící MF seřazené podle stavby prvních nepokrytých dveří: chybí od, vůz a dveře,
   sklad, potřeba, chybí ks, poslední chybějící), list Chybějící dveře (každé nepokryté dveře podle data) a Matrix
   (podle filtrů).
-- Smyšlená ukázka: `sample-data/Sekvence/` a `sample-data/BOM/MBOM_DOOR_PANEL_P500.xlsx`
-  (vytvoří `node scripts/generate-material-sample.mjs`).
+- Smyšlená ukázka: `sample-data/Sekvence/` (vytvoří `node scripts/generate-material-sample.mjs`).
 
 ## Testovací data
 

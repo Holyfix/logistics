@@ -349,6 +349,13 @@ export function DataPage() {
                         <td>{new Date(data.sequence.matrix.lastModified).toLocaleString(locale === 'cs' ? 'cs-CZ' : 'en-GB', { dateStyle: 'short', timeStyle: 'short' })}</td>
                       </tr>
                     )}
+                    {data.sequence.key && (
+                      <tr>
+                        <td>{data.sequence.key.path}</td>
+                        <td>{t.data.sequence.key.replace('{n}', formatQuantity(data.sequence.key.key.entries.size, locale))}</td>
+                        <td>{new Date(data.sequence.key.lastModified).toLocaleString(locale === 'cs' ? 'cs-CZ' : 'en-GB', { dateStyle: 'short', timeStyle: 'short' })}</td>
+                      </tr>
+                    )}
                     {data.sequence.jit && (
                       <tr>
                         <td>{data.sequence.jit.path}</td>
@@ -359,7 +366,7 @@ export function DataPage() {
                   </tbody>
                 </table>
               </div>
-              {(!data.sequence.matrix || !data.sequence.jit) && <p className="muted">{t.data.sequence.incomplete}</p>}
+              {(!data.sequence.matrix || (!data.sequence.key && !data.sequence.jit)) && <p className="muted">{t.data.sequence.incomplete}</p>}
             </div>
           )}
 
