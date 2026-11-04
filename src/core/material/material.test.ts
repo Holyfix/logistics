@@ -228,7 +228,6 @@ describe('export Sekvence', () => {
     total: 'Potřeba',
     overdue: 'Po termínu',
     shortFrom: 'Chybí od',
-    sum: 'Celkem',
     sheetCoverage: 'Coverage',
     sheetDemand: 'Potreba po dnech',
     sheetMatrix: 'Matrix',
@@ -273,26 +272,32 @@ describe('export Sekvence', () => {
   it('list Coverage: stav skladu na konci dne po druzích, záporné červeně, zítřek orámovaný', () => {
     expect([coverage!.name, demand!.name]).toEqual(['Coverage', 'Potreba po dnech']);
     expect(values(coverage!.data[4])).toEqual(['Díl', 'Popis', 'Sklad', 'Potřeba', 'Chybí od', 'Čt', 'Pá']);
-    expect(values(coverage!.data[6])[0]).toBe('Maincarrier');
+    expect(values(coverage!.data[6])[0]).toBe('Maincarrier (1)');
     expect(values(coverage!.data[7])).toEqual(['MC-1', 'ASSY MC', 5, 3, '', 4, 2]);
-    expect(values(coverage!.data[8])[0]).toBe('Middlefield');
+    expect(values(coverage!.data[8])[0]).toBe('Middlefield (1)');
+    // skupiny jdou v Excelu sbalit: díly na úrovni 1 pod řádkem skupiny
+    expect(coverage!.outline!.slice(6, 10)).toEqual([undefined, { level: 1 }, undefined, { level: 1 }]);
     expect(values(coverage!.data[9])).toEqual(['MF-1', 'ASSY MF', 1, 3, 'od T2', 0, -2]);
     expect(coverage!.data[9]![6]).toMatchObject({ backgroundColor: '#FDECEC', leftBorderColor: '#2E8B3E' });
   });
 
   it('list Potřeba po dnech: kusy sečtené po dnech, červeně nepokryté dny, součet za druh', () => {
+    // součty za druh na řádku skupiny (vidět i po sbalení)
+    expect(values(demand!.data[6])).toEqual(['Maincarrier (1)', '', '', 3, '', 1, 2]);
     expect(values(demand!.data[7])).toEqual(['MC-1', 'ASSY MC', 5, 3, '', 1, 2]);
-    expect(values(demand!.data[8])).toEqual(['Celkem Maincarrier', '', '', 3, '', 1, 2]);
-    expect(values(demand!.data[10])).toEqual(['MF-1', 'ASSY MF', 1, 3, 'od T2', 1, 2]);
-    expect(demand!.data[10]![5]).not.toHaveProperty('textColor');
-    expect(demand!.data[10]![6]).toMatchObject({ textColor: '#B42D2D' });
+    expect(values(demand!.data[9])).toEqual(['MF-1', 'ASSY MF', 1, 3, 'od T2', 1, 2]);
+    expect(demand!.data[9]![5]).not.toHaveProperty('textColor');
+    expect(demand!.data[9]![6]).toMatchObject({ textColor: '#B42D2D' });
+    expect(demand!.outline!.slice(6, 10)).toEqual([undefined, { level: 1 }, undefined, { level: 1 }]);
   });
 
   it('list PRIO Sorting: reference a kusy po dnech podle první potřeby, s pořadím a druhem', () => {
     expect(prio!.name).toBe('PRIO Sorting');
     expect(values(prio!.data[4])).toEqual(['Pořadí', 'Díl', 'Druh', 'Popis', 'Sklad', 'Potřeba', 'První potřeba', 'Čt', 'Pá']);
-    expect(values(prio!.data[6])).toEqual([1, 'MC-1', 'MC', 'ASSY MC', 5, 3, 'poprvé T1', 1, 2]);
-    expect(values(prio!.data[7])).toEqual([2, 'MF-1', 'MF', 'ASSY MF', 1, 3, 'poprvé T1', 1, 2]);
-    expect(prio!.data[6]![8]).toMatchObject({ leftBorderColor: '#2E8B3E' });
+    expect(values(prio!.data[6])[0]).toBe('Maincarrier (1)');
+    expect(values(prio!.data[7])).toEqual([1, 'MC-1', 'MC', 'ASSY MC', 5, 3, 'poprvé T1', 1, 2]);
+    expect(values(prio!.data[9])).toEqual([1, 'MF-1', 'MF', 'ASSY MF', 1, 3, 'poprvé T1', 1, 2]);
+    expect(prio!.data[7]![8]).toMatchObject({ leftBorderColor: '#2E8B3E' });
+    expect(prio!.outline!.slice(6, 10)).toEqual([undefined, { level: 1 }, undefined, { level: 1 }]);
   });
 });

@@ -198,7 +198,6 @@ export function SequenceView({ today }: { today: DayNumber }) {
           total: te.demand,
           overdue: te.overdue,
           shortFrom: te.shortFrom,
-          sum: te.sum,
           sheetCoverage: te.sheetCoverage,
           sheetDemand: te.sheetDemand,
           sheetMatrix: te.sheetMatrix,
@@ -220,7 +219,7 @@ export function SequenceView({ today }: { today: DayNumber }) {
           boundary: today + 1,
           shortText,
           needText: (p) => (p.demands[0] ? `${time(p.demands[0].planned)} · ${p.demands[0].productionNumber} ${p.demands[0].door}` : ''),
-          cars,
+          cars: allCars,
           carTexts: (car) => {
             const missing = missingByDoor(car).join(' · ');
             const undetermined = undeterminedText(car);
