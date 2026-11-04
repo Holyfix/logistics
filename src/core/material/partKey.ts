@@ -4,7 +4,7 @@
 
 import { cellText, type Cell } from '../table';
 import { findColumn } from '../csv';
-import { DOORS, type Door } from './jit';
+import { DOORS, type Door } from './doors';
 
 export type PartKind = 'MC' | 'MF';
 export const PART_KINDS: readonly PartKind[] = ['MC', 'MF'];

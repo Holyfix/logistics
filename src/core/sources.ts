@@ -28,7 +28,7 @@ export function formatOf(path: string): SourceFormat | null {
  * OIL: Excel ve složce „oil“ nebo s názvem začínajícím „oil“.
  * KPI: Excel ve složce „kpi“ nebo s názvem začínajícím „kpi“.
  * Doplněný transit: soubor ve složce „transit“ nebo s názvem začínajícím „transit“ (naše expedice, které coverage ještě nemá).
- * Sekvence: soubory ve složce „sekvence“ / „sequence“ (Order Status Matrix a JIT Overview; druh se pozná podle obsahu).
+ * Sekvence: soubory ve složce „sekvence“ / „sequence“ (Order Status Matrix a klíč MC/MF; druh se pozná podle obsahu).
  * Dočasné soubory Excelu (~$…) se ignorují.
  */
 export function classifyPath(path: string): SourceKind {

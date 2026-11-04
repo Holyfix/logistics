@@ -1,9 +1,9 @@
 // Order Status Matrix: vozy (Production number) s plánovanou stavbou u zákazníka a stavem každých dveří. Z ní se
-// skládá pokrytí materiálu (vozy v pořadí matice); JIT Overview jen doplní dveřní panel.
+// skládá pokrytí MC a MF (vozy v pořadí matice); díly určí klíč MC/MF.
 
 import { findColumn } from '../csv';
 import { cellText, type Cell } from '../table';
-import { MINUTES_PER_DAY, parseStamp, type Door, type Stamp } from './jit';
+import { MINUTES_PER_DAY, parseStamp, type Door, type Stamp } from './doors';
 
 export interface MatrixOrder {
   lot: string;

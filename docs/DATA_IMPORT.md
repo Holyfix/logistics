@@ -19,7 +19,7 @@ Soubory se rozpoznají podle názvu (nezáleží na velikosti písmen ani diakri
 | OIL (Open Issue List) | leží ve složce `OIL`, nebo název začíná „OIL“; platí nejnovější soubor | XLSX (zapisuje aplikace) |
 | KPI (SQCDP) | leží ve složce `KPI`, nebo název začíná „KPI“; platí nejnovější soubor | XLSX (zapisuje aplikace) |
 | Doplněný transit (naše expedice, které coverage ještě nemá) | leží ve složce `Transit`, nebo název začíná „Transit“; všechny soubory | XLSX nebo CSV |
-| Sekvence: Order Status Matrix, klíč MC/MF, volitelně JIT Overview | leží ve složce `Sekvence` (nebo `Sequence`); platí nejnovější soubor každého druhu | XLSX nebo CSV |
+| Sekvence: Order Status Matrix a klíč MC/MF | leží ve složce `Sekvence` (nebo `Sequence`); platí nejnovější soubor každého druhu | XLSX nebo CSV |
 
 Doporučená struktura (složka se v aplikaci vybírá celá, podsložky se prohledají):
 
@@ -338,8 +338,7 @@ skladu (stejně jako v Komponentách), nic se nezadává ručně.
 | Soubor | Potřebné sloupce | Povinný |
 |---|---|---|
 | Order Status Matrix (Excel nebo CSV) | Production number, Planned customer built, Status FL / FR / RL / RR / HB, Option Type, MC / MF; Lot se zobrazí (záhlaví může být pod titulkem) | ano |
-| Klíč MC/MF (Excel nebo CSV) | Side (FL, FR, RL, RR), Item Number, Type (Option Type z matice), Colour; Description (druh dílu podle „MC“ / „MF“) | ano (nebo JIT) |
-| JIT Overview (CSV z ERP, každý řádek může být celý v uvozovkách) | Production number, Article number (Pos), Article description (Pos) | ne – použije se jen bez klíče (pak je potřeba i kusovník dveřních panelů) |
+| Klíč MC/MF (Excel nebo CSV) | Side (FL, FR, RL, RR), Item Number, Type (Option Type z matice), Colour; Description (druh dílu podle „MC“ / „MF“) | ano |
 
 Klíč MC/MF musí ležet ve složce `Sekvence`: mimo ni by se podle „Mapping“ v názvu načetl jako Item Mapping.
 
@@ -352,10 +351,8 @@ Klíč MC/MF musí ležet ve složce `Sekvence`: mimo ni by se podle „Mapping�
   řádek s oběma nebo bez nich se ignoruje). Kombinace, která má v klíči víc různých dílů, je nejednoznačná
   a nepoužije se (modul Data ji vypíše).
 - Co v klíči přesně není, **chybí v klíči**: ukáže se šedě (štítek, ve sloupci Materiál „chybí v klíči: MC FL, FR“,
-  dlaždice Díly bez klíče, v Excelu list Bez klíče) a do potřeby ani mezi chybějící se nepočítá. JIT se s klíčem
-  nepoužívá, aby mezery v klíči byly vidět. Výklopné dveře (HB) MC ani MF nemají.
-- **Bez klíče** se díly dohledají přes **JIT** (dveřní panel pro Production number a dveře, dveře z popisu panelu
-  „FRT LH“, „RR RH“) a **kusovník** (MC a MF na úrovni 1 pod panelem).
+  dlaždice Díly bez klíče, v Excelu list Bez klíče) a do potřeby ani mezi chybějící se nepočítá. Výklopné dveře (HB)
+  MC ani MF nemají.
 - **Sklad** dílu (stejné lokace jako v Komponentách) se spotřebovává v pořadí stavby. V rozbalovacím seznamu **Lokace
   skladu** lze zvlášť pro MC a MF zaškrtnout lokace, které se do skladu nepočítají (např. linka nebo příjem); volba
   se pamatuje v prohlížeči.

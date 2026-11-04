@@ -9,7 +9,6 @@ import type { LinePlan } from '../core/planning/plan';
 import type { PlanSettings } from '../core/planning/settings';
 import type { KpiData } from '../core/kpi';
 import type { OilList } from '../core/oil';
-import type { JitPosition } from '../core/material/jit';
 import type { MatrixOrder } from '../core/material/matrix';
 import type { PartKey } from '../core/material/partKey';
 import { applyTransit, type TransitEntry } from '../core/transit';
@@ -43,11 +42,10 @@ export interface LoadedData {
   oil: { path: string; lastModified: number; list: OilList } | null;
   /** KPI (KPI/KPI.xlsx): nejnovější soubor. */
   kpi: { path: string; lastModified: number; data: KpiData } | null;
-  /** Sekvence (složka Sekvence): nejnovější Order Status Matrix, klíč MC/MF a JIT Overview. */
+  /** Sekvence (složka Sekvence): nejnovější Order Status Matrix a klíč MC/MF. */
   sequence?: {
     matrix: { path: string; lastModified: number; orders: Map<string, MatrixOrder> } | null;
-    key?: { path: string; lastModified: number; key: PartKey } | null;
-    jit: { path: string; lastModified: number; positions: JitPosition[] } | null;
+    key: { path: string; lastModified: number; key: PartKey } | null;
   };
   /** Doplněný transit ze složky Transit: soubory a co se z nich přičetlo k coverage (už je v `coverage`). */
   transit?: { files: string[]; entries: TransitEntry[] };
@@ -265,18 +263,17 @@ export async function loadFolder(source: FolderSource, onProgress: (p: LoadProgr
     for (const older of kpiFiles.slice(1)) failed.push({ path: older.path, reason: 'superseded', detail: kpiFile.path });
   }
 
-  // Sekvence: platí nejnovější matice, klíč MC/MF a JIT Overview, starší se jen vypíšou.
+  // Sekvence: platí nejnovější matice a nejnovější klíč MC/MF, starší se jen vypíšou.
   let sequence: LoadedData['sequence'];
   for (const file of sequenceFiles) {
     const response = await parseInWorker({ kind: 'sequence', format: formatOf(file.path)!, name: file.path, file: file.file });
-    sequence ??= { matrix: null, key: null, jit: null };
+    sequence ??= { matrix: null, key: null };
     if (response.kind === 'sequence' && response.result.type !== 'unknown') {
       const type = response.result.type;
       const newer = sequence[type];
       if (newer) failed.push({ path: file.path, reason: 'superseded', detail: newer.path });
       else if (response.result.type === 'matrix') sequence.matrix = { path: file.path, lastModified: file.lastModified, orders: response.result.orders };
-      else if (response.result.type === 'key') sequence.key = { path: file.path, lastModified: file.lastModified, key: response.result.key };
-      else sequence.jit = { path: file.path, lastModified: file.lastModified, positions: response.result.positions };
+      else sequence.key = { path: file.path, lastModified: file.lastModified, key: response.result.key };
     } else if (response.kind === 'sequence') failed.push({ path: file.path, reason: 'unknownFormat', detail: '' });
     else if (response.kind === 'error') failed.push({ path: file.path, reason: 'unreadable', detail: response.message });
     onProgress({ done: ++done, total });

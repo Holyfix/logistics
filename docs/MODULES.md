@@ -138,7 +138,7 @@ Filtry projekt, kategorie, strana (LHD/RHD) a varianta z kmenových dat se ovliv
 - ⏳ Otevřené nákupní objednávky (pokud jsou v exportu)
 - Shortage list pro ranní poradu
 - ✅ Karta **Sekvence**: pokrytí Maincarrieru a Middlefieldu ve formátu Order Status Matrix (složka Sekvence: matice a klíč MC/MF);
-  MC a MF podle klíče (přesná shoda dveří, výbavy a barvy; jen zadní dveře bez „-HT“), bez klíče přes JIT a kusovník; sklad ze souboru skladu v pořadí stavby; stav dveří v barvách matice
+  MC a MF podle klíče (přesná shoda dveří, výbavy a barvy; jen zadní dveře bez „-HT“); sklad ze souboru skladu v pořadí stavby; stav dveří v barvách matice
   se štítky MC a MF, sloupec Materiál s chybějícími díly; zabalené a odeslané dveře (stav 50+) se nepočítají; filtry (Option
   Type, den stavby, stav, díl, nevyrobené carsety); výběr lokací, které se do skladu nepočítají (zvlášť MC a MF); Excel s prioritním seznamem podle data. Podrobnosti v DATA_IMPORT.md (Sekvence)
 
