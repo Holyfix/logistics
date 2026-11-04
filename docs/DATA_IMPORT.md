@@ -329,7 +329,7 @@ aplikace nabídne úvodní sadu ukazatelů. Když soubor mezitím změnil někdo
 
 ## Pokrytí materiálu (samostatná stránka material.html)
 
-Samostatná stránka vedle logistické aplikace (`…/material.html`): pokrytí **Maincarrieru (MC)** a **Middlefieldu (MF)**
+Samostatná stránka vedle logistické aplikace (`…/material.html`): pokrytí **Middlefieldu (MF)**
 dveřních panelů ve formátu **Order Status Matrix**. Soubory se vybírají přímo na stránce (lze víc najednou nebo
 přetáhnout); druh souboru se pozná podle obsahu. Logistická aplikace složku `Material` ve sdílené složce nečte.
 
@@ -340,21 +340,23 @@ přetáhnout); druh souboru se pozná podle obsahu. Logistická aplikace složku
 | Kusovník dveřních panelů (MBOM, Excel nebo CSV) | jako u Komponent; End Eff se bere v potaz | ano |
 
 - **Vozy a pořadí** jsou z matice (Planned customer built); zakázky, které v matici nejsou (např. staré zakázky v JIT),
-  se nepočítají. U každých dveří se stavem z matice se počítá potřeba bez ohledu na stav; volitelně bez zabalených
-  a odeslaných (stav 50 a víc).
+  se nepočítají. Zabalené a odeslané dveře (stav 50 a víc) se do potřeby nikdy nepočítají (MF už
+  je v nich zabudovaný), a to ani když vůz v JIT už není; ostatní dveře se stavem z matice se počítají.
 - **JIT** slouží jen k dohledání dveřního panelu pro Production number a dveře: pozice, která je v kusovníku jako hotový
   díl; dveře (FL, FR, RL, RR, HB) se poznají z popisu panelu („FRT LH“, „RR RH“, „HB“). Dveře vozu, který v JIT ještě
   není, se ukážou šedě („není v JIT“) a do potřeby se nepočítají.
-- **MC a MF** jsou díly na úrovni 1 pod panelem s „MC“ / „MF“ v popisu (např. „ASSY MC …“, „ASSY MF …“), s množstvím
-  z kusovníku.
+- **MF** jsou díly na úrovni 1 pod panelem s „MF“ v popisu (např. „ASSY MF …“), s množstvím z kusovníku. Maincarrier
+  (MC) ani ostatní díly se nepočítají.
 - **Sklad** se zadává ručně v kartě Díly a sklad (u dílu nebo vložením dvou sloupců z Excelu: díl, množství) a pamatuje se
   v prohlížeči; nezadaný sklad je 0. Spotřebovává se v pořadí stavby.
 - **Karta Matrix:** řádky jako v matici (Lot, Production number, Option Type, MC / MF, Planned customer built, stav
-  dveří v barvách matice podle čísla stavu 20–60); v buňce štítky **MC** a **MF** (zelený na skladě, červený chybí,
-  šedý dveře nejsou v JIT); sloupec **Materiál** vyjmenuje chybějící díly vozu („FR: MF …“).
+  dveří v barvách matice podle čísla stavu 20–60); v buňce štítek **MF** (zelený na skladě, červený chybí,
+  šedý dveře nejsou v JIT); sloupec **Materiál** vyjmenuje chybějící MF vozu („FR: …“). Filtry: Lot, Option Type,
+  MC / MF (barva), den stavby, stav dveří (vozy, které mají aspoň jedny dveře v daném stavu), hledání podle Production
+  number, Lotu nebo dílu MF a jen vozy s nepokrytými dveřmi; list Matrix v Excelu respektuje filtry.
 - **Karta Díly a sklad:** pokryto do / chybí od (vůz a dveře), stav skladu na konci dne, klik na díl ukáže dveře se
   zbývajícím skladem.
-- **Excel:** list Priority (chybějící MC a MF seřazené podle stavby prvních nepokrytých dveří: chybí od, vůz a dveře,
+- **Excel:** list Priority (chybějící MF seřazené podle stavby prvních nepokrytých dveří: chybí od, vůz a dveře,
   sklad, potřeba, chybí ks, poslední chybějící), list Chybějící dveře (každé nepokryté dveře podle data), Matrix
   a Díly.
 - Smyšlená ukázka: `sample-data/Material/` (vytvoří `node scripts/generate-material-sample.mjs`).

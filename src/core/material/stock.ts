@@ -1,4 +1,4 @@
-// Ručně zadaný sklad MC a MF: vložení dvou sloupců z Excelu (díl a množství).
+// Ručně zadaný sklad MF: vložení dvou sloupců z Excelu (díl a množství).
 
 import { parseNumber } from '../numbers';
 

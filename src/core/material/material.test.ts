@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { parseBom } from '../bom';
 import { dayFromParts } from '../dates';
-import { buildMaterialCoverage, carMissing, partKind, shortages } from './coverage';
+import { buildMaterialCoverage, carMissing, isMiddlefield, shortages } from './coverage';
 import { doorOf, MINUTES_PER_DAY, parseJit, parseStamp } from './jit';
 import { parseStatusMatrix, statusCode } from './matrix';
 import { parseStockPaste } from './stock';
@@ -46,9 +46,9 @@ describe('JIT Overview', () => {
     expect(parseJit('a,b\n1,2')).toMatchObject({ ok: false });
   });
 
-  it('dveře z popisu panelu, druh dílu z popisu v kusovníku', () => {
+  it('dveře z popisu panelu, Middlefield z popisu v kusovníku', () => {
     expect(['ASSY DP SR2 FRT LH', 'ASSY DP BASIS HEAT FRTRH', 'ASSY DP SR1 RR LH', 'ASSY DP SR2 RR RH', 'ASSY HB TRIM PVC', 'X'].map(doorOf)).toEqual(['FL', 'FR', 'RL', 'RR', 'HB', null]);
-    expect(['ASSY MC TRIM TPO FRT LH', 'ASSY MF SR2 RR RH', 'MAP POCKET'].map(partKind)).toEqual(['MC', 'MF', null]);
+    expect(['ASSY MC TRIM TPO FRT LH', 'ASSY MF SR2 RR RH', 'MAP POCKET'].map(isMiddlefield)).toEqual([false, true, false]);
   });
 });
 
@@ -80,70 +80,65 @@ describe('Order Status Matrix', () => {
   });
 });
 
-describe('pokrytí MC a MF podle matice', () => {
+describe('pokrytí MF podle matice', () => {
   const jit = parseJit(jitText);
   if (!jit.ok) throw new Error();
   const car = (lot: string, pn: string, planned: number | null, status: Record<string, string>) => ({ lot, productionNumber: pn, planned, optionType: 'SR1', colors: 'C1 / C1', status });
   const matrix = new Map(
     [
-      car('10', 'T0001', at(5, 8), { FL: '30 - Sequencelabel printed', RR: '60 - Shipped' }),
+      // zabalený vůz, který už v JIT není: nepočítá se (ani mezi neznámé)
+      car('09', 'T0000', at(4, 8), { FL: '50 - Packed' }),
+      car('10', 'T0001', at(5, 8), { FL: '30 - Sequencelabel printed', RR: '45 - Passed Q-Gate' }),
       car('10', 'T0002', at(6, 10, 30), { FL: '20 - Container planned' }),
       // vůz, který v JIT ještě není: dveřní panel neznáme
       car('11', 'T0009', at(6, 11), { FL: '20 - Container planned', HB: '20 - Container planned' }),
     ].map((c) => [c.productionNumber, c]),
   );
 
-  it('vozy z matice, dveřní panel z JIT, MC a MF z kusovníku; sklad se spotřebovává v pořadí stavby', () => {
-    const t = buildMaterialCoverage({ matrix, positions: jit.value, bom: bom.value, stock: new Map([['MC-FL-1', 1]]), today: day(5) });
+  it('vozy z matice, dveřní panel z JIT, MF z kusovníku (MC se nepočítá); sklad se spotřebovává v pořadí stavby', () => {
+    const t = buildMaterialCoverage({ matrix, positions: jit.value, bom: bom.value, stock: new Map([['MF-FL-1', 1]]), today: day(5) });
     // stará zakázka z JIT (T0003, 2018) v matici není, takže se nepočítá
-    expect(t.cars.map((c) => c.productionNumber)).toEqual(['T0001', 'T0002', 'T0009']);
-    // T0009 HB: výklopné dveře MC/MF nemají, nepočítají se mezi neznámé
-    expect(t).toMatchObject({ doors: 5, known: 3, unknown: 1, skippedDone: 0 });
+    expect(t.cars.map((c) => c.productionNumber)).toEqual(['T0000', 'T0001', 'T0002', 'T0009']);
+    // T0009 HB: výklopné dveře MF nemají, nepočítají se mezi neznámé; T0000 je zabalený
+    expect(t).toMatchObject({ doors: 6, known: 3, unknown: 1, skippedDone: 1 });
     expect(t.days).toEqual([day(5), day(6)]);
-    const [t1, t2, t9] = t.cars;
-    expect(t1!.doors.FL).toMatchObject({ status: '30 - Sequencelabel printed', panel: 'PANEL-FL-A', state: 'short' });
-    // MC pokrytý (sklad 1), MF bez skladu chybí
-    expect(t1!.doors.FL!.parts).toEqual([
-      { item: 'MC-FL-1', kind: 'MC', qty: 1, left: 0 },
-      { item: 'MF-FL-1', kind: 'MF', qty: 1, left: -1 },
-    ]);
-    expect(t2!.doors.FL!.parts[0]).toMatchObject({ item: 'MC-FL-1', left: -1 });
+    const [t0, t1, t2, t9] = t.cars;
+    expect(t0!.doors.FL).toMatchObject({ panel: null, state: 'skipped', parts: [] });
+    // MF pokrytý (sklad 1), na RR bez skladu chybí
+    expect(t1!.doors.FL).toMatchObject({ status: '30 - Sequencelabel printed', panel: 'PANEL-FL-A', state: 'ok', parts: [{ item: 'MF-FL-1', qty: 1, left: 0 }] });
+    expect(t1!.doors.RR).toMatchObject({ state: 'short', parts: [{ item: 'MF-RR-1', qty: 1, left: -1 }] });
+    expect(t2!.doors.FL).toMatchObject({ state: 'short', parts: [{ item: 'MF-FL-1', left: -1 }] });
     expect(t9!.doors.FL).toMatchObject({ panel: null, state: 'unknown' });
     expect(t9!.doors.HB).toMatchObject({ panel: null, state: 'none' });
     expect(t9!.short).toBe(false);
-    const mc = t.parts.find((p) => p.item === 'MC-FL-1')!;
-    expect(mc).toMatchObject({ kind: 'MC', stock: 1, total: 2, overdue: 0, perDay: [1, 1], balance: [0, -1] });
-    expect(mc.lastCovered).toMatchObject({ productionNumber: 'T0001', door: 'FL' });
-    expect(mc.firstShort).toMatchObject({ productionNumber: 'T0002', door: 'FL', status: '20 - Container planned', planned: at(6, 10, 30) });
-    expect(t.parts.map((p) => p.item).sort()).toEqual(['MC-FL-1', 'MC-RR-1', 'MF-FL-1', 'MF-RR-1']);
+    const mf = t.parts.find((p) => p.item === 'MF-FL-1')!;
+    expect(mf).toMatchObject({ stock: 1, total: 2, overdue: 0, perDay: [1, 1], balance: [0, -1] });
+    expect(mf.lastCovered).toMatchObject({ productionNumber: 'T0001', door: 'FL' });
+    expect(mf.firstShort).toMatchObject({ productionNumber: 'T0002', door: 'FL', status: '20 - Container planned', planned: at(6, 10, 30) });
+    expect(t.parts.map((p) => p.item)).toEqual(['MF-RR-1', 'MF-FL-1']);
     // sloupec Materiál a prioritní seznam
-    expect(carMissing(t1!)).toEqual([
-      { door: 'FL', kind: 'MF', item: 'MF-FL-1' },
-      { door: 'RR', kind: 'MC', item: 'MC-RR-1' },
-      { door: 'RR', kind: 'MF', item: 'MF-RR-1' },
-    ]);
+    expect(carMissing(t1!)).toEqual([{ door: 'RR', item: 'MF-RR-1' }]);
     const list = shortages(t.parts);
     expect(list.map((s) => [s.part.item, s.missing, s.demands.map((d) => `${d.productionNumber} ${d.door} ${d.missing}`)])).toEqual([
-      ['MC-RR-1', 1, ['T0001 RR 1']],
-      ['MF-FL-1', 2, ['T0001 FL 1', 'T0002 FL 1']],
       ['MF-RR-1', 1, ['T0001 RR 1']],
-      ['MC-FL-1', 1, ['T0002 FL 1']],
+      ['MF-FL-1', 1, ['T0002 FL 1']],
     ]);
   });
 
-  it('volitelně bez zabalených a odeslaných dveří', () => {
-    const t = buildMaterialCoverage({ matrix, positions: jit.value, bom: bom.value, stock: new Map(), today: day(5), skipDone: true });
-    expect(t.skippedDone).toBe(1);
-    expect(t.cars[0]!.doors.RR).toMatchObject({ state: 'skipped', parts: [] });
-    expect(t.parts.find((p) => p.item === 'MC-RR-1')).toBeUndefined();
+  it('zabalené a odeslané dveře (stav 50+) se do potřeby nepočítají', () => {
+    const shipped = new Map(matrix).set('T0001', { ...matrix.get('T0001')!, status: { FL: '30 - Sequencelabel printed', RR: '60 - Shipped' } });
+    const t = buildMaterialCoverage({ matrix: shipped, positions: jit.value, bom: bom.value, stock: new Map(), today: day(5) });
+    expect(t.skippedDone).toBe(2);
+    expect(t.cars[1]!.doors.RR).toMatchObject({ panel: 'PANEL-RR-A', state: 'skipped', parts: [] });
+    expect(t.parts.find((p) => p.item === 'MF-RR-1')).toBeUndefined();
   });
 });
 
 describe('vložení skladu z Excelu', () => {
   it('díl a množství po řádcích, záhlaví se přeskočí, stejný díl se sečte', () => {
-    expect([...parseStockPaste('Díl\tMnožství\nmc-fl-1\t12\nMF-FL-1;3\nMC-FL-1\t1 000\n\n')]).toEqual([
-      ['MC-FL-1', 1012],
-      ['MF-FL-1', 3],
+    expect([...parseStockPaste('Díl\tMnožství\nmf-fl-1\t12\nMF-RR-1;3\nMF-FL-1\t1 000\n\n')]).toEqual([
+      ['MF-FL-1', 1012],
+      ['MF-RR-1', 3],
     ]);
   });
 });
