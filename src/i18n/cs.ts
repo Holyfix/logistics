@@ -1381,6 +1381,14 @@ export const cs = {
       none: 'Ve skladu není žádný díl tohoto druhu.',
     },
     kinds: { MC: 'Maincarrier', MF: 'Middlefield' },
+    views: { label: 'Pohled', cars: 'Vozy (Matrix)', parts: 'Díly MC a MF' },
+    parts: {
+      heading: 'Pokrytí dílů MC a MF',
+      sub: 'stav skladu na konci dne po odečtení potřeby v pořadí stavby · díly v pořadí priority',
+      empty: 'Filtru neodpovídá žádný díl.',
+      boundary: 'Zítřek: pokrytí na 2 dny',
+      note: 'Stejně jako list Coverage v exportu: sklad na konci dne (záporné = chybí), nejdřív Maincarrier, pak Middlefield, v nich díly, které chybí nejdřív. Zabalené a odeslané dveře a díly, které chybí v klíči, se nepočítají. Zeleně orámovaný zítřek = pokrytí na 2 dny.',
+    },
     tiles: {
       cars: 'Vozů v matici',
       carsNote: '{doors} dveří se stavem, z toho {done} zabalených nebo odeslaných (nepočítají se)',
@@ -1403,6 +1411,8 @@ export const cs = {
       search: 'Production number, Lot nebo díl',
       onlyShort: 'Jen vozy s nepokrytými dveřmi',
       onlyUnbuilt: 'Jen nevyrobené carsety (aspoň jedny dveře ve stavu 45 a méně)',
+      searchPart: 'Díl nebo popis',
+      onlyShortParts: 'Jen chybějící díly',
     },
     matrix: {
       heading: 'Pokrytí MC a MF podle Order Status Matrix',
@@ -1443,6 +1453,8 @@ export const cs = {
       sum: 'Celkem',
       sheetCoverage: 'Coverage',
       sheetDemand: 'Potreba po dnech',
+      sheetMatrix: 'Matrix',
+      matrixNote: 'Vozy v pořadí plánované stavby (s filtry z aplikace), stav dveří v barvách Order Status Matrix. MC a MF: zeleně na skladě, červeně chybí, šedě chybí v klíči; bez štítku zabalené nebo odeslané dveře (stav 50+), které se nepočítají.',
     },
   },
   footer: {

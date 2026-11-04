@@ -1,7 +1,7 @@
 import { Fragment, useMemo, useState } from 'react';
 import { dayToIso, weekday, type DayNumber } from '../../core/dates';
 import { formatDayShort, formatQuantity } from '../../core/format';
-import { buildMaterialCoverage, carMissing, carUndetermined, DONE_STATUS, missingKeys, type CarCoverage, type DoorCoverage } from '../../core/material/coverage';
+import { buildMaterialCoverage, carMissing, carUndetermined, DONE_STATUS, missingKeys, type CarCoverage, type DoorCoverage, type PartCoverage } from '../../core/material/coverage';
 import { sequenceReport } from '../../core/material/report';
 import { dayOfStamp, DOORS, MINUTES_PER_DAY, type Door, type Stamp } from '../../core/material/doors';
 import { statusCode } from '../../core/material/matrix';
@@ -86,6 +86,7 @@ export function SequenceView({ today }: { today: DayNumber }) {
   const [query, setQuery] = useState('');
   const [onlyShort, setOnlyShort] = useState(false);
   const [onlyUnbuilt, setOnlyUnbuilt] = useState(false);
+  const [view, setView] = useState<'cars' | 'parts'>('cars');
   const [excludedAll, setExcludedAll] = useState<Excluded>(loadExcluded);
   const [locationKind, setLocationKind] = useState<PartKind>('MC');
   const [locationQuery, setLocationQuery] = useState('');
@@ -168,6 +169,8 @@ export function SequenceView({ today }: { today: DayNumber }) {
   })();
   const shortDoors = allCars.reduce((n, c) => n + DOORS.filter((d) => c.doors[d]?.state === 'short').length, 0);
 
+  /** „Chybí od“: čas stavby, vůz a dveře prvních nepokrytých dveří; jinak „pokryto“. */
+  const shortText = (p: PartCoverage) => (p.firstShort ? `${time(p.firstShort.planned)} · ${p.firstShort.productionNumber} ${p.firstShort.door}` : ts.export.covered);
   // Excel: formátovaný sešit (jako Coverage) – stav skladu po dnech a potřeba dílů sečtená po dnech, v pořadí priority.
   const exportExcel = () => {
     const te = ts.export;
@@ -197,13 +200,41 @@ export function SequenceView({ today }: { today: DayNumber }) {
           sum: te.sum,
           sheetCoverage: te.sheetCoverage,
           sheetDemand: te.sheetDemand,
+          sheetMatrix: te.sheetMatrix,
+          lot: ts.matrix.lot,
+          productionNumber: ts.matrix.productionNumber,
+          optionType: ts.matrix.optionType,
+          colors: ts.matrix.colors,
+          planned: ts.matrix.planned,
+          status: ts.matrix.status,
+          material: ts.matrix.material,
+          matrixNote: te.matrixNote,
         },
-        { boundary: today + 1, shortText: (p) => (p.firstShort ? `${time(p.firstShort.planned)} · ${p.firstShort.productionNumber} ${p.firstShort.door}` : te.covered) },
+        {
+          boundary: today + 1,
+          shortText,
+          cars,
+          carTexts: (car) => {
+            const missing = missingByDoor(car).join(' · ');
+            const undetermined = undeterminedText(car);
+            const material = [missing, undetermined && `${ts.matrix.undetermined}: ${undetermined}`].filter(Boolean).join(' · ');
+            const counted = DOORS.some((d) => car.doors[d]?.parts.length);
+            return {
+              planned: time(car.planned),
+              material: material || (counted ? ts.matrix.allInStock : ''),
+              tone: missing ? 'short' : undetermined ? 'undetermined' : counted ? 'ok' : 'none',
+            };
+          },
+        },
       ),
     );
   };
 
   const fileName = (path: string | undefined) => path?.split('/').pop() ?? '—';
+  // Pohled Díly MC a MF: stav skladu po dnech jako list Coverage v exportu.
+  const shownParts = coverage.parts.filter((p) => (!onlyShort || p.firstShort) && (!q || `${p.item} ${p.description}`.toLowerCase().includes(q)));
+  const anyOverdue = coverage.parts.some((p) => p.overdue > 0);
+  const dayClass = (d: DayNumber) => `${weekday(d) >= 6 ? ' col-weekend' : ''}${d === today + 1 ? ' col-boundary' : ''}`;
   const lq = locationQuery.trim().toUpperCase();
   const shownLocations = locations.filter((l) => !lq || `${l.location} ${l.zone}`.includes(lq));
 
@@ -337,115 +368,193 @@ export function SequenceView({ today }: { today: DayNumber }) {
         </div>
       </div>
 
+      <div className="segmented" role="group" aria-label={ts.views.label}>
+        {(['cars', 'parts'] as const).map((id) => (
+          <button key={id} type="button" aria-pressed={view === id} onClick={() => setView(id)}>
+            {ts.views[id]}
+          </button>
+        ))}
+      </div>
+
       <div className="filters" role="group" aria-label={ts.filters.label}>
         <label className="field field-wide">
-          <span>{ts.filters.search}</span>
+          <span>{view === 'cars' ? ts.filters.search : ts.filters.searchPart}</span>
           <input type="search" value={query} onChange={(e) => setQuery(e.target.value)} />
         </label>
         <label className="check-field">
           <input type="checkbox" checked={onlyShort} onChange={(e) => setOnlyShort(e.target.checked)} />
-          {ts.filters.onlyShort}
+          {view === 'cars' ? ts.filters.onlyShort : ts.filters.onlyShortParts}
         </label>
-        <label className="check-field">
-          <input type="checkbox" checked={onlyUnbuilt} onChange={(e) => setOnlyUnbuilt(e.target.checked)} />
-          {ts.filters.onlyUnbuilt}
-        </label>
-        {(
-          [
-            ['optionType', ts.matrix.optionType],
-            ['day', ts.filters.day],
-            ['status', ts.filters.status],
-          ] as const
-        ).map(([key, label]) => (
-          <label key={key} className="field">
-            <span>{label}</span>
-            <select value={filter[key]} onChange={(e) => setFilter({ ...filter, [key]: e.target.value })}>
-              <option value="">{ts.filters.all}</option>
-              {carOptions[key].map((v) => (
-                <option key={v} value={v}>
-                  {filterLabel(key, v)}
-                </option>
-              ))}
-            </select>
+        {view === 'cars' && (
+          <label className="check-field">
+            <input type="checkbox" checked={onlyUnbuilt} onChange={(e) => setOnlyUnbuilt(e.target.checked)} />
+            {ts.filters.onlyUnbuilt}
           </label>
-        ))}
+        )}
+        {view === 'cars' &&
+          (
+            [
+              ['optionType', ts.matrix.optionType],
+              ['day', ts.filters.day],
+              ['status', ts.filters.status],
+            ] as const
+          ).map(([key, label]) => (
+            <label key={key} className="field">
+              <span>{label}</span>
+              <select value={filter[key]} onChange={(e) => setFilter({ ...filter, [key]: e.target.value })}>
+                <option value="">{ts.filters.all}</option>
+                {carOptions[key].map((v) => (
+                  <option key={v} value={v}>
+                    {filterLabel(key, v)}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ))}
         <span className="filters-break" role="presentation" />
         <button type="button" className="button button-small" onClick={exportExcel}>
           ⤓ {ts.export.button}
         </button>
       </div>
 
-      <div className="panel">
-        <div className="panel-head">
-          <h2>{ts.matrix.heading}</h2>
-          <span className="muted">{ts.matrix.sub}</span>
-          {filterActive && (
-            <span className="panel-actions">
-              <span className="muted">{ts.filters.shown.replace('{n}', qty(cars.length)).replace('{total}', qty(allCars.length))}</span>
-              <button
-                type="button"
-                className="button button-small"
-                onClick={() => {
-                  setFilter(NO_FILTER);
-                  setQuery('');
-                  setOnlyShort(false);
-                  setOnlyUnbuilt(false);
-                }}
-              >
-                {ts.filters.reset}
-              </button>
-            </span>
-          )}
-        </div>
-        {cars.length === 0 ? (
-          <p className="muted">{ts.matrix.empty}</p>
-        ) : (
-          <div className="table-scroll table-tall">
-            <table className="table table-data mat-matrix">
-              <thead>
-                <tr>
-                  <th>{ts.matrix.lot}</th>
-                  <th className="sticky-col">{ts.matrix.productionNumber}</th>
-                  <th>{ts.matrix.optionType}</th>
-                  <th>{ts.matrix.colors}</th>
-                  <th>{ts.matrix.planned}</th>
-                  {DOORS.map((d) => (
-                    <th key={d}>
-                      {ts.matrix.status} {d}
-                    </th>
-                  ))}
-                  <th>{ts.matrix.material}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {cars.map((c) => (
-                  <CarRow key={c.productionNumber} car={c} time={time} title={doorTitle} />
-                ))}
-              </tbody>
-            </table>
+      {view === 'parts' && (
+        <div className="panel">
+          <div className="panel-head">
+            <h2>{ts.parts.heading}</h2>
+            <span className="muted">{ts.parts.sub}</span>
           </div>
-        )}
-        <ul className="cov-legend">
-          {STATUS_COLORS.map((code) => (
-            <li key={code}>
-              <i className={`swatch mat-s${code}`} /> {ts.matrix.statuses[code as keyof typeof ts.matrix.statuses]}
+          {shownParts.length === 0 ? (
+            <p className="muted">{ts.parts.empty}</p>
+          ) : (
+            <div className="table-scroll table-tall">
+              <table className="table table-data mat-parts">
+                <thead>
+                  <tr>
+                    <th className="sticky-col">{ts.export.item}</th>
+                    <th>{ts.export.description}</th>
+                    <th className="n">{ts.export.stock}</th>
+                    <th className="n">{ts.export.demand}</th>
+                    {anyOverdue && <th className="n">{ts.export.overdue}</th>}
+                    <th>{ts.export.shortFrom}</th>
+                    {coverage.days.map((d) => (
+                      <th key={d} className={`n${dayClass(d)}`} title={d === today + 1 ? ts.parts.boundary : undefined}>
+                        {dayLabel(d)}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {PART_KINDS.map((kind) => {
+                    const list = shownParts.filter((p) => p.kind === kind);
+                    if (list.length === 0) return null;
+                    return (
+                      <Fragment key={kind}>
+                        <tr className="mat-kind-row">
+                          <th colSpan={5 + (anyOverdue ? 1 : 0) + coverage.days.length} scope="colgroup">
+                            {ts.kinds[kind]}
+                          </th>
+                        </tr>
+                        {list.map((p) => (
+                          <tr key={p.item}>
+                            <td className="sticky-col">
+                              <strong>{p.item}</strong>
+                            </td>
+                            <td className="desc">{p.description}</td>
+                            <td className="n">{qty(p.stock ?? 0)}</td>
+                            <td className="n">{qty(p.total)}</td>
+                            {anyOverdue && <td className={`n${(p.stock ?? 0) < p.overdue ? ' cell-negative' : ''}`}>{p.overdue ? qty((p.stock ?? 0) - p.overdue) : ''}</td>}
+                            <td className={p.firstShort ? 'cell-short' : 'muted'}>{shortText(p)}</td>
+                            {p.balance.map((v, k) => (
+                              <td key={coverage.days[k]} className={`n${dayClass(coverage.days[k]!)}${v < -1e-9 ? ' cell-negative' : ''}`}>
+                                {qty(v)}
+                              </td>
+                            ))}
+                          </tr>
+                        ))}
+                      </Fragment>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+          <p className="muted">{ts.parts.note}</p>
+        </div>
+      )}
+
+      {view === 'cars' && (
+        <div className="panel">
+          <div className="panel-head">
+            <h2>{ts.matrix.heading}</h2>
+            <span className="muted">{ts.matrix.sub}</span>
+            {filterActive && (
+              <span className="panel-actions">
+                <span className="muted">{ts.filters.shown.replace('{n}', qty(cars.length)).replace('{total}', qty(allCars.length))}</span>
+                <button
+                  type="button"
+                  className="button button-small"
+                  onClick={() => {
+                    setFilter(NO_FILTER);
+                    setQuery('');
+                    setOnlyShort(false);
+                    setOnlyUnbuilt(false);
+                  }}
+                >
+                  {ts.filters.reset}
+                </button>
+              </span>
+            )}
+          </div>
+          {cars.length === 0 ? (
+            <p className="muted">{ts.matrix.empty}</p>
+          ) : (
+            <div className="table-scroll table-tall">
+              <table className="table table-data mat-matrix">
+                <thead>
+                  <tr>
+                    <th>{ts.matrix.lot}</th>
+                    <th className="sticky-col">{ts.matrix.productionNumber}</th>
+                    <th>{ts.matrix.optionType}</th>
+                    <th>{ts.matrix.colors}</th>
+                    <th>{ts.matrix.planned}</th>
+                    {DOORS.map((d) => (
+                      <th key={d}>
+                        {ts.matrix.status} {d}
+                      </th>
+                    ))}
+                    <th>{ts.matrix.material}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {cars.map((c) => (
+                    <CarRow key={c.productionNumber} car={c} time={time} title={doorTitle} />
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          <ul className="cov-legend">
+            {STATUS_COLORS.map((code) => (
+              <li key={code}>
+                <i className={`swatch mat-s${code}`} /> {ts.matrix.statuses[code as keyof typeof ts.matrix.statuses]}
+              </li>
+            ))}
+          </ul>
+          <ul className="cov-legend">
+            <li>
+              <i className="mat-badge mat-badge-ok">MC</i> {ts.matrix.legendOk}
             </li>
-          ))}
-        </ul>
-        <ul className="cov-legend">
-          <li>
-            <i className="mat-badge mat-badge-ok">MC</i> {ts.matrix.legendOk}
-          </li>
-          <li>
-            <i className="mat-badge mat-badge-short">MF</i> {ts.matrix.legendShort}
-          </li>
-          <li>
-            <i className="mat-badge mat-badge-unknown">MC</i> {ts.matrix.legendUnknown}
-          </li>
-          <li>{ts.matrix.legendDone}</li>
-        </ul>
-        <p className="muted">{ts.matrix.note}</p>
-      </div>
+            <li>
+              <i className="mat-badge mat-badge-short">MF</i> {ts.matrix.legendShort}
+            </li>
+            <li>
+              <i className="mat-badge mat-badge-unknown">MC</i> {ts.matrix.legendUnknown}
+            </li>
+            <li>{ts.matrix.legendDone}</li>
+          </ul>
+          <p className="muted">{ts.matrix.note}</p>
+        </div>
+      )}
     </>
   );
 }

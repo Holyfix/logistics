@@ -361,7 +361,11 @@ Klíč MC/MF musí ležet ve složce `Sekvence`: mimo ni by se podle „Mapping�
   šedý díl neurčen); sloupec **Materiál** vyjmenuje chybějící díly vozu („FR: MC …, MF …“). Filtry: Option Type, den
   stavby, stav dveří (vozy, které mají aspoň jedny dveře v daném stavu), hledání podle Production number, Lotu nebo
   dílu, jen vozy s nepokrytými dveřmi a jen nevyrobené carsety (aspoň jedny dveře ve stavu 45 a méně).
-- **Excel** (formátovaný jako Coverage): list **Coverage** (sklad MC a MF na konci dne po odečtení potřeby v pořadí
+- **Pohled Díly MC a MF** (přepínač vedle pohledu Vozy): stav skladu každého MC a MF na konci dne po odečtení
+  potřeby v pořadí stavby, stejně jako list Coverage v exportu (záporné červeně, zítřek zeleně orámovaný, díly
+  v pořadí priority); hledání podle dílu a „jen chybějící díly“.
+- **Excel** (formátovaný jako Coverage): list **Matrix** (pokrytí dveřních panelů jako v aplikaci: vozy s filtry, stav
+  dveří v barvách matice, u každých dveří štítky MC a MF a sloupec Materiál), list **Coverage** (sklad MC a MF na konci dne po odečtení potřeby v pořadí
   stavby, záporné červeně, zítřek zeleně orámovaný) a list **Potřeba po dnech** (kusy dílu sečtené po dnech plánované
   stavby, červeně dny, kdy sklad nestačí, součet za Maincarrier a Middlefield); díly v pořadí priority (druh, pak
   díly, které chybí nejdřív) s „chybí od“ (čas stavby, vůz a dveře).

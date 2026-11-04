@@ -174,6 +174,26 @@ describe('Komponenty – karta Sekvence', () => {
     ]);
   });
 
+  it('pohled Díly MC a MF: stav skladu po dnech jako list Coverage v exportu', () => {
+    renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'Díly MC a MF' }));
+    // filtry vozů v pohledu na díly nejsou
+    expect(screen.queryByLabelText(/Jen nevyrobené carsety/)).toBeNull();
+    const table = document.querySelector('.mat-parts')!;
+    expect([...table.querySelectorAll('thead th')].map((th) => th.textContent)).toEqual(['Díl', 'Popis', 'Sklad', 'Potřeba', 'Chybí od', 'Čt 5. 11.', 'Pá 6. 11.']);
+    const rows = [...table.querySelectorAll('tbody tr')].map((r) => [...r.querySelectorAll('th, td')].map((c) => c.textContent));
+    expect(rows).toEqual([
+      ['Maincarrier'],
+      ['MC-1', 'ASSY MC SR1 FRT LH', '10', '3', 'pokryto', '8', '7'],
+      ['Middlefield'],
+      ['MF-1', 'ASSY MF SR1 FRT LH', '2', '3', 'Pá 6. 11. 07:00 · V3 FL', '0', '-1'],
+    ]);
+    expect(table.querySelectorAll('tbody td.cell-negative')).toHaveLength(1);
+    expect(table.querySelector('thead th.col-boundary')!.textContent).toBe('Pá 6. 11.');
+    fireEvent.click(screen.getByLabelText('Jen chybějící díly'));
+    expect([...table.querySelectorAll('tbody td.sticky-col')].map((td) => td.textContent)).toEqual(['MF-1']);
+  });
+
   it('bez souborů ve složce Sekvence poradí, co uložit', () => {
     renderPage(false);
     expect(screen.getByText(/uložte do sdílené složky Sekvence/)).toBeTruthy();

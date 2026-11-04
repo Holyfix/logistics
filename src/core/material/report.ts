@@ -1,10 +1,13 @@
-// Export Sekvence jako formátovaný sešit (stejný vzhled jako Coverage): list Coverage se stavem skladu MC a MF na konci
-// dne a list Potřeba po dnech s kusy sečtenými po dnech; díly v pořadí priority (nejdřív ty, které chybí nejdřív).
+// Export Sekvence jako formátovaný sešit (stejný vzhled jako Coverage): list Matrix s pokrytím dveřních panelů jako
+// v aplikaci (stav dveří v barvách matice, stav MC a MF), list Coverage se stavem skladu MC a MF na konci dne a list
+// Potřeba po dnech s kusy sečtenými po dnech; díly v pořadí priority (nejdřív ty, které chybí nejdřív).
 
 import type { ReportCell, ReportSheet } from '../calloffs/summaryReport';
 import { BOUNDARY_EDGE, headerRows, isWeekend, QTY, REPORT_COLORS as C, titleRows, valueCell } from '../coverage/report';
 import type { DayNumber } from '../dates';
-import type { PartCoverage } from './coverage';
+import type { CarCoverage, DoorCoverage, PartCoverage } from './coverage';
+import { DOORS } from './doors';
+import { statusCode } from './matrix';
 import { PART_KINDS, type PartKind } from './partKey';
 
 export interface SequenceReportTexts {
@@ -24,17 +27,101 @@ export interface SequenceReportTexts {
   sum: string;
   sheetCoverage: string;
   sheetDemand: string;
+  sheetMatrix: string;
+  lot: string;
+  productionNumber: string;
+  optionType: string;
+  colors: string;
+  planned: string;
+  status: string;
+  material: string;
+  matrixNote: string;
+}
+
+/** Barvy stavů jako v Order Status Matrix (podle čísla stavu) a štítky MC/MF jako v aplikaci. */
+const STATUS_FILL: Record<number, string> = { 20: '#FFA500', 25: '#F0E68C', 30: '#FFFF00', 40: '#ADD8E6', 45: '#40E0D0', 50: '#90EE90', 60: '#32CD32' };
+const BADGE_FILL = { ok: '#2E8B3E', short: '#C62828', unknown: '#9AA5B1' } as const;
+const MATRIX_HEADER = '#4C68A2';
+
+/** Text řádku vozu: plánovaná stavba a sloupec Materiál (chybějící díly, „chybí v klíči“, nebo vše na skladě). */
+export interface CarTexts {
+  planned: string;
+  material: string;
+  tone: 'short' | 'ok' | 'undetermined' | 'none';
+}
+
+/** Stav dílu daného druhu u dveří: na skladě, chybí, chybí v klíči, nebo bez štítku (hotové, výklopné). */
+function badge(cell: DoorCoverage, kind: PartKind): keyof typeof BADGE_FILL | null {
+  if (cell.state === 'none' || cell.state === 'skipped') return null;
+  const parts = cell.parts.filter((p) => p.kind === kind);
+  if (parts.length) return parts.some((p) => p.left < -1e-9) ? 'short' : 'ok';
+  return cell.unknown.includes(kind) ? 'unknown' : null;
+}
+
+/** List Matrix: vozy jako v aplikaci; u dveří stav v barvě matice a vedle štítky MC a MF. */
+function matrixSheet(cars: readonly CarCoverage[], texts: SequenceReportTexts, carTexts: (car: CarCoverage) => CarTexts): ReportSheet {
+  const labels = [texts.lot, texts.productionNumber, texts.optionType, texts.colors, texts.planned];
+  const width = labels.length + DOORS.length * 3 + 1;
+  const head: ReportCell = { fontWeight: 'bold', textColor: '#FFFFFF', backgroundColor: MATRIX_HEADER, alignVertical: 'center', wrap: true, height: 30 };
+  const header: (ReportCell | null)[] = [
+    ...labels.map((value) => ({ ...head, value })),
+    ...DOORS.flatMap((d): ReportCell[] => [
+      { ...head, value: `${texts.status} ${d}` },
+      { ...head, value: 'MC', align: 'center' },
+      { ...head, value: 'MF', align: 'center' },
+    ]),
+    { ...head, value: texts.material },
+  ];
+  const rows = cars.map((car): (ReportCell | null)[] => {
+    const ct = carTexts(car);
+    return [
+      { value: car.lot },
+      { value: car.productionNumber, fontWeight: 'bold', ...(car.short ? { textColor: C.down } : {}) },
+      { value: car.optionType },
+      { value: car.colors },
+      { value: ct.planned },
+      ...DOORS.flatMap((d): ReportCell[] => {
+        const cell = car.doors[d];
+        if (!cell) return [{ value: '' }, { value: '' }, { value: '' }];
+        const fill = STATUS_FILL[statusCode(cell.status) ?? -1];
+        const mark = (kind: PartKind): ReportCell => {
+          const b = badge(cell, kind);
+          return b ? { value: kind, align: 'center', fontWeight: 'bold', fontSize: 9, textColor: '#FFFFFF', backgroundColor: BADGE_FILL[b] } : { value: '' };
+        };
+        return [{ value: cell.status, textColor: '#4D4D4D', ...(fill ? { backgroundColor: fill } : {}) }, mark('MC'), mark('MF')];
+      }),
+      {
+        value: ct.material,
+        ...(ct.tone === 'short' ? { textColor: C.down, fontWeight: 'bold' as const } : ct.tone === 'ok' ? { textColor: C.boundary } : ct.tone === 'undetermined' ? { textColor: C.muted, fontStyle: 'italic' as const } : {}),
+      },
+    ];
+  });
+  const span = (cell: ReportCell): (ReportCell | null)[] => [{ ...cell, columnSpan: width }, ...Array.from({ length: width - 1 }, () => null)];
+  return {
+    name: texts.sheetMatrix,
+    data: [...titleRows(texts, width), header, ...rows, [], span({ value: texts.matrixNote, textColor: C.muted, fontStyle: 'italic', wrap: true, height: 30, alignVertical: 'top' })],
+    columns: [{ width: 8 }, { width: 16 }, { width: 10 }, { width: 14 }, { width: 16 }, ...DOORS.flatMap(() => [{ width: 22 }, { width: 5 }, { width: 5 }]), { width: 40 }],
+    stickyRows: 5,
+    stickyColumns: 2,
+    gridLines: true,
+  };
 }
 
 /**
- * Sešit Sekvence. `parts` v pořadí priority (druh, pak díly, které chybí nejdřív); `shortText` = text „chybí od“
+ * Sešit Sekvence. `cars` = vozy pro list Matrix (jak je ukazuje aplikace, s filtry), `carTexts` = plánovaná stavba
+ * a sloupec Materiál; `parts` v pořadí priority (druh, pak díly, které chybí nejdřív); `shortText` = text „chybí od“
  * (čas stavby, vůz a dveře) nebo prázdný; `boundary` = den hranice pokrytí 2 dny (dnes + 1), sloupec se orámuje zeleně.
  */
 export function sequenceReport(
   parts: readonly PartCoverage[],
   days: readonly DayNumber[],
   texts: SequenceReportTexts,
-  { boundary = null, shortText }: { boundary?: DayNumber | null; shortText: (p: PartCoverage) => string },
+  {
+    boundary = null,
+    shortText,
+    cars = [],
+    carTexts = (car) => ({ planned: '', material: '', tone: car.short ? 'short' : 'none' }),
+  }: { boundary?: DayNumber | null; shortText: (p: PartCoverage) => string; cars?: readonly CarCoverage[]; carTexts?: (car: CarCoverage) => CarTexts },
 ): ReportSheet[] {
   const edge = (d: DayNumber): ReportCell => (d === boundary ? BOUNDARY_EDGE : {});
   const anyOverdue = parts.some((p) => p.overdue > 0);
@@ -100,5 +187,5 @@ export function sequenceReport(
     stickyColumns: 2,
     gridLines: true,
   });
-  return [sheet(texts.sheetCoverage, coverageRows), sheet(texts.sheetDemand, demandRows)];
+  return [matrixSheet(cars, texts, carTexts), sheet(texts.sheetCoverage, coverageRows), sheet(texts.sheetDemand, demandRows)];
 }

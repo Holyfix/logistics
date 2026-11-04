@@ -1379,6 +1379,14 @@ export const en: Messages = {
       none: 'No part of this kind is in stock.',
     },
     kinds: { MC: 'Maincarrier', MF: 'Middlefield' },
+    views: { label: 'View', cars: 'Cars (Matrix)', parts: 'MC and MF parts' },
+    parts: {
+      heading: 'MC and MF part coverage',
+      sub: 'stock at the end of the day after demand in build order · parts in priority order',
+      empty: 'No part matches the filter.',
+      boundary: 'Tomorrow: 2-day coverage',
+      note: 'Same as the Coverage sheet in the export: stock at the end of the day (negative = short), Maincarrier first, then Middlefield, within them the parts that run short first. Packed and shipped doors and parts missing in the key are not counted. Green-framed tomorrow = 2-day coverage.',
+    },
     tiles: {
       cars: 'Cars in the matrix',
       carsNote: '{doors} doors with status, {done} of them packed or shipped (not counted)',
@@ -1401,6 +1409,8 @@ export const en: Messages = {
       search: 'Production number, lot or part',
       onlyShort: 'Only cars with uncovered doors',
       onlyUnbuilt: 'Only unbuilt car sets (at least one door at status 45 or lower)',
+      searchPart: 'Part or description',
+      onlyShortParts: 'Only short parts',
     },
     matrix: {
       heading: 'MC and MF coverage by the Order Status Matrix',
@@ -1441,6 +1451,8 @@ export const en: Messages = {
       sum: 'Total',
       sheetCoverage: 'Coverage',
       sheetDemand: 'Demand per day',
+      sheetMatrix: 'Matrix',
+      matrixNote: 'Cars in planned build order (with the filters from the app), door status in the Order Status Matrix colours. MC and MF: green in stock, red short, grey missing in the key; no badge = packed or shipped doors (status 50+), not counted.',
     },
   },
   footer: {
