@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { parseBom } from '../bom';
 import { dayFromParts } from '../dates';
-import { buildMaterialCoverage, carMissing, isMiddlefield, shortages } from './coverage';
+import { buildMaterialCoverage, carMissing, shortages } from './coverage';
+import { isMiddlefield, lookupMf, mfColour, parsePartKey } from './partKey';
 import { doorOf, MINUTES_PER_DAY, parseJit, parseStamp } from './jit';
 import { parseStatusMatrix, statusCode } from './matrix';
 import { parseSequenceCsv, parseSequenceSheets } from './sequence';
@@ -142,5 +143,54 @@ describe('soubory ze složky Sekvence', () => {
     // bez sloupců stavu dveří to matice není
     expect(parseSequenceCsv('Production number;Planned customer built\nT1;05.11.2026 08:00')).toEqual({ type: 'unknown' });
     expect(parseSequenceSheets([[['Item'], ['A']], [[null, 'Report'], ['Production number', 'Status RR'], ['t2', '30 - Sequencelabel printed']]])).toMatchObject({ type: 'matrix' });
+  });
+});
+
+describe('klíč MC/MF (dveře, výbava, barva)', () => {
+  const key = parsePartKey([
+    ['MC/MF klíč'],
+    ['Side', 'Item Number', 'Type', 'Colour', 'Type_colour', 'Description'],
+    ['FL', 'MF-KEY-FL', 'SR1', 'C1', 'SR1C1', 'ASSY MF SR1 FRT LH'],
+    ['FL', 'MF-KEY-FL-HT', 'SR1-HT', 'C1', 'SR1-HTC1', 'ASSY MF SR1 HEAT. FRT LH'],
+    ['FL', 'MC-KEY-FL', 'SR1', 'C1', 'SR1C1', 'ASSY MC SR1 FRT LH'],
+    ['RL', 'MF-KEY-RL', 'SR1', 'C2', 'SR1C2', 'ASSY MF SR1 RR LH'],
+  ]);
+  if (!key.ok) throw new Error();
+
+  it('jen MF; barva MF je druhá ve sloupci „MC / MF“; zadní dveře bez vyhřívané výbavy', () => {
+    expect(key.value.entries.size).toBe(3);
+    expect([...key.value.heated]).toEqual(['FL']);
+    expect(mfColour('C9 / C1')).toBe('C1');
+    expect(mfColour('C1')).toBe('C1');
+    expect(lookupMf(key.value, 'FL', 'SR1', 'C9 / C1')?.item).toBe('MF-KEY-FL');
+    expect(lookupMf(key.value, 'FL', 'sr1-ht', 'C9 / C1')?.item).toBe('MF-KEY-FL-HT');
+    // RL vyhřívanou výbavu v klíči nemá: SR1-HT se hledá jako SR1
+    expect(lookupMf(key.value, 'RL', 'SR1-HT', 'C9 / C2')?.item).toBe('MF-KEY-RL');
+    // FL vyhřívanou výbavu má, takže bez přesné shody nic
+    expect(lookupMf(key.value, 'FL', 'SR1-HT', 'C9 / C2')).toBeNull();
+    expect(parsePartKey([['Item Number', 'Type']])).toEqual({ ok: false, error: 'missingColumns', columns: ['Side', 'Item Number', 'Type', 'Colour'] });
+  });
+
+  it('MF z klíče, co v klíči není, z JIT a kusovníku; kusovník ani JIT nejsou nutné', () => {
+    const jit = parseJit(jitText);
+    if (!jit.ok) throw new Error();
+    const matrix = new Map(
+      [
+        { lot: '10', productionNumber: 'T0001', planned: at(5, 8), optionType: 'SR1', colors: 'C9 / C1', status: { FL: '20 - Container planned', RR: '20 - Container planned' } },
+        // vůz, který v JIT není: FL podle klíče, FR nikde
+        { lot: '11', productionNumber: 'T0009', planned: at(6, 11), optionType: 'SR1-HT', colors: 'C9 / C1', status: { FL: '20 - Container planned', FR: '20 - Container planned' } },
+      ].map((c) => [c.productionNumber, c]),
+    );
+    const t = buildMaterialCoverage({ matrix, key: key.value, positions: jit.value, bom: bom.value, stock: new Map([['MF-KEY-FL', 1]]), today: day(5) });
+    const [t1, t9] = t.cars;
+    expect(t1!.doors.FL).toMatchObject({ source: 'key', panel: null, state: 'ok', parts: [{ item: 'MF-KEY-FL', qty: 1, left: 0 }] });
+    expect(t1!.doors.RR).toMatchObject({ source: 'jit', panel: 'PANEL-RR-A', state: 'short', parts: [{ item: 'MF-RR-1' }] });
+    expect(t9!.doors.FL).toMatchObject({ source: 'key', state: 'short', parts: [{ item: 'MF-KEY-FL-HT' }] });
+    expect(t9!.doors.FR).toMatchObject({ source: null, state: 'unknown' });
+    expect(t).toMatchObject({ known: 3, unknown: 1 });
+    expect(t.parts.find((p) => p.item === 'MF-KEY-FL-HT')!.description).toBe('ASSY MF SR1 HEAT. FRT LH');
+    // jen klíč, bez JIT a kusovníku
+    const only = buildMaterialCoverage({ matrix, key: key.value, stock: new Map(), today: day(5) });
+    expect(only).toMatchObject({ known: 2, unknown: 2 });
   });
 });

@@ -1,19 +1,16 @@
 // Pokrytí Middlefieldu (MF) ve formátu Order Status Matrix: vozy z matice v pořadí plánované stavby, u každých dveří
-// stav z matice. Dveřní panel pro Production number a dveře se dohledá v JIT Overview, MF pod panelem na úrovni 1
-// kusovníku. Sklad (ze souboru skladu) se spotřebovává v pořadí stavby.
+// stav z matice. MF se určí podle klíče MC/MF (dveře, výbava, barva); co v klíči není, podle JIT Overview (dveřní
+// panel pro Production number a dveře) a kusovníku (MF pod panelem na úrovni 1). Sklad (ze souboru skladu) se
+// spotřebovává v pořadí stavby.
 
 import type { BomData } from '../bom';
 import type { DayNumber } from '../dates';
 import { dayOfStamp, doorOf, DOORS, type Door, type JitPosition, type Stamp } from './jit';
 import { statusCode, type MatrixOrder } from './matrix';
+import { isMiddlefield, lookupMf, type PartKey } from './partKey';
 
 /** Stav „Packed“ a vyšší: dveře jsou hotové, MF už je spotřebovaný a do potřeby se nepočítají. */
 export const DONE_STATUS = 50;
-
-/** Middlefield podle popisu v kusovníku („ASSY MF …“). */
-export function isMiddlefield(description: string): boolean {
-  return /\bMF\b/.test(description.toUpperCase());
-}
 
 /** Dveřní panel podle Production number a dveří z JIT Overview (pozice, která je v kusovníku jako hotový díl). */
 export function panelsFromJit(positions: readonly JitPosition[], bom: BomData): Map<string, string> {
@@ -37,14 +34,17 @@ export interface DoorPart {
 }
 
 /**
- * Pokrytí dveří: ok = MF na skladě, short = chybí, unknown = dveřní panel není v JIT, none = dveře bez MF (panel bez
- * něj, nebo výklopné dveře), skipped = zabalené nebo odeslané dveře (stav 50+) se nepočítají.
+ * Pokrytí dveří: ok = MF na skladě, short = chybí, unknown = MF nelze určit (není v klíči ani v JIT), none = dveře
+ * bez MF (panel bez něj, nebo výklopné dveře), skipped = zabalené nebo odeslané dveře (stav 50+) se nepočítají.
  */
 export type DoorState = 'ok' | 'short' | 'unknown' | 'none' | 'skipped';
 
 export interface DoorCoverage {
   door: Door;
   status: string;
+  /** Odkud je MF: z klíče MC/MF, nebo z JIT (dveřní panel a kusovník); null = neurčeno. */
+  source: 'key' | 'jit' | null;
+  /** Dveřní panel z JIT (jen u zdroje JIT). */
   panel: string | null;
   parts: DoorPart[];
   state: DoorState;
@@ -66,7 +66,7 @@ export interface Demand {
   lot: string;
   productionNumber: string;
   door: Door;
-  panel: string;
+  panel: string | null;
   planned: Stamp | null;
   status: string;
   qty: number;
@@ -95,7 +95,7 @@ export interface MaterialCoverage {
   days: DayNumber[];
   cars: CarCoverage[];
   parts: PartCoverage[];
-  /** Dveře v matici (se stavem); z nich hotové (stav 50+, nepočítají se) a z ostatních s dveřním panelem z JIT a bez něj (bez výklopných). */
+  /** Dveře v matici (se stavem); z nich hotové (stav 50+, nepočítají se) a z ostatních s určeným MF a bez něj (bez výklopných). */
   doors: number;
   known: number;
   unknown: number;
@@ -104,14 +104,18 @@ export interface MaterialCoverage {
 
 export interface MaterialInputs {
   matrix: ReadonlyMap<string, MatrixOrder>;
-  positions: readonly JitPosition[];
-  bom: BomData;
+  /** Klíč MC/MF (dveře, výbava, barva → MF). */
+  key?: PartKey | undefined;
+  /** JIT Overview a kusovník: pro dveře, které v klíči nejsou. */
+  positions?: readonly JitPosition[] | undefined;
+  bom?: BomData | undefined;
   stock: ReadonlyMap<string, number>;
   today: DayNumber;
 }
 
-export function buildMaterialCoverage({ matrix, positions, bom, stock, today }: MaterialInputs): MaterialCoverage {
-  const panels = panelsFromJit(positions, bom);
+export function buildMaterialCoverage({ matrix, key, positions, bom, stock, today }: MaterialInputs): MaterialCoverage {
+  const panels = positions && bom ? panelsFromJit(positions, bom) : new Map<string, string>();
+  const descriptions = new Map<string, string>();
   // Vozy v pořadí plánované stavby (při shodě v pořadí matice); vůz bez data na začátek.
   const orders = [...matrix.values()].map((o, i) => ({ o, i })).sort((a, b) => (a.o.planned ?? -Infinity) - (b.o.planned ?? -Infinity) || a.i - b.i);
   const left = new Map<string, number>();
@@ -126,9 +130,11 @@ export function buildMaterialCoverage({ matrix, positions, bom, stock, today }: 
       const status = o.status[door];
       if (status === undefined) continue;
       doors++;
-      const panel = panels.get(panelKey(o.productionNumber, door)) ?? null;
-      // Výklopné dveře MF nemají: bez panelu z JIT nejsou „neznámé“, jen bez MF.
-      const cell: DoorCoverage = { door, status, panel, parts: [], state: panel || door === 'HB' ? 'none' : 'unknown' };
+      const keyed = key ? lookupMf(key, door, o.optionType, o.colors) : null;
+      const panel = keyed ? null : (panels.get(panelKey(o.productionNumber, door)) ?? null);
+      const source = keyed ? 'key' : panel ? 'jit' : null;
+      // Výklopné dveře MF nemají: bez MF v klíči a bez panelu z JIT nejsou „neznámé“, jen bez MF.
+      const cell: DoorCoverage = { door, status, source, panel, parts: [], state: source || door === 'HB' ? 'none' : 'unknown' };
       car.doors[door] = cell;
       // Zabalené a odeslané dveře (stav 50+) už MF spotřebovaly: nepočítají se, ani když nejsou v JIT.
       if ((statusCode(status) ?? 0) >= DONE_STATUS) {
@@ -136,13 +142,17 @@ export function buildMaterialCoverage({ matrix, positions, bom, stock, today }: 
         skippedDone++;
         continue;
       }
-      if (!panel) {
+      if (!source) {
         if (door !== 'HB') unknown++;
         continue;
       }
       known++;
-      for (const node of bom.trees.get(panel) ?? []) {
-        if (!isMiddlefield(bom.info.get(node.item)?.description ?? '')) continue;
+      // MF z klíče (1 ks na dveře), jinak MF pod dveřním panelem v kusovníku.
+      const needed = keyed
+        ? [{ item: keyed.item, qty: 1, description: keyed.description }]
+        : (bom!.trees.get(panel!) ?? []).map((node) => ({ item: node.item, qty: node.qty, description: bom!.info.get(node.item)?.description ?? '' })).filter((n) => isMiddlefield(n.description));
+      for (const node of needed) {
+        if (!descriptions.has(node.item)) descriptions.set(node.item, bom?.info.get(node.item)?.description || node.description);
         const rest = (left.has(node.item) ? left.get(node.item)! : (stock.get(node.item) ?? 0)) - node.qty;
         left.set(node.item, rest);
         cell.parts.push({ item: node.item, qty: node.qty, left: rest });
@@ -183,7 +193,7 @@ export function buildMaterialCoverage({ matrix, positions, bom, stock, today }: 
     }
     return {
       item,
-      description: bom.info.get(item)?.description ?? '',
+      description: descriptions.get(item) ?? '',
       stock: own ?? null,
       total: list.reduce((s, d) => s + d.qty, 0),
       overdue,

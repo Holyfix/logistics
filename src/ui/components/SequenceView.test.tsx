@@ -35,9 +35,11 @@ const bom = parseBom([
   ['1', 'MF-1', 'ASSY MF SR1 FRT LH', 1, 'EA', 'P'],
 ]);
 const stock = parseStock(parseCsv('Item Number;Location;Zone ID;Qty On Hand - Inv Detail\nMF-1;A-01;PURCH;2\nMC-1;A-02;PURCH;10'));
-if (jit.type !== 'jit' || matrix.type !== 'matrix' || !bom.ok || !stock.ok) throw new Error();
+// Klíč MC/MF: MF podle dveří, výbavy a barvy (bez JIT)
+const key = parseSequenceCsv('Side;Item Number;Type;Colour;Description\nFL;MF-K1;SR1;C1;ASSY MF SR1 FRT LH\nFL;MC-K1;SR1;C1;ASSY MC SR1 FRT LH');
+if (jit.type !== 'jit' || matrix.type !== 'matrix' || key.type !== 'key' || !bom.ok || !stock.ok) throw new Error();
 
-const state = (sequence: boolean): DataState => ({
+const state = (sequence: boolean, withKey = false): DataState => ({
   status: 'ready',
   folderName: 'data',
   progress: null,
@@ -57,7 +59,8 @@ const state = (sequence: boolean): DataState => ({
       ? {
           sequence: {
             matrix: { path: 'Sekvence/OrderStatusMatrixOverview.xlsx', lastModified: 0, orders: matrix.orders },
-            jit: { path: 'Sekvence/JIT_Overview.csv', lastModified: 0, positions: jit.positions },
+            jit: withKey ? null : { path: 'Sekvence/JIT_Overview.csv', lastModified: 0, positions: jit.positions },
+            key: withKey ? { path: 'Sekvence/MC_MF_klic.xlsx', lastModified: 0, key: key.key } : null,
           },
         }
       : {}),
@@ -66,11 +69,11 @@ const state = (sequence: boolean): DataState => ({
   },
 });
 
-function renderPage(withSequence = true) {
+function renderPage(withSequence = true, withKey = false) {
   localStorage.setItem('logistics-locale', 'cs');
   render(
     <I18nProvider>
-      <DataProvider initial={state(withSequence)}>
+      <DataProvider initial={state(withSequence, withKey)}>
         <ComponentsPage today={dayFromParts(2026, 11, 5)!} />
       </DataProvider>
     </I18nProvider>,
@@ -91,7 +94,7 @@ describe('Komponenty – karta Sekvence', () => {
 
   it('matice a JIT ze složky Sekvence, MF z kusovníku a sklad ze souboru skladu', () => {
     renderPage();
-    expect(screen.getByText(/OrderStatusMatrixOverview\.xlsx · JIT Overview: JIT_Overview\.csv · sklad: Stock_1\.csv/)).toBeTruthy();
+    expect(screen.getByText(/OrderStatusMatrixOverview\.xlsx · klíč MC\/MF: — · JIT Overview: JIT_Overview\.csv · sklad: Stock_1\.csv/)).toBeTruthy();
     expect(shown()).toEqual(['V0', 'V1', 'V2', 'V3', 'V9']);
     // V0 je odeslaný: nepočítá se; sklad MF 2 pokryje V1 a V2, V3 chybí; V9 není v JIT; MC se nepočítá
     expect(badges('V0')).toEqual([]);
@@ -101,7 +104,7 @@ describe('Komponenty – karta Sekvence', () => {
     expect(badges('V9')).toEqual(['MF unknown']);
     expect(material('V2')).toBe('vše na skladě');
     expect(material('V3')).toBe('FL: MF-1');
-    expect(material('V9')).toBe('není v JIT');
+    expect(material('V9')).toBe('MF neurčen');
     expect(screen.getByText(/z toho 1 zabalených nebo odeslaných/)).toBeTruthy();
     // filtry
     fireEvent.change(screen.getByLabelText('Lot'), { target: { value: '8' } });
@@ -112,6 +115,16 @@ describe('Komponenty – karta Sekvence', () => {
     expect(shown()).toEqual(['V1', 'V2', 'V3']);
     fireEvent.click(screen.getByLabelText('Jen vozy s nepokrytými dveřmi'));
     expect(shown()).toEqual(['V3']);
+  });
+
+  it('klíč MC/MF místo JIT: MF podle výbavy, dveří a barvy', () => {
+    renderPage(true, true);
+    expect(screen.getByText(/klíč MC\/MF: MC_MF_klic\.xlsx · JIT Overview: —/)).toBeTruthy();
+    // sklad MF-K1 není: všechny počítané dveře chybí, i V9, který v JIT není
+    expect(badges('V1')).toEqual(['MF short']);
+    expect(badges('V9')).toEqual(['MF short']);
+    expect(material('V9')).toBe('FL: MF-K1');
+    expect(rowOf('V1').querySelectorAll('td')[5]!.title).toBe('MF podle klíče (Type, Side, Colour)\nMF MF-K1: zbývá skladu -1');
   });
 
   it('bez souborů ve složce Sekvence poradí, co uložit', () => {

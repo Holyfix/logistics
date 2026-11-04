@@ -10,7 +10,7 @@ export interface MatrixOrder {
   productionNumber: string;
   planned: Stamp | null;
   optionType: string;
-  /** Barvy Maincarrieru a Middlefieldu, jak je matice uvádí (např. „9K82 / 9H15“). */
+  /** Barvy Maincarrieru a Middlefieldu, jak je matice uvádí (např. „C9 / C1“). */
   colors: string;
   /** Stav dveří, např. „20 - Container planned“; prázdné, když ho matice nemá. */
   status: Partial<Record<Door, string>>;

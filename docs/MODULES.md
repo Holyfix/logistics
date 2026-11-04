@@ -137,8 +137,8 @@ Filtry projekt, kategorie, strana (LHD/RHD) a varianta z kmenových dat se ovliv
 - ✅ Sledují se všechny nakupované díly (Item Type = PG); popis jen z mapování
 - ⏳ Otevřené nákupní objednávky (pokud jsou v exportu)
 - Shortage list pro ranní poradu
-- ✅ Karta **Sekvence**: pokrytí Middlefieldu ve formátu Order Status Matrix (složka Sekvence: matice a JIT Overview);
-  dveřní panel z JIT, MF z kusovníku (úroveň 1), sklad ze souboru skladu v pořadí stavby; stav dveří v barvách matice
+- ✅ Karta **Sekvence**: pokrytí Middlefieldu ve formátu Order Status Matrix (složka Sekvence: matice a klíč MC/MF);
+  MF podle klíče (dveře, výbava, barva), jinak volitelně přes JIT a kusovník; sklad ze souboru skladu v pořadí stavby; stav dveří v barvách matice
   se štítkem MF, sloupec Materiál s chybějícími díly; zabalené a odeslané dveře (stav 50+) se nepočítají; filtry podle
   sloupců matice, dne stavby, stavu a dílu; Excel s prioritním seznamem podle data. Podrobnosti v DATA_IMPORT.md (Sekvence)
 
