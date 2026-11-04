@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { parseBom } from '../../core/bom';
 import { parseCsv } from '../../core/csv';
 import { dayFromParts } from '../../core/dates';
@@ -180,18 +180,22 @@ describe('Komponenty – karta Sekvence', () => {
     // filtry vozů v pohledu na díly nejsou
     expect(screen.queryByLabelText(/Jen nevyrobené carsety/)).toBeNull();
     const table = document.querySelector('.mat-parts')!;
-    expect([...table.querySelectorAll('thead th')].map((th) => th.textContent)).toEqual(['Díl', 'Popis', 'Sklad', 'Potřeba', 'Chybí od', 'Čt 5. 11.', 'Pá 6. 11.']);
-    const rows = [...table.querySelectorAll('tbody tr')].map((r) => [...r.querySelectorAll('th, td')].map((c) => c.textContent));
-    expect(rows).toEqual([
-      ['Maincarrier'],
-      ['MC-1', 'ASSY MC SR1 FRT LH', '10', '3', 'pokryto', '8', '7'],
-      ['Middlefield'],
-      ['MF-1', 'ASSY MF SR1 FRT LH', '2', '3', 'Pá 6. 11. 07:00 · V3 FL', '0', '-1'],
+    expect([...table.querySelectorAll('thead th')].map((th) => th.textContent)).toEqual(['Díl', 'Druh', 'Popis', 'Sklad', 'Potřeba', 'Chybí od', 'Čt 5. 11.', 'Pá 6. 11.']);
+    // jeden seznam bez skupin: nahoře díly, které chybí nejdřív
+    const rows = () => [...table.querySelectorAll('tbody tr')].map((r) => [...r.querySelectorAll('td')].map((c) => c.textContent));
+    expect(rows()).toEqual([
+      ['MF-1', 'MF', 'ASSY MF SR1 FRT LH', '2', '3', 'Pá 6. 11. 07:00 · V3 FL', '0', '-1'],
+      ['MC-1', 'MC', 'ASSY MC SR1 FRT LH', '10', '3', 'pokryto', '8', '7'],
     ]);
     expect(table.querySelectorAll('tbody td.cell-negative')).toHaveLength(1);
     expect(table.querySelector('thead th.col-boundary')!.textContent).toBe('Pá 6. 11.');
+    // filtr druhu nahoře
+    const kindFilter = within(screen.getByRole('group', { name: 'Zobrazit díly' }));
+    fireEvent.click(kindFilter.getByRole('button', { name: 'Maincarrier' }));
+    expect(rows().map((r) => r[0])).toEqual(['MC-1']);
+    fireEvent.click(kindFilter.getByRole('button', { name: 'Vše' }));
     fireEvent.click(screen.getByLabelText('Jen chybějící díly'));
-    expect([...table.querySelectorAll('tbody td.sticky-col')].map((td) => td.textContent)).toEqual(['MF-1']);
+    expect(rows().map((r) => r[0])).toEqual(['MF-1']);
   });
 
   it('bez souborů ve složce Sekvence poradí, co uložit', () => {

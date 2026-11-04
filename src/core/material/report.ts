@@ -1,6 +1,7 @@
 // Export Sekvence jako formátovaný sešit (stejný vzhled jako Coverage): list Matrix s pokrytím dveřních panelů jako
 // v aplikaci (stav dveří v barvách matice, stav MC a MF), list Coverage se stavem skladu MC a MF na konci dne a list
-// Potřeba po dnech s kusy sečtenými po dnech; díly v pořadí priority (nejdřív ty, které chybí nejdřív).
+// Potřeba po dnech s kusy sečtenými po dnech; díly v pořadí priority (nejdřív ty, které chybí nejdřív); list PRIO
+// Sorting pro kvalitu (reference a kusy po dnech podle první potřeby).
 
 import type { ReportCell, ReportSheet } from '../calloffs/summaryReport';
 import { BOUNDARY_EDGE, headerRows, isWeekend, QTY, REPORT_COLORS as C, titleRows, valueCell } from '../coverage/report';
@@ -24,7 +25,6 @@ export interface SequenceReportTexts {
   total: string;
   overdue: string;
   shortFrom: string;
-  sum: string;
   sheetCoverage: string;
   sheetDemand: string;
   sheetMatrix: string;
@@ -36,6 +36,11 @@ export interface SequenceReportTexts {
   status: string;
   material: string;
   matrixNote: string;
+  sheetPrio: string;
+  order: string;
+  kind: string;
+  firstNeed: string;
+  prioNote: string;
 }
 
 /** Barvy stavů jako v Order Status Matrix (podle čísla stavu) a štítky MC/MF jako v aplikaci. */
@@ -119,9 +124,17 @@ export function sequenceReport(
   {
     boundary = null,
     shortText,
+    needText = () => '',
     cars = [],
     carTexts = (car) => ({ planned: '', material: '', tone: car.short ? 'short' : 'none' }),
-  }: { boundary?: DayNumber | null; shortText: (p: PartCoverage) => string; cars?: readonly CarCoverage[]; carTexts?: (car: CarCoverage) => CarTexts },
+  }: {
+    boundary?: DayNumber | null;
+    shortText: (p: PartCoverage) => string;
+    /** Text „první potřeba“ pro PRIO Sorting (čas stavby, vůz a dveře prvních dveří, které díl potřebují). */
+    needText?: (p: PartCoverage) => string;
+    cars?: readonly CarCoverage[];
+    carTexts?: (car: CarCoverage) => CarTexts;
+  },
 ): ReportSheet[] {
   const edge = (d: DayNumber): ReportCell => (d === boundary ? BOUNDARY_EDGE : {});
   const anyOverdue = parts.some((p) => p.overdue > 0);
@@ -129,7 +142,11 @@ export function sequenceReport(
   const width = labels.length + days.length;
   const qty = (value: number | null): ReportCell => (value === null ? { value: '' } : { value, type: Number, format: QTY });
   const span = (cell: ReportCell): (ReportCell | null)[] => [{ ...cell, columnSpan: width }, ...Array.from({ length: width - 1 }, () => null)];
-  const groupRow = (kind: PartKind) => span({ value: texts.kinds[kind], fontWeight: 'bold', textColor: C.ink, backgroundColor: C.subHeader });
+  // Řádek skupiny (Maincarrier / Middlefield): v Excelu jde skupinu sbalit a rozbalit (tlačítka −/+ vlevo).
+  type Row = { cells: (ReportCell | null)[]; level: 0 | 1 };
+  const groupLabel = (kind: PartKind, n: number) => `${texts.kinds[kind]} (${n})`;
+  const group: ReportCell = { fontWeight: 'bold', textColor: C.ink, backgroundColor: C.subHeader };
+  const groupRow = (kind: PartKind, n: number, w: number): Row => ({ cells: [{ ...group, value: groupLabel(kind, n), columnSpan: w }, ...Array.from({ length: w - 1 }, () => null)], level: 0 });
   const lead = (p: PartCoverage): (ReportCell | null)[] => [
     { value: p.item, fontWeight: 'bold' },
     { value: p.description },
@@ -142,50 +159,105 @@ export function sequenceReport(
   const groups = PART_KINDS.map((kind) => ({ kind, list: parts.filter((p) => p.kind === kind) })).filter((g) => g.list.length > 0);
 
   // Coverage: stav skladu na konci dne (sklad − potřeba včetně dřívější); po termínu = sklad po potřebě před dneškem.
-  const coverageRows = groups.flatMap(({ kind, list }) => [
-    groupRow(kind),
-    ...list.map((p): (ReportCell | null)[] => [
-      ...lead(p),
-      ...(anyOverdue ? [p.overdue ? valueCell((p.stock ?? 0) - p.overdue, days[0]!) : { value: '' }] : []),
-      short(p),
-      ...p.balance.map((v, k) => valueCell(v, days[k]!, edge(days[k]!))),
-    ]),
+  const coverageRows = groups.flatMap(({ kind, list }): Row[] => [
+    groupRow(kind, list.length, width),
+    ...list.map((p): Row => ({
+      cells: [
+        ...lead(p),
+        ...(anyOverdue ? [p.overdue ? valueCell((p.stock ?? 0) - p.overdue, days[0]!) : { value: '' }] : []),
+        short(p),
+        ...p.balance.map((v, k) => valueCell(v, days[k]!, edge(days[k]!))),
+      ],
+      level: 1,
+    })),
   ]);
 
-  // Potřeba po dnech: kusy dílu sečtené po dnech; červeně dny, kdy sklad na potřebu nestačí; součet za druh.
+  // Potřeba po dnech: kusy dílu sečtené po dnech; červeně dny, kdy sklad na potřebu nestačí; součty za druh na řádku
+  // skupiny (vidět i po sbalení).
   const demandCell = (q: number, balance: number, d: DayNumber): ReportCell => {
     const style: ReportCell = { ...(isWeekend(d) ? { backgroundColor: C.weekend } : {}), ...edge(d) };
     if (q === 0) return { value: '', ...style };
     return balance < 0 ? { value: q, type: Number, format: QTY, ...style, textColor: C.down, backgroundColor: C.negative, fontWeight: 'bold' } : { value: q, type: Number, format: QTY, ...style };
   };
-  const top: ReportCell = { topBorderColor: C.header, topBorderStyle: 'thin' };
-  const sumRow = (kind: PartKind, list: readonly PartCoverage[]): (ReportCell | null)[] => [
-    { value: `${texts.sum} ${texts.kinds[kind]}`, fontWeight: 'bold', ...top },
-    { value: '', ...top },
-    { value: '', ...top },
-    { ...qty(list.reduce((s, p) => s + p.total, 0)), fontWeight: 'bold', ...top },
-    ...(anyOverdue ? [{ ...qty(list.reduce((s, p) => s + p.overdue, 0)), fontWeight: 'bold' as const, ...top }] : []),
-    { value: '', ...top },
-    ...days.map((d, k): ReportCell => ({ ...qty(list.reduce((s, p) => s + p.perDay[k]!, 0)), fontWeight: 'bold', ...top, ...edge(d) })),
-  ];
-  const demandRows = groups.flatMap(({ kind, list }) => [
-    groupRow(kind),
-    ...list.map((p): (ReportCell | null)[] => [
-      ...lead(p),
-      ...(anyOverdue ? [p.overdue ? { value: p.overdue, type: Number, format: QTY, ...((p.stock ?? 0) < p.overdue ? { textColor: C.down, fontWeight: 'bold' as const } : {}) } : { value: '' }] : []),
-      short(p),
-      ...p.perDay.map((q, k) => demandCell(q, p.balance[k]!, days[k]!)),
-    ]),
-    sumRow(kind, list),
+  const demandGroupRow = (kind: PartKind, list: readonly PartCoverage[]): Row => ({
+    cells: [
+      { ...group, value: groupLabel(kind, list.length) },
+      { ...group, value: '' },
+      { ...group, value: '' },
+      { ...group, ...qty(list.reduce((s, p) => s + p.total, 0)) },
+      ...(anyOverdue ? [{ ...group, ...qty(list.reduce((s, p) => s + p.overdue, 0)) }] : []),
+      { ...group, value: '' },
+      ...days.map((d, k): ReportCell => ({ ...group, ...qty(list.reduce((s, p) => s + p.perDay[k]!, 0)), ...edge(d) })),
+    ],
+    level: 0,
+  });
+  const demandRows = groups.flatMap(({ kind, list }): Row[] => [
+    demandGroupRow(kind, list),
+    ...list.map((p): Row => ({
+      cells: [
+        ...lead(p),
+        ...(anyOverdue ? [p.overdue ? { value: p.overdue, type: Number, format: QTY, ...((p.stock ?? 0) < p.overdue ? { textColor: C.down, fontWeight: 'bold' as const } : {}) } : { value: '' }] : []),
+        short(p),
+        ...p.perDay.map((q, k) => demandCell(q, p.balance[k]!, days[k]!)),
+      ],
+      level: 1,
+    })),
   ]);
 
-  const sheet = (name: string, rows: (ReportCell | null)[][]): ReportSheet => ({
+  // List se skupinami: řádky dílů na úrovni 1 pod řádkem skupiny (rozbalené); titulek, záhlaví a poznámka bez úrovně.
+  const grouped = (name: string, head: (ReportCell | null)[][], rows: Row[], foot: (ReportCell | null)[][], cols: { width: number }[]): ReportSheet => ({
     name,
-    data: [...titleRows(texts, width), ...headerRows(labels, days, boundary, texts), ...rows, [], note],
-    columns,
+    data: [...head, ...rows.map((r) => r.cells), ...foot],
+    columns: cols,
     stickyRows: 6,
     stickyColumns: 2,
     gridLines: true,
+    outline: [...head.map(() => undefined), ...rows.map((r) => (r.level ? { level: r.level } : undefined)), ...foot.map(() => undefined)],
   });
-  return [matrixSheet(cars, texts, carTexts), sheet(texts.sheetCoverage, coverageRows), sheet(texts.sheetDemand, demandRows)];
+  const head = [...titleRows(texts, width), ...headerRows(labels, days, boundary, texts)];
+
+  // PRIO Sorting (pro kvalitu): reference a kusy po dnech, v každém druhu seřazené podle první potřeby (nejdřív to, co
+  // jde do výroby nejdřív; při shodě víc kusů dřív), s pořadím v rámci druhu.
+  const firstNeed = (p: PartCoverage) => p.demands[0]?.planned ?? Infinity;
+  const byNeed = (a: PartCoverage, b: PartCoverage) => firstNeed(a) - firstNeed(b) || b.total - a.total || a.item.localeCompare(b.item, 'en', { numeric: true });
+  const prioLabels = [texts.order, texts.item, texts.kind, texts.description, texts.stock, texts.total, ...(anyOverdue ? [texts.overdue] : []), texts.firstNeed];
+  const prioWidth = prioLabels.length + days.length;
+  const prioRows = groups.flatMap(({ kind, list }): Row[] => {
+    const sorted = list.filter((p) => p.total > 0).sort(byNeed);
+    return [
+      groupRow(kind, sorted.length, prioWidth),
+      ...sorted.map((p, i): Row => ({
+        cells: [
+          { value: i + 1, type: Number, align: 'center' },
+          { value: p.item, fontWeight: 'bold' },
+          { value: p.kind, align: 'center' },
+          { value: p.description },
+          qty(p.stock ?? 0),
+          { ...qty(p.total), fontWeight: 'bold' },
+          ...(anyOverdue ? [p.overdue ? qty(p.overdue) : { value: '' }] : []),
+          { value: needText(p), textColor: C.muted },
+          ...p.perDay.map((q, k): ReportCell => {
+            const d = days[k]!;
+            const style: ReportCell = { ...(isWeekend(d) ? { backgroundColor: C.weekend } : {}), ...edge(d) };
+            return q ? { value: q, type: Number, format: QTY, fontWeight: 'bold', ...style } : { value: '', ...style };
+          }),
+        ],
+        level: 1,
+      })),
+    ];
+  });
+  const prioNote: (ReportCell | null)[] = [{ value: texts.prioNote, textColor: C.muted, fontStyle: 'italic', wrap: true, height: 30, alignVertical: 'top', columnSpan: prioWidth }, ...Array.from({ length: prioWidth - 1 }, () => null)];
+
+  return [
+    matrixSheet(cars, texts, carTexts),
+    grouped(texts.sheetCoverage, head, coverageRows, [[], note], columns),
+    grouped(texts.sheetDemand, head, demandRows, [[], note], columns),
+    grouped(
+      texts.sheetPrio,
+      [...titleRows(texts, prioWidth), ...headerRows(prioLabels, days, boundary, texts)],
+      prioRows,
+      [[], prioNote],
+      [{ width: 7 }, { width: 18 }, { width: 6 }, { width: 34 }, { width: 9 }, { width: 9 }, ...(anyOverdue ? [{ width: 10 }] : []), { width: 30 }, ...days.map(() => ({ width: 8 }))],
+    ),
+  ];
 }
