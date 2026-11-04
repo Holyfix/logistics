@@ -35,6 +35,8 @@ describe('classifyPath', () => {
     ['Plán/poznamky.csv', 'ignored'],
     ['Plán/~$ASSEMBLY_P100.xlsx', 'ignored'],
     ['Material/MBOM_DOOR_PANEL.xlsx', 'ignored'],
+    ['Sekvence/OrderStatusMatrixOverview.xlsx', 'sequence'],
+    ['data/Sequence/JIT_Overview.csv', 'sequence'],
     ['Logistics/Materiál/JIT_Overview.csv', 'ignored'],
   ])('%s → %s', (path, kind) => expect(classifyPath(path)).toBe(kind));
 });

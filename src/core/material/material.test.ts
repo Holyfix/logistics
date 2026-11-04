@@ -4,7 +4,7 @@ import { dayFromParts } from '../dates';
 import { buildMaterialCoverage, carMissing, isMiddlefield, shortages } from './coverage';
 import { doorOf, MINUTES_PER_DAY, parseJit, parseStamp } from './jit';
 import { parseStatusMatrix, statusCode } from './matrix';
-import { parseStockPaste } from './stock';
+import { parseSequenceCsv, parseSequenceSheets } from './sequence';
 
 const day = (n: number) => dayFromParts(2026, 11, n)!;
 const at = (n: number, h: number, m = 0) => day(n) * MINUTES_PER_DAY + h * 60 + m;
@@ -134,11 +134,13 @@ describe('pokrytí MF podle matice', () => {
   });
 });
 
-describe('vložení skladu z Excelu', () => {
-  it('díl a množství po řádcích, záhlaví se přeskočí, stejný díl se sečte', () => {
-    expect([...parseStockPaste('Díl\tMnožství\nmf-fl-1\t12\nMF-RR-1;3\nMF-FL-1\t1 000\n\n')]).toEqual([
-      ['MF-FL-1', 1012],
-      ['MF-RR-1', 3],
-    ]);
+describe('soubory ze složky Sekvence', () => {
+  it('JIT Overview a Order Status Matrix podle obsahu', () => {
+    expect(parseSequenceCsv(jitText)).toMatchObject({ type: 'jit' });
+    const csv = parseSequenceCsv('Production number;Planned customer built;Status FL\nT1;05.11.2026 08:00;20 - Container planned');
+    expect(csv.type === 'matrix' && [...csv.orders.keys()]).toEqual(['T1']);
+    // bez sloupců stavu dveří to matice není
+    expect(parseSequenceCsv('Production number;Planned customer built\nT1;05.11.2026 08:00')).toEqual({ type: 'unknown' });
+    expect(parseSequenceSheets([[['Item'], ['A']], [[null, 'Report'], ['Production number', 'Status RR'], ['t2', '30 - Sequencelabel printed']]])).toMatchObject({ type: 'matrix' });
   });
 });

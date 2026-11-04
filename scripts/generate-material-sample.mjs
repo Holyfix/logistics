@@ -1,5 +1,5 @@
-// Vytvoří smyšlená ukázková data pro pokrytí materiálu (material.html): JIT Overview, kusovník dveřních panelů
-// a Order Status Matrix. Použití: node scripts/generate-material-sample.mjs
+// Vytvoří smyšlená ukázková data pro kartu Sekvence v Komponentách: JIT Overview a Order Status Matrix (složka
+// Sekvence) a kusovník dveřních panelů (složka BOM). Použití: node scripts/generate-material-sample.mjs
 import { mkdirSync, writeFileSync } from 'node:fs';
 import writeXlsxFile from 'write-excel-file/node';
 
@@ -7,7 +7,8 @@ let seed = 7;
 const rnd = () => ((seed = (seed * 16807) % 2147483647) - 1) / 2147483646;
 const pick = (list) => list[Math.floor(rnd() * list.length)];
 
-const DIR = 'sample-data/Material';
+const DIR = 'sample-data/Sekvence';
+const BOM_DIR = 'sample-data/BOM';
 const DOORS = [
   ['FL', 'FRT LH'],
   ['FR', 'FRT RH'],
@@ -39,7 +40,8 @@ for (const trim of TRIMS)
       bom.push(['1', '1000600', 'METAL CLIP', 'P500', 8, 'EA', 'P', null, null]);
     }
 mkdirSync(DIR, { recursive: true });
-await writeXlsxFile(bom.map((row) => row.map(cell)), { sheet: 'MBOM' }).toFile(`${DIR}/MBOM_DOOR_PANEL_P500.xlsx`);
+mkdirSync(BOM_DIR, { recursive: true });
+await writeXlsxFile(bom.map((row) => row.map(cell)), { sheet: 'MBOM' }).toFile(`${BOM_DIR}/MBOM_DOOR_PANEL_P500.xlsx`);
 
 // Vozy: výbava, barva, montáž u zákazníka každých 12 minut od 13. 10. 2026 6:00 (směny 6–22 h).
 const pad = (n) => String(n).padStart(2, '0');
@@ -114,4 +116,4 @@ await writeXlsxFile(
   { sheet: 'OrderStatusMatrixOverview' },
 ).toFile(`${DIR}/OrderStatusMatrixOverview.xlsx`);
 
-console.log(`Ukázková data pro pokrytí materiálu: ${DIR}`);
+console.log(`Ukázková data pro Sekvenci: ${DIR} a ${BOM_DIR}/MBOM_DOOR_PANEL_P500.xlsx`);

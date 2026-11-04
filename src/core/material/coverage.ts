@@ -1,6 +1,6 @@
 // Pokrytí Middlefieldu (MF) ve formátu Order Status Matrix: vozy z matice v pořadí plánované stavby, u každých dveří
 // stav z matice. Dveřní panel pro Production number a dveře se dohledá v JIT Overview, MF pod panelem na úrovni 1
-// kusovníku. Sklad (ručně zadaný) se spotřebovává v pořadí stavby.
+// kusovníku. Sklad (ze souboru skladu) se spotřebovává v pořadí stavby.
 
 import type { BomData } from '../bom';
 import type { DayNumber } from '../dates';
@@ -75,7 +75,7 @@ export interface Demand {
 export interface PartCoverage {
   item: string;
   description: string;
-  /** Ručně zadaný sklad; null = nezadaný (počítá se jako 0). */
+  /** Sklad dílu; null = díl ve skladu není (počítá se jako 0). */
   stock: number | null;
   total: number;
   /** Potřeba před dneškem nebo bez data stavby. */

@@ -8,6 +8,7 @@ import { useData } from '../data/DataProvider';
 import { Icon } from '../icons';
 import { localToday, useComponents } from './useComponents';
 import { MappingNotice } from '../data/MappingPanels';
+import { SequenceView } from './SequenceView';
 
 /** Za kolik prvních dnů se ukazuje potřeba komponenty. */
 const NEED_DAYS = 7;
@@ -29,6 +30,7 @@ export function ComponentsPage({ today = localToday() }: { today?: DayNumber } =
   const [category, setCategory] = useState('');
   const [query, setQuery] = useState('');
   const [onlyShort, setOnlyShort] = useState(false);
+  const [tab, setTab] = useState<'components' | 'sequence'>('components');
 
   // Filtry Projekt a Kategorie podle hotových dílů, navzájem v libovolném pořadí: kategorie se nabízí jen z hotových
   // dílů vybraného projektu a projekty jen s hotovými díly vybrané kategorie; komponenta odpovídá, když je v hotovém
@@ -179,253 +181,266 @@ export function ComponentsPage({ today = localToday() }: { today?: DayNumber } =
         </p>
       </div>
       <MappingNotice module="components" />
-
-      <div className="kpis">
-        <div className="kpi">
-          <span className="kpi-label">{tc.kpi.soon}</span>
-          <span className="kpi-value">{formatQuantity(soon, locale)}</span>
-          <span className="kpi-note">{tc.kpi.soonNote}</span>
-        </div>
-        <div className="kpi">
-          <span className="kpi-label">{tc.kpi.short}</span>
-          <span className="kpi-value">{formatQuantity(short, locale)}</span>
-          <span className="kpi-note">
-            {tc.kpi.shortNote} {dayLabel(days.at(-1)!)}
-          </span>
-        </div>
-        <div className="kpi">
-          <span className="kpi-label">{tc.kpi.tracked}</span>
-          <span className="kpi-value">{formatQuantity(table.components.length, locale)}</span>
-          <span className="kpi-note">{table.byMapping ? tc.kpi.byMapping : tc.kpi.allPurchased}</span>
-        </div>
-        <div className="kpi">
-          <span className="kpi-label">{tc.kpi.demand}</span>
-          <span className="kpi-value">{formatQuantity(toProduce, locale)}</span>
-          <span className="kpi-note">
-            {tc.kpi.demandNote} {formatQuantity(products.length, locale)}
-          </span>
-        </div>
+      <div className="tabs" role="tablist" aria-label={t.modules.components.title}>
+        {(['components', 'sequence'] as const).map((id) => (
+          <button key={id} type="button" role="tab" className="tab" aria-selected={tab === id} onClick={() => setTab(id)}>
+            {id === 'components' ? t.modules.components.title : t.sequence.tab}
+          </button>
+        ))}
       </div>
 
-      <div className="filters" role="group" aria-label={tc.filters.label}>
-        <label className="field">
-          <span>{tc.filters.project}</span>
-          <select value={project} onChange={(e) => setProject(e.target.value)}>
-            <option value="">{tc.filters.all}</option>
-            {projects.map((p) => (
-              <option key={p} value={p}>
-                {p}
-              </option>
-            ))}
-          </select>
-        </label>
-        {(categories.length > 0 || category !== '') && (
-          <label className="field">
-            <span>{tc.filters.category}</span>
-            <select value={category} onChange={(e) => setCategory(e.target.value)}>
-              <option value="">{tc.filters.all}</option>
-              {categories.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
-        <label className="field field-wide">
-          <span>{tc.filters.search}</span>
-          <input type="search" value={query} placeholder={tc.filters.searchPlaceholder} onChange={(e) => setQuery(e.target.value)} />
-        </label>
-        <label className="check-field">
-          <input type="checkbox" checked={onlyShort} onChange={(e) => setOnlyShort(e.target.checked)} />
-          {tc.filters.onlyShort}
-        </label>
-        <button
-          type="button"
-          className="link-button"
-          onClick={() => {
-            setProject('');
-            setCategory('');
-            setQuery('');
-            setOnlyShort(false);
-          }}
-        >
-          {tc.filters.reset}
-        </button>
-        <span className="filters-break" role="presentation" />
-        <label className="check-field" title={tc.filters.netOwnStockTitle}>
-          <input type="checkbox" checked={netOwnStock} onChange={(e) => setNetOwnStock(e.target.checked)} />
-          {tc.filters.netOwnStock}
-        </label>
-      </div>
-
-      {withoutProject.length > 0 && (
-        <p className="muted">
-          {tc.withoutProject}: {formatQuantity(withoutProject.length, locale)} ({withoutProject.slice(0, 5).join(', ')}
-          {withoutProject.length > 5 ? ', …' : ''})
-        </p>
-      )}
-
-      <div className="panel">
-        <div className="panel-head">
-          <h2>{tc.table.heading}</h2>
-          <span className="muted">{tc.table.sub}</span>
-          <span className="panel-actions">
-            <ExportButtons build={buildExport} />
-          </span>
-        </div>
-        {!state.data?.stock && <p className="muted">{tc.table.noStock}</p>}
-        {lines.length === 0 ? (
-          <p>{tc.table.empty}</p>
-        ) : (
-          <div className="table-scroll table-tall">
-            <table className="table table-data">
-              <thead>
-                <tr>
-                  <th className="sticky-col">{tc.table.item}</th>
-                  <th>{tc.table.description}</th>
-                  <th>{tc.table.um}</th>
-                  <th>{tc.table.source}</th>
-                  <th className="n">{tc.table.stock}</th>
-                  <th className="n">{tc.table.need}</th>
-                  <th>{tc.table.until}</th>
-                  <th title={tc.table.customerTitle}>{tc.table.customer}</th>
-                  {days.map((d) => (
-                    <th key={d} className={`n${weekend(d)}`}>
-                      {dayLabel(d)}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {lines.map((c) => (
-                  <tr key={c.item}>
-                    <td className="sticky-col">
-                      <button type="button" className="link-button cell-link" title={tc.table.select} onClick={() => setQuery(c.item)}>
-                        <strong>{c.item}</strong>
-                      </button>
-                    </td>
-                    <td className="desc" title={`${tc.table.products}: ${c.products.join(', ')}`}>
-                      {c.description}
-                    </td>
-                    <td>{c.um}</td>
-                    <td>{sourceLabel(c)}</td>
-                    <td className="n">{c.stock === null ? <span className="muted">—</span> : amount(c.stock, c.um)}</td>
-                    <td className="n">{amount(need7(c), c.um)}</td>
-                    <td className="cell-until">
-                      <strong className={c.shortDay === null ? undefined : 'cell-short'}>{stockText(c)}</strong>
-                      <small className="muted cell-note">{shortText(c)}</small>
-                    </td>
-                    <td className="cell-until" title={!c.customerKnown ? tc.table.noCoverage : netOwnStock ? tc.table.customerTitleNet : tc.table.customerTitle}>
-                      <strong className={!c.customerKnown ? 'muted' : c.customerShortDay === null ? undefined : 'cell-short'}>{customerText(c)}</strong>
-                    </td>
-                    {c.balance.map((v, k) => {
-                      const framed = customerDay(c) === days[k];
-                      return (
-                        <td
-                          key={k}
-                          className={`n${weekend(days[k]!)}${v < -1e-9 ? ' cell-negative' : ''}${framed ? ' cell-customer' : ''}`}
-                          title={framed ? tc.legend.customer : undefined}
-                        >
-                          {amount(v, c.um)}
-                        </td>
-                      );
-                    })}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+      {tab === 'sequence' ? (
+        <SequenceView today={today} />
+      ) : (
+        <>
+          <div className="kpis">
+            <div className="kpi">
+              <span className="kpi-label">{tc.kpi.soon}</span>
+              <span className="kpi-value">{formatQuantity(soon, locale)}</span>
+              <span className="kpi-note">{tc.kpi.soonNote}</span>
+            </div>
+            <div className="kpi">
+              <span className="kpi-label">{tc.kpi.short}</span>
+              <span className="kpi-value">{formatQuantity(short, locale)}</span>
+              <span className="kpi-note">
+                {tc.kpi.shortNote} {dayLabel(days.at(-1)!)}
+              </span>
+            </div>
+            <div className="kpi">
+              <span className="kpi-label">{tc.kpi.tracked}</span>
+              <span className="kpi-value">{formatQuantity(table.components.length, locale)}</span>
+              <span className="kpi-note">{table.byMapping ? tc.kpi.byMapping : tc.kpi.allPurchased}</span>
+            </div>
+            <div className="kpi">
+              <span className="kpi-label">{tc.kpi.demand}</span>
+              <span className="kpi-value">{formatQuantity(toProduce, locale)}</span>
+              <span className="kpi-note">
+                {tc.kpi.demandNote} {formatQuantity(products.length, locale)}
+              </span>
+            </div>
           </div>
-        )}
-        <ul className="cov-legend">
-          <li>
-            <i className="swatch swatch-negative" /> {tc.legend.negative}
-          </li>
-          <li>
-            <i className="swatch swatch-customer" /> {tc.legend.customer}
-          </li>
-          <li>
-            <i className="swatch swatch-weekend" /> {tc.legend.weekend}
-          </li>
-        </ul>
-        <dl className="explain">
-          <dt>{tc.explain.balance}</dt>
-          <dd>{netOwnStock ? tc.explain.balanceNet : tc.explain.balanceGross}</dd>
-          <dt>{tc.table.until}</dt>
-          <dd>{tc.explain.until}</dd>
-          <dt>{tc.table.customer}</dt>
-          <dd>{netOwnStock ? tc.explain.customerNet : tc.explain.customer}</dd>
-          <dt>{tc.table.need}</dt>
-          <dd>{tc.explain.need}</dd>
-        </dl>
-      </div>
 
-      <div className="panel">
-        <div className="panel-head">
-          <h2>{tc.demand.heading}</h2>
-          <span className="muted">
-            {tc.demand.sub}
-            {shownProducts.length !== products.length && ` · ${tc.demand.shown} ${formatQuantity(shownProducts.length, locale)} / ${formatQuantity(products.length, locale)}`}
-          </span>
-          <span className="panel-actions">
-            <ExportButtons build={buildDemandExport} />
-          </span>
-        </div>
-        <div className="table-scroll table-tall">
-          <table className="table table-data">
-            <thead>
-              <tr>
-                <th className="sticky-col">{tc.demand.item}</th>
-                <th>{tc.demand.description}</th>
-                <th>{tc.demand.project}</th>
-                <th className="n">{tc.demand.total}</th>
-                {days.map((d) => (
-                  <th key={d} className={`n${weekend(d)}`}>
-                    {dayLabel(d)}
-                  </th>
+          <div className="filters" role="group" aria-label={tc.filters.label}>
+            <label className="field">
+              <span>{tc.filters.project}</span>
+              <select value={project} onChange={(e) => setProject(e.target.value)}>
+                <option value="">{tc.filters.all}</option>
+                {projects.map((p) => (
+                  <option key={p} value={p}>
+                    {p}
+                  </option>
                 ))}
-              </tr>
-            </thead>
-            <tbody>
-              {shownProducts.map((p) => (
-                <tr key={p.item}>
-                  <td className="sticky-col">
-                    <strong>{p.item}</strong>
-                  </td>
-                  <td className="desc">{p.description}</td>
-                  <td>{p.project || '—'}</td>
-                  <td className="n">{formatQuantity(sum(p.callOffs.slice(0, NEED_DAYS)), locale)}</td>
-                  {p.callOffs.map((q, k) => (
-                    <td key={k} className={`n${weekend(days[k]!)}`}>
-                      {q === 0 ? <span className="muted">0</span> : formatQuantity(q, locale)}
-                    </td>
+              </select>
+            </label>
+            {(categories.length > 0 || category !== '') && (
+              <label className="field">
+                <span>{tc.filters.category}</span>
+                <select value={category} onChange={(e) => setCategory(e.target.value)}>
+                  <option value="">{tc.filters.all}</option>
+                  {categories.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
                   ))}
-                </tr>
-              ))}
-            </tbody>
-            {shownProducts.length > 0 && (
-              <tfoot>
-                <tr className="row-total">
-                  <td className="sticky-col">
-                    <strong>{tc.demand.sum}</strong>
-                  </td>
-                  <td />
-                  <td />
-                  <td className="n">{formatQuantity(sum(callOffTotals.slice(0, NEED_DAYS)), locale)}</td>
-                  {callOffTotals.map((q, k) => (
-                    <td key={k} className={`n${weekend(days[k]!)}`}>
-                      {formatQuantity(q, locale)}
-                    </td>
-                  ))}
-                </tr>
-              </tfoot>
+                </select>
+              </label>
             )}
-          </table>
-        </div>
-        {!callOffs && <p className="muted">{tc.demand.noCallOffs}</p>}
-        {shownProducts.length === 0 && <p>{tc.demand.empty}</p>}
-        <p className="muted">{tc.demand.note}</p>
-      </div>
+            <label className="field field-wide">
+              <span>{tc.filters.search}</span>
+              <input type="search" value={query} placeholder={tc.filters.searchPlaceholder} onChange={(e) => setQuery(e.target.value)} />
+            </label>
+            <label className="check-field">
+              <input type="checkbox" checked={onlyShort} onChange={(e) => setOnlyShort(e.target.checked)} />
+              {tc.filters.onlyShort}
+            </label>
+            <button
+              type="button"
+              className="link-button"
+              onClick={() => {
+                setProject('');
+                setCategory('');
+                setQuery('');
+                setOnlyShort(false);
+              }}
+            >
+              {tc.filters.reset}
+            </button>
+            <span className="filters-break" role="presentation" />
+            <label className="check-field" title={tc.filters.netOwnStockTitle}>
+              <input type="checkbox" checked={netOwnStock} onChange={(e) => setNetOwnStock(e.target.checked)} />
+              {tc.filters.netOwnStock}
+            </label>
+          </div>
+
+          {withoutProject.length > 0 && (
+            <p className="muted">
+              {tc.withoutProject}: {formatQuantity(withoutProject.length, locale)} ({withoutProject.slice(0, 5).join(', ')}
+              {withoutProject.length > 5 ? ', …' : ''})
+            </p>
+          )}
+
+          <div className="panel">
+            <div className="panel-head">
+              <h2>{tc.table.heading}</h2>
+              <span className="muted">{tc.table.sub}</span>
+              <span className="panel-actions">
+                <ExportButtons build={buildExport} />
+              </span>
+            </div>
+            {!state.data?.stock && <p className="muted">{tc.table.noStock}</p>}
+            {lines.length === 0 ? (
+              <p>{tc.table.empty}</p>
+            ) : (
+              <div className="table-scroll table-tall">
+                <table className="table table-data">
+                  <thead>
+                    <tr>
+                      <th className="sticky-col">{tc.table.item}</th>
+                      <th>{tc.table.description}</th>
+                      <th>{tc.table.um}</th>
+                      <th>{tc.table.source}</th>
+                      <th className="n">{tc.table.stock}</th>
+                      <th className="n">{tc.table.need}</th>
+                      <th>{tc.table.until}</th>
+                      <th title={tc.table.customerTitle}>{tc.table.customer}</th>
+                      {days.map((d) => (
+                        <th key={d} className={`n${weekend(d)}`}>
+                          {dayLabel(d)}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {lines.map((c) => (
+                      <tr key={c.item}>
+                        <td className="sticky-col">
+                          <button type="button" className="link-button cell-link" title={tc.table.select} onClick={() => setQuery(c.item)}>
+                            <strong>{c.item}</strong>
+                          </button>
+                        </td>
+                        <td className="desc" title={`${tc.table.products}: ${c.products.join(', ')}`}>
+                          {c.description}
+                        </td>
+                        <td>{c.um}</td>
+                        <td>{sourceLabel(c)}</td>
+                        <td className="n">{c.stock === null ? <span className="muted">—</span> : amount(c.stock, c.um)}</td>
+                        <td className="n">{amount(need7(c), c.um)}</td>
+                        <td className="cell-until">
+                          <strong className={c.shortDay === null ? undefined : 'cell-short'}>{stockText(c)}</strong>
+                          <small className="muted cell-note">{shortText(c)}</small>
+                        </td>
+                        <td className="cell-until" title={!c.customerKnown ? tc.table.noCoverage : netOwnStock ? tc.table.customerTitleNet : tc.table.customerTitle}>
+                          <strong className={!c.customerKnown ? 'muted' : c.customerShortDay === null ? undefined : 'cell-short'}>{customerText(c)}</strong>
+                        </td>
+                        {c.balance.map((v, k) => {
+                          const framed = customerDay(c) === days[k];
+                          return (
+                            <td
+                              key={k}
+                              className={`n${weekend(days[k]!)}${v < -1e-9 ? ' cell-negative' : ''}${framed ? ' cell-customer' : ''}`}
+                              title={framed ? tc.legend.customer : undefined}
+                            >
+                              {amount(v, c.um)}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            <ul className="cov-legend">
+              <li>
+                <i className="swatch swatch-negative" /> {tc.legend.negative}
+              </li>
+              <li>
+                <i className="swatch swatch-customer" /> {tc.legend.customer}
+              </li>
+              <li>
+                <i className="swatch swatch-weekend" /> {tc.legend.weekend}
+              </li>
+            </ul>
+            <dl className="explain">
+              <dt>{tc.explain.balance}</dt>
+              <dd>{netOwnStock ? tc.explain.balanceNet : tc.explain.balanceGross}</dd>
+              <dt>{tc.table.until}</dt>
+              <dd>{tc.explain.until}</dd>
+              <dt>{tc.table.customer}</dt>
+              <dd>{netOwnStock ? tc.explain.customerNet : tc.explain.customer}</dd>
+              <dt>{tc.table.need}</dt>
+              <dd>{tc.explain.need}</dd>
+            </dl>
+          </div>
+
+          <div className="panel">
+            <div className="panel-head">
+              <h2>{tc.demand.heading}</h2>
+              <span className="muted">
+                {tc.demand.sub}
+                {shownProducts.length !== products.length && ` · ${tc.demand.shown} ${formatQuantity(shownProducts.length, locale)} / ${formatQuantity(products.length, locale)}`}
+              </span>
+              <span className="panel-actions">
+                <ExportButtons build={buildDemandExport} />
+              </span>
+            </div>
+            <div className="table-scroll table-tall">
+              <table className="table table-data">
+                <thead>
+                  <tr>
+                    <th className="sticky-col">{tc.demand.item}</th>
+                    <th>{tc.demand.description}</th>
+                    <th>{tc.demand.project}</th>
+                    <th className="n">{tc.demand.total}</th>
+                    {days.map((d) => (
+                      <th key={d} className={`n${weekend(d)}`}>
+                        {dayLabel(d)}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {shownProducts.map((p) => (
+                    <tr key={p.item}>
+                      <td className="sticky-col">
+                        <strong>{p.item}</strong>
+                      </td>
+                      <td className="desc">{p.description}</td>
+                      <td>{p.project || '—'}</td>
+                      <td className="n">{formatQuantity(sum(p.callOffs.slice(0, NEED_DAYS)), locale)}</td>
+                      {p.callOffs.map((q, k) => (
+                        <td key={k} className={`n${weekend(days[k]!)}`}>
+                          {q === 0 ? <span className="muted">0</span> : formatQuantity(q, locale)}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+                {shownProducts.length > 0 && (
+                  <tfoot>
+                    <tr className="row-total">
+                      <td className="sticky-col">
+                        <strong>{tc.demand.sum}</strong>
+                      </td>
+                      <td />
+                      <td />
+                      <td className="n">{formatQuantity(sum(callOffTotals.slice(0, NEED_DAYS)), locale)}</td>
+                      {callOffTotals.map((q, k) => (
+                        <td key={k} className={`n${weekend(days[k]!)}`}>
+                          {formatQuantity(q, locale)}
+                        </td>
+                      ))}
+                    </tr>
+                  </tfoot>
+                )}
+              </table>
+            </div>
+            {!callOffs && <p className="muted">{tc.demand.noCallOffs}</p>}
+            {shownProducts.length === 0 && <p>{tc.demand.empty}</p>}
+            <p className="muted">{tc.demand.note}</p>
+          </div>
+        </>
+      )}
     </section>
   );
 }

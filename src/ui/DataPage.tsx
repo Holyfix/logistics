@@ -329,6 +329,40 @@ export function DataPage() {
             )}
           </div>
 
+          {data.sequence && (
+            <div className="panel">
+              <h2>{t.data.sequence.heading}</h2>
+              <div className="table-scroll">
+                <table className="table">
+                  <thead>
+                    <tr>
+                      <th>{t.data.planning.file}</th>
+                      <th>{t.data.planning.content}</th>
+                      <th>{t.data.bom.modified}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.sequence.matrix && (
+                      <tr>
+                        <td>{data.sequence.matrix.path}</td>
+                        <td>{t.data.sequence.matrix.replace('{n}', formatQuantity(data.sequence.matrix.orders.size, locale))}</td>
+                        <td>{new Date(data.sequence.matrix.lastModified).toLocaleString(locale === 'cs' ? 'cs-CZ' : 'en-GB', { dateStyle: 'short', timeStyle: 'short' })}</td>
+                      </tr>
+                    )}
+                    {data.sequence.jit && (
+                      <tr>
+                        <td>{data.sequence.jit.path}</td>
+                        <td>{t.data.sequence.jit.replace('{n}', formatQuantity(new Set(data.sequence.jit.positions.map((p) => p.productionNumber)).size, locale))}</td>
+                        <td>{new Date(data.sequence.jit.lastModified).toLocaleString(locale === 'cs' ? 'cs-CZ' : 'en-GB', { dateStyle: 'short', timeStyle: 'short' })}</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+              {(!data.sequence.matrix || !data.sequence.jit) && <p className="muted">{t.data.sequence.incomplete}</p>}
+            </div>
+          )}
+
           <div className="panel">
             <h2>{t.data.planning.heading}</h2>
             {data.plans.length === 0 && !data.planSettings && !data.oil ? (
