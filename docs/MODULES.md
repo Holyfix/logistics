@@ -137,6 +137,10 @@ Filtry projekt, kategorie, strana (LHD/RHD) a varianta z kmenových dat se ovliv
 - ✅ Sledují se všechny nakupované díly (Item Type = PG); popis jen z mapování
 - ⏳ Otevřené nákupní objednávky (pokud jsou v exportu)
 - Shortage list pro ranní poradu
+- ✅ Karta **Sekvence**: pokrytí Middlefieldu ve formátu Order Status Matrix (složka Sekvence: matice a JIT Overview);
+  dveřní panel z JIT, MF z kusovníku (úroveň 1), sklad ze souboru skladu v pořadí stavby; stav dveří v barvách matice
+  se štítkem MF, sloupec Materiál s chybějícími díly; zabalené a odeslané dveře (stav 50+) se nepočítají; filtry podle
+  sloupců matice, dne stavby, stavu a dílu; Excel s prioritním seznamem podle data. Podrobnosti v DATA_IMPORT.md (Sekvence)
 
 ### Zásoby
 - **Přehled aktuální zásoby v penězích** na jedné stránce (bez karet a dlouhých seznamů dílů – detail je v ERP):
@@ -213,15 +217,6 @@ Filtry projekt, kategorie, strana (LHD/RHD) a varianta z kmenových dat se ovliv
 ### Nastavení
 - Prahy semaforu, horizont výhledu
 - Jméno uživatele pro zápisy (obaly; OIL ho už má ve svém modulu)
-
-## Samostatné stránky
-
-### Pokrytí materiálu (material.html)
-- ✅ Pokrytí Middlefieldu ve formátu Order Status Matrix: vozy a stav dveří z matice, dveřní panel z JIT Overview,
-  MF z kusovníku (úroveň 1, End Eff); stav dveří v barvách matice se štítkem MF podle skladu v pořadí stavby a sloupec
-  Materiál s chybějícími díly; zabalené a odeslané dveře (stav 50+) se nepočítají; filtry podle sloupců matice, dne stavby, stavu a dílu; Excel s prioritním seznamem podle data;
-  karta Díly a sklad s ručně zadaným skladem (i vložením z Excelu), pokryto do / chybí od, stav po dnech a detail; Excel
-- Podrobnosti v DATA_IMPORT.md (Pokrytí materiálu)
 
 ## Zápis dat
 

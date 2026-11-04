@@ -12,11 +12,12 @@ import { parseSettings, type PlanSettings } from '../core/planning/settings';
 import { parseKpiWorkbook, type KpiResult } from '../core/kpi';
 import { parseOilWorkbook, type OilResult } from '../core/oil';
 import { parseTransit, type TransitResult } from '../core/transit';
+import { parseSequenceCsv, parseSequenceSheets, type SequenceFile } from '../core/material/sequence';
 import { decodeText } from '../core/text';
 import type { SourceFormat } from '../core/sources';
 import type { Cell, DataTable } from '../core/table';
 
-export type ParseRequest = { id: number; kind: 'calloffs' | 'masterdata' | 'coverage' | 'stock' | 'bom' | 'plan' | 'planSettings' | 'oil' | 'kpi' | 'transit'; format: SourceFormat; name: string; buffer: ArrayBuffer };
+export type ParseRequest = { id: number; kind: 'calloffs' | 'masterdata' | 'coverage' | 'stock' | 'bom' | 'plan' | 'planSettings' | 'oil' | 'kpi' | 'transit' | 'sequence'; format: SourceFormat; name: string; buffer: ArrayBuffer };
 
 export type ParseResponse =
   | { id: number; kind: 'calloffs'; result: ParseResult<CallOffExport> }
@@ -29,6 +30,7 @@ export type ParseResponse =
   | { id: number; kind: 'oil'; result: OilResult }
   | { id: number; kind: 'kpi'; result: KpiResult }
   | { id: number; kind: 'transit'; result: TransitResult }
+  | { id: number; kind: 'sequence'; result: SequenceFile }
   | { id: number; kind: 'error'; message: string };
 
 function toTable(data: Cell[][]): DataTable {
@@ -66,6 +68,12 @@ self.onmessage = async (event: MessageEvent<ParseRequest>) => {
       const sheets = (await readXlsxFile(buffer)).map((s) => ({ name: s.sheet, data: s.data as Cell[][] }));
       const response: ParseResponse = kind === 'plan' ? { id, kind, result: parsePlanWorkbook(sheets, name) } : { id, kind, result: parseSettings(sheets) };
       (self as unknown as Worker).postMessage(response);
+      return;
+    }
+    if (kind === 'sequence') {
+      // Sekvence: Order Status Matrix nebo JIT Overview (druh podle obsahu).
+      const result = format === 'csv' ? parseSequenceCsv(decodeText(buffer)) : parseSequenceSheets((await readXlsxFile(buffer)).map((s) => s.data as Cell[][]));
+      (self as unknown as Worker).postMessage({ id, kind, result } satisfies ParseResponse);
       return;
     }
     if (kind === 'bom') {

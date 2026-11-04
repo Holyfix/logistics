@@ -1,7 +1,6 @@
 import { defineConfig, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
 
 /**
  * Content-Security-Policy: aplikace smí načítat jen své vlastní soubory a nesmí nic
@@ -50,12 +49,5 @@ export default defineConfig({
   },
   build: {
     sourcemap: true,
-    // Dvě samostatné stránky: logistická aplikace (index.html) a pokrytí materiálu (material.html).
-    rollupOptions: {
-      input: {
-        main: fileURLToPath(new URL('./index.html', import.meta.url)),
-        material: fileURLToPath(new URL('./material.html', import.meta.url)),
-      },
-    },
   },
 });

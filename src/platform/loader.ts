@@ -9,6 +9,8 @@ import type { LinePlan } from '../core/planning/plan';
 import type { PlanSettings } from '../core/planning/settings';
 import type { KpiData } from '../core/kpi';
 import type { OilList } from '../core/oil';
+import type { JitPosition } from '../core/material/jit';
+import type { MatrixOrder } from '../core/material/matrix';
 import { applyTransit, type TransitEntry } from '../core/transit';
 import { classifyPath, coverageScope, formatOf } from '../core/sources';
 import { idbDelete, idbGet, idbKeys, idbSet, STORE_CALLOFFS } from './idb';
@@ -40,6 +42,11 @@ export interface LoadedData {
   oil: { path: string; lastModified: number; list: OilList } | null;
   /** KPI (KPI/KPI.xlsx): nejnovější soubor. */
   kpi: { path: string; lastModified: number; data: KpiData } | null;
+  /** Sekvence (složka Sekvence): nejnovější Order Status Matrix a JIT Overview. */
+  sequence?: {
+    matrix: { path: string; lastModified: number; orders: Map<string, MatrixOrder> } | null;
+    jit: { path: string; lastModified: number; positions: JitPosition[] } | null;
+  };
   /** Doplněný transit ze složky Transit: soubory a co se z nich přičetlo k coverage (už je v `coverage`). */
   transit?: { files: string[]; entries: TransitEntry[] };
   failed: FailedFile[];
@@ -99,6 +106,7 @@ export async function loadFolder(source: FolderSource, onProgress: (p: LoadProgr
   const oilFiles = files.filter((f) => classifyPath(f.path) === 'oil').sort((a, b) => b.lastModified - a.lastModified);
   const kpiFiles = files.filter((f) => classifyPath(f.path) === 'kpi').sort((a, b) => b.lastModified - a.lastModified);
   const transitFiles = files.filter((f) => classifyPath(f.path) === 'transit').sort((a, b) => a.path.localeCompare(b.path));
+  const sequenceFiles = files.filter((f) => classifyPath(f.path) === 'sequence').sort((a, b) => b.lastModified - a.lastModified);
 
   // Coverage: pro každou destinaci a projekt platí naposledy změněný soubor (i z hlubší podsložky).
   const coverageFiles = new Map<string, SourceFile>();
@@ -115,7 +123,7 @@ export async function loadFolder(source: FolderSource, onProgress: (p: LoadProgr
   }
 
   const parsed: { file: SourceFile; exp: CallOffExport }[] = [];
-  const total = calloffFiles.length + (masterFiles.length > 0 ? 1 : 0) + coverageFiles.size + (stockFiles.length > 0 ? 1 : 0) + bomFiles.length + planFiles.length + (settingsFiles.length > 0 ? 1 : 0) + (oilFiles.length > 0 ? 1 : 0) + (kpiFiles.length > 0 ? 1 : 0) + transitFiles.length;
+  const total = calloffFiles.length + (masterFiles.length > 0 ? 1 : 0) + coverageFiles.size + (stockFiles.length > 0 ? 1 : 0) + bomFiles.length + planFiles.length + (settingsFiles.length > 0 ? 1 : 0) + (oilFiles.length > 0 ? 1 : 0) + (kpiFiles.length > 0 ? 1 : 0) + transitFiles.length + sequenceFiles.length;
   let done = 0;
   onProgress({ done, total });
 
@@ -255,6 +263,22 @@ export async function loadFolder(source: FolderSource, onProgress: (p: LoadProgr
     for (const older of kpiFiles.slice(1)) failed.push({ path: older.path, reason: 'superseded', detail: kpiFile.path });
   }
 
+  // Sekvence: platí nejnovější matice a nejnovější JIT Overview, starší se jen vypíšou.
+  let sequence: LoadedData['sequence'];
+  for (const file of sequenceFiles) {
+    const response = await parseInWorker({ kind: 'sequence', format: formatOf(file.path)!, name: file.path, file: file.file });
+    sequence ??= { matrix: null, jit: null };
+    if (response.kind === 'sequence' && response.result.type !== 'unknown') {
+      const key = response.result.type;
+      const newer = sequence[key];
+      if (newer) failed.push({ path: file.path, reason: 'superseded', detail: newer.path });
+      else if (response.result.type === 'matrix') sequence.matrix = { path: file.path, lastModified: file.lastModified, orders: response.result.orders };
+      else sequence.jit = { path: file.path, lastModified: file.lastModified, positions: response.result.positions };
+    } else if (response.kind === 'sequence') failed.push({ path: file.path, reason: 'unknownFormat', detail: '' });
+    else if (response.kind === 'error') failed.push({ path: file.path, reason: 'unreadable', detail: response.message });
+    onProgress({ done: ++done, total });
+  }
+
   return {
     folderName: source.name,
     exports,
@@ -266,6 +290,7 @@ export async function loadFolder(source: FolderSource, onProgress: (p: LoadProgr
     planSettings,
     oil,
     kpi,
+    ...(sequence ? { sequence } : {}),
     ...(withTransit ? { transit: { files: transitData.map((t) => t.path), entries: withTransit.entries } } : {}),
     failed,
     loadedAt: Date.now(),

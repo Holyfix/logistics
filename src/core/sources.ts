@@ -1,6 +1,6 @@
 // Rozpoznání souborů ve sdílené složce podle cesty a názvu.
 
-export type SourceKind = 'calloffs' | 'masterdata' | 'coverage' | 'stock' | 'bom' | 'plan' | 'planSettings' | 'oil' | 'kpi' | 'transit' | 'ignored';
+export type SourceKind = 'calloffs' | 'masterdata' | 'coverage' | 'stock' | 'bom' | 'plan' | 'planSettings' | 'oil' | 'kpi' | 'transit' | 'sequence' | 'ignored';
 export type SourceFormat = 'csv' | 'xlsx';
 
 function normalize(s: string): string {
@@ -28,6 +28,7 @@ export function formatOf(path: string): SourceFormat | null {
  * OIL: Excel ve složce „oil“ nebo s názvem začínajícím „oil“.
  * KPI: Excel ve složce „kpi“ nebo s názvem začínajícím „kpi“.
  * Doplněný transit: soubor ve složce „transit“ nebo s názvem začínajícím „transit“ (naše expedice, které coverage ještě nemá).
+ * Sekvence: soubory ve složce „sekvence“ / „sequence“ (Order Status Matrix a JIT Overview; druh se pozná podle obsahu).
  * Dočasné soubory Excelu (~$…) se ignorují.
  */
 export function classifyPath(path: string): SourceKind {
@@ -36,7 +37,8 @@ export function classifyPath(path: string): SourceKind {
   const name = parts[parts.length - 1]!;
   if (name.startsWith('~$')) return 'ignored';
   const folders = parts.slice(0, -1);
-  // Exporty pro pokrytí materiálu (samostatná stránka material.html) logistická aplikace nečte.
+  if (folders.some((f) => /^(sekvence|sequence)$/.test(f))) return 'sequence';
+  // Dřívější složka samostatné stránky pokrytí materiálu: soubory z ní se nečtou (patří do složky Sekvence).
   if (folders.some((f) => /^(material|materialy?)$/.test(f))) return 'ignored';
   if (/kmenov|master|mapping/.test(name)) return 'masterdata';
   if (folders.some((f) => /^(plan|planovani|planning)$/.test(f))) {
