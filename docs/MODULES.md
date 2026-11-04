@@ -214,6 +214,14 @@ Filtry projekt, kategorie, strana (LHD/RHD) a varianta z kmenových dat se ovliv
 - Prahy semaforu, horizont výhledu
 - Jméno uživatele pro zápisy (obaly; OIL ho už má ve svém modulu)
 
+## Samostatné stránky
+
+### Pokrytí materiálu (material.html)
+- ✅ Pokrytí Maincarrieru a Middlefieldu ve formátu Order Status Matrix: vozy a stav dveří z matice, dveřní panel
+  z JIT Overview, MC a MF z kusovníku (úroveň 1, End Eff); buňka dveří zeleně / červeně podle skladu v pořadí stavby;
+  karta Díly a sklad s ručně zadaným skladem (i vložením z Excelu), pokryto do / chybí od, stav po dnech a detail; Excel
+- Podrobnosti v DATA_IMPORT.md (Pokrytí materiálu)
+
 ## Zápis dat
 
 Plánování, OIL a KPI už do sdílené složky zapisují (`Plan/`, `OIL/OIL.xlsx`, `KPI/KPI.xlsx`); Obaly a později Mimořádné přepravy přibudou. Bez serveru se záznamy ukládají

@@ -35,8 +35,10 @@ export function classifyPath(path: string): SourceKind {
   const parts = normalize(path).split('/');
   const name = parts[parts.length - 1]!;
   if (name.startsWith('~$')) return 'ignored';
-  if (/kmenov|master|mapping/.test(name)) return 'masterdata';
   const folders = parts.slice(0, -1);
+  // Exporty pro pokrytí materiálu (samostatná stránka material.html) logistická aplikace nečte.
+  if (folders.some((f) => /^(material|materialy?)$/.test(f))) return 'ignored';
+  if (/kmenov|master|mapping/.test(name)) return 'masterdata';
   if (folders.some((f) => /^(plan|planovani|planning)$/.test(f))) {
     if (formatOf(path) !== 'xlsx') return 'ignored';
     return /^(kapacit|capacit)/.test(name) ? 'planSettings' : 'plan';
