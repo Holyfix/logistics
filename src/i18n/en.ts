@@ -1349,6 +1349,19 @@ export const en: Messages = {
     needKey: 'The MC/MF key (or a JIT Overview) is missing in the Sequence folder.',
     noStock: 'No stock file loaded – stock counts as zero.',
     sources: 'Order Status Matrix: {matrix} · MC/MF key: {key} · JIT Overview: {jit} · stock: {stock}',
+    locations: {
+      summary: 'MF stock locations: {n} of {total} locations not counted ({qty} pcs)',
+      hint: 'Ticked locations are not counted in the MF stock; the choice is remembered in this browser. The list shows locations with MF stock in the zones counted as stock ({zones}).',
+      search: 'Search location or zone',
+      excludeShown: 'Exclude shown',
+      includeShown: 'Count shown',
+      exclude: 'Exclude',
+      location: 'Location',
+      zone: 'Zone',
+      qty: 'MF pcs',
+      items: 'MF parts',
+      none: 'No MF part is in stock.',
+    },
     tiles: {
       cars: 'Cars in the matrix',
       carsNote: '{doors} doors with status, {done} of them packed or shipped (not counted)',
@@ -1369,6 +1382,7 @@ export const en: Messages = {
       shown: 'Showing {n} of {total} cars',
       search: 'Production number, lot or MF part',
       onlyShort: 'Only cars with uncovered doors',
+      onlyUnbuilt: 'Only unbuilt car sets (at least one door at status 45 or lower)',
     },
     matrix: {
       heading: 'Middlefield coverage by the Order Status Matrix',

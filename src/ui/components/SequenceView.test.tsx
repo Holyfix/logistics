@@ -106,15 +106,34 @@ describe('Komponenty – karta Sekvence', () => {
     expect(material('V3')).toBe('FL: MF-1');
     expect(material('V9')).toBe('MF neurčen');
     expect(screen.getByText(/z toho 1 zabalených nebo odeslaných/)).toBeTruthy();
-    // filtry
-    fireEvent.change(screen.getByLabelText('Lot'), { target: { value: '8' } });
-    expect(shown()).toEqual(['V3', 'V9']);
-    expect(screen.getByText('Zobrazeno 2 z 5 vozů')).toBeTruthy();
+    // filtry: Lot a MC / MF ve filtrech nejsou; nevyrobené carsety (aspoň jedny dveře ve stavu 45 a méně)
+    expect(screen.queryByLabelText('Lot')).toBeNull();
+    expect(screen.queryByLabelText('MC / MF')).toBeNull();
+    fireEvent.click(screen.getByLabelText(/Jen nevyrobené carsety/));
+    expect(shown()).toEqual(['V1', 'V2', 'V3', 'V9']);
+    expect(screen.getByText('Zobrazeno 4 z 5 vozů')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Zrušit filtry' }));
+    expect(shown()).toEqual(['V0', 'V1', 'V2', 'V3', 'V9']);
     fireEvent.change(screen.getByLabelText('Production number, Lot nebo díl MF'), { target: { value: 'mf-1' } });
     expect(shown()).toEqual(['V1', 'V2', 'V3']);
     fireEvent.click(screen.getByLabelText('Jen vozy s nepokrytými dveřmi'));
     expect(shown()).toEqual(['V3']);
+  });
+
+  it('vybrané lokace se do skladu MF nepočítají a volba se pamatuje', () => {
+    renderPage();
+    expect(screen.getByText('Lokace skladu MF: nepočítá se 0 z 1 lokací (0 ks)')).toBeTruthy();
+    // v seznamu jsou jen lokace se skladem MF (A-02 má jen MC)
+    expect(screen.queryByLabelText('Nepočítat A-02')).toBeNull();
+    fireEvent.click(screen.getByLabelText('Nepočítat A-01'));
+    expect(screen.getByText('Lokace skladu MF: nepočítá se 1 z 1 lokací (2 ks)')).toBeTruthy();
+    expect(badges('V1')).toEqual(['MF short']);
+    expect(JSON.parse(localStorage.getItem('sequence-excluded-locations')!)).toEqual(['A-01']);
+    cleanup();
+    renderPage();
+    expect(badges('V1')).toEqual(['MF short']);
+    fireEvent.click(screen.getByLabelText('Nepočítat A-01'));
+    expect(badges('V1')).toEqual(['MF ok']);
   });
 
   it('klíč MC/MF místo JIT: MF podle výbavy, dveří a barvy', () => {

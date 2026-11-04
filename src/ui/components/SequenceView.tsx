@@ -2,27 +2,49 @@ import { Fragment, useMemo, useState } from 'react';
 import { mergeBoms } from '../../core/bom';
 import { dayToIso, weekday, type DayNumber } from '../../core/dates';
 import { formatDayShort, formatQuantity } from '../../core/format';
-import { buildMaterialCoverage, carMissing, shortages, type CarCoverage, type DoorCoverage } from '../../core/material/coverage';
+import { buildMaterialCoverage, carMissing, DONE_STATUS, shortages, type CarCoverage, type DoorCoverage } from '../../core/material/coverage';
 import { dayOfStamp, DOORS, MINUTES_PER_DAY, type Door, type Stamp } from '../../core/material/jit';
 import { statusCode } from '../../core/material/matrix';
-import { stockByItem } from '../../core/stock';
+import { isExcludedLocation, locationsOf, STOCK_ZONES, stockByItem } from '../../core/stock';
 import { useI18n } from '../../i18n/I18nProvider';
 import { downloadXlsxSheets } from '../../platform/download';
 import { useData } from '../data/DataProvider';
 
 /** Filtry Matrixu: hodnota sloupce ('' = vše). */
 interface CarFilter {
-  lot: string;
   optionType: string;
-  colors: string;
   day: string;
   status: string;
 }
-const NO_FILTER: CarFilter = { lot: '', optionType: '', colors: '', day: '', status: '' };
+const NO_FILTER: CarFilter = { optionType: '', day: '', status: '' };
 const NO_DAY = 'none';
 
 /** Den stavby vozu pro filtr ('none' = bez data). */
 const carDay = (c: CarCoverage) => (c.planned === null ? NO_DAY : String(dayOfStamp(c.planned)));
+
+/** Nevyrobený carset: aspoň jedny dveře (DP) ve stavu pod „Packed“ (45 a méně). */
+const unbuilt = (c: CarCoverage) => DOORS.some((d) => {
+  const status = c.doors[d]?.status;
+  return status !== undefined && (statusCode(status) ?? 0) < DONE_STATUS;
+});
+
+/** Lokace, které uživatel nechce počítat do skladu MF (pamatují se v prohlížeči). */
+const EXCLUDED_KEY = 'sequence-excluded-locations';
+function loadExcluded(): Set<string> {
+  try {
+    const saved = JSON.parse(localStorage.getItem(EXCLUDED_KEY) ?? '[]') as unknown;
+    return new Set(Array.isArray(saved) ? saved.filter((v): v is string => typeof v === 'string') : []);
+  } catch {
+    return new Set();
+  }
+}
+function saveExcluded(excluded: ReadonlySet<string>) {
+  try {
+    localStorage.setItem(EXCLUDED_KEY, JSON.stringify([...excluded].sort()));
+  } catch {
+    // Volba se jen nezapamatuje.
+  }
+}
 
 /** Barva stavu jako v Order Status Matrix (podle čísla stavu). */
 const STATUS_COLORS = [20, 25, 30, 40, 45, 50, 60];
@@ -52,6 +74,13 @@ export function SequenceView({ today }: { today: DayNumber }) {
   const [filter, setFilter] = useState<CarFilter>(NO_FILTER);
   const [query, setQuery] = useState('');
   const [onlyShort, setOnlyShort] = useState(false);
+  const [onlyUnbuilt, setOnlyUnbuilt] = useState(false);
+  const [excluded, setExcluded] = useState<Set<string>>(loadExcluded);
+  const [locationQuery, setLocationQuery] = useState('');
+  const updateExcluded = (next: Set<string>) => {
+    setExcluded(next);
+    saveExcluded(next);
+  };
 
   const coverage = useMemo(() => {
     const bom = data?.boms.length ? mergeBoms(data.boms.map((b) => b.data)) : undefined;
@@ -61,10 +90,15 @@ export function SequenceView({ today }: { today: DayNumber }) {
       key: sequence.key?.key,
       positions: sequence.jit?.positions,
       bom,
-      stock: data?.stock ? stockByItem(data.stock.data) : new Map(),
+      stock: data?.stock ? stockByItem(data.stock.data, (location) => isExcludedLocation(location) || excluded.has(location.trim().toUpperCase())) : new Map(),
       today,
     });
-  }, [sequence, data, today]);
+  }, [sequence, data, today, excluded]);
+  // Lokace se skladem MF (bez lokací, které aplikace vylučuje vždy); na výběr, které se nepočítají.
+  const locations = useMemo(
+    () => (coverage && data?.stock ? locationsOf(data.stock.data, new Set(coverage.parts.map((p) => p.item))) : []),
+    [coverage, data],
+  );
 
   if (!coverage) {
     return (
@@ -98,20 +132,17 @@ export function SequenceView({ today }: { today: DayNumber }) {
   const cars = allCars.filter(
     (c) =>
       (!onlyShort || c.short) &&
-      (!filter.lot || c.lot === filter.lot) &&
+      (!onlyUnbuilt || unbuilt(c)) &&
       (!filter.optionType || c.optionType === filter.optionType) &&
-      (!filter.colors || c.colors === filter.colors) &&
       (!filter.day || carDay(c) === filter.day) &&
       (!filter.status || DOORS.some((d) => c.doors[d]?.status === filter.status)) &&
       (!q || carText(c).includes(q)),
   );
-  const filterActive = Object.values(filter).some(Boolean) || q !== '' || onlyShort;
+  const filterActive = Object.values(filter).some(Boolean) || q !== '' || onlyShort || onlyUnbuilt;
   // Hodnoty do filtrů z celé matice (číselně seřazené).
   const options = (values: Iterable<string>) => [...new Set(values)].filter(Boolean).sort((a, b) => a.localeCompare(b, 'en', { numeric: true }));
   const carOptions = {
-    lot: options(allCars.map((c) => c.lot)),
     optionType: options(allCars.map((c) => c.optionType)),
-    colors: options(allCars.map((c) => c.colors)),
     day: [...new Set(allCars.map(carDay))].sort((a, b) => (a === NO_DAY ? -1 : b === NO_DAY ? 1 : Number(a) - Number(b))),
     status: [...new Set(allCars.flatMap((c) => DOORS.flatMap((d) => c.doors[d]?.status ?? [])))].sort((a, b) => (statusCode(a) ?? 0) - (statusCode(b) ?? 0) || a.localeCompare(b)),
   };
@@ -165,6 +196,8 @@ export function SequenceView({ today }: { today: DayNumber }) {
   };
 
   const fileName = (path: string | undefined) => path?.split('/').pop() ?? '—';
+  const lq = locationQuery.trim().toUpperCase();
+  const shownLocations = locations.filter((l) => !lq || `${l.location} ${l.zone}`.includes(lq));
 
   return (
     <>
@@ -176,6 +209,73 @@ export function SequenceView({ today }: { today: DayNumber }) {
           .replace('{stock}', fileName(data?.stock?.path))}
       </p>
       {!data?.stock && <p className="banner banner-warn">{ts.noStock}</p>}
+      {data?.stock && (
+        <details className="panel mat-locations">
+          <summary>
+            {ts.locations.summary
+              .replace('{n}', qty(locations.filter((l) => excluded.has(l.location)).length))
+              .replace('{total}', qty(locations.length))
+              .replace('{qty}', qty(locations.filter((l) => excluded.has(l.location)).reduce((sum, l) => sum + l.qty, 0)))}
+          </summary>
+          <p className="muted">{ts.locations.hint.replace('{zones}', STOCK_ZONES.join(', '))}</p>
+          {locations.length === 0 ? (
+            <p className="muted">{ts.locations.none}</p>
+          ) : (
+            <>
+              <div className="filters">
+                <label className="field">
+                  <span>{ts.locations.search}</span>
+                  <input type="search" value={locationQuery} onChange={(e) => setLocationQuery(e.target.value)} />
+                </label>
+                <button type="button" className="button button-small" onClick={() => updateExcluded(new Set([...excluded, ...shownLocations.map((l) => l.location)]))}>
+                  {ts.locations.excludeShown}
+                </button>
+                <button type="button" className="button button-small" onClick={() => updateExcluded(new Set([...excluded].filter((l) => !shownLocations.some((s) => s.location === l))))}>
+                  {ts.locations.includeShown}
+                </button>
+              </div>
+              <div className="table-scroll mat-locations-list">
+                <table className="table table-data">
+                  <thead>
+                    <tr>
+                      <th>{ts.locations.exclude}</th>
+                      <th>{ts.locations.location}</th>
+                      <th>{ts.locations.zone}</th>
+                      <th className="n">{ts.locations.qty}</th>
+                      <th className="n">{ts.locations.items}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {shownLocations.map((l) => (
+                      <tr key={l.location} className={excluded.has(l.location) ? 'row-muted' : undefined}>
+                        <td>
+                          <input
+                            type="checkbox"
+                            aria-label={`${ts.locations.exclude} ${l.location}`}
+                            checked={excluded.has(l.location)}
+                            onChange={(e) => {
+                              const next = new Set(excluded);
+                              if (e.target.checked) next.add(l.location);
+                              else next.delete(l.location);
+                              updateExcluded(next);
+                            }}
+                          />
+                        </td>
+                        <td>
+                          <strong>{l.location}</strong>
+                        </td>
+                        <td>{l.zone}</td>
+                        <td className="n">{qty(l.qty)}</td>
+                        <td className="n">{qty(l.items)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
+        </details>
+      )}
 
       <div className="kpis">
         <div className="kpi">
@@ -216,11 +316,13 @@ export function SequenceView({ today }: { today: DayNumber }) {
           <input type="checkbox" checked={onlyShort} onChange={(e) => setOnlyShort(e.target.checked)} />
           {ts.filters.onlyShort}
         </label>
+        <label className="check-field">
+          <input type="checkbox" checked={onlyUnbuilt} onChange={(e) => setOnlyUnbuilt(e.target.checked)} />
+          {ts.filters.onlyUnbuilt}
+        </label>
         {(
           [
-            ['lot', ts.matrix.lot],
             ['optionType', ts.matrix.optionType],
-            ['colors', ts.matrix.colors],
             ['day', ts.filters.day],
             ['status', ts.filters.status],
           ] as const
@@ -257,6 +359,7 @@ export function SequenceView({ today }: { today: DayNumber }) {
                   setFilter(NO_FILTER);
                   setQuery('');
                   setOnlyShort(false);
+                  setOnlyUnbuilt(false);
                 }}
               >
                 {ts.filters.reset}

@@ -149,6 +149,31 @@ export function stockByItem(stock: StockData, excluded: (location: string) => bo
   return result;
 }
 
+/** Lokace se skladem vybraných dílů (počítaná část skladu jako u stockByItem), od největšího množství. */
+export interface ItemLocation {
+  /** Název lokace velkými písmeny. */
+  location: string;
+  zone: string;
+  qty: number;
+  /** Počet různých dílů na lokaci. */
+  items: number;
+}
+
+export function locationsOf(stock: StockData, items: ReadonlySet<string>, excluded: (location: string) => boolean = isExcludedLocation): ItemLocation[] {
+  const home = homeSite(stock.rows);
+  const byLocation = new Map<string, { zone: string; qty: number; items: Set<string> }>();
+  for (const row of stock.rows) {
+    if (!items.has(row.item) || row.qty <= 0 || !STOCK_ZONES.includes(row.zone) || excluded(row.location) || (row.site && row.site !== home)) continue;
+    const location = row.location.trim().toUpperCase();
+    const entry = byLocation.get(location) ?? byLocation.set(location, { zone: row.zone, qty: 0, items: new Set() }).get(location)!;
+    entry.qty += row.qty;
+    entry.items.add(row.item);
+  }
+  return [...byLocation]
+    .map(([location, e]) => ({ location, zone: e.zone, qty: e.qty, items: e.items.size }))
+    .sort((a, b) => b.qty - a.qty || a.location.localeCompare(b.location, 'en', { numeric: true }));
+}
+
 /** Vyloučené lokace, které jsou v souboru skladu (názvy tak, jak jsou v souboru, velkými písmeny). */
 export function excludedLocationsIn(stock: StockData, excluded: (location: string) => boolean = isExcludedLocation): string[] {
   return [...new Set(stock.rows.filter((r) => excluded(r.location)).map((r) => r.location.trim().toUpperCase()))].sort();
