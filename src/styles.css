@@ -2970,3 +2970,33 @@ button.oil-step:disabled {
 .table-data tr[data-crosshair] > [data-crosshair-col] {
   background-image: linear-gradient(var(--crosshair-cell), var(--crosshair-cell));
 }
+
+/* Pokrytí materiálu (material.html): načtení souborů, ruční sklad, řádky dílů. */
+.mat-files {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 13.5px;
+}
+
+.mat-stock {
+  width: 80px;
+  padding: 3px 6px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  font: inherit;
+  text-align: right;
+}
+
+.mat-row {
+  cursor: pointer;
+}
+
+.mat-paste textarea {
+  width: 100%;
+  max-width: 520px;
+  font: 13px/1.4 ui-monospace, monospace;
+}
+
+.kpi-value.mat-kpi-small {
+  font-size: 18px;
+}

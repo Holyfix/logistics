@@ -327,6 +327,31 @@ aplikace nabídne úvodní sadu ukazatelů. Když soubor mezitím změnil někdo
   z mapování, osob z OIL a dříve zapsaných příčin). U automatických ukazatelů je aplikace uloží sama při uložení dne
   (díly a lokace z Coverage, komponenty s projekty, body OIL po termínu s odpovědným).
 
+## Pokrytí materiálu (samostatná stránka material.html)
+
+Samostatná stránka vedle logistické aplikace (`…/material.html`): pokrytí **Maincarrieru (MC)** a **Middlefieldu (MF)**
+dveřních panelů podle JIT zakázek. Soubory se vybírají přímo na stránce (lze víc najednou nebo přetáhnout); druh
+souboru se pozná podle obsahu. Logistická aplikace složku `Material` ve sdílené složce nečte.
+
+| Soubor | Potřebné sloupce | Povinný |
+|---|---|---|
+| JIT Overview (CSV z ERP, každý řádek může být celý v uvozovkách) | JIT order number, Item, Production number, Assembly date (`dd/mm/yyyy hh:mm:ss`), Last priority, Article number (Pos), Article description (Pos) | ano |
+| Kusovník dveřních panelů (MBOM, Excel nebo CSV) | jako u Komponent; End Eff se bere v potaz | ano |
+| Order Status Matrix (Excel) | Production number, Planned customer built, Option Type, Status FL / FR / RL / RR / HB (záhlaví může být pod titulkem) | ne |
+
+- **Zakázka** = JIT order number + Item (jedny dveře vozu). **Dveřní panel** je pozice zakázky, která je v kusovníku
+  jako hotový díl; dveře (FL, FR, RL, RR, HB) se poznají z popisu panelu („FRT LH“, „RR RH“, „HB“).
+- **MC a MF** jsou díly na úrovni 1 pod panelem s „MC“ / „MF“ v popisu (např. „ASSY MC …“, „ASSY MF …“), s množstvím
+  z kusovníku. Zakázky bez panelu v kusovníku (např. výklopné dveře bez MC/MF) se jen spočítají.
+- **Potřeba** je v čase montáže u zákazníka (Assembly date); montáže před dneškem a bez data jsou „po termínu“. Počítají
+  se všechny dveře v JIT bez ohledu na stav; volitelně (s načtenou maticí) bez zabalených a odeslaných (stav 50 a víc).
+- **Stav** u zakázky je z Order Status Matrix (stav dveří), bez ní z JIT (Last priority).
+- **Sklad** se zadává ručně u dílu nebo vložením dvou sloupců z Excelu (díl, množství) a pamatuje se v prohlížeči.
+  Nezadaný sklad je 0.
+- **Pokryto do** = poslední zakázka, na kterou sklad stačí (čas montáže, Production number, dveře); „Chybí od“ = první
+  zakázka, na kterou nestačí. Po dnech stav skladu na konci dne. Klik na díl ukáže zakázky se zbývajícím skladem.
+- Smyšlená ukázka: `sample-data/Material/` (vytvoří `node scripts/generate-material-sample.mjs`).
+
 ## Testovací data
 
 `sample-data/` obsahuje smyšlené exporty, mapování, soubory coverage, sklad, kusovník a kapacity plánování ve stejném formátu
