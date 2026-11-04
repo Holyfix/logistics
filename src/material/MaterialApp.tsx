@@ -2,8 +2,8 @@ import { useEffect, useMemo, useRef, useState, type DragEvent } from 'react';
 import { mergeBoms } from '../core/bom';
 import { dayToIso, weekday, type DayNumber } from '../core/dates';
 import { formatDayShort, formatQuantity, type Locale } from '../core/format';
-import { buildMaterialCoverage, PART_KINDS, type Demand, type PartCoverage, type PartKind } from '../core/material/coverage';
-import { dayOfStamp, MINUTES_PER_DAY, type Stamp } from '../core/material/jit';
+import { buildMaterialCoverage, PART_KINDS, type CarCoverage, type Demand, type DoorCoverage, type PartCoverage, type PartKind } from '../core/material/coverage';
+import { dayOfStamp, DOORS, MINUTES_PER_DAY, type Stamp } from '../core/material/jit';
 import { statusCode } from '../core/material/matrix';
 import { parseStockPaste } from '../core/material/stock';
 import { parseNumber } from '../core/numbers';
@@ -13,6 +13,8 @@ import { loadStock, readMaterialFile, saveStock, type MaterialFile, type SavedSt
 import { localToday } from '../ui/components/useComponents';
 
 const LOCALES: Locale[] = ['cs', 'en'];
+
+type Tab = 'matrix' | 'parts';
 
 /** Nové soubory: JIT a matice nahradí předchozí, kusovníky se přidají (stejný název nahradí). */
 function addFiles(current: readonly MaterialFile[], added: readonly MaterialFile[]): MaterialFile[] {
@@ -24,13 +26,17 @@ function addFiles(current: readonly MaterialFile[], added: readonly MaterialFile
   return next;
 }
 
-/** Pokrytí Maincarrieru a Middlefieldu: samostatná stránka (material.html) vedle logistické aplikace. */
+/**
+ * Pokrytí Maincarrieru a Middlefieldu: samostatná stránka (material.html) vedle logistické aplikace. Karta Matrix je ve
+ * formátu Order Status Matrix (vozy a stav dveří, barva podle pokrytí materiálem), karta Díly a sklad pro zadání skladu.
+ */
 export function MaterialApp({ today = localToday() }: { today?: DayNumber } = {}) {
   const { t, locale, setLocale } = useI18n();
   const tm = t.material;
   const [files, setFiles] = useState<MaterialFile[]>([]);
   const [busy, setBusy] = useState(false);
   const [stock, setStock] = useState<SavedStock>(loadStock);
+  const [tab, setTab] = useState<Tab>('matrix');
   const [kind, setKind] = useState<PartKind | ''>('');
   const [query, setQuery] = useState('');
   const [onlyShort, setOnlyShort] = useState(false);
@@ -47,8 +53,8 @@ export function MaterialApp({ today = localToday() }: { today?: DayNumber } = {}
   const stockMap = useMemo(() => new Map(Object.entries(stock.items)), [stock]);
   const coverage = useMemo(
     () =>
-      jit?.kind === 'jit' && bom
-        ? buildMaterialCoverage({ positions: jit.positions, bom, matrix: matrix?.kind === 'matrix' ? matrix.orders : undefined, stock: stockMap, today, skipDone })
+      jit?.kind === 'jit' && matrix?.kind === 'matrix' && bom
+        ? buildMaterialCoverage({ matrix: matrix.orders, positions: jit.positions, bom, stock: stockMap, today, skipDone })
         : null,
     [jit, bom, matrix, stockMap, today, skipDone],
   );
@@ -86,54 +92,66 @@ export function MaterialApp({ today = localToday() }: { today?: DayNumber } = {}
     if (s === null) return tm.detail.noDate;
     const day = dayOfStamp(s);
     const minute = s - day * MINUTES_PER_DAY;
-    // Rok jen u jiného roku než letos (staré zakázky v JIT).
+    // Rok jen u jiného roku než letos.
     const year = dayToIso(day).slice(0, 4);
     return `${dayLabel(day)}${year !== dayToIso(today).slice(0, 4) ? ` ${year}` : ''} ${String(Math.floor(minute / 60)).padStart(2, '0')}:${String(minute % 60).padStart(2, '0')}`;
   };
   const qty = (v: number) => formatQuantity(v, locale);
-  const demandText = (d: Demand | null) => (d ? `${time(d.assembly)} · ${d.productionNumber}${d.door ? ` ${d.door}` : ''}` : '');
+  const demandText = (d: Demand | null) => (d ? `${time(d.planned)} · ${d.productionNumber} ${d.door}` : '');
+  /** Text pokrytí dveří: díly MC a MF se značkou, nebo důvod, proč pokrytí nejde určit. */
+  const doorNote = (cell: DoorCoverage) =>
+    cell.state === 'unknown'
+      ? tm.matrix.notInJit
+      : cell.state === 'skipped'
+        ? tm.matrix.skipped
+        : cell.state === 'none'
+          ? tm.matrix.noParts
+          : cell.parts.map((p) => `${p.kind} ${p.left < -1e-9 ? '✗' : '✓'}`).join(' · ');
+  const doorTitle = (cell: DoorCoverage) =>
+    [cell.panel ? `${tm.detail.panel}: ${cell.panel}` : tm.matrix.notInJit, ...cell.parts.map((p) => `${tm.kinds[p.kind]} ${p.item}: ${tm.matrix.left} ${qty(p.left)}`)].join('\n');
 
   const q = query.trim().toLowerCase();
+  const cars = (coverage?.cars ?? []).filter((c) => (!onlyShort || c.short) && (!q || `${c.productionNumber} ${c.lot}`.toLowerCase().includes(q)));
   const parts = (coverage?.parts ?? []).filter(
     (p) => (!kind || p.kind === kind) && (!onlyShort || p.firstShort) && (!q || `${p.item} ${p.description}`.toLowerCase().includes(q)),
   );
   const anyOverdue = parts.some((p) => p.overdue > 0);
   const selectedPart = coverage?.parts.find((p) => p.item === selected) ?? null;
-  const firstShort = (coverage?.parts ?? []).filter((p) => p.firstShort).sort((a, b) => (a.firstShort!.assembly ?? -Infinity) - (b.firstShort!.assembly ?? -Infinity))[0];
+  // První nepokryté dveře v pořadí stavby.
+  const firstShort = (() => {
+    for (const car of coverage?.cars ?? []) for (const door of DOORS) if (car.doors[door]?.state === 'short') return { car, cell: car.doors[door]! };
+    return null;
+  })();
+  const shortDoors = (coverage?.cars ?? []).reduce((n, c) => n + DOORS.filter((d) => c.doors[d]?.state === 'short').length, 0);
 
   const exportExcel = () => {
     if (!coverage) return;
-    const days = coverage.days.map(dayToIso);
+    const material = (cell: DoorCoverage | undefined) =>
+      !cell
+        ? null
+        : cell.state === 'short'
+          ? `${tm.matrix.short}: ${cell.parts
+              .filter((p) => p.left < -1e-9)
+              .map((p) => p.item)
+              .join(', ')}`
+          : doorNote(cell).replace(/ ✓/g, ' OK');
     void downloadXlsxSheets(`${tm.export.fileName}_${dayToIso(today)}.xlsx`, [
       {
-        name: tm.export.sheet,
-        header: [tm.table.item, tm.table.description, tm.table.kind, tm.table.stock, tm.table.demand, tm.table.overdue, tm.table.covered, tm.table.shortFrom, ...days],
-        rows: parts.map((p) => [p.item, p.description, tm.kinds[p.kind], p.stock, p.total, p.overdue, demandText(p.lastCovered), demandText(p.firstShort), ...p.balance]),
-        stickyColumns: 1,
+        name: tm.export.matrix,
+        header: [tm.matrix.lot, tm.matrix.productionNumber, tm.matrix.optionType, tm.matrix.colors, tm.matrix.planned, ...DOORS.flatMap((d) => [`${tm.matrix.status} ${d}`, `${tm.matrix.material} ${d}`])],
+        rows: cars.map((c) => [c.lot, c.productionNumber, c.optionType, c.colors, c.planned === null ? null : time(c.planned), ...DOORS.flatMap((d) => [c.doors[d]?.status ?? null, material(c.doors[d])])]),
+        stickyColumns: 2,
       },
       {
-        name: tm.export.orders,
-        header: [tm.table.item, tm.table.kind, tm.detail.assembly, tm.detail.productionNumber, tm.detail.door, tm.detail.panel, tm.detail.status, tm.detail.qty],
-        rows: parts.flatMap((p) => p.demands.map((d) => [p.item, tm.kinds[p.kind], d.assembly === null ? null : time(d.assembly), d.productionNumber, d.door, d.panel, d.status, d.qty])),
+        name: tm.export.sheet,
+        header: [tm.table.item, tm.table.description, tm.table.kind, tm.table.stock, tm.table.demand, tm.table.covered, tm.table.shortFrom, ...coverage.days.map(dayToIso)],
+        rows: parts.map((p) => [p.item, p.description, tm.kinds[p.kind], p.stock, p.total, demandText(p.lastCovered), demandText(p.firstShort), ...p.balance]),
         stickyColumns: 1,
       },
     ]);
   };
 
-  const tiles = coverage && [
-    { label: tm.tiles.cars, value: qty(coverage.productionNumbers), note: '' },
-    {
-      label: tm.tiles.doors,
-      value: qty(coverage.counted),
-      note: tm.tiles.doorsNote.replace('{total}', qty(coverage.orders)) + (coverage.skippedDone ? tm.tiles.skipped.replace('{n}', qty(coverage.skippedDone)) : ''),
-    },
-    ...PART_KINDS.map((k) => {
-      const of = coverage.parts.filter((p) => p.kind === k);
-      const short = of.filter((p) => p.firstShort).length;
-      return { label: k === 'MC' ? tm.tiles.shortMc : tm.tiles.shortMf, value: qty(short), note: tm.tiles.shortNote.replace('{n}', qty(of.length)), tone: short ? 'cell-short' : '' };
-    }),
-    { label: tm.tiles.first, value: firstShort ? time(firstShort.firstShort!.assembly) : tm.tiles.none, note: firstShort ? `${firstShort.item} · ${firstShort.firstShort!.productionNumber}` : '', small: true },
-  ];
+  const stockInfo = stock.at ? tm.stock.saved.replace('{at}', new Date(stock.at).toLocaleString(locale === 'cs' ? 'cs-CZ' : 'en-GB', { dateStyle: 'short', timeStyle: 'short' })) : tm.stock.notSaved;
 
   return (
     <div className="shell">
@@ -159,7 +177,7 @@ export function MaterialApp({ today = localToday() }: { today?: DayNumber } = {}
             <p className="lead">{tm.lead}</p>
           </div>
 
-          <div className="panel mat-drop" onDragOver={(e) => e.preventDefault()} onDrop={onDrop}>
+          <div className="panel" onDragOver={(e) => e.preventDefault()} onDrop={onDrop}>
             <div className="panel-head">
               <h2>{tm.load.heading}</h2>
               <span className="panel-actions">
@@ -191,132 +209,209 @@ export function MaterialApp({ today = localToday() }: { today?: DayNumber } = {}
                 ))}
               </ul>
             )}
+            {files.length > 0 && !matrix && <p className="banner banner-warn">{tm.load.needMatrix}</p>}
             {files.length > 0 && !jit && <p className="banner banner-warn">{tm.load.needJit}</p>}
             {files.length > 0 && !bom && <p className="banner banner-warn">{tm.load.needBom}</p>}
-            {coverage && coverage.withoutPanel.length > 0 && (
-              <p className="muted" title={coverage.withoutPanel.slice(0, 50).join('\n')}>
-                {tm.load.withoutPanel.replace('{n}', qty(coverage.withoutPanel.length))}
-              </p>
-            )}
           </div>
 
-          {coverage && tiles && (
+          {coverage && (
             <>
               <div className="kpis">
-                {tiles.map((tile) => (
-                  <div key={tile.label} className="kpi">
-                    <span className="kpi-label">{tile.label}</span>
-                    <span className={`kpi-value${'tone' in tile && tile.tone ? ` ${tile.tone}` : ''}${'small' in tile ? ' mat-kpi-small' : ''}`}>{tile.value}</span>
-                    <span className="kpi-note">{tile.note}</span>
-                  </div>
+                <div className="kpi">
+                  <span className="kpi-label">{tm.tiles.cars}</span>
+                  <span className="kpi-value">{qty(coverage.cars.length)}</span>
+                  <span className="kpi-note">{tm.tiles.carsNote.replace('{doors}', qty(coverage.doors))}</span>
+                </div>
+                <div className="kpi">
+                  <span className="kpi-label">{tm.tiles.known}</span>
+                  <span className="kpi-value">{qty(coverage.known)}</span>
+                  <span className="kpi-note">{tm.tiles.knownNote.replace('{n}', qty(coverage.unknown))}</span>
+                </div>
+                <div className="kpi">
+                  <span className="kpi-label">{tm.tiles.short}</span>
+                  <span className={`kpi-value${shortDoors ? ' cell-short' : ''}`}>{qty(shortDoors)}</span>
+                  <span className="kpi-note">
+                    {PART_KINDS.map((k) => `${tm.kinds[k]} ${qty(coverage.parts.filter((p) => p.kind === k && p.firstShort).length)}`).join(' · ')} {tm.tiles.shortParts}
+                  </span>
+                </div>
+                <div className="kpi">
+                  <span className="kpi-label">{tm.tiles.first}</span>
+                  <span className="kpi-value mat-kpi-small">{firstShort ? time(firstShort.car.planned) : tm.tiles.none}</span>
+                  <span className="kpi-note">
+                    {firstShort
+                      ? `${firstShort.car.productionNumber} ${firstShort.cell.door} · ${firstShort.cell.parts
+                          .filter((p) => p.left < -1e-9)
+                          .map((p) => p.item)
+                          .join(', ')}`
+                      : ''}
+                  </span>
+                </div>
+              </div>
+
+              <div className="tabs" role="tablist" aria-label={tm.title}>
+                {(['matrix', 'parts'] as const).map((id) => (
+                  <button key={id} type="button" role="tab" className="tab" aria-selected={tab === id} onClick={() => setTab(id)}>
+                    {tm.tabs[id]}
+                  </button>
                 ))}
               </div>
 
               <div className="filters" role="group" aria-label={tm.filters.label}>
-                <span className="segmented" role="group" aria-label={tm.filters.kind}>
-                  {(['', ...PART_KINDS] as const).map((k) => (
-                    <button key={k || 'all'} type="button" aria-pressed={kind === k} onClick={() => setKind(k)}>
-                      {k ? tm.kinds[k] : tm.filters.all}
-                    </button>
-                  ))}
-                </span>
+                {tab === 'parts' && (
+                  <span className="segmented" role="group" aria-label={tm.filters.kind}>
+                    {(['', ...PART_KINDS] as const).map((k) => (
+                      <button key={k || 'all'} type="button" aria-pressed={kind === k} onClick={() => setKind(k)}>
+                        {k ? tm.kinds[k] : tm.filters.all}
+                      </button>
+                    ))}
+                  </span>
+                )}
                 <label className="field field-wide">
-                  <span>{tm.filters.search}</span>
+                  <span>{tab === 'matrix' ? tm.filters.searchCar : tm.filters.search}</span>
                   <input type="search" value={query} onChange={(e) => setQuery(e.target.value)} />
                 </label>
                 <label className="check-field">
                   <input type="checkbox" checked={onlyShort} onChange={(e) => setOnlyShort(e.target.checked)} />
-                  {tm.filters.onlyShort}
+                  {tab === 'matrix' ? tm.filters.onlyShortCars : tm.filters.onlyShort}
                 </label>
-                {matrix && (
-                  <label className="check-field">
-                    <input type="checkbox" checked={skipDone} onChange={(e) => setSkipDone(e.target.checked)} />
-                    {tm.filters.skipDone}
-                  </label>
-                )}
+                <label className="check-field">
+                  <input type="checkbox" checked={skipDone} onChange={(e) => setSkipDone(e.target.checked)} />
+                  {tm.filters.skipDone}
+                </label>
+                <span className="filters-break" role="presentation" />
+                <span className="muted">{stockInfo}</span>
+                <button type="button" className="button button-small" onClick={exportExcel}>
+                  ⤓ {tm.export.button}
+                </button>
               </div>
 
-              <div className="panel">
-                <div className="panel-head">
-                  <h2>{tm.table.heading}</h2>
-                  <span className="muted">{tm.table.sub}</span>
-                  <span className="panel-actions">
-                    <span className="muted">{stock.at ? tm.stock.saved.replace('{at}', new Date(stock.at).toLocaleString(locale === 'cs' ? 'cs-CZ' : 'en-GB', { dateStyle: 'short', timeStyle: 'short' })) : tm.stock.notSaved}</span>
-                    <button type="button" className="button button-small" onClick={() => setPaste('')}>
-                      {tm.stock.paste}
-                    </button>
-                    {Object.keys(stock.items).length > 0 && (
-                      <button type="button" className="button button-small" onClick={() => window.confirm(tm.stock.clearConfirm) && updateStock({})}>
-                        {tm.stock.clear}
-                      </button>
-                    )}
-                    <button type="button" className="button button-small" onClick={exportExcel}>
-                      ⤓ {tm.export.button}
-                    </button>
-                  </span>
-                </div>
-                {paste !== null && (
-                  <div className="mat-paste">
-                    <p className="muted">{tm.stock.pasteHint}</p>
-                    <textarea rows={6} value={paste} aria-label={tm.stock.paste} onChange={(e) => setPaste(e.target.value)} />
-                    <p>
-                      <button
-                        type="button"
-                        className="button button-primary"
-                        onClick={() => {
-                          updateStock({ ...stock.items, ...Object.fromEntries(parseStockPaste(paste)) });
-                          setPaste(null);
-                        }}
-                      >
-                        {tm.stock.apply}
-                      </button>{' '}
-                      <button type="button" className="button" onClick={() => setPaste(null)}>
-                        {tm.stock.cancel}
-                      </button>
-                    </p>
+              {tab === 'matrix' && (
+                <div className="panel">
+                  <div className="panel-head">
+                    <h2>{tm.matrix.heading}</h2>
+                    <span className="muted">{tm.matrix.sub}</span>
                   </div>
-                )}
-                {parts.length === 0 ? (
-                  <p className="muted">{tm.table.empty}</p>
-                ) : (
-                  <div className="table-scroll table-tall">
-                    <table className="table table-data">
-                      <thead>
-                        <tr>
-                          <th className="sticky-col">{tm.table.item}</th>
-                          <th>{tm.table.description}</th>
-                          <th className="n">{tm.table.stock}</th>
-                          <th className="n">{tm.table.demand}</th>
-                          <th>{tm.table.covered}</th>
-                          {anyOverdue && <th className="n">{tm.table.overdue}</th>}
-                          {coverage.days.map((d) => (
-                            <th key={d} className={`n${weekday(d) >= 6 ? ' col-weekend' : ''}`}>
-                              {dayLabel(d)}
-                            </th>
+                  {cars.length === 0 ? (
+                    <p className="muted">{tm.matrix.empty}</p>
+                  ) : (
+                    <div className="table-scroll table-tall">
+                      <table className="table table-data mat-matrix">
+                        <thead>
+                          <tr>
+                            <th>{tm.matrix.lot}</th>
+                            <th className="sticky-col">{tm.matrix.productionNumber}</th>
+                            <th>{tm.matrix.optionType}</th>
+                            <th>{tm.matrix.colors}</th>
+                            <th>{tm.matrix.planned}</th>
+                            {DOORS.map((d) => (
+                              <th key={d}>
+                                {tm.matrix.status} {d}
+                              </th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {cars.map((c) => (
+                            <CarRow key={c.productionNumber} car={c} time={time} note={doorNote} title={doorTitle} />
                           ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {parts.map((p) => (
-                          <PartRow
-                            key={p.item}
-                            part={p}
-                            days={coverage.days}
-                            anyOverdue={anyOverdue}
-                            selected={p.item === selected}
-                            onSelect={() => setSelected(p.item === selected ? null : p.item)}
-                            onStock={(text) => setItemStock(p.item, text)}
-                            demandText={demandText}
-                          />
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-                <p className="muted">{tm.legend}</p>
-              </div>
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                  <ul className="cov-legend">
+                    <li>
+                      <i className="swatch mat-ok" /> {tm.matrix.legendOk}
+                    </li>
+                    <li>
+                      <i className="swatch mat-short" /> {tm.matrix.legendShort}
+                    </li>
+                    <li>
+                      <i className="swatch mat-unknown" /> {tm.matrix.legendUnknown}
+                    </li>
+                  </ul>
+                  <p className="muted">{tm.matrix.note}</p>
+                </div>
+              )}
 
-              {selectedPart && <PartDetail part={selectedPart} time={time} onClose={() => setSelected(null)} />}
+              {tab === 'parts' && (
+                <div className="panel">
+                  <div className="panel-head">
+                    <h2>{tm.table.heading}</h2>
+                    <span className="muted">{tm.table.sub}</span>
+                    <span className="panel-actions">
+                      <button type="button" className="button button-small" onClick={() => setPaste('')}>
+                        {tm.stock.paste}
+                      </button>
+                      {Object.keys(stock.items).length > 0 && (
+                        <button type="button" className="button button-small" onClick={() => window.confirm(tm.stock.clearConfirm) && updateStock({})}>
+                          {tm.stock.clear}
+                        </button>
+                      )}
+                    </span>
+                  </div>
+                  {paste !== null && (
+                    <div className="mat-paste">
+                      <p className="muted">{tm.stock.pasteHint}</p>
+                      <textarea rows={6} value={paste} aria-label={tm.stock.paste} onChange={(e) => setPaste(e.target.value)} />
+                      <p>
+                        <button
+                          type="button"
+                          className="button button-primary"
+                          onClick={() => {
+                            updateStock({ ...stock.items, ...Object.fromEntries(parseStockPaste(paste)) });
+                            setPaste(null);
+                          }}
+                        >
+                          {tm.stock.apply}
+                        </button>{' '}
+                        <button type="button" className="button" onClick={() => setPaste(null)}>
+                          {tm.stock.cancel}
+                        </button>
+                      </p>
+                    </div>
+                  )}
+                  {parts.length === 0 ? (
+                    <p className="muted">{tm.table.empty}</p>
+                  ) : (
+                    <div className="table-scroll table-tall">
+                      <table className="table table-data">
+                        <thead>
+                          <tr>
+                            <th className="sticky-col">{tm.table.item}</th>
+                            <th>{tm.table.description}</th>
+                            <th className="n">{tm.table.stock}</th>
+                            <th className="n">{tm.table.demand}</th>
+                            <th>{tm.table.covered}</th>
+                            {anyOverdue && <th className="n">{tm.table.overdue}</th>}
+                            {coverage.days.map((d) => (
+                              <th key={d} className={`n${weekday(d) >= 6 ? ' col-weekend' : ''}`}>
+                                {dayLabel(d)}
+                              </th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {parts.map((p) => (
+                            <PartRow
+                              key={p.item}
+                              part={p}
+                              days={coverage.days}
+                              anyOverdue={anyOverdue}
+                              selected={p.item === selected}
+                              onSelect={() => setSelected(p.item === selected ? null : p.item)}
+                              onStock={(text) => setItemStock(p.item, text)}
+                              demandText={demandText}
+                            />
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                  <p className="muted">{tm.legend}</p>
+                </div>
+              )}
+
+              {tab === 'parts' && selectedPart && <PartDetail part={selectedPart} time={time} onClose={() => setSelected(null)} />}
             </>
           )}
         </section>
@@ -329,6 +424,50 @@ export function MaterialApp({ today = localToday() }: { today?: DayNumber } = {}
         </span>
       </footer>
     </div>
+  );
+}
+
+/** Řádek vozu jako v Order Status Matrix: stav dveří a pod ním pokrytí MC a MF; barva buňky podle pokrytí. */
+function CarRow({
+  car,
+  time,
+  note,
+  title,
+}: {
+  car: CarCoverage;
+  time: (s: Stamp | null) => string;
+  note: (cell: DoorCoverage) => string;
+  title: (cell: DoorCoverage) => string;
+}) {
+  return (
+    <tr className={car.short ? 'mat-car-short' : undefined}>
+      <td>{car.lot}</td>
+      <td className="sticky-col">
+        <strong>{car.productionNumber}</strong>
+      </td>
+      <td>{car.optionType}</td>
+      <td>{car.colors}</td>
+      <td>{time(car.planned)}</td>
+      {DOORS.map((d) => {
+        const cell = car.doors[d];
+        if (!cell) return <td key={d} />;
+        return (
+          <td key={d} className={`mat-door mat-${cell.state}`} title={title(cell)}>
+            {cell.status}
+            <small className="cell-note">
+              {cell.parts.length === 0
+                ? note(cell)
+                : cell.parts.map((p, i) => (
+                    <span key={p.item} className={p.left < -1e-9 ? 'mat-part-short' : undefined}>
+                      {i > 0 && ' · '}
+                      {p.kind} {p.left < -1e-9 ? '✗' : '✓'}
+                    </span>
+                  ))}
+            </small>
+          </td>
+        );
+      })}
+    </tr>
   );
 }
 
@@ -395,7 +534,7 @@ function PartRow({
   );
 }
 
-/** Zakázky dílu v pořadí montáže se zbývajícím skladem po každé; první nepokrytá zvýrazněná. */
+/** Dveře, které díl potřebují, v pořadí stavby se zbývajícím skladem; první nepokryté zvýrazněné. */
 function PartDetail({ part, time, onClose }: { part: PartCoverage; time: (s: Stamp | null) => string; onClose: () => void }) {
   const { t, locale } = useI18n();
   const tm = t.material;
@@ -438,17 +577,17 @@ function PartDetail({ part, time, onClose }: { part: PartCoverage; time: (s: Sta
           </thead>
           <tbody>
             {rows.map(({ d, left: l }, i) => (
-                <tr key={`${d.order}-${i}`} className={d === part.firstShort ? 'row-selected' : undefined}>
-                  <td>{time(d.assembly)}</td>
-                  <td>
-                    <strong>{d.productionNumber}</strong>
-                  </td>
-                  <td title={d.door ? tm.doors[d.door] : undefined}>{d.door ?? '—'}</td>
-                  <td>{d.panel}</td>
-                  <td>{d.status}</td>
-                  <td className="n">{qty(d.qty)}</td>
-                  <td className={`n${l < 0 ? ' cell-negative' : ''}`}>{qty(l)}</td>
-                </tr>
+              <tr key={`${d.productionNumber}-${d.door}-${i}`} className={d === part.firstShort ? 'row-selected' : undefined}>
+                <td>{time(d.planned)}</td>
+                <td>
+                  <strong>{d.productionNumber}</strong>
+                </td>
+                <td title={tm.doors[d.door]}>{d.door}</td>
+                <td>{d.panel}</td>
+                <td>{d.status}</td>
+                <td className="n">{qty(d.qty)}</td>
+                <td className={`n${l < 0 ? ' cell-negative' : ''}`}>{qty(l)}</td>
+              </tr>
             ))}
           </tbody>
         </table>

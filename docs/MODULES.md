@@ -217,9 +217,9 @@ Filtry projekt, kategorie, strana (LHD/RHD) a varianta z kmenových dat se ovliv
 ## Samostatné stránky
 
 ### Pokrytí materiálu (material.html)
-- ✅ Pokrytí Maincarrieru a Middlefieldu dveřních panelů podle JIT Overview: zakázka → dveřní panel → MC a MF
-  z kusovníku (úroveň 1, End Eff), potřeba v čase montáže, ručně zadaný sklad (i vložením z Excelu), pokryto do
-  zakázky a chybí od, stav po dnech, detail zakázek se stavem z Order Status Matrix, Excel
+- ✅ Pokrytí Maincarrieru a Middlefieldu ve formátu Order Status Matrix: vozy a stav dveří z matice, dveřní panel
+  z JIT Overview, MC a MF z kusovníku (úroveň 1, End Eff); buňka dveří zeleně / červeně podle skladu v pořadí stavby;
+  karta Díly a sklad s ručně zadaným skladem (i vložením z Excelu), pokryto do / chybí od, stav po dnech a detail; Excel
 - Podrobnosti v DATA_IMPORT.md (Pokrytí materiálu)
 
 ## Zápis dat

@@ -19,6 +19,7 @@
   --up: #006300;
   --down: #b42d2d;
   --changed: #fff4d6;
+  --ok-bg: #e3f3df;
   --crosshair: rgba(29, 92, 158, 0.09);
   --crosshair-cell: rgba(29, 92, 158, 0.22);
   --negative-bg: #fdecec;
@@ -52,6 +53,7 @@
     --up: #2fbf2f;
     --down: #ef7070;
     --changed: #3a3115;
+    --ok-bg: #1d3320;
     --crosshair: rgba(111, 168, 232, 0.14);
     --crosshair-cell: rgba(111, 168, 232, 0.3);
     --negative-bg: #3a1c1c;
@@ -2999,4 +3001,44 @@ button.oil-step:disabled {
 
 .kpi-value.mat-kpi-small {
   font-size: 18px;
+}
+
+/* Pokrytí materiálu – karta Matrix: buňka dveří podle pokrytí MC a MF skladem. */
+.table-data td.mat-door {
+  min-width: 150px;
+  white-space: nowrap;
+  font-size: 12.5px;
+}
+
+.table-data td.mat-door .cell-note {
+  font-weight: 600;
+}
+
+.table-data td.mat-ok,
+.swatch.mat-ok {
+  background: var(--ok-bg);
+}
+
+.table-data td.mat-short,
+.swatch.mat-short {
+  background: var(--negative-bg);
+}
+
+.table-data td.mat-door .mat-part-short {
+  color: var(--down);
+}
+
+.table-data td.mat-unknown .cell-note,
+.table-data td.mat-none .cell-note,
+.table-data td.mat-skipped .cell-note {
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.swatch.mat-unknown {
+  background: var(--surface-2);
+}
+
+.table-data tr.mat-car-short td.sticky-col {
+  box-shadow: inset 3px 0 0 var(--down), 1px 0 0 var(--line);
 }

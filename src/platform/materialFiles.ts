@@ -1,4 +1,4 @@
-// Načtení exportů pro pokrytí materiálu: JIT Overview (CSV), Order Status Matrix a kusovníky (Excel). Druh souboru se
+// Načtení exportů pro pokrytí materiálu: Order Status Matrix, JIT Overview a kusovníky (Excel nebo CSV). Druh souboru se
 // pozná podle obsahu (sloupců), ne podle názvu. Ručně zadaný sklad se pamatuje v prohlížeči.
 
 import { mergeBoms, parseBom, type BomData } from '../core/bom';
@@ -14,6 +14,9 @@ export type MaterialFile =
   | { kind: 'bom'; name: string; bom: BomData }
   | { kind: 'unknown'; name: string };
 
+/** Matice má sloupce stavu dveří; jinak by se za ni mohl považovat i jiný soubor se sloupcem Production number. */
+const isMatrix = (data: readonly Cell[][]) => data.some((row) => row.some((c) => typeof c === 'string' && /^status (fl|fr|rl|rr|hb)$/i.test(c.trim())));
+
 /** Rozpozná a načte jeden soubor. */
 export async function readMaterialFile(file: File): Promise<MaterialFile> {
   const name = file.name;
@@ -22,9 +25,12 @@ export async function readMaterialFile(file: File): Promise<MaterialFile> {
     const text = decodeText(buffer);
     const jit = parseJit(text);
     if (jit.ok) return { kind: 'jit', name, positions: jit.value };
-    // Kusovník může být i v CSV.
+    // Matice i kusovník můžou být i v CSV.
     const table = parseCsv(text);
-    const bom = parseBom([table.header, ...table.rows]);
+    const rows = [table.header, ...table.rows];
+    const matrix = parseStatusMatrix(rows);
+    if (matrix.ok && isMatrix(rows)) return { kind: 'matrix', name, orders: matrix.value };
+    const bom = parseBom(rows);
     return bom.ok ? { kind: 'bom', name, bom: bom.value } : { kind: 'unknown', name };
   }
   if (!/\.xlsx$/i.test(name)) return { kind: 'unknown', name };
@@ -32,8 +38,7 @@ export async function readMaterialFile(file: File): Promise<MaterialFile> {
   const sheets = (await readXlsxFile(buffer)).map((s) => s.data as Cell[][]);
   for (const data of sheets) {
     const matrix = parseStatusMatrix(data);
-    // Matice má sloupce stavu dveří; jinak by se za ni mohl považovat i jiný sešit se sloupcem Production number.
-    if (matrix.ok && data.some((row) => row.some((c) => typeof c === 'string' && /^status (fl|fr|rl|rr|hb)$/i.test(c.trim())))) {
+    if (matrix.ok && isMatrix(data)) {
       return { kind: 'matrix', name, orders: matrix.value };
     }
   }
