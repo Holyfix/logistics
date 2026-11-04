@@ -1,13 +1,13 @@
 // Pokrytí Maincarrieru (MC) a Middlefieldu (MF) ve formátu Order Status Matrix: vozy z matice v pořadí plánované
-// stavby, u každých dveří stav z matice. Díly se určí podle klíče MC/MF (dveře, výbava, barva); co v klíči není, podle
-// JIT Overview (dveřní panel pro Production number a dveře) a kusovníku (MC a MF pod panelem na úrovni 1). Sklad
-// (ze souboru skladu, pro MC a MF zvlášť) se spotřebovává v pořadí stavby.
+// stavby, u každých dveří stav z matice. Díly se určí podle klíče MC/MF (dveře, výbava, barva; co v klíči přesně není,
+// je „chybí v klíči“). Bez klíče podle JIT Overview (dveřní panel pro Production number a dveře) a kusovníku (MC a MF
+// pod panelem na úrovni 1). Sklad (ze souboru skladu, pro MC a MF zvlášť) se spotřebovává v pořadí stavby.
 
 import type { BomData } from '../bom';
 import type { DayNumber } from '../dates';
 import { dayOfStamp, doorOf, DOORS, type Door, type JitPosition, type Stamp } from './jit';
 import { statusCode, type MatrixOrder } from './matrix';
-import { lookupPart, PART_KINDS, partColour, partKind, type PartKey, type PartKind } from './partKey';
+import { keyType, lookupPart, PART_KINDS, partColour, partKind, type PartKey, type PartKind } from './partKey';
 
 /** Stav „Packed“ a vyšší: dveře jsou hotové, MC a MF už jsou spotřebované a do potřeby se nepočítají. */
 export const DONE_STATUS = 50;
@@ -113,7 +113,7 @@ export interface MaterialInputs {
   matrix: ReadonlyMap<string, MatrixOrder>;
   /** Klíč MC/MF (druh, dveře, výbava, barva → díl). */
   key?: PartKey | undefined;
-  /** JIT Overview a kusovník: pro dveře, které v klíči nejsou. */
+  /** JIT Overview a kusovník: jen když není klíč (s klíčem se mezery v klíči nedoplňují, aby byly vidět). */
   positions?: readonly JitPosition[] | undefined;
   bom?: BomData | undefined;
   /** Sklad po dílech zvlášť pro MC a MF (každý druh může mít jiné lokace). */
@@ -122,7 +122,7 @@ export interface MaterialInputs {
 }
 
 export function buildMaterialCoverage({ matrix, key, positions, bom, stock, today }: MaterialInputs): MaterialCoverage {
-  const panels = positions && bom ? panelsFromJit(positions, bom) : new Map<string, string>();
+  const panels = !key && positions && bom ? panelsFromJit(positions, bom) : new Map<string, string>();
   const info = new Map<string, { kind: PartKind; description: string }>();
   // Vozy v pořadí plánované stavby (při shodě v pořadí matice); vůz bez data na začátek.
   const orders = [...matrix.values()].map((o, i) => ({ o, i })).sort((a, b) => (a.o.planned ?? -Infinity) - (b.o.planned ?? -Infinity) || a.i - b.i);
@@ -240,7 +240,10 @@ export function carUndetermined(car: CarCoverage): { kind: PartKind; doors: Door
   return PART_KINDS.map((kind) => ({ kind, doors: DOORS.filter((d) => car.doors[d]?.unknown.includes(kind)) })).filter((u) => u.doors.length > 0);
 }
 
-/** Kombinace dveří, výbavy a barvy, které v klíči MC/MF chybí: kolik dveří se kvůli nim nepočítá a od kdy. */
+/**
+ * Kombinace dveří, výbavy a barvy, které v klíči MC/MF chybí (výbava tak, jak ji stačí do klíče doplnit: u zadních
+ * dveří bez „-HT“): kolik dveří se kvůli nim nepočítá a od kdy.
+ */
 export interface MissingKey {
   kind: PartKind;
   door: Door;
@@ -257,8 +260,9 @@ export function missingKeys(cars: readonly CarCoverage[]): MissingKey[] {
     for (const door of DOORS)
       for (const kind of car.doors[door]?.unknown ?? []) {
         const colour = partColour(car.colors, kind);
-        const id = `${kind}|${door}|${car.optionType}|${colour}`;
-        const entry = byKey.get(id) ?? byKey.set(id, { kind, door, optionType: car.optionType, colour, doors: 0, first: car.planned }).get(id)!;
+        const optionType = keyType(door, car.optionType);
+        const id = `${kind}|${door}|${optionType}|${colour}`;
+        const entry = byKey.get(id) ?? byKey.set(id, { kind, door, optionType, colour, doors: 0, first: car.planned }).get(id)!;
         entry.doors++;
       }
   return [...byKey.values()].sort(

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { parseBom } from '../bom';
 import { dayFromParts } from '../dates';
 import { buildMaterialCoverage, carMissing, carUndetermined, missingKeys, shortages } from './coverage';
-import { lookupPart, partColour, partKind, parsePartKey } from './partKey';
+import { keyType, lookupPart, partColour, partKind, parsePartKey } from './partKey';
 import { doorOf, MINUTES_PER_DAY, parseJit, parseStamp } from './jit';
 import { parseStatusMatrix, statusCode } from './matrix';
 import { parseSequenceCsv, parseSequenceSheets } from './sequence';
@@ -49,7 +49,7 @@ describe('JIT Overview', () => {
 
   it('dveře z popisu panelu, MC a MF z popisu v kusovníku', () => {
     expect(['ASSY DP SR2 FRT LH', 'ASSY DP BASIS HEAT FRTRH', 'ASSY DP SR1 RR LH', 'ASSY DP SR2 RR RH', 'ASSY HB TRIM PVC', 'X'].map(doorOf)).toEqual(['FL', 'FR', 'RL', 'RR', 'HB', null]);
-    expect(['ASSY MC TRIM TPO FRT LH', 'ASSY MF SR2 RR RH', 'MAP POCKET'].map(partKind)).toEqual(['MC', 'MF', null]);
+    expect(['ASSY MC TRIM TPO FRT LH', 'ASSY MF SR2 RR RH', 'MAP POCKET', 'ASSY MC/MF'].map(partKind)).toEqual(['MC', 'MF', null, null]);
   });
 });
 
@@ -164,63 +164,77 @@ describe('klíč MC/MF (dveře, výbava, barva)', () => {
     ['FL', 'MF-KEY-FL-HT', 'SR1-HT', 'C1', 'SR1-HTC1', 'ASSY MF SR1 HEAT. FRT LH'],
     ['FL', 'MC-KEY-FL', 'SR1', 'C9', 'SR1C9', 'ASSY MC SR1 FRT LH'],
     ['RL', 'MF-KEY-RL', 'SR1', 'C2', 'SR1C2', 'ASSY MF SR1 RR LH'],
-    // MC bez barvy: platí pro všechny barvy
+    // bez barvy: platí jen pro vůz bez barvy, ne pro všechny barvy
     ['RL', 'MC-KEY-RL', 'SR1', null, 'SR1', 'ASSY MC SR1 RR LH'],
+    // stejná kombinace se dvěma různými díly: nejednoznačné, nepoužije se
+    ['FR', 'MF-A', 'SR1', 'C1', 'SR1C1', 'ASSY MF SR1 FRT RH'],
+    ['FR', 'MF-B', 'SR1', 'C1', 'SR1C1', 'ASSY MF SR1 FRT RH'],
+    // popis bez MC/MF i s oběma: ignoruje se
     ['FL', 'X-1', 'SR1', 'C1', 'SR1C1', 'MAP POCKET'],
+    ['FR', 'X-2', 'SR1', 'C9', 'SR1C9', 'ASSY MC/MF FRT RH'],
   ]);
   if (!key.ok) throw new Error();
 
-  it('MC a MF; barva MC je první a MF druhá ve sloupci „MC / MF“; bez barvy = všechny; zadní dveře bez vyhřívané výbavy', () => {
+  it('jen přesná shoda dveří, výbavy a barvy; výjimka -HT jen u zadních dveří', () => {
     expect(key.value.entries.size).toBe(5);
-    expect([...key.value.heated]).toEqual(['MF|FL']);
+    expect([...key.value.conflicts]).toEqual(['MF|FR|SR1|C1']);
     expect([partColour('C9 / C1', 'MC'), partColour('C9 / C1', 'MF'), partColour('C1', 'MF')]).toEqual(['C9', 'C1', 'C1']);
     expect(lookupPart(key.value, 'MF', 'FL', 'SR1', 'C9 / C1')?.item).toBe('MF-KEY-FL');
     expect(lookupPart(key.value, 'MC', 'FL', 'SR1', 'C9 / C1')?.item).toBe('MC-KEY-FL');
     expect(lookupPart(key.value, 'MF', 'FL', 'sr1-ht', 'C9 / C1')?.item).toBe('MF-KEY-FL-HT');
-    // MC u FL vyhřívanou výbavu v klíči nemá: SR1-HT se hledá jako SR1
-    expect(lookupPart(key.value, 'MC', 'FL', 'SR1-HT', 'C9 / C1')?.item).toBe('MC-KEY-FL');
+    // přední dveře: bez přesného řádku -HT nic
+    expect(lookupPart(key.value, 'MC', 'FL', 'SR1-HT', 'C9 / C1')).toBeNull();
+    // zadní dveře: SR1-HT se hledá i jako SR1
     expect(lookupPart(key.value, 'MF', 'RL', 'SR1-HT', 'C9 / C2')?.item).toBe('MF-KEY-RL');
-    expect(lookupPart(key.value, 'MC', 'RL', 'SR1-HT', 'C7 / C2')?.item).toBe('MC-KEY-RL');
-    // MF u FL vyhřívanou výbavu má, takže bez přesné shody nic
-    expect(lookupPart(key.value, 'MF', 'FL', 'SR1-HT', 'C9 / C2')).toBeNull();
+    // jiná barva ani řádek bez barvy neplatí
+    expect(lookupPart(key.value, 'MF', 'RL', 'SR1', 'C9 / C3')).toBeNull();
+    expect(lookupPart(key.value, 'MC', 'RL', 'SR1', 'C7 / C2')).toBeNull();
+    // nejednoznačná kombinace
+    expect(lookupPart(key.value, 'MF', 'FR', 'SR1', 'C9 / C1')).toBeNull();
     expect(parsePartKey([['Item Number', 'Type']])).toEqual({ ok: false, error: 'missingColumns', columns: ['Side', 'Item Number', 'Type', 'Colour'] });
   });
 
-  it('díly z klíče, co v klíči není, z JIT a kusovníku; kusovník ani JIT nejsou nutné', () => {
+  it('výbava pro doplnění klíče: u zadních dveří bez -HT', () => {
+    expect([keyType('RL', 'SR2-HT'), keyType('RR', 'sr2-ht'), keyType('FL', 'SR2-HT'), keyType('RL', 'SR2')]).toEqual(['SR2', 'sr2', 'SR2-HT', 'SR2']);
+  });
+
+  it('s klíčem se JIT nepoužije: co v klíči přesně není, chybí v klíči a nepočítá se', () => {
     const jit = parseJit(jitText);
     if (!jit.ok) throw new Error();
     const matrix = new Map(
       [
         { lot: '10', productionNumber: 'T0001', planned: at(5, 8), optionType: 'SR1', colors: 'C9 / C1', status: { FL: '20 - Container planned', RR: '20 - Container planned' } },
-        // vůz, který v JIT není: FL podle klíče, FR nikde
         { lot: '11', productionNumber: 'T0009', planned: at(6, 11), optionType: 'SR1-HT', colors: 'C9 / C1', status: { FL: '20 - Container planned', FR: '20 - Container planned' } },
       ].map((c) => [c.productionNumber, c]),
     );
     const stock = { MC: new Map([['MC-KEY-FL', 5]]), MF: new Map([['MF-KEY-FL', 1]]) };
     const t = buildMaterialCoverage({ matrix, key: key.value, positions: jit.value, bom: bom.value, stock, today: day(5) });
     const [t1, t9] = t.cars;
-    expect(t1!.doors.FL).toMatchObject({ state: 'ok' });
+    expect(t1!.doors.FL).toMatchObject({ state: 'ok', unknown: [] });
     expect(t1!.doors.FL!.parts).toEqual([
       { item: 'MC-KEY-FL', kind: 'MC', qty: 1, left: 4, source: 'key' },
       { item: 'MF-KEY-FL', kind: 'MF', qty: 1, left: 0, source: 'key' },
     ]);
-    expect(t1!.doors.RR).toMatchObject({ panel: 'PANEL-RR-A', state: 'short', parts: [{ item: 'MC-RR-1', source: 'jit' }, { item: 'MF-RR-1', source: 'jit' }] });
-    expect(t9!.doors.FL).toMatchObject({ state: 'short', parts: [{ item: 'MC-KEY-FL', left: 3 }, { item: 'MF-KEY-FL-HT', left: -1 }] });
+    // T0001 RR je v JIT, ale v klíči ne: chybí v klíči
+    expect(t1!.doors.RR).toMatchObject({ panel: null, state: 'unknown', parts: [], unknown: ['MC', 'MF'] });
+    expect(t9!.doors.FL).toMatchObject({ state: 'short', parts: [{ item: 'MF-KEY-FL-HT', left: -1 }], unknown: ['MC'] });
     expect(t9!.doors.FR).toMatchObject({ state: 'unknown', unknown: ['MC', 'MF'] });
-    expect(t).toMatchObject({ known: 3, unknown: 1 });
-    // neurčené díly se nepočítají do potřeby; kombinace, které v klíči chybí
+    expect(t).toMatchObject({ known: 1, unknown: 3, unknownByKind: { MC: 3, MF: 2 } });
     expect(carUndetermined(t9!)).toEqual([
-      { kind: 'MC', doors: ['FR'] },
+      { kind: 'MC', doors: ['FL', 'FR'] },
       { kind: 'MF', doors: ['FR'] },
     ]);
-    expect(t.parts.every((p) => p.demands.every((d) => d.door !== 'FR'))).toBe(true);
-    expect(missingKeys(t.cars)).toEqual([
-      { kind: 'MC', door: 'FR', optionType: 'SR1-HT', colour: 'C9', doors: 1, first: at(6, 11) },
-      { kind: 'MF', door: 'FR', optionType: 'SR1-HT', colour: 'C1', doors: 1, first: at(6, 11) },
+    // neurčené díly se nepočítají do potřeby
+    expect(t.parts.map((p) => p.item)).toEqual(['MC-KEY-FL', 'MF-KEY-FL-HT', 'MF-KEY-FL']);
+    expect(missingKeys(t.cars).map((m) => `${m.kind} ${m.door} ${m.optionType} ${m.colour} ${m.doors}`)).toEqual([
+      'MC RR SR1 C9 1',
+      'MC FL SR1-HT C9 1',
+      'MC FR SR1-HT C9 1',
+      'MF RR SR1 C1 1',
+      'MF FR SR1-HT C1 1',
     ]);
     expect(t.parts.find((p) => p.item === 'MF-KEY-FL-HT')).toMatchObject({ kind: 'MF', description: 'ASSY MF SR1 HEAT. FRT LH' });
-    // jen klíč, bez JIT a kusovníku
-    const only = buildMaterialCoverage({ matrix, key: key.value, stock, today: day(5) });
-    expect(only).toMatchObject({ known: 2, unknown: 2 });
+    // bez JIT a kusovníku vyjde totéž
+    expect(buildMaterialCoverage({ matrix, key: key.value, stock, today: day(5) })).toMatchObject({ known: 1, unknown: 3 });
   });
 });

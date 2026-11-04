@@ -215,7 +215,7 @@ export function SequenceView({ today }: { today: DayNumber }) {
       },
       {
         name: te.missingKeys,
-        header: [te.kind, te.door, tm.optionType, te.colour, te.doors, te.firstBuild],
+        header: [te.kind, te.door, te.keyType, te.colour, te.doors, te.firstBuild],
         rows: missingKeys(coverage.cars).map((m) => [ts.kinds[m.kind], m.door, m.optionType, m.colour, m.doors, isoTime(m.first)]),
         stickyColumns: 0,
       },

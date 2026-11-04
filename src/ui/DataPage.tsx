@@ -352,7 +352,17 @@ export function DataPage() {
                     {data.sequence.key && (
                       <tr>
                         <td>{data.sequence.key.path}</td>
-                        <td>{t.data.sequence.key.replace('{n}', formatQuantity(data.sequence.key.key.entries.size, locale))}</td>
+                        <td>
+                          {t.data.sequence.key.replace('{n}', formatQuantity(data.sequence.key.key.entries.size, locale))}
+                          {data.sequence.key.key.conflicts.size > 0 && (
+                            <span className="cell-short">
+                              {' · '}
+                              {t.data.sequence.conflicts
+                                .replace('{n}', formatQuantity(data.sequence.key.key.conflicts.size, locale))
+                                .replace('{list}', [...data.sequence.key.key.conflicts].map((k) => k.replaceAll('|', ' ')).join('; '))}
+                            </span>
+                          )}
+                        </td>
                         <td>{new Date(data.sequence.key.lastModified).toLocaleString(locale === 'cs' ? 'cs-CZ' : 'en-GB', { dateStyle: 'short', timeStyle: 'short' })}</td>
                       </tr>
                     )}
