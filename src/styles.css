@@ -2972,13 +2972,6 @@ button.oil-step:disabled {
 }
 
 /* Sekvence (karta v Komponentách): pokrytí Middlefieldu ve formátu Order Status Matrix. */
-.table-data tr.mat-kind-row th {
-  background: #dce6f1;
-  color: var(--ink);
-  text-align: left;
-  position: static;
-}
-
 /* Výběr lokací skladu, které se do MF nepočítají. */
 .mat-locations > summary {
   cursor: pointer;

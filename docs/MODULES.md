@@ -140,7 +140,7 @@ Filtry projekt, kategorie, strana (LHD/RHD) a varianta z kmenových dat se ovliv
 - ✅ Karta **Sekvence**: pokrytí Maincarrieru a Middlefieldu ve formátu Order Status Matrix (složka Sekvence: matice a klíč MC/MF);
   MC a MF podle klíče (přesná shoda dveří, výbavy a barvy; jen zadní dveře bez „-HT“); sklad ze souboru skladu v pořadí stavby; stav dveří v barvách matice
   se štítky MC a MF, sloupec Materiál s chybějícími díly; zabalené a odeslané dveře (stav 50+) se nepočítají; filtry (Option
-  Type, den stavby, stav, díl, nevyrobené carsety); výběr lokací, které se do skladu nepočítají (zvlášť MC a MF); pohled Díly MC a MF (pokrytí po dnech); formátovaný Excel (Matrix, Coverage a potřeba po dnech podle priority); chybějící klíč v modulu Data. Podrobnosti v DATA_IMPORT.md (Sekvence)
+  Type, den stavby, stav, díl, nevyrobené carsety); výběr lokací, které se do skladu nepočítají (zvlášť MC a MF); pohled Díly MC a MF (pokrytí po dnech); formátovaný Excel (Matrix, Coverage, potřeba po dnech podle priority a PRIO Sorting pro kvalitu); chybějící klíč v modulu Data. Podrobnosti v DATA_IMPORT.md (Sekvence)
 
 ### Zásoby
 - **Přehled aktuální zásoby v penězích** na jedné stránce (bez karet a dlouhých seznamů dílů – detail je v ERP):

@@ -362,13 +362,17 @@ Klíč MC/MF musí ležet ve složce `Sekvence`: mimo ni by se podle „Mapping�
   stavby, stav dveří (vozy, které mají aspoň jedny dveře v daném stavu), hledání podle Production number, Lotu nebo
   dílu, jen vozy s nepokrytými dveřmi a jen nevyrobené carsety (aspoň jedny dveře ve stavu 45 a méně).
 - **Pohled Díly MC a MF** (přepínač vedle pohledu Vozy): stav skladu každého MC a MF na konci dne po odečtení
-  potřeby v pořadí stavby, stejně jako list Coverage v exportu (záporné červeně, zítřek zeleně orámovaný, díly
-  v pořadí priority); hledání podle dílu a „jen chybějící díly“.
+  potřeby v pořadí stavby, stejně jako list Coverage v exportu (záporné červeně, zítřek zeleně orámovaný); jeden
+  seznam MC i MF se sloupcem Druh, nahoře díly, které chybí nejdřív; filtr Vše / Maincarrier / Middlefield, hledání
+  podle dílu a „jen chybějící díly“.
 - **Excel** (formátovaný jako Coverage): list **Matrix** (pokrytí dveřních panelů jako v aplikaci: vozy s filtry, stav
   dveří v barvách matice, u každých dveří štítky MC a MF a sloupec Materiál), list **Coverage** (sklad MC a MF na konci dne po odečtení potřeby v pořadí
   stavby, záporné červeně, zítřek zeleně orámovaný) a list **Potřeba po dnech** (kusy dílu sečtené po dnech plánované
   stavby, červeně dny, kdy sklad nestačí, součet za Maincarrier a Middlefield); díly v pořadí priority (druh, pak
   díly, které chybí nejdřív) s „chybí od“ (čas stavby, vůz a dveře).
+- List **PRIO Sorting** (pro kvalitu): reference MC a MF a počet kusů po dnech plánované stavby, seřazené podle první
+  potřeby (nejdřív to, co jde do výroby nejdřív; při shodě víc kusů dřív), s pořadím, druhem, skladem, celkovou
+  potřebou a první potřebou (čas stavby, vůz a dveře).
 - **Chybějící klíč** ukazuje modul **Data** (panel Sekvence) jako u kontroly mapování ostatních modulů: kombinace druhu,
   dveří, výbavy a barvy z matice, pro které klíč nemá díl (výbava tak, jak ji zapsat do klíče, u zadních dveří bez
   „-HT“), s počtem dveří a první stavbou; seznam jde stáhnout do Excelu. V Sekvenci na něj vede odkaz z dlaždice Díly

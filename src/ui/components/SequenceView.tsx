@@ -87,6 +87,7 @@ export function SequenceView({ today }: { today: DayNumber }) {
   const [onlyShort, setOnlyShort] = useState(false);
   const [onlyUnbuilt, setOnlyUnbuilt] = useState(false);
   const [view, setView] = useState<'cars' | 'parts'>('cars');
+  const [partKindFilter, setPartKindFilter] = useState<PartKind | ''>('');
   const [excludedAll, setExcludedAll] = useState<Excluded>(loadExcluded);
   const [locationKind, setLocationKind] = useState<PartKind>('MC');
   const [locationQuery, setLocationQuery] = useState('');
@@ -201,6 +202,11 @@ export function SequenceView({ today }: { today: DayNumber }) {
           sheetCoverage: te.sheetCoverage,
           sheetDemand: te.sheetDemand,
           sheetMatrix: te.sheetMatrix,
+          sheetPrio: te.sheetPrio,
+          order: te.order,
+          kind: te.kind,
+          firstNeed: te.firstNeed,
+          prioNote: te.prioNote,
           lot: ts.matrix.lot,
           productionNumber: ts.matrix.productionNumber,
           optionType: ts.matrix.optionType,
@@ -213,6 +219,7 @@ export function SequenceView({ today }: { today: DayNumber }) {
         {
           boundary: today + 1,
           shortText,
+          needText: (p) => (p.demands[0] ? `${time(p.demands[0].planned)} · ${p.demands[0].productionNumber} ${p.demands[0].door}` : ''),
           cars,
           carTexts: (car) => {
             const missing = missingByDoor(car).join(' · ');
@@ -232,7 +239,11 @@ export function SequenceView({ today }: { today: DayNumber }) {
 
   const fileName = (path: string | undefined) => path?.split('/').pop() ?? '—';
   // Pohled Díly MC a MF: stav skladu po dnech jako list Coverage v exportu.
-  const shownParts = coverage.parts.filter((p) => (!onlyShort || p.firstShort) && (!q || `${p.item} ${p.description}`.toLowerCase().includes(q)));
+  // Jeden seznam MC a MF v pořadí priority: nejdřív díly, které chybí nejdřív, pak podle čísla; filtr druhu nahoře.
+  const shortAt = (p: PartCoverage) => (p.firstShort ? (p.firstShort.planned ?? -Infinity) : Infinity);
+  const shownParts = coverage.parts
+    .filter((p) => (!partKindFilter || p.kind === partKindFilter) && (!onlyShort || p.firstShort) && (!q || `${p.item} ${p.description}`.toLowerCase().includes(q)))
+    .sort((a, b) => shortAt(a) - shortAt(b) || a.item.localeCompare(b.item, 'en', { numeric: true }));
   const anyOverdue = coverage.parts.some((p) => p.overdue > 0);
   const dayClass = (d: DayNumber) => `${weekday(d) >= 6 ? ' col-weekend' : ''}${d === today + 1 ? ' col-boundary' : ''}`;
   const lq = locationQuery.trim().toUpperCase();
@@ -377,6 +388,15 @@ export function SequenceView({ today }: { today: DayNumber }) {
       </div>
 
       <div className="filters" role="group" aria-label={ts.filters.label}>
+        {view === 'parts' && (
+          <span className="segmented" role="group" aria-label={ts.filters.kind}>
+            {(['', ...PART_KINDS] as const).map((k) => (
+              <button key={k || 'all'} type="button" aria-pressed={partKindFilter === k} onClick={() => setPartKindFilter(k)}>
+                {k ? ts.kinds[k] : ts.filters.all}
+              </button>
+            ))}
+          </span>
+        )}
         <label className="field field-wide">
           <span>{view === 'cars' ? ts.filters.search : ts.filters.searchPart}</span>
           <input type="search" value={query} onChange={(e) => setQuery(e.target.value)} />
@@ -431,6 +451,7 @@ export function SequenceView({ today }: { today: DayNumber }) {
                 <thead>
                   <tr>
                     <th className="sticky-col">{ts.export.item}</th>
+                    <th>{ts.export.kind}</th>
                     <th>{ts.export.description}</th>
                     <th className="n">{ts.export.stock}</th>
                     <th className="n">{ts.export.demand}</th>
@@ -444,36 +465,24 @@ export function SequenceView({ today }: { today: DayNumber }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {PART_KINDS.map((kind) => {
-                    const list = shownParts.filter((p) => p.kind === kind);
-                    if (list.length === 0) return null;
-                    return (
-                      <Fragment key={kind}>
-                        <tr className="mat-kind-row">
-                          <th colSpan={5 + (anyOverdue ? 1 : 0) + coverage.days.length} scope="colgroup">
-                            {ts.kinds[kind]}
-                          </th>
-                        </tr>
-                        {list.map((p) => (
-                          <tr key={p.item}>
-                            <td className="sticky-col">
-                              <strong>{p.item}</strong>
-                            </td>
-                            <td className="desc">{p.description}</td>
-                            <td className="n">{qty(p.stock ?? 0)}</td>
-                            <td className="n">{qty(p.total)}</td>
-                            {anyOverdue && <td className={`n${(p.stock ?? 0) < p.overdue ? ' cell-negative' : ''}`}>{p.overdue ? qty((p.stock ?? 0) - p.overdue) : ''}</td>}
-                            <td className={p.firstShort ? 'cell-short' : 'muted'}>{shortText(p)}</td>
-                            {p.balance.map((v, k) => (
-                              <td key={coverage.days[k]} className={`n${dayClass(coverage.days[k]!)}${v < -1e-9 ? ' cell-negative' : ''}`}>
-                                {qty(v)}
-                              </td>
-                            ))}
-                          </tr>
-                        ))}
-                      </Fragment>
-                    );
-                  })}
+                  {shownParts.map((p) => (
+                    <tr key={p.item}>
+                      <td className="sticky-col">
+                        <strong>{p.item}</strong>
+                      </td>
+                      <td title={ts.kinds[p.kind]}>{p.kind}</td>
+                      <td className="desc">{p.description}</td>
+                      <td className="n">{qty(p.stock ?? 0)}</td>
+                      <td className="n">{qty(p.total)}</td>
+                      {anyOverdue && <td className={`n${(p.stock ?? 0) < p.overdue ? ' cell-negative' : ''}`}>{p.overdue ? qty((p.stock ?? 0) - p.overdue) : ''}</td>}
+                      <td className={p.firstShort ? 'cell-short' : 'muted'}>{shortText(p)}</td>
+                      {p.balance.map((v, k) => (
+                        <td key={coverage.days[k]} className={`n${dayClass(coverage.days[k]!)}${v < -1e-9 ? ' cell-negative' : ''}`}>
+                          {qty(v)}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>

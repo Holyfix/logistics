@@ -240,10 +240,16 @@ describe('export Sekvence', () => {
     status: 'Status',
     material: 'Materiál',
     matrixNote: 'pozn. matice',
+    sheetPrio: 'PRIO Sorting',
+    order: 'Pořadí',
+    kind: 'Druh',
+    firstNeed: 'První potřeba',
+    prioNote: 'pozn. prio',
   };
-  const [matrixSheet, coverage, demand] = sequenceReport(t.parts, t.days, texts, {
+  const [matrixSheet, coverage, demand, prio] = sequenceReport(t.parts, t.days, texts, {
     boundary: day(6),
     shortText: (p) => (p.firstShort ? `od ${p.firstShort.productionNumber}` : ''),
+    needText: (p) => `poprvé ${p.demands[0]!.productionNumber}`,
     cars: t.cars,
     carTexts: (car) => ({ planned: `stavba ${car.productionNumber}`, material: car.short ? 'FL: chybí' : 'vše na skladě', tone: car.short ? 'short' : 'ok' }),
   });
@@ -280,5 +286,13 @@ describe('export Sekvence', () => {
     expect(values(demand!.data[10])).toEqual(['MF-1', 'ASSY MF', 1, 3, 'od T2', 1, 2]);
     expect(demand!.data[10]![5]).not.toHaveProperty('textColor');
     expect(demand!.data[10]![6]).toMatchObject({ textColor: '#B42D2D' });
+  });
+
+  it('list PRIO Sorting: reference a kusy po dnech podle první potřeby, s pořadím a druhem', () => {
+    expect(prio!.name).toBe('PRIO Sorting');
+    expect(values(prio!.data[4])).toEqual(['Pořadí', 'Díl', 'Druh', 'Popis', 'Sklad', 'Potřeba', 'První potřeba', 'Čt', 'Pá']);
+    expect(values(prio!.data[6])).toEqual([1, 'MC-1', 'MC', 'ASSY MC', 5, 3, 'poprvé T1', 1, 2]);
+    expect(values(prio!.data[7])).toEqual([2, 'MF-1', 'MF', 'ASSY MF', 1, 3, 'poprvé T1', 1, 2]);
+    expect(prio!.data[6]![8]).toMatchObject({ leftBorderColor: '#2E8B3E' });
   });
 });

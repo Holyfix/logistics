@@ -1,6 +1,7 @@
 // Export Sekvence jako formátovaný sešit (stejný vzhled jako Coverage): list Matrix s pokrytím dveřních panelů jako
 // v aplikaci (stav dveří v barvách matice, stav MC a MF), list Coverage se stavem skladu MC a MF na konci dne a list
-// Potřeba po dnech s kusy sečtenými po dnech; díly v pořadí priority (nejdřív ty, které chybí nejdřív).
+// Potřeba po dnech s kusy sečtenými po dnech; díly v pořadí priority (nejdřív ty, které chybí nejdřív); list PRIO
+// Sorting pro kvalitu (reference a kusy po dnech podle první potřeby).
 
 import type { ReportCell, ReportSheet } from '../calloffs/summaryReport';
 import { BOUNDARY_EDGE, headerRows, isWeekend, QTY, REPORT_COLORS as C, titleRows, valueCell } from '../coverage/report';
@@ -36,6 +37,11 @@ export interface SequenceReportTexts {
   status: string;
   material: string;
   matrixNote: string;
+  sheetPrio: string;
+  order: string;
+  kind: string;
+  firstNeed: string;
+  prioNote: string;
 }
 
 /** Barvy stavů jako v Order Status Matrix (podle čísla stavu) a štítky MC/MF jako v aplikaci. */
@@ -119,9 +125,17 @@ export function sequenceReport(
   {
     boundary = null,
     shortText,
+    needText = () => '',
     cars = [],
     carTexts = (car) => ({ planned: '', material: '', tone: car.short ? 'short' : 'none' }),
-  }: { boundary?: DayNumber | null; shortText: (p: PartCoverage) => string; cars?: readonly CarCoverage[]; carTexts?: (car: CarCoverage) => CarTexts },
+  }: {
+    boundary?: DayNumber | null;
+    shortText: (p: PartCoverage) => string;
+    /** Text „první potřeba“ pro PRIO Sorting (čas stavby, vůz a dveře prvních dveří, které díl potřebují). */
+    needText?: (p: PartCoverage) => string;
+    cars?: readonly CarCoverage[];
+    carTexts?: (car: CarCoverage) => CarTexts;
+  },
 ): ReportSheet[] {
   const edge = (d: DayNumber): ReportCell => (d === boundary ? BOUNDARY_EDGE : {});
   const anyOverdue = parts.some((p) => p.overdue > 0);
@@ -187,5 +201,41 @@ export function sequenceReport(
     stickyColumns: 2,
     gridLines: true,
   });
-  return [matrixSheet(cars, texts, carTexts), sheet(texts.sheetCoverage, coverageRows), sheet(texts.sheetDemand, demandRows)];
+  // PRIO Sorting (pro kvalitu): reference a kusy po dnech, seřazené podle první potřeby (nejdřív to, co jde do výroby
+  // nejdřív); bez skupin, s pořadím a druhem.
+  const firstNeed = (p: PartCoverage) => p.demands[0]?.planned ?? Infinity;
+  const prio = [...parts].filter((p) => p.total > 0).sort((a, b) => firstNeed(a) - firstNeed(b) || b.total - a.total || a.item.localeCompare(b.item, 'en', { numeric: true }));
+  const prioLabels = [texts.order, texts.item, texts.kind, texts.description, texts.stock, texts.total, ...(anyOverdue ? [texts.overdue] : []), texts.firstNeed];
+  const prioWidth = prioLabels.length + days.length;
+  const prioRows = prio.map((p, i): (ReportCell | null)[] => [
+    { value: i + 1, type: Number, align: 'center' },
+    { value: p.item, fontWeight: 'bold' },
+    { value: p.kind, align: 'center' },
+    { value: p.description },
+    qty(p.stock ?? 0),
+    { ...qty(p.total), fontWeight: 'bold' },
+    ...(anyOverdue ? [p.overdue ? qty(p.overdue) : { value: '' }] : []),
+    { value: needText(p), textColor: C.muted },
+    ...p.perDay.map((q, k): ReportCell => {
+      const d = days[k]!;
+      const style: ReportCell = { ...(isWeekend(d) ? { backgroundColor: C.weekend } : {}), ...edge(d) };
+      return q ? { value: q, type: Number, format: QTY, fontWeight: 'bold', ...style } : { value: '', ...style };
+    }),
+  ]);
+  const prioSheet: ReportSheet = {
+    name: texts.sheetPrio,
+    data: [
+      ...titleRows(texts, prioWidth),
+      ...headerRows(prioLabels, days, boundary, texts),
+      ...prioRows,
+      [],
+      [{ value: texts.prioNote, textColor: C.muted, fontStyle: 'italic', wrap: true, height: 30, alignVertical: 'top', columnSpan: prioWidth }, ...Array.from({ length: prioWidth - 1 }, () => null)],
+    ],
+    columns: [{ width: 7 }, { width: 18 }, { width: 6 }, { width: 34 }, { width: 9 }, { width: 9 }, ...(anyOverdue ? [{ width: 10 }] : []), { width: 30 }, ...days.map(() => ({ width: 8 }))],
+    stickyRows: 6,
+    stickyColumns: 2,
+    gridLines: true,
+  };
+
+  return [matrixSheet(cars, texts, carTexts), sheet(texts.sheetCoverage, coverageRows), sheet(texts.sheetDemand, demandRows), prioSheet];
 }

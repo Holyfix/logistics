@@ -1382,10 +1382,10 @@ export const en: Messages = {
     views: { label: 'View', cars: 'Cars (Matrix)', parts: 'MC and MF parts' },
     parts: {
       heading: 'MC and MF part coverage',
-      sub: 'stock at the end of the day after demand in build order · parts in priority order',
+      sub: 'stock at the end of the day after demand in build order · parts running short first at the top',
       empty: 'No part matches the filter.',
       boundary: 'Tomorrow: 2-day coverage',
-      note: 'Same as the Coverage sheet in the export: stock at the end of the day (negative = short), Maincarrier first, then Middlefield, within them the parts that run short first. Packed and shipped doors and parts missing in the key are not counted. Green-framed tomorrow = 2-day coverage.',
+      note: 'Same as the Coverage sheet in the export: stock at the end of the day (negative = short); parts running short first at the top. Packed and shipped doors and parts missing in the key are not counted. Green-framed tomorrow = 2-day coverage.',
     },
     tiles: {
       cars: 'Cars in the matrix',
@@ -1410,6 +1410,7 @@ export const en: Messages = {
       onlyShort: 'Only cars with uncovered doors',
       onlyUnbuilt: 'Only unbuilt car sets (at least one door at status 45 or lower)',
       searchPart: 'Part or description',
+      kind: 'Show parts',
       onlyShortParts: 'Only short parts',
     },
     matrix: {
@@ -1452,6 +1453,11 @@ export const en: Messages = {
       sheetCoverage: 'Coverage',
       sheetDemand: 'Demand per day',
       sheetMatrix: 'Matrix',
+      sheetPrio: 'PRIO Sorting',
+      order: 'Rank',
+      kind: 'Kind',
+      firstNeed: 'First need',
+      prioNote: 'For quality: MC and MF references and quantities per planned build day, sorted by first need (what goes into production first; on a tie, more pieces first). Packed and shipped doors and parts missing in the key are not counted.',
       matrixNote: 'Cars in planned build order (with the filters from the app), door status in the Order Status Matrix colours. MC and MF: green in stock, red short, grey missing in the key; no badge = packed or shipped doors (status 50+), not counted.',
     },
   },

@@ -1384,10 +1384,10 @@ export const cs = {
     views: { label: 'Pohled', cars: 'Vozy (Matrix)', parts: 'Díly MC a MF' },
     parts: {
       heading: 'Pokrytí dílů MC a MF',
-      sub: 'stav skladu na konci dne po odečtení potřeby v pořadí stavby · díly v pořadí priority',
+      sub: 'stav skladu na konci dne po odečtení potřeby v pořadí stavby · nahoře díly, které chybí nejdřív',
       empty: 'Filtru neodpovídá žádný díl.',
       boundary: 'Zítřek: pokrytí na 2 dny',
-      note: 'Stejně jako list Coverage v exportu: sklad na konci dne (záporné = chybí), nejdřív Maincarrier, pak Middlefield, v nich díly, které chybí nejdřív. Zabalené a odeslané dveře a díly, které chybí v klíči, se nepočítají. Zeleně orámovaný zítřek = pokrytí na 2 dny.',
+      note: 'Stejně jako list Coverage v exportu: sklad na konci dne (záporné = chybí); nahoře díly, které chybí nejdřív. Zabalené a odeslané dveře a díly, které chybí v klíči, se nepočítají. Zeleně orámovaný zítřek = pokrytí na 2 dny.',
     },
     tiles: {
       cars: 'Vozů v matici',
@@ -1412,6 +1412,7 @@ export const cs = {
       onlyShort: 'Jen vozy s nepokrytými dveřmi',
       onlyUnbuilt: 'Jen nevyrobené carsety (aspoň jedny dveře ve stavu 45 a méně)',
       searchPart: 'Díl nebo popis',
+      kind: 'Zobrazit díly',
       onlyShortParts: 'Jen chybějící díly',
     },
     matrix: {
@@ -1454,6 +1455,11 @@ export const cs = {
       sheetCoverage: 'Coverage',
       sheetDemand: 'Potreba po dnech',
       sheetMatrix: 'Matrix',
+      sheetPrio: 'PRIO Sorting',
+      order: 'Pořadí',
+      kind: 'Druh',
+      firstNeed: 'První potřeba',
+      prioNote: 'Pro kvalitu: reference MC a MF a počet kusů po dnech plánované stavby, seřazené podle první potřeby (nejdřív to, co jde do výroby nejdřív; při shodě víc kusů dřív). Zabalené a odeslané dveře a díly, které chybí v klíči, se nepočítají.',
       matrixNote: 'Vozy v pořadí plánované stavby (s filtry z aplikace), stav dveří v barvách Order Status Matrix. MC a MF: zeleně na skladě, červeně chybí, šedě chybí v klíči; bez štítku zabalené nebo odeslané dveře (stav 50+), které se nepočítají.',
     },
   },
