@@ -176,6 +176,12 @@ export function SequenceView({ today }: { today: DayNumber }) {
   const exportExcel = () => {
     const te = ts.export;
     const excludedCount = (kind: PartKind) => locationsByKind[kind].filter((l) => excludedAll[kind].has(l.location)).length;
+    // Sklad v lokacích před sortingem (vyřazené ze skladu MC, resp. MF): z nich kvalita třídí chybějící kusy.
+    const beforeSorting = (kind: PartKind) =>
+      data?.stock && excludedAll[kind].size > 0
+        ? stockByItem(data.stock.data, (location) => isExcludedLocation(location) || !excludedAll[kind].has(location.trim().toUpperCase()))
+        : null;
+    const sortingStock = { MC: beforeSorting('MC'), MF: beforeSorting('MF') };
     void downloadReport(
       `${te.fileName}_${dayToIso(today)}.xlsx`,
       sequenceReport(
@@ -204,7 +210,8 @@ export function SequenceView({ today }: { today: DayNumber }) {
           sheetPrio: te.sheetPrio,
           order: te.order,
           kind: te.kind,
-          firstNeed: te.firstNeed,
+          sorting: te.sorting,
+          missing: te.missing,
           prioNote: te.prioNote,
           lot: ts.matrix.lot,
           productionNumber: ts.matrix.productionNumber,
@@ -218,7 +225,7 @@ export function SequenceView({ today }: { today: DayNumber }) {
         {
           boundary: today + 1,
           shortText,
-          needText: (p) => (p.demands[0] ? `${time(p.demands[0].planned)} · ${p.demands[0].productionNumber} ${p.demands[0].door}` : ''),
+          sortingStock: (p) => sortingStock[p.kind]?.get(p.item) ?? (sortingStock[p.kind] ? 0 : null),
           cars: allCars,
           carTexts: (car) => {
             const missing = missingByDoor(car).join(' · ');

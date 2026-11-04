@@ -1,7 +1,7 @@
 // Export Sekvence jako formátovaný sešit (stejný vzhled jako Coverage): list Matrix s pokrytím dveřních panelů jako
 // v aplikaci (stav dveří v barvách matice, stav MC a MF), list Coverage se stavem skladu MC a MF na konci dne a list
 // Potřeba po dnech s kusy sečtenými po dnech; díly v pořadí priority (nejdřív ty, které chybí nejdřív); list PRIO
-// Sorting pro kvalitu (reference a kusy po dnech podle první potřeby).
+// Sorting pro kvalitu (nepokryté díly a chybějící kusy po dnech, které je potřeba vytřídit).
 
 import type { ReportCell, ReportSheet } from '../calloffs/summaryReport';
 import { BOUNDARY_EDGE, headerRows, isWeekend, QTY, REPORT_COLORS as C, titleRows, valueCell } from '../coverage/report';
@@ -39,7 +39,8 @@ export interface SequenceReportTexts {
   sheetPrio: string;
   order: string;
   kind: string;
-  firstNeed: string;
+  sorting: string;
+  missing: string;
   prioNote: string;
 }
 
@@ -124,14 +125,14 @@ export function sequenceReport(
   {
     boundary = null,
     shortText,
-    needText = () => '',
+    sortingStock = () => null,
     cars = [],
     carTexts = (car) => ({ planned: '', material: '', tone: car.short ? 'short' : 'none' }),
   }: {
     boundary?: DayNumber | null;
     shortText: (p: PartCoverage) => string;
-    /** Text „první potřeba“ pro PRIO Sorting (čas stavby, vůz a dveře prvních dveří, které díl potřebují). */
-    needText?: (p: PartCoverage) => string;
+    /** Sklad dílu v lokacích před sortingem (vyřazené ze skladu) pro PRIO Sorting; null = neznámý. */
+    sortingStock?: (p: PartCoverage) => number | null;
     cars?: readonly CarCoverage[];
     carTexts?: (car: CarCoverage) => CarTexts;
   },
@@ -216,34 +217,53 @@ export function sequenceReport(
   });
   const head = [...titleRows(texts, width), ...headerRows(labels, days, boundary, texts)];
 
-  // PRIO Sorting (pro kvalitu): reference a kusy po dnech, v každém druhu seřazené podle první potřeby (nejdřív to, co
-  // jde do výroby nejdřív; při shodě víc kusů dřív), s pořadím v rámci druhu.
-  const firstNeed = (p: PartCoverage) => p.demands[0]?.planned ?? Infinity;
-  const byNeed = (a: PartCoverage, b: PartCoverage) => firstNeed(a) - firstNeed(b) || b.total - a.total || a.item.localeCompare(b.item, 'en', { numeric: true });
-  const prioLabels = [texts.order, texts.item, texts.kind, texts.description, texts.stock, texts.total, ...(anyOverdue ? [texts.overdue] : []), texts.firstNeed];
+  // PRIO Sorting (pro kvalitu): jen nepokryté díly a kolik kusů jim chybí po dnech – to je potřeba vytřídit z lokací
+  // před sortingem (do skladu se nepočítají). Chybějící kusy dne = o kolik vzroste nepokrytá potřeba (−stav skladu).
+  // V každém druhu podle toho, kdy díl začne chybět (při shodě víc chybějících kusů dřív), s pořadím v rámci druhu.
+  const uncovered = (p: PartCoverage) => {
+    const short = (v: number) => Math.max(0, -v);
+    let prev = short((p.stock ?? 0) - p.overdue);
+    const perDay = p.balance.map((v) => {
+      const now = short(v);
+      const q = now - prev;
+      prev = now;
+      return q > 1e-9 ? q : 0;
+    });
+    return { overdue: short((p.stock ?? 0) - p.overdue), perDay, total: short(p.balance.at(-1) ?? (p.stock ?? 0) - p.overdue) };
+  };
+  const shortAt = (p: PartCoverage) => (p.firstShort ? (p.firstShort.planned ?? -Infinity) : Infinity);
+  const prioLabels = [texts.order, texts.item, texts.kind, texts.description, texts.stock, texts.sorting, texts.missing, ...(anyOverdue ? [texts.overdue] : []), texts.shortFrom];
   const prioWidth = prioLabels.length + days.length;
   const prioRows = groups.flatMap(({ kind, list }): Row[] => {
-    const sorted = list.filter((p) => p.total > 0).sort(byNeed);
+    const sorted = list
+      .filter((p) => p.firstShort)
+      .map((p) => ({ p, u: uncovered(p) }))
+      .sort((a, b) => shortAt(a.p) - shortAt(b.p) || b.u.total - a.u.total || a.p.item.localeCompare(b.p.item, 'en', { numeric: true }));
+    if (sorted.length === 0) return [];
     return [
       groupRow(kind, sorted.length, prioWidth),
-      ...sorted.map((p, i): Row => ({
-        cells: [
-          { value: i + 1, type: Number, align: 'center' },
-          { value: p.item, fontWeight: 'bold' },
-          { value: p.kind, align: 'center' },
-          { value: p.description },
-          qty(p.stock ?? 0),
-          { ...qty(p.total), fontWeight: 'bold' },
-          ...(anyOverdue ? [p.overdue ? qty(p.overdue) : { value: '' }] : []),
-          { value: needText(p), textColor: C.muted },
-          ...p.perDay.map((q, k): ReportCell => {
-            const d = days[k]!;
-            const style: ReportCell = { ...(isWeekend(d) ? { backgroundColor: C.weekend } : {}), ...edge(d) };
-            return q ? { value: q, type: Number, format: QTY, fontWeight: 'bold', ...style } : { value: '', ...style };
-          }),
-        ],
-        level: 1,
-      })),
+      ...sorted.map(({ p, u }, i): Row => {
+        const toSort = sortingStock(p);
+        return {
+          cells: [
+            { value: i + 1, type: Number, align: 'center' },
+            { value: p.item, fontWeight: 'bold' },
+            { value: p.kind, align: 'center' },
+            { value: p.description },
+            qty(p.stock ?? 0),
+            toSort === null ? { value: '' } : { ...qty(toSort), ...(toSort < u.total ? { textColor: C.down } : {}) },
+            { ...qty(u.total), fontWeight: 'bold', textColor: C.down },
+            ...(anyOverdue ? [u.overdue ? { ...qty(u.overdue), fontWeight: 'bold' as const, textColor: C.down } : { value: '' }] : []),
+            { value: shortText(p), textColor: C.down },
+            ...u.perDay.map((q, k): ReportCell => {
+              const d = days[k]!;
+              const style: ReportCell = { ...(isWeekend(d) ? { backgroundColor: C.weekend } : {}), ...edge(d) };
+              return q ? { value: q, type: Number, format: QTY, ...style, fontWeight: 'bold', textColor: C.down, backgroundColor: C.negative } : { value: '', ...style };
+            }),
+          ],
+          level: 1,
+        };
+      }),
     ];
   });
   const prioNote: (ReportCell | null)[] = [{ value: texts.prioNote, textColor: C.muted, fontStyle: 'italic', wrap: true, height: 30, alignVertical: 'top', columnSpan: prioWidth }, ...Array.from({ length: prioWidth - 1 }, () => null)];
@@ -257,7 +277,7 @@ export function sequenceReport(
       [...titleRows(texts, prioWidth), ...headerRows(prioLabels, days, boundary, texts)],
       prioRows,
       [[], prioNote],
-      [{ width: 7 }, { width: 18 }, { width: 6 }, { width: 34 }, { width: 9 }, { width: 9 }, ...(anyOverdue ? [{ width: 10 }] : []), { width: 30 }, ...days.map(() => ({ width: 8 }))],
+      [{ width: 7 }, { width: 18 }, { width: 6 }, { width: 34 }, { width: 9 }, { width: 10 }, { width: 9 }, ...(anyOverdue ? [{ width: 10 }] : []), { width: 30 }, ...days.map(() => ({ width: 8 }))],
     ),
   ];
 }

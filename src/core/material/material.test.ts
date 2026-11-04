@@ -242,13 +242,14 @@ describe('export Sekvence', () => {
     sheetPrio: 'PRIO Sorting',
     order: 'Pořadí',
     kind: 'Druh',
-    firstNeed: 'První potřeba',
+    sorting: 'K sortingu',
+    missing: 'Chybí ks',
     prioNote: 'pozn. prio',
   };
   const [matrixSheet, coverage, demand, prio] = sequenceReport(t.parts, t.days, texts, {
     boundary: day(6),
     shortText: (p) => (p.firstShort ? `od ${p.firstShort.productionNumber}` : ''),
-    needText: (p) => `poprvé ${p.demands[0]!.productionNumber}`,
+    sortingStock: (p) => (p.kind === 'MF' ? 5 : null),
     cars: t.cars,
     carTexts: (car) => ({ planned: `stavba ${car.productionNumber}`, material: car.short ? 'FL: chybí' : 'vše na skladě', tone: car.short ? 'short' : 'ok' }),
   });
@@ -291,13 +292,14 @@ describe('export Sekvence', () => {
     expect(demand!.outline!.slice(6, 10)).toEqual([undefined, { level: 1 }, undefined, { level: 1 }]);
   });
 
-  it('list PRIO Sorting: reference a kusy po dnech podle první potřeby, s pořadím a druhem', () => {
+  it('list PRIO Sorting: jen nepokryté díly a chybějící kusy po dnech (k vytřídění), sklad před sortingem', () => {
     expect(prio!.name).toBe('PRIO Sorting');
-    expect(values(prio!.data[4])).toEqual(['Pořadí', 'Díl', 'Druh', 'Popis', 'Sklad', 'Potřeba', 'První potřeba', 'Čt', 'Pá']);
-    expect(values(prio!.data[6])[0]).toBe('Maincarrier (1)');
-    expect(values(prio!.data[7])).toEqual([1, 'MC-1', 'MC', 'ASSY MC', 5, 3, 'poprvé T1', 1, 2]);
-    expect(values(prio!.data[9])).toEqual([1, 'MF-1', 'MF', 'ASSY MF', 1, 3, 'poprvé T1', 1, 2]);
-    expect(prio!.data[7]![8]).toMatchObject({ leftBorderColor: '#2E8B3E' });
-    expect(prio!.outline!.slice(6, 10)).toEqual([undefined, { level: 1 }, undefined, { level: 1 }]);
+    expect(values(prio!.data[4])).toEqual(['Pořadí', 'Díl', 'Druh', 'Popis', 'Sklad', 'K sortingu', 'Chybí ks', 'Chybí od', 'Čt', 'Pá']);
+    // MC-1 je pokrytý (sklad 5 na 3 dveře): v PRIO není, ani jeho skupina; MF-1 (sklad 1) chybí 2 ks v pátek
+    expect(values(prio!.data[6])[0]).toBe('Middlefield (1)');
+    expect(values(prio!.data[7])).toEqual([1, 'MF-1', 'MF', 'ASSY MF', 1, 5, 2, 'od T2', '', 2]);
+    expect(prio!.data[7]![9]).toMatchObject({ textColor: '#B42D2D', backgroundColor: '#FDECEC', leftBorderColor: '#2E8B3E' });
+    expect(prio!.data[7]![5]).not.toHaveProperty('textColor');
+    expect(prio!.outline!.slice(6, 8)).toEqual([undefined, { level: 1 }]);
   });
 });

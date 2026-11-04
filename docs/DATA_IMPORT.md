@@ -373,9 +373,11 @@ Klíč MC/MF musí ležet ve složce `Sekvence`: mimo ni by se podle „Mapping�
 - Export obsahuje vždy všechno (bez filtrů z aplikace); na listech Coverage, Potřeba po dnech a PRIO Sorting jsou
   Maincarrier a Middlefield skupiny, které jde v Excelu sbalit a rozbalit (tlačítka −/+ vlevo, jako u odvolávek);
   řádek skupiny ukazuje počet dílů, u Potřeby po dnech i součty po dnech.
-- List **PRIO Sorting** (pro kvalitu): reference MC a MF a počet kusů po dnech plánované stavby, v každém druhu seřazené
-  podle první potřeby (nejdřív to, co jde do výroby nejdřív; při shodě víc kusů dřív), s pořadím, druhem, skladem, celkovou
-  potřebou a první potřebou (čas stavby, vůz a dveře).
+- List **PRIO Sorting** (pro kvalitu): jen **nepokryté** díly a kolik kusů jim chybí po dnech plánované stavby – ty je
+  potřeba vytřídit z lokací před sortingem (lokace vyřazené ze skladu MC a MF se do skladu nepočítají, takže záporné
+  pokrytí = nezkontrolované kusy). Sloupce: pořadí v rámci druhu, díl, druh, sklad, **K sortingu** (kusy ve vyřazených
+  lokacích; červeně, když nestačí), **Chybí ks** (celkem nepokryto), chybí od a chybějící kusy po dnech. Řazení podle
+  toho, kdy díl začne chybět, při shodě víc chybějících kusů dřív.
 - **Chybějící klíč** ukazuje modul **Data** (panel Sekvence) jako u kontroly mapování ostatních modulů: kombinace druhu,
   dveří, výbavy a barvy z matice, pro které klíč nemá díl (výbava tak, jak ji zapsat do klíče, u zadních dveří bez
   „-HT“), s počtem dveří a první stavbou; seznam jde stáhnout do Excelu. V Sekvenci na něj vede odkaz z dlaždice Díly
