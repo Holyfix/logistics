@@ -2,7 +2,7 @@ import { Fragment, useEffect, useMemo, useRef, useState, type DragEvent } from '
 import { mergeBoms } from '../core/bom';
 import { dayToIso, weekday, type DayNumber } from '../core/dates';
 import { formatDayShort, formatQuantity, type Locale } from '../core/format';
-import { buildMaterialCoverage, carMissing, PART_KINDS, shortages, type CarCoverage, type Demand, type DoorCoverage, type PartCoverage, type PartKind } from '../core/material/coverage';
+import { buildMaterialCoverage, carMissing, shortages, type CarCoverage, type Demand, type DoorCoverage, type PartCoverage } from '../core/material/coverage';
 import { dayOfStamp, DOORS, MINUTES_PER_DAY, type Door, type Stamp } from '../core/material/jit';
 import { statusCode } from '../core/material/matrix';
 import { parseStockPaste } from '../core/material/stock';
@@ -26,8 +26,22 @@ function addFiles(current: readonly MaterialFile[], added: readonly MaterialFile
   return next;
 }
 
+/** Filtry Matrixu: hodnota sloupce ('' = vše). */
+interface CarFilter {
+  lot: string;
+  optionType: string;
+  colors: string;
+  day: string;
+  status: string;
+}
+const NO_FILTER: CarFilter = { lot: '', optionType: '', colors: '', day: '', status: '' };
+const NO_DAY = 'none';
+
+/** Den stavby vozu pro filtr ('none' = bez data). */
+const carDay = (c: CarCoverage) => (c.planned === null ? NO_DAY : String(dayOfStamp(c.planned)));
+
 /**
- * Pokrytí Maincarrieru a Middlefieldu: samostatná stránka (material.html) vedle logistické aplikace. Karta Matrix je ve
+ * Pokrytí Middlefieldu: samostatná stránka (material.html) vedle logistické aplikace. Karta Matrix je ve
  * formátu Order Status Matrix (vozy a stav dveří, barva podle pokrytí materiálem), karta Díly a sklad pro zadání skladu.
  */
 export function MaterialApp({ today = localToday() }: { today?: DayNumber } = {}) {
@@ -37,7 +51,7 @@ export function MaterialApp({ today = localToday() }: { today?: DayNumber } = {}
   const [busy, setBusy] = useState(false);
   const [stock, setStock] = useState<SavedStock>(loadStock);
   const [tab, setTab] = useState<Tab>('matrix');
-  const [kind, setKind] = useState<PartKind | ''>('');
+  const [filter, setFilter] = useState<CarFilter>(NO_FILTER);
   const [query, setQuery] = useState('');
   const [onlyShort, setOnlyShort] = useState(false);
   const [skipDone, setSkipDone] = useState(false);
@@ -99,13 +113,33 @@ export function MaterialApp({ today = localToday() }: { today?: DayNumber } = {}
   const qty = (v: number) => formatQuantity(v, locale);
   const demandText = (d: Demand | null) => (d ? `${time(d.planned)} · ${d.productionNumber} ${d.door}` : '');
   const doorTitle = (cell: DoorCoverage) =>
-    [cell.panel ? `${tm.detail.panel}: ${cell.panel}` : tm.matrix.notInJit, ...cell.parts.map((p) => `${tm.kinds[p.kind]} ${p.item}: ${tm.matrix.left} ${qty(p.left)}`)].join('\n');
+    [cell.panel ? `${tm.detail.panel}: ${cell.panel}` : tm.matrix.notInJit, ...cell.parts.map((p) => `MF ${p.item}: ${tm.matrix.left} ${qty(p.left)}`)].join('\n');
 
   const q = query.trim().toLowerCase();
-  const cars = (coverage?.cars ?? []).filter((c) => (!onlyShort || c.short) && (!q || `${c.productionNumber} ${c.lot}`.toLowerCase().includes(q)));
-  const parts = (coverage?.parts ?? []).filter(
-    (p) => (!kind || p.kind === kind) && (!onlyShort || p.firstShort) && (!q || `${p.item} ${p.description}`.toLowerCase().includes(q)),
+  const allCars = coverage?.cars ?? [];
+  const carText = (c: CarCoverage) => [c.productionNumber, c.lot, ...DOORS.flatMap((d) => c.doors[d]?.parts.map((p) => p.item) ?? [])].join(' ').toLowerCase();
+  const cars = allCars.filter(
+    (c) =>
+      (!onlyShort || c.short) &&
+      (!filter.lot || c.lot === filter.lot) &&
+      (!filter.optionType || c.optionType === filter.optionType) &&
+      (!filter.colors || c.colors === filter.colors) &&
+      (!filter.day || carDay(c) === filter.day) &&
+      (!filter.status || DOORS.some((d) => c.doors[d]?.status === filter.status)) &&
+      (!q || carText(c).includes(q)),
   );
+  const filterActive = Object.values(filter).some(Boolean) || q !== '' || onlyShort;
+  // Hodnoty do filtrů z celé matice (číselně seřazené).
+  const options = (values: Iterable<string>) => [...new Set(values)].filter(Boolean).sort((a, b) => a.localeCompare(b, 'en', { numeric: true }));
+  const carOptions = {
+    lot: options(allCars.map((c) => c.lot)),
+    optionType: options(allCars.map((c) => c.optionType)),
+    colors: options(allCars.map((c) => c.colors)),
+    day: [...new Set(allCars.map(carDay))].sort((a, b) => (a === NO_DAY ? -1 : b === NO_DAY ? 1 : Number(a) - Number(b))),
+    status: [...new Set(allCars.flatMap((c) => DOORS.flatMap((d) => c.doors[d]?.status ?? [])))].sort((a, b) => (statusCode(a) ?? 0) - (statusCode(b) ?? 0) || a.localeCompare(b)),
+  };
+  const filterLabel = (key: keyof CarFilter, value: string) => (key === 'day' ? (value === NO_DAY ? tm.filters.noDate : dayLabel(Number(value))) : value);
+  const parts = (coverage?.parts ?? []).filter((p) => (!onlyShort || p.firstShort) && (!q || `${p.item} ${p.description}`.toLowerCase().includes(q)));
   const anyOverdue = parts.some((p) => p.overdue > 0);
   const selectedPart = coverage?.parts.find((p) => p.item === selected) ?? null;
   // První nepokryté dveře v pořadí stavby.
@@ -122,7 +156,7 @@ export function MaterialApp({ today = localToday() }: { today?: DayNumber } = {}
     const minute = st - day * MINUTES_PER_DAY;
     return `${dayToIso(day)} ${String(Math.floor(minute / 60)).padStart(2, '0')}:${String(minute % 60).padStart(2, '0')}`;
   };
-  // Excel: prioritní seznam chybějících MC a MF podle data, chybějící dveře, Matrix a díly.
+  // Excel: prioritní seznam chybějících MF podle data, chybějící dveře, Matrix (podle filtrů) a díly.
   const exportExcel = () => {
     if (!coverage) return;
     const te = tm.export;
@@ -131,20 +165,20 @@ export function MaterialApp({ today = localToday() }: { today?: DayNumber } = {}
     void downloadXlsxSheets(`${te.fileName}_${dayToIso(today)}.xlsx`, [
       {
         name: te.priority,
-        header: [te.order, tm.table.shortFrom, tm.matrix.productionNumber, tm.detail.door, tm.table.kind, tm.table.item, tm.table.description, tm.table.stock, tm.table.demand, te.missing, te.lastShort],
+        header: [te.order, tm.table.shortFrom, tm.matrix.productionNumber, tm.detail.door, tm.table.item, tm.table.description, tm.table.stock, tm.table.demand, te.missing, te.lastShort],
         rows: list.map((s, i) => {
           const first = s.part.firstShort!;
-          return [i + 1, isoTime(first.planned), first.productionNumber, first.door, tm.kinds[s.part.kind], s.part.item, s.part.description, s.part.stock, s.part.total, s.missing, isoTime(s.demands.at(-1)!.planned)];
+          return [i + 1, isoTime(first.planned), first.productionNumber, first.door, s.part.item, s.part.description, s.part.stock, s.part.total, s.missing, isoTime(s.demands.at(-1)!.planned)];
         }),
         stickyColumns: 2,
       },
       {
         name: te.missingDoors,
-        header: [tm.matrix.planned, tm.matrix.lot, tm.matrix.productionNumber, tm.detail.door, tm.table.kind, tm.table.item, tm.table.description, tm.detail.status, te.missing],
+        header: [tm.matrix.planned, tm.matrix.lot, tm.matrix.productionNumber, tm.detail.door, tm.table.item, tm.table.description, tm.detail.status, te.missing],
         rows: list
           .flatMap((s) => s.demands.map((d) => ({ s, d })))
           .sort((x, y) => (x.d.planned ?? -Infinity) - (y.d.planned ?? -Infinity) || x.d.productionNumber.localeCompare(y.d.productionNumber))
-          .map(({ s, d }) => [isoTime(d.planned), d.lot, d.productionNumber, d.door, tm.kinds[s.part.kind], s.part.item, s.part.description, d.status, d.missing]),
+          .map(({ s, d }) => [isoTime(d.planned), d.lot, d.productionNumber, d.door, s.part.item, s.part.description, d.status, d.missing]),
         stickyColumns: 1,
       },
       {
@@ -155,8 +189,8 @@ export function MaterialApp({ today = localToday() }: { today?: DayNumber } = {}
       },
       {
         name: te.sheet,
-        header: [tm.table.item, tm.table.description, tm.table.kind, tm.table.stock, tm.table.demand, tm.table.covered, tm.table.shortFrom, ...coverage.days.map(dayToIso)],
-        rows: parts.map((p) => [p.item, p.description, tm.kinds[p.kind], p.stock, p.total, demandText(p.lastCovered), demandText(p.firstShort), ...p.balance]),
+        header: [tm.table.item, tm.table.description, tm.table.stock, tm.table.demand, tm.table.covered, tm.table.shortFrom, ...coverage.days.map(dayToIso)],
+        rows: parts.map((p) => [p.item, p.description, p.stock, p.total, demandText(p.lastCovered), demandText(p.firstShort), ...p.balance]),
         stickyColumns: 1,
       },
     ]);
@@ -241,9 +275,7 @@ export function MaterialApp({ today = localToday() }: { today?: DayNumber } = {}
                 <div className="kpi">
                   <span className="kpi-label">{tm.tiles.short}</span>
                   <span className={`kpi-value${shortDoors ? ' cell-short' : ''}`}>{qty(shortDoors)}</span>
-                  <span className="kpi-note">
-                    {PART_KINDS.map((k) => `${tm.kinds[k]} ${qty(coverage.parts.filter((p) => p.kind === k && p.firstShort).length)}`).join(' · ')} {tm.tiles.shortParts}
-                  </span>
+                  <span className="kpi-note">{tm.tiles.shortParts.replace('{n}', qty(coverage.parts.filter((p) => p.firstShort).length))}</span>
                 </div>
                 <div className="kpi">
                   <span className="kpi-label">{tm.tiles.first}</span>
@@ -268,15 +300,6 @@ export function MaterialApp({ today = localToday() }: { today?: DayNumber } = {}
               </div>
 
               <div className="filters" role="group" aria-label={tm.filters.label}>
-                {tab === 'parts' && (
-                  <span className="segmented" role="group" aria-label={tm.filters.kind}>
-                    {(['', ...PART_KINDS] as const).map((k) => (
-                      <button key={k || 'all'} type="button" aria-pressed={kind === k} onClick={() => setKind(k)}>
-                        {k ? tm.kinds[k] : tm.filters.all}
-                      </button>
-                    ))}
-                  </span>
-                )}
                 <label className="field field-wide">
                   <span>{tab === 'matrix' ? tm.filters.searchCar : tm.filters.search}</span>
                   <input type="search" value={query} onChange={(e) => setQuery(e.target.value)} />
@@ -285,6 +308,28 @@ export function MaterialApp({ today = localToday() }: { today?: DayNumber } = {}
                   <input type="checkbox" checked={onlyShort} onChange={(e) => setOnlyShort(e.target.checked)} />
                   {tab === 'matrix' ? tm.filters.onlyShortCars : tm.filters.onlyShort}
                 </label>
+                {tab === 'matrix' &&
+                  (
+                    [
+                      ['lot', tm.matrix.lot],
+                      ['optionType', tm.matrix.optionType],
+                      ['colors', tm.matrix.colors],
+                      ['day', tm.filters.day],
+                      ['status', tm.filters.status],
+                    ] as const
+                  ).map(([key, label]) => (
+                    <label key={key} className="field">
+                      <span>{label}</span>
+                      <select value={filter[key]} onChange={(e) => setFilter({ ...filter, [key]: e.target.value })}>
+                        <option value="">{tm.filters.all}</option>
+                        {carOptions[key].map((v) => (
+                          <option key={v} value={v}>
+                            {filterLabel(key, v)}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  ))}
                 <label className="check-field">
                   <input type="checkbox" checked={skipDone} onChange={(e) => setSkipDone(e.target.checked)} />
                   {tm.filters.skipDone}
@@ -301,6 +346,22 @@ export function MaterialApp({ today = localToday() }: { today?: DayNumber } = {}
                   <div className="panel-head">
                     <h2>{tm.matrix.heading}</h2>
                     <span className="muted">{tm.matrix.sub}</span>
+                    {filterActive && (
+                      <span className="panel-actions">
+                        <span className="muted">{tm.filters.shown.replace('{n}', qty(cars.length)).replace('{total}', qty(allCars.length))}</span>
+                        <button
+                          type="button"
+                          className="button button-small"
+                          onClick={() => {
+                            setFilter(NO_FILTER);
+                            setQuery('');
+                            setOnlyShort(false);
+                          }}
+                        >
+                          {tm.filters.reset}
+                        </button>
+                      </span>
+                    )}
                   </div>
                   {cars.length === 0 ? (
                     <p className="muted">{tm.matrix.empty}</p>
@@ -339,13 +400,13 @@ export function MaterialApp({ today = localToday() }: { today?: DayNumber } = {}
                   </ul>
                   <ul className="cov-legend">
                     <li>
-                      <i className="mat-badge mat-badge-ok">MC</i> {tm.matrix.legendOk}
+                      <i className="mat-badge mat-badge-ok">MF</i> {tm.matrix.legendOk}
                     </li>
                     <li>
                       <i className="mat-badge mat-badge-short">MF</i> {tm.matrix.legendShort}
                     </li>
                     <li>
-                      <i className="mat-badge mat-badge-unknown">MC</i> {tm.matrix.legendUnknown}
+                      <i className="mat-badge mat-badge-unknown">MF</i> {tm.matrix.legendUnknown}
                     </li>
                   </ul>
                   <p className="muted">{tm.matrix.note}</p>
@@ -446,7 +507,6 @@ export function MaterialApp({ today = localToday() }: { today?: DayNumber } = {}
   );
 }
 
-/** Řádek vozu jako v Order Status Matrix: stav dveří a pod ním pokrytí MC a MF; barva buňky podle pokrytí. */
 /** Barva stavu jako v Order Status Matrix (podle čísla stavu). */
 const STATUS_COLORS = [20, 25, 30, 40, 45, 50, 60];
 const statusClass = (status: string) => {
@@ -454,13 +514,14 @@ const statusClass = (status: string) => {
   return code !== null && STATUS_COLORS.includes(code) ? ` mat-s${code}` : '';
 };
 
-/** Chybějící MC a MF vozu po dveřích, např. „FL: MC 123, MF 456“. */
+/** Chybějící MF vozu po dveřích, např. „FL: 456“. */
 function missingByDoor(car: CarCoverage): string[] {
   const doors = new Map<Door, string[]>();
-  for (const m of carMissing(car)) (doors.get(m.door) ?? doors.set(m.door, []).get(m.door)!).push(`${m.kind} ${m.item}`);
+  for (const m of carMissing(car)) (doors.get(m.door) ?? doors.set(m.door, []).get(m.door)!).push(m.item);
   return [...doors].map(([door, parts]) => `${door}: ${parts.join(', ')}`);
 }
 
+/** Řádek vozu jako v Order Status Matrix: stav dveří v barvě matice se štítkem MF, vpravo chybějící MF. */
 function CarRow({ car, time, title }: { car: CarCoverage; time: (s: Stamp | null) => string; title: (cell: DoorCoverage) => string }) {
   const { t } = useI18n();
   const tm = t.material;
@@ -512,21 +573,12 @@ function CarRow({ car, time, title }: { car: CarCoverage; time: (s: Stamp | null
   );
 }
 
-/** Štítky MC a MF v buňce dveří: zelený na skladě, červený chybí, šedý neznámý (dveře nejsou v JIT). */
+/** Štítek MF v buňce dveří: zelený na skladě, červený chybí, šedý neznámý (dveře nejsou v JIT). */
 function DoorBadges({ cell }: { cell: DoorCoverage }) {
   if (cell.state === 'none' || cell.state === 'skipped') return null;
   return (
     <span className="mat-badges">
-      {PART_KINDS.map((kind) => {
-        const part = cell.parts.find((p) => p.kind === kind);
-        if (cell.state !== 'unknown' && !part) return null;
-        const state = !part ? 'unknown' : part.left < -1e-9 ? 'short' : 'ok';
-        return (
-          <i key={kind} className={`mat-badge mat-badge-${state}`}>
-            {kind}
-          </i>
-        );
-      })}
+      <i className={`mat-badge mat-badge-${cell.state}`}>MF</i>
     </span>
   );
 }
@@ -557,7 +609,6 @@ function PartRow({
     <tr className={`mat-row${selected ? ' row-selected' : ''}`} onClick={onSelect}>
       <td className="sticky-col">
         <strong>{p.item}</strong>
-        <small className="cell-note muted">{tm.kinds[p.kind]}</small>
       </td>
       <td className="desc">{p.description}</td>
       <td className="n" onClick={(e) => e.stopPropagation()}>

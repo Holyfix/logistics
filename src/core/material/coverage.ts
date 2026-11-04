@@ -1,24 +1,18 @@
-// Pokrytí Maincarrieru (MC) a Middlefieldu (MF) ve formátu Order Status Matrix: vozy z matice v pořadí plánované
-// stavby, u každých dveří stav z matice. Dveřní panel pro Production number a dveře se dohledá v JIT Overview,
-// MC a MF pod panelem na úrovni 1 kusovníku. Sklad (ručně zadaný) se spotřebovává v pořadí stavby.
+// Pokrytí Middlefieldu (MF) ve formátu Order Status Matrix: vozy z matice v pořadí plánované stavby, u každých dveří
+// stav z matice. Dveřní panel pro Production number a dveře se dohledá v JIT Overview, MF pod panelem na úrovni 1
+// kusovníku. Sklad (ručně zadaný) se spotřebovává v pořadí stavby.
 
 import type { BomData } from '../bom';
 import type { DayNumber } from '../dates';
 import { dayOfStamp, doorOf, DOORS, type Door, type JitPosition, type Stamp } from './jit';
 import { statusCode, type MatrixOrder } from './matrix';
 
-export type PartKind = 'MC' | 'MF';
-export const PART_KINDS: readonly PartKind[] = ['MC', 'MF'];
-
 /** Stav „Packed“ a vyšší: dveře jsou hotové (lze je volitelně nepočítat do potřeby). */
 export const DONE_STATUS = 50;
 
-/** Druh dílu podle popisu v kusovníku: „ASSY MC …“ = Maincarrier, „ASSY MF …“ = Middlefield. */
-export function partKind(description: string): PartKind | null {
-  const d = description.toUpperCase();
-  if (/\bMC\b/.test(d)) return 'MC';
-  if (/\bMF\b/.test(d)) return 'MF';
-  return null;
+/** Middlefield podle popisu v kusovníku („ASSY MF …“). */
+export function isMiddlefield(description: string): boolean {
+  return /\bMF\b/.test(description.toUpperCase());
 }
 
 /** Dveřní panel podle Production number a dveří z JIT Overview (pozice, která je v kusovníku jako hotový díl). */
@@ -34,18 +28,17 @@ export function panelsFromJit(positions: readonly JitPosition[], bom: BomData): 
 
 const panelKey = (productionNumber: string, door: Door) => `${productionNumber}|${door}`;
 
-/** Díl MC nebo MF u dveří: množství na dveře a sklad, který po nich zbude. */
+/** Middlefield u dveří: množství na dveře a sklad, který po nich zbude. */
 export interface DoorPart {
   item: string;
-  kind: PartKind;
   qty: number;
   /** Sklad dílu po těchto dveřích (záporný = dveře nejsou pokryté). */
   left: number;
 }
 
 /**
- * Pokrytí dveří: ok = MC i MF na skladě, short = něco chybí, unknown = dveřní panel není v JIT, none = dveře bez MC/MF
- * (panel bez nich, nebo výklopné dveře), skipped = hotové dveře se nepočítají.
+ * Pokrytí dveří: ok = MF na skladě, short = chybí, unknown = dveřní panel není v JIT, none = dveře bez MF (panel bez
+ * něj, nebo výklopné dveře), skipped = hotové dveře se nepočítají.
  */
 export type DoorState = 'ok' | 'short' | 'unknown' | 'none' | 'skipped';
 
@@ -81,7 +74,6 @@ export interface Demand {
 
 export interface PartCoverage {
   item: string;
-  kind: PartKind;
   description: string;
   /** Ručně zadaný sklad; null = nezadaný (počítá se jako 0). */
   stock: number | null;
@@ -137,7 +129,7 @@ export function buildMaterialCoverage({ matrix, positions, bom, stock, today, sk
       if (status === undefined) continue;
       doors++;
       const panel = panels.get(panelKey(o.productionNumber, door)) ?? null;
-      // Výklopné dveře MC ani MF nemají: bez panelu z JIT nejsou „neznámé“, jen bez MC/MF.
+      // Výklopné dveře MF nemají: bez panelu z JIT nejsou „neznámé“, jen bez MF.
       const cell: DoorCoverage = { door, status, panel, parts: [], state: panel || door === 'HB' ? 'none' : 'unknown' };
       car.doors[door] = cell;
       if (!panel) {
@@ -151,11 +143,10 @@ export function buildMaterialCoverage({ matrix, positions, bom, stock, today, sk
         continue;
       }
       for (const node of bom.trees.get(panel) ?? []) {
-        const kind = partKind(bom.info.get(node.item)?.description ?? '');
-        if (!kind) continue;
+        if (!isMiddlefield(bom.info.get(node.item)?.description ?? '')) continue;
         const rest = (left.has(node.item) ? left.get(node.item)! : (stock.get(node.item) ?? 0)) - node.qty;
         left.set(node.item, rest);
-        cell.parts.push({ item: node.item, kind, qty: node.qty, left: rest });
+        cell.parts.push({ item: node.item, qty: node.qty, left: rest });
         (demands.get(node.item) ?? demands.set(node.item, []).get(node.item)!).push({ lot: o.lot, productionNumber: o.productionNumber, door, panel, planned: o.planned, status, qty: node.qty });
       }
       if (cell.parts.length) cell.state = cell.parts.some((p) => p.left < -1e-9) ? 'short' : 'ok';
@@ -193,7 +184,6 @@ export function buildMaterialCoverage({ matrix, positions, bom, stock, today, sk
     }
     return {
       item,
-      kind: partKind(bom.info.get(item)?.description ?? '')!,
       description: bom.info.get(item)?.description ?? '',
       stock: own ?? null,
       total: list.reduce((s, d) => s + d.qty, 0),
@@ -207,13 +197,13 @@ export function buildMaterialCoverage({ matrix, positions, bom, stock, today, sk
   });
   // Nejdřív díly, které chybí nejdřív; pak podle čísla.
   const shortAt = (p: PartCoverage) => (p.firstShort ? (p.firstShort.planned ?? -Infinity) : Infinity);
-  parts.sort((a, b) => PART_KINDS.indexOf(a.kind) - PART_KINDS.indexOf(b.kind) || shortAt(a) - shortAt(b) || a.item.localeCompare(b.item, 'en', { numeric: true }));
+  parts.sort((a, b) => shortAt(a) - shortAt(b) || a.item.localeCompare(b.item, 'en', { numeric: true }));
   return { days, cars, parts, doors, known, unknown, skippedDone };
 }
 
-/** Chybějící MC a MF vozu po dveřích (pro sloupec Materiál). */
-export function carMissing(car: CarCoverage): { door: Door; kind: PartKind; item: string }[] {
-  return DOORS.flatMap((door) => (car.doors[door]?.parts ?? []).filter((p) => p.left < -1e-9).map((p) => ({ door, kind: p.kind, item: p.item })));
+/** Chybějící MF vozu po dveřích (pro sloupec Materiál). */
+export function carMissing(car: CarCoverage): { door: Door; item: string }[] {
+  return DOORS.flatMap((door) => (car.doors[door]?.parts ?? []).filter((p) => p.left < -1e-9).map((p) => ({ door, item: p.item })));
 }
 
 /** Dveře, na které sklad dílu nestačí, s chybějícím množstvím (v pořadí stavby). */
