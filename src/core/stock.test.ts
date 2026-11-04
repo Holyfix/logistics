@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { parseCsv } from './csv';
 import { dayFromParts } from './dates';
-import { excludedLocationsIn, isExcludedLocation, lastMoveDay, locationHash, parseStock, stockByItem, stockItemCount } from './stock';
+import { excludedLocationsIn, isExcludedLocation, lastMoveDay, locationHash, locationsOf, parseStock, stockByItem, stockItemCount } from './stock';
 
 // Smyšlený export skladu ve formátu z ERP: čárka jako oddělovač, čísla v českém formátu, dvakrát sloupec Description.
 const csv = [
@@ -67,6 +67,20 @@ describe('stockByItem', () => {
     expect(stockByItem(r.value, excluded)).toEqual(new Map([['900100', 44]]));
     expect(excludedLocationsIn(r.value, excluded)).toEqual(['A-01']);
     expect(excludedLocationsIn(r.value)).toEqual([]);
+  });
+});
+
+describe('locationsOf', () => {
+  it('lokace se skladem vybraných dílů v počítaných zónách, od největšího množství', () => {
+    const r = parseStock(parseCsv(csv));
+    if (!r.ok) throw new Error();
+    expect(locationsOf(r.value, new Set(['900100', '900101']))).toEqual([
+      { location: 'A-01', zone: 'SALE', qty: 1200, items: 1 },
+      { location: 'A-02', zone: 'SALE', qty: 24, items: 1 },
+      { location: 'B-01', zone: 'PURCH', qty: 12, items: 1 },
+      { location: 'L-01', zone: 'WRKC', qty: 8, items: 1 },
+    ]);
+    expect(locationsOf(r.value, new Set(['900101']))).toEqual([]);
   });
 });
 

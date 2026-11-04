@@ -2972,6 +2972,26 @@ button.oil-step:disabled {
 }
 
 /* Sekvence (karta v Komponentách): pokrytí Middlefieldu ve formátu Order Status Matrix. */
+/* Výběr lokací skladu, které se do MF nepočítají. */
+.mat-locations > summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.mat-locations[open] > summary {
+  margin-bottom: 8px;
+}
+
+.mat-locations-list {
+  max-height: 340px;
+  overflow: auto;
+}
+
+.mat-locations-list tr.row-muted td {
+  color: var(--muted);
+  text-decoration: line-through;
+}
+
 .kpi-value.mat-kpi-small {
   font-size: 18px;
 }

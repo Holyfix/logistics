@@ -1351,6 +1351,19 @@ export const cs = {
     needKey: 'Ve složce Sekvence chybí klíč MC/MF (nebo JIT Overview).',
     noStock: 'Není načtený sklad – počítá se s nulovým skladem.',
     sources: 'Order Status Matrix: {matrix} · klíč MC/MF: {key} · JIT Overview: {jit} · sklad: {stock}',
+    locations: {
+      summary: 'Lokace skladu MF: nepočítá se {n} z {total} lokací ({qty} ks)',
+      hint: 'Zaškrtnuté lokace se do skladu MF nepočítají; volba se pamatuje v tomto prohlížeči. V seznamu jsou lokace se skladem MF v zónách, které se počítají do skladu ({zones}).',
+      search: 'Hledat lokaci nebo zónu',
+      excludeShown: 'Nepočítat zobrazené',
+      includeShown: 'Počítat zobrazené',
+      exclude: 'Nepočítat',
+      location: 'Lokace',
+      zone: 'Zóna',
+      qty: 'Ks MF',
+      items: 'Dílů MF',
+      none: 'Ve skladu není žádný díl MF.',
+    },
     tiles: {
       cars: 'Vozů v matici',
       carsNote: '{doors} dveří se stavem, z toho {done} zabalených nebo odeslaných (nepočítají se)',
@@ -1371,6 +1384,7 @@ export const cs = {
       shown: 'Zobrazeno {n} z {total} vozů',
       search: 'Production number, Lot nebo díl MF',
       onlyShort: 'Jen vozy s nepokrytými dveřmi',
+      onlyUnbuilt: 'Jen nevyrobené carsety (aspoň jedny dveře ve stavu 45 a méně)',
     },
     matrix: {
       heading: 'Pokrytí Middlefieldu podle Order Status Matrix',

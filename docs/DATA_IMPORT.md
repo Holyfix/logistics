@@ -351,12 +351,14 @@ Klíč MC/MF musí ležet ve složce `Sekvence`: mimo ni by se podle „Mapping�
 - Co v klíči není, se dohledá přes **JIT** (dveřní panel pro Production number a dveře, dveře z popisu panelu „FRT LH“,
   „RR RH“) a **kusovník** (MF na úrovni 1 pod panelem). Dveře bez MF v klíči i v JIT se ukážou šedě („MF neurčen“)
   a do potřeby se nepočítají; výklopné dveře (HB) MF nemají.
-- **Sklad** dílu (stejné lokace jako v Komponentách) se spotřebovává v pořadí stavby.
+- **Sklad** dílu (stejné lokace jako v Komponentách) se spotřebovává v pořadí stavby. V rozbalovacím seznamu **Lokace
+  skladu MF** lze zaškrtnout lokace, které se do skladu MF nepočítají (např. linka nebo příjem); volba se pamatuje
+  v prohlížeči.
 - **Tabulka:** řádky jako v matici (Lot, Production number, Option Type, MC / MF, Planned customer built, stav
   dveří v barvách matice podle čísla stavu 20–60); v buňce štítek **MF** (zelený na skladě, červený chybí,
-  šedý MF neurčen); sloupec **Materiál** vyjmenuje chybějící MF vozu („FR: …“). Filtry: Lot, Option Type,
-  MC / MF (barva), den stavby, stav dveří (vozy, které mají aspoň jedny dveře v daném stavu), hledání podle Production
-  number, Lotu nebo dílu MF a jen vozy s nepokrytými dveřmi.
+  šedý MF neurčen); sloupec **Materiál** vyjmenuje chybějící MF vozu („FR: …“). Filtry: Option Type, den
+  stavby, stav dveří (vozy, které mají aspoň jedny dveře v daném stavu), hledání podle Production number, Lotu nebo
+  dílu MF, jen vozy s nepokrytými dveřmi a jen nevyrobené carsety (aspoň jedny dveře ve stavu 45 a méně).
 - **Excel:** list Priority (chybějící MF seřazené podle stavby prvních nepokrytých dveří: chybí od, vůz a dveře,
   sklad, potřeba, chybí ks, poslední chybějící), list Chybějící dveře (každé nepokryté dveře podle data) a Matrix
   (podle filtrů).
