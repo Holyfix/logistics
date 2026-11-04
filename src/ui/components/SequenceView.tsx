@@ -1,9 +1,8 @@
 import { Fragment, useMemo, useState } from 'react';
-import { mergeBoms } from '../../core/bom';
 import { dayToIso, weekday, type DayNumber } from '../../core/dates';
 import { formatDayShort, formatQuantity } from '../../core/format';
 import { buildMaterialCoverage, carMissing, carUndetermined, DONE_STATUS, missingKeys, shortages, type CarCoverage, type DoorCoverage } from '../../core/material/coverage';
-import { dayOfStamp, DOORS, MINUTES_PER_DAY, type Door, type Stamp } from '../../core/material/jit';
+import { dayOfStamp, DOORS, MINUTES_PER_DAY, type Door, type Stamp } from '../../core/material/doors';
 import { statusCode } from '../../core/material/matrix';
 import { PART_KINDS, type PartKind } from '../../core/material/partKey';
 import { isExcludedLocation, locationsOf, STOCK_ZONES, stockByItem } from '../../core/stock';
@@ -73,8 +72,8 @@ function missingByDoor(car: CarCoverage): string[] {
 
 /**
  * Sekvence (karta v Komponentách): pokrytí Maincarrieru a Middlefieldu ve formátu Order Status Matrix. Vozy a stav
- * dveří z matice, MC a MF podle klíče MC/MF (složka Sekvence), co v klíči není, podle JIT Overview a načtených
- * kusovníků; sklad z načteného souboru skladu (lokace se dají vyřadit zvlášť pro MC a MF).
+ * dveří z matice, MC a MF podle klíče MC/MF (složka Sekvence; co v klíči přesně není, je šedě „chybí v klíči“); sklad
+ * z načteného souboru skladu (lokace se dají vyřadit zvlášť pro MC a MF).
  */
 export function SequenceView({ today }: { today: DayNumber }) {
   const { t, locale } = useI18n();
@@ -98,13 +97,10 @@ export function SequenceView({ today }: { today: DayNumber }) {
   const coverage = useMemo(() => {
     const stockOf = (kind: PartKind) =>
       data?.stock ? stockByItem(data.stock.data, (location) => isExcludedLocation(location) || excludedAll[kind].has(location.trim().toUpperCase())) : new Map<string, number>();
-    const bom = data?.boms.length ? mergeBoms(data.boms.map((b) => b.data)) : undefined;
-    if (!sequence?.matrix || !(sequence.key || (sequence.jit && bom))) return null;
+    if (!sequence?.matrix || !sequence.key) return null;
     return buildMaterialCoverage({
       matrix: sequence.matrix.orders,
-      key: sequence.key?.key,
-      positions: sequence.jit?.positions,
-      bom,
+      key: sequence.key.key,
       stock: { MC: stockOf('MC'), MF: stockOf('MF') },
       today,
     });
@@ -121,7 +117,7 @@ export function SequenceView({ today }: { today: DayNumber }) {
       <div className="panel">
         <p>{ts.noFiles}</p>
         {sequence && !sequence.matrix && <p className="banner banner-warn">{ts.needMatrix}</p>}
-        {sequence && !sequence.key && !sequence.jit && <p className="banner banner-warn">{ts.needKey}</p>}
+        {sequence && !sequence.key && <p className="banner banner-warn">{ts.needKey}</p>}
       </div>
     );
   }
@@ -138,9 +134,8 @@ export function SequenceView({ today }: { today: DayNumber }) {
   };
   const doorTitle = (cell: DoorCoverage) =>
     [
-      ...(cell.parts.some((p) => p.source === 'jit') ? [`${ts.matrix.panel}: ${cell.panel}`] : []),
-      ...cell.parts.map((p) => `${p.kind} ${p.item}${p.source === 'key' ? ` (${ts.matrix.fromKey})` : ''}: ${ts.matrix.left} ${qty(p.left)}`),
-      ...cell.unknown.map((kind) => `${kind}: ${ts.matrix.unknown}`),
+      ...cell.parts.map((p) => `${p.kind} ${p.item}: ${ts.matrix.left} ${qty(p.left)}`),
+      ...cell.unknown.map((kind) => `${kind}: ${ts.matrix.undetermined}`),
     ].join('\n');
 
   const q = query.trim().toLowerCase();
@@ -215,7 +210,7 @@ export function SequenceView({ today }: { today: DayNumber }) {
       },
       {
         name: te.missingKeys,
-        header: [te.kind, te.door, tm.optionType, te.colour, te.doors, te.firstBuild],
+        header: [te.kind, te.door, te.keyType, te.colour, te.doors, te.firstBuild],
         rows: missingKeys(coverage.cars).map((m) => [ts.kinds[m.kind], m.door, m.optionType, m.colour, m.doors, isoTime(m.first)]),
         stickyColumns: 0,
       },
@@ -232,7 +227,6 @@ export function SequenceView({ today }: { today: DayNumber }) {
         {ts.sources
           .replace('{matrix}', fileName(sequence?.matrix?.path))
           .replace('{key}', fileName(sequence?.key?.path))
-          .replace('{jit}', fileName(sequence?.jit?.path))
           .replace('{stock}', fileName(data?.stock?.path))}
       </p>
       {!data?.stock && <p className="banner banner-warn">{ts.noStock}</p>}
@@ -520,7 +514,7 @@ function CarRow({ car, time, title }: { car: CarCoverage; time: (s: Stamp | null
   );
 }
 
-/** Štítky MC a MF v buňce dveří: zelený na skladě, červený chybí, šedý neurčený (není v klíči ani v JIT). */
+/** Štítky MC a MF v buňce dveří: zelený na skladě, červený chybí, šedý neurčený (chybí v klíči). */
 function DoorBadges({ cell }: { cell: DoorCoverage }) {
   if (cell.state === 'none' || cell.state === 'skipped') return null;
   return (

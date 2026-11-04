@@ -352,21 +352,24 @@ export function DataPage() {
                     {data.sequence.key && (
                       <tr>
                         <td>{data.sequence.key.path}</td>
-                        <td>{t.data.sequence.key.replace('{n}', formatQuantity(data.sequence.key.key.entries.size, locale))}</td>
+                        <td>
+                          {t.data.sequence.key.replace('{n}', formatQuantity(data.sequence.key.key.entries.size, locale))}
+                          {data.sequence.key.key.conflicts.size > 0 && (
+                            <span className="cell-short">
+                              {' · '}
+                              {t.data.sequence.conflicts
+                                .replace('{n}', formatQuantity(data.sequence.key.key.conflicts.size, locale))
+                                .replace('{list}', [...data.sequence.key.key.conflicts].map((k) => k.replaceAll('|', ' ')).join('; '))}
+                            </span>
+                          )}
+                        </td>
                         <td>{new Date(data.sequence.key.lastModified).toLocaleString(locale === 'cs' ? 'cs-CZ' : 'en-GB', { dateStyle: 'short', timeStyle: 'short' })}</td>
-                      </tr>
-                    )}
-                    {data.sequence.jit && (
-                      <tr>
-                        <td>{data.sequence.jit.path}</td>
-                        <td>{t.data.sequence.jit.replace('{n}', formatQuantity(new Set(data.sequence.jit.positions.map((p) => p.productionNumber)).size, locale))}</td>
-                        <td>{new Date(data.sequence.jit.lastModified).toLocaleString(locale === 'cs' ? 'cs-CZ' : 'en-GB', { dateStyle: 'short', timeStyle: 'short' })}</td>
                       </tr>
                     )}
                   </tbody>
                 </table>
               </div>
-              {(!data.sequence.matrix || (!data.sequence.key && !data.sequence.jit)) && <p className="muted">{t.data.sequence.incomplete}</p>}
+              {(!data.sequence.matrix || !data.sequence.key) && <p className="muted">{t.data.sequence.incomplete}</p>}
             </div>
           )}
 

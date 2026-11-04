@@ -71,7 +71,7 @@ self.onmessage = async (event: MessageEvent<ParseRequest>) => {
       return;
     }
     if (kind === 'sequence') {
-      // Sekvence: Order Status Matrix nebo JIT Overview (druh podle obsahu).
+      // Sekvence: Order Status Matrix nebo klíč MC/MF (druh podle obsahu).
       const result = format === 'csv' ? parseSequenceCsv(decodeText(buffer)) : parseSequenceSheets((await readXlsxFile(buffer)).map((s) => s.data as Cell[][]));
       (self as unknown as Worker).postMessage({ id, kind, result } satisfies ParseResponse);
       return;

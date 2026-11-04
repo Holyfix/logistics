@@ -1,19 +1,20 @@
 // Klíč MC/MF: Maincarrier a Middlefield podle dveří (Side), výbavy (Type = Option Type v matici) a barvy (Colour =
-// barva ze sloupce „MC / MF“ v matici: první pro MC, druhá pro MF). Nahrazuje dohledání přes JIT Overview a kusovník.
+// barva ze sloupce „MC / MF“ v matici: první pro MC, druhá pro MF). Platí jen přesná shoda; jediná výjimka je
+// vyhřívaná výbava („-HT“) u zadních dveří, které vyhřívanou variantu nemají. Co přesně nesedí, je „chybí v klíči“.
 
 import { cellText, type Cell } from '../table';
 import { findColumn } from '../csv';
-import { DOORS, type Door } from './jit';
+import { DOORS, type Door } from './doors';
 
 export type PartKind = 'MC' | 'MF';
 export const PART_KINDS: readonly PartKind[] = ['MC', 'MF'];
 
-/** Druh dílu podle popisu: „ASSY MC …“ = Maincarrier, „ASSY MF …“ = Middlefield; jinak null. */
+/** Druh dílu podle popisu: „ASSY MC …“ = Maincarrier, „ASSY MF …“ = Middlefield; jinak (i když jsou v popisu oba) null. */
 export function partKind(description: string): PartKind | null {
   const d = description.toUpperCase();
-  if (/\bMC\b/.test(d)) return 'MC';
-  if (/\bMF\b/.test(d)) return 'MF';
-  return null;
+  const mc = /\bMC\b/.test(d);
+  const mf = /\bMF\b/.test(d);
+  return mc === mf ? null : mc ? 'MC' : 'MF';
 }
 
 export interface PartKeyEntry {
@@ -22,22 +23,24 @@ export interface PartKeyEntry {
 }
 
 export interface PartKey {
-  /** Klíč `druh|dveře|výbava|barva` (velkými písmeny; barva prázdná = všechny barvy) → díl. */
+  /** Klíč `druh|dveře|výbava|barva` (velkými písmeny) → díl. */
   entries: Map<string, PartKeyEntry>;
-  /** `druh|dveře`, které mají v klíči vyhřívanou výbavu („…-HT“); u ostatních se vyhřívání nerozlišuje. */
-  heated: Set<string>;
+  /** Kombinace, které mají v klíči víc různých dílů: nejsou jednoznačné, a proto se nepoužijí. */
+  conflicts: Set<string>;
 }
 
 export type PartKeyResult = { ok: true; value: PartKey } | { ok: false; error: 'missingColumns'; columns: string[] };
 
 const COLUMNS = { side: ['Side'], item: ['Item Number', 'Item'], type: ['Type', 'Option Type'], colour: ['Colour', 'Color'], description: ['Description'] };
 const HEATED = /-HT$/;
+/** Zadní dveře vyhřívanou variantu nemají: „SR2-HT“ se u nich hledá i jako „SR2“. */
+const REAR: readonly Door[] = ['RL', 'RR'];
 
 const keyOf = (kind: PartKind, door: Door, type: string, colour: string) => `${kind}|${door}|${type.trim().toUpperCase()}|${colour.trim().toUpperCase()}`;
 
 /**
  * Klíč MC/MF z listu: záhlaví je řádek se sloupci Side, Item Number, Type a Colour. Druh dílu podle popisu („MC“ / „MF“);
- * bez sloupce Description se díly berou jako MF. Prázdná barva platí pro všechny barvy.
+ * bez sloupce Description se díly berou jako MF.
  */
 export function parsePartKey(data: readonly Cell[][]): PartKeyResult {
   const headerIndex = data.findIndex((row) => {
@@ -49,7 +52,7 @@ export function parsePartKey(data: readonly Cell[][]): PartKeyResult {
   const missing = (['side', 'item', 'type', 'colour'] as const).filter((k) => col[k] === -1).map((k) => COLUMNS[k][0]!);
   if (missing.length) return { ok: false, error: 'missingColumns', columns: missing };
   const entries = new Map<string, PartKeyEntry>();
-  const heated = new Set<string>();
+  const conflicts = new Set<string>();
   for (const row of data.slice(headerIndex + 1)) {
     const door = cellText(row[col.side]).toUpperCase() as Door;
     const item = cellText(row[col.item]);
@@ -57,10 +60,13 @@ export function parsePartKey(data: readonly Cell[][]): PartKeyResult {
     const description = col.description === -1 ? '' : cellText(row[col.description]);
     const kind = col.description === -1 ? 'MF' : partKind(description);
     if (!DOORS.includes(door) || !item || !type || !kind) continue;
-    entries.set(keyOf(kind, door, type, cellText(row[col.colour])), { item, description });
-    if (HEATED.test(type.trim().toUpperCase())) heated.add(`${kind}|${door}`);
+    const key = keyOf(kind, door, type, cellText(row[col.colour]));
+    const known = entries.get(key);
+    if (known && known.item.toUpperCase() !== item.toUpperCase()) conflicts.add(key);
+    else entries.set(key, { item, description });
   }
-  return { ok: true, value: { entries, heated } };
+  for (const key of conflicts) entries.delete(key);
+  return { ok: true, value: { entries, conflicts } };
 }
 
 /** Barva dílu ze sloupce „MC / MF“ matice („C9 / C1“ → MC C9, MF C1; jedna barva platí pro oba). */
@@ -69,18 +75,20 @@ export function partColour(colors: string, kind: PartKind): string {
   return (kind === 'MC' ? parts[0] : parts[1] || parts[0]) ?? '';
 }
 
+/** Výbava, kterou stačí mít v klíči: u zadních dveří bez „-HT“ (SR2-HT → SR2), jinak přesně Option Type. */
+export function keyType(door: Door, optionType: string): string {
+  const type = optionType.trim();
+  return REAR.includes(door) ? type.replace(/-HT$/i, '') : type;
+}
+
 /**
- * Díl daného druhu pro dveře vozu podle klíče: nejdřív s barvou, pak řádek bez barvy (pro všechny barvy). Dveře, které
- * v klíči vyhřívanou výbavu nemají (typicky zadní), se hledají i pod výbavou bez „-HT“ (SR2-HT → SR2).
+ * Díl daného druhu pro dveře vozu podle klíče: jen přesná shoda dveří, výbavy a barvy. Zadní dveře (RL, RR) se
+ * s vyhřívanou výbavou hledají i pod výbavou bez „-HT“ (SR2-HT → SR2), přednost má přesný řádek „-HT“.
  */
 export function lookupPart(key: PartKey, kind: PartKind, door: Door, optionType: string, colors: string): PartKeyEntry | null {
   const type = optionType.trim().toUpperCase();
-  const types = !key.heated.has(`${kind}|${door}`) && HEATED.test(type) ? [type, type.replace(HEATED, '')] : [type];
-  for (const colour of [partColour(colors, kind), '']) {
-    for (const t of types) {
-      const entry = key.entries.get(keyOf(kind, door, t, colour));
-      if (entry) return entry;
-    }
-  }
-  return null;
+  const colour = partColour(colors, kind);
+  const exact = key.entries.get(keyOf(kind, door, type, colour));
+  if (exact || !REAR.includes(door) || !HEATED.test(type)) return exact ?? null;
+  return key.entries.get(keyOf(kind, door, type.replace(HEATED, ''), colour)) ?? null;
 }
