@@ -19,7 +19,6 @@
   --up: #006300;
   --down: #b42d2d;
   --changed: #fff4d6;
-  --ok-bg: #e3f3df;
   --crosshair: rgba(29, 92, 158, 0.09);
   --crosshair-cell: rgba(29, 92, 158, 0.22);
   --negative-bg: #fdecec;
@@ -53,7 +52,6 @@
     --up: #2fbf2f;
     --down: #ef7070;
     --changed: #3a3115;
-    --ok-bg: #1d3320;
     --crosshair: rgba(111, 168, 232, 0.14);
     --crosshair-cell: rgba(111, 168, 232, 0.3);
     --negative-bg: #3a1c1c;
@@ -3010,35 +3008,100 @@ button.oil-step:disabled {
   font-size: 12.5px;
 }
 
-.table-data td.mat-door .cell-note {
-  font-weight: 600;
-}
-
-.table-data td.mat-ok,
-.swatch.mat-ok {
-  background: var(--ok-bg);
-}
-
-.table-data td.mat-short,
-.swatch.mat-short {
-  background: var(--negative-bg);
-}
-
-.table-data td.mat-door .mat-part-short {
-  color: var(--down);
-}
-
-.table-data td.mat-unknown .cell-note,
-.table-data td.mat-none .cell-note,
-.table-data td.mat-skipped .cell-note {
-  color: var(--muted);
-  font-weight: 400;
-}
-
-.swatch.mat-unknown {
-  background: var(--surface-2);
-}
-
 .table-data tr.mat-car-short td.sticky-col {
   box-shadow: inset 3px 0 0 var(--down), 1px 0 0 var(--line);
+}
+
+/* Pokrytí materiálu – barvy stavů jako v Order Status Matrix, štítky MC a MF, sloupec Materiál. */
+.mat-matrix thead th {
+  background: #4c68a2;
+  color: #ffffff;
+}
+
+.table-data td.mat-door {
+  color: #4d4d4d;
+}
+
+.mat-s20 {
+  --mat-status: #ffa500;
+}
+
+.mat-s25 {
+  --mat-status: #f0e68c;
+}
+
+.mat-s30 {
+  --mat-status: #ffff00;
+}
+
+.mat-s40 {
+  --mat-status: #add8e6;
+}
+
+.mat-s45 {
+  --mat-status: #40e0d0;
+}
+
+.mat-s50 {
+  --mat-status: #90ee90;
+}
+
+.mat-s60 {
+  --mat-status: #32cd32;
+}
+
+.table-data td.mat-door {
+  background: var(--mat-status, var(--surface));
+}
+
+.swatch[class*='mat-s'] {
+  background: var(--mat-status);
+}
+
+.mat-door-in {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.mat-badges {
+  display: inline-flex;
+  gap: 3px;
+}
+
+.mat-badge {
+  display: inline-block;
+  padding: 3px 4px;
+  border-radius: 3px;
+  color: #ffffff;
+  font: 700 10px/1 var(--font-display);
+  font-style: normal;
+}
+
+.mat-badge-ok {
+  background: #2e8b3e;
+}
+
+.mat-badge-short {
+  background: #c62828;
+}
+
+.mat-badge-unknown {
+  background: #9aa5b1;
+}
+
+.table-data td.mat-missing {
+  white-space: normal;
+  min-width: 300px;
+  font-weight: 600;
+  font-size: 12.5px;
+}
+
+.mat-missing-door {
+  white-space: nowrap;
+}
+
+.mat-all {
+  color: #2e8b3e;
 }

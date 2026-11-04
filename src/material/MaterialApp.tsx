@@ -1,9 +1,9 @@
-import { useEffect, useMemo, useRef, useState, type DragEvent } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState, type DragEvent } from 'react';
 import { mergeBoms } from '../core/bom';
 import { dayToIso, weekday, type DayNumber } from '../core/dates';
 import { formatDayShort, formatQuantity, type Locale } from '../core/format';
-import { buildMaterialCoverage, PART_KINDS, type CarCoverage, type Demand, type DoorCoverage, type PartCoverage, type PartKind } from '../core/material/coverage';
-import { dayOfStamp, DOORS, MINUTES_PER_DAY, type Stamp } from '../core/material/jit';
+import { buildMaterialCoverage, carMissing, PART_KINDS, shortages, type CarCoverage, type Demand, type DoorCoverage, type PartCoverage, type PartKind } from '../core/material/coverage';
+import { dayOfStamp, DOORS, MINUTES_PER_DAY, type Door, type Stamp } from '../core/material/jit';
 import { statusCode } from '../core/material/matrix';
 import { parseStockPaste } from '../core/material/stock';
 import { parseNumber } from '../core/numbers';
@@ -98,15 +98,6 @@ export function MaterialApp({ today = localToday() }: { today?: DayNumber } = {}
   };
   const qty = (v: number) => formatQuantity(v, locale);
   const demandText = (d: Demand | null) => (d ? `${time(d.planned)} · ${d.productionNumber} ${d.door}` : '');
-  /** Text pokrytí dveří: díly MC a MF se značkou, nebo důvod, proč pokrytí nejde určit. */
-  const doorNote = (cell: DoorCoverage) =>
-    cell.state === 'unknown'
-      ? tm.matrix.notInJit
-      : cell.state === 'skipped'
-        ? tm.matrix.skipped
-        : cell.state === 'none'
-          ? tm.matrix.noParts
-          : cell.parts.map((p) => `${p.kind} ${p.left < -1e-9 ? '✗' : '✓'}`).join(' · ');
   const doorTitle = (cell: DoorCoverage) =>
     [cell.panel ? `${tm.detail.panel}: ${cell.panel}` : tm.matrix.notInJit, ...cell.parts.map((p) => `${tm.kinds[p.kind]} ${p.item}: ${tm.matrix.left} ${qty(p.left)}`)].join('\n');
 
@@ -124,26 +115,46 @@ export function MaterialApp({ today = localToday() }: { today?: DayNumber } = {}
   })();
   const shortDoors = (coverage?.cars ?? []).reduce((n, c) => n + DOORS.filter((d) => c.doors[d]?.state === 'short').length, 0);
 
+  /** Datum a čas do Excelu: „2026-11-04 16:15“ (řadí se správně i jako text). */
+  const isoTime = (st: Stamp | null) => {
+    if (st === null) return null;
+    const day = dayOfStamp(st);
+    const minute = st - day * MINUTES_PER_DAY;
+    return `${dayToIso(day)} ${String(Math.floor(minute / 60)).padStart(2, '0')}:${String(minute % 60).padStart(2, '0')}`;
+  };
+  // Excel: prioritní seznam chybějících MC a MF podle data, chybějící dveře, Matrix a díly.
   const exportExcel = () => {
     if (!coverage) return;
-    const material = (cell: DoorCoverage | undefined) =>
-      !cell
-        ? null
-        : cell.state === 'short'
-          ? `${tm.matrix.short}: ${cell.parts
-              .filter((p) => p.left < -1e-9)
-              .map((p) => p.item)
-              .join(', ')}`
-          : doorNote(cell).replace(/ ✓/g, ' OK');
-    void downloadXlsxSheets(`${tm.export.fileName}_${dayToIso(today)}.xlsx`, [
+    const te = tm.export;
+    const list = shortages(coverage.parts);
+    const missingText = (c: CarCoverage) => missingByDoor(c).join(' · ');
+    void downloadXlsxSheets(`${te.fileName}_${dayToIso(today)}.xlsx`, [
       {
-        name: tm.export.matrix,
-        header: [tm.matrix.lot, tm.matrix.productionNumber, tm.matrix.optionType, tm.matrix.colors, tm.matrix.planned, ...DOORS.flatMap((d) => [`${tm.matrix.status} ${d}`, `${tm.matrix.material} ${d}`])],
-        rows: cars.map((c) => [c.lot, c.productionNumber, c.optionType, c.colors, c.planned === null ? null : time(c.planned), ...DOORS.flatMap((d) => [c.doors[d]?.status ?? null, material(c.doors[d])])]),
+        name: te.priority,
+        header: [te.order, tm.table.shortFrom, tm.matrix.productionNumber, tm.detail.door, tm.table.kind, tm.table.item, tm.table.description, tm.table.stock, tm.table.demand, te.missing, te.lastShort],
+        rows: list.map((s, i) => {
+          const first = s.part.firstShort!;
+          return [i + 1, isoTime(first.planned), first.productionNumber, first.door, tm.kinds[s.part.kind], s.part.item, s.part.description, s.part.stock, s.part.total, s.missing, isoTime(s.demands.at(-1)!.planned)];
+        }),
         stickyColumns: 2,
       },
       {
-        name: tm.export.sheet,
+        name: te.missingDoors,
+        header: [tm.matrix.planned, tm.matrix.lot, tm.matrix.productionNumber, tm.detail.door, tm.table.kind, tm.table.item, tm.table.description, tm.detail.status, te.missing],
+        rows: list
+          .flatMap((s) => s.demands.map((d) => ({ s, d })))
+          .sort((x, y) => (x.d.planned ?? -Infinity) - (y.d.planned ?? -Infinity) || x.d.productionNumber.localeCompare(y.d.productionNumber))
+          .map(({ s, d }) => [isoTime(d.planned), d.lot, d.productionNumber, d.door, tm.kinds[s.part.kind], s.part.item, s.part.description, d.status, d.missing]),
+        stickyColumns: 1,
+      },
+      {
+        name: te.matrix,
+        header: [tm.matrix.lot, tm.matrix.productionNumber, tm.matrix.optionType, tm.matrix.colors, tm.matrix.planned, ...DOORS.map((d) => `${tm.matrix.status} ${d}`), tm.matrix.material],
+        rows: cars.map((c) => [c.lot, c.productionNumber, c.optionType, c.colors, isoTime(c.planned), ...DOORS.map((d) => c.doors[d]?.status ?? null), missingText(c) || null]),
+        stickyColumns: 2,
+      },
+      {
+        name: te.sheet,
         header: [tm.table.item, tm.table.description, tm.table.kind, tm.table.stock, tm.table.demand, tm.table.covered, tm.table.shortFrom, ...coverage.days.map(dayToIso)],
         rows: parts.map((p) => [p.item, p.description, tm.kinds[p.kind], p.stock, p.total, demandText(p.lastCovered), demandText(p.firstShort), ...p.balance]),
         stickyColumns: 1,
@@ -308,25 +319,33 @@ export function MaterialApp({ today = localToday() }: { today?: DayNumber } = {}
                                 {tm.matrix.status} {d}
                               </th>
                             ))}
+                            <th>{tm.matrix.material}</th>
                           </tr>
                         </thead>
                         <tbody>
                           {cars.map((c) => (
-                            <CarRow key={c.productionNumber} car={c} time={time} note={doorNote} title={doorTitle} />
+                            <CarRow key={c.productionNumber} car={c} time={time} title={doorTitle} />
                           ))}
                         </tbody>
                       </table>
                     </div>
                   )}
                   <ul className="cov-legend">
+                    {STATUS_COLORS.map((code) => (
+                      <li key={code}>
+                        <i className={`swatch mat-s${code}`} /> {tm.matrix.statuses[code as keyof typeof tm.matrix.statuses]}
+                      </li>
+                    ))}
+                  </ul>
+                  <ul className="cov-legend">
                     <li>
-                      <i className="swatch mat-ok" /> {tm.matrix.legendOk}
+                      <i className="mat-badge mat-badge-ok">MC</i> {tm.matrix.legendOk}
                     </li>
                     <li>
-                      <i className="swatch mat-short" /> {tm.matrix.legendShort}
+                      <i className="mat-badge mat-badge-short">MF</i> {tm.matrix.legendShort}
                     </li>
                     <li>
-                      <i className="swatch mat-unknown" /> {tm.matrix.legendUnknown}
+                      <i className="mat-badge mat-badge-unknown">MC</i> {tm.matrix.legendUnknown}
                     </li>
                   </ul>
                   <p className="muted">{tm.matrix.note}</p>
@@ -428,17 +447,26 @@ export function MaterialApp({ today = localToday() }: { today?: DayNumber } = {}
 }
 
 /** Řádek vozu jako v Order Status Matrix: stav dveří a pod ním pokrytí MC a MF; barva buňky podle pokrytí. */
-function CarRow({
-  car,
-  time,
-  note,
-  title,
-}: {
-  car: CarCoverage;
-  time: (s: Stamp | null) => string;
-  note: (cell: DoorCoverage) => string;
-  title: (cell: DoorCoverage) => string;
-}) {
+/** Barva stavu jako v Order Status Matrix (podle čísla stavu). */
+const STATUS_COLORS = [20, 25, 30, 40, 45, 50, 60];
+const statusClass = (status: string) => {
+  const code = statusCode(status);
+  return code !== null && STATUS_COLORS.includes(code) ? ` mat-s${code}` : '';
+};
+
+/** Chybějící MC a MF vozu po dveřích, např. „FL: MC 123, MF 456“. */
+function missingByDoor(car: CarCoverage): string[] {
+  const doors = new Map<Door, string[]>();
+  for (const m of carMissing(car)) (doors.get(m.door) ?? doors.set(m.door, []).get(m.door)!).push(`${m.kind} ${m.item}`);
+  return [...doors].map(([door, parts]) => `${door}: ${parts.join(', ')}`);
+}
+
+function CarRow({ car, time, title }: { car: CarCoverage; time: (s: Stamp | null) => string; title: (cell: DoorCoverage) => string }) {
+  const { t } = useI18n();
+  const tm = t.material;
+  const missing = missingByDoor(car);
+  const unknown = DOORS.filter((d) => car.doors[d]?.state === 'unknown');
+  const counted = DOORS.some((d) => car.doors[d]?.parts.length);
   return (
     <tr className={car.short ? 'mat-car-short' : undefined}>
       <td>{car.lot}</td>
@@ -452,22 +480,54 @@ function CarRow({
         const cell = car.doors[d];
         if (!cell) return <td key={d} />;
         return (
-          <td key={d} className={`mat-door mat-${cell.state}`} title={title(cell)}>
-            {cell.status}
-            <small className="cell-note">
-              {cell.parts.length === 0
-                ? note(cell)
-                : cell.parts.map((p, i) => (
-                    <span key={p.item} className={p.left < -1e-9 ? 'mat-part-short' : undefined}>
-                      {i > 0 && ' · '}
-                      {p.kind} {p.left < -1e-9 ? '✗' : '✓'}
-                    </span>
-                  ))}
-            </small>
+          <td key={d} className={`mat-door${statusClass(cell.status)}`} title={title(cell)}>
+            <span className="mat-door-in">
+              <span>{cell.status}</span>
+              <DoorBadges cell={cell} />
+            </span>
           </td>
         );
       })}
+      <td className="mat-missing">
+        {missing.length > 0 && (
+          <span className="cell-short">
+            {missing.map((text, i) => (
+              <Fragment key={text}>
+                {i > 0 && ' · '}
+                <span className="mat-missing-door">{text}</span>
+              </Fragment>
+            ))}
+          </span>
+        )}
+        {missing.length === 0 && counted && <span className="mat-all">{tm.matrix.allInStock}</span>}
+        {unknown.length > 0 && (
+          <span className="muted">
+            {missing.length > 0 || counted ? ' · ' : ''}
+            {tm.matrix.notInJit}
+            {unknown.length < DOORS.filter((d) => car.doors[d] && d !== 'HB').length ? `: ${unknown.join(', ')}` : ''}
+          </span>
+        )}
+      </td>
     </tr>
+  );
+}
+
+/** Štítky MC a MF v buňce dveří: zelený na skladě, červený chybí, šedý neznámý (dveře nejsou v JIT). */
+function DoorBadges({ cell }: { cell: DoorCoverage }) {
+  if (cell.state === 'none' || cell.state === 'skipped') return null;
+  return (
+    <span className="mat-badges">
+      {PART_KINDS.map((kind) => {
+        const part = cell.parts.find((p) => p.kind === kind);
+        if (cell.state !== 'unknown' && !part) return null;
+        const state = !part ? 'unknown' : part.left < -1e-9 ? 'short' : 'ok';
+        return (
+          <i key={kind} className={`mat-badge mat-badge-${state}`}>
+            {kind}
+          </i>
+        );
+      })}
+    </span>
   );
 }
 

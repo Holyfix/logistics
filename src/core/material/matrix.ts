@@ -2,7 +2,6 @@
 // skládá pokrytí materiálu (vozy v pořadí matice); JIT Overview jen doplní dveřní panel.
 
 import { findColumn } from '../csv';
-import { dayFromDate } from '../dates';
 import { cellText, type Cell } from '../table';
 import { MINUTES_PER_DAY, parseStamp, type Door, type Stamp } from './jit';
 
@@ -26,7 +25,8 @@ const EXCEL_EPOCH = 25569;
 
 /** Datum a čas z buňky: datum, pořadové číslo Excelu (když buňka nemá formát data) nebo text. */
 function stampOf(cell: Cell | undefined): Stamp | null {
-  if (cell instanceof Date && !Number.isNaN(cell.getTime())) return dayFromDate(cell) * MINUTES_PER_DAY + cell.getUTCHours() * 60 + cell.getUTCMinutes();
+  // Zaokrouhlit na minuty: Excel ukládá čas jako zlomek dne, takže 6:12 může přijít jako 6:11:59,999.
+  if (cell instanceof Date && !Number.isNaN(cell.getTime())) return Math.round(cell.getTime() / 60000);
   if (typeof cell === 'number' && cell > EXCEL_EPOCH - 36525) return Math.round((cell - EXCEL_EPOCH) * MINUTES_PER_DAY);
   return parseStamp(cellText(cell));
 }
