@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { parseBom } from '../bom';
 import { dayFromParts } from '../dates';
-import { buildMaterialCoverage, partKind } from './coverage';
+import { buildMaterialCoverage, carMissing, partKind, shortages } from './coverage';
 import { doorOf, MINUTES_PER_DAY, parseJit, parseStamp } from './jit';
 import { parseStatusMatrix, statusCode } from './matrix';
 import { parseStockPaste } from './stock';
@@ -73,6 +73,10 @@ describe('Order Status Matrix', () => {
     const n = parseStatusMatrix([['Production number', 'Planned customer built', 'Status FL'], ['T1', 46331 + 8 / 24, '20 - Container planned']]);
     if (!n.ok) throw new Error();
     expect(n.value.get('T1')!.planned).toBe(at(5, 8));
+    // Excel uloží 6:12 jako 6:11:59,999: zaokrouhlí se na minuty
+    const d = parseStatusMatrix([['Production number', 'Planned customer built', 'Status FL'], ['T1', new Date(Date.UTC(2026, 10, 5, 8, 12) - 1), '20 - Container planned']]);
+    if (!d.ok) throw new Error();
+    expect(d.value.get('T1')!.planned).toBe(at(5, 8, 12));
   });
 });
 
@@ -112,6 +116,19 @@ describe('pokrytí MC a MF podle matice', () => {
     expect(mc.lastCovered).toMatchObject({ productionNumber: 'T0001', door: 'FL' });
     expect(mc.firstShort).toMatchObject({ productionNumber: 'T0002', door: 'FL', status: '20 - Container planned', planned: at(6, 10, 30) });
     expect(t.parts.map((p) => p.item).sort()).toEqual(['MC-FL-1', 'MC-RR-1', 'MF-FL-1', 'MF-RR-1']);
+    // sloupec Materiál a prioritní seznam
+    expect(carMissing(t1!)).toEqual([
+      { door: 'FL', kind: 'MF', item: 'MF-FL-1' },
+      { door: 'RR', kind: 'MC', item: 'MC-RR-1' },
+      { door: 'RR', kind: 'MF', item: 'MF-RR-1' },
+    ]);
+    const list = shortages(t.parts);
+    expect(list.map((s) => [s.part.item, s.missing, s.demands.map((d) => `${d.productionNumber} ${d.door} ${d.missing}`)])).toEqual([
+      ['MC-RR-1', 1, ['T0001 RR 1']],
+      ['MF-FL-1', 2, ['T0001 FL 1', 'T0002 FL 1']],
+      ['MF-RR-1', 1, ['T0001 RR 1']],
+      ['MC-FL-1', 1, ['T0002 FL 1']],
+    ]);
   });
 
   it('volitelně bez zabalených a odeslaných dveří', () => {

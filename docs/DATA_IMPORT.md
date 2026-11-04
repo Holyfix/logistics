@@ -350,9 +350,13 @@ přetáhnout); druh souboru se pozná podle obsahu. Logistická aplikace složku
 - **Sklad** se zadává ručně v kartě Díly a sklad (u dílu nebo vložením dvou sloupců z Excelu: díl, množství) a pamatuje se
   v prohlížeči; nezadaný sklad je 0. Spotřebovává se v pořadí stavby.
 - **Karta Matrix:** řádky jako v matici (Lot, Production number, Option Type, MC / MF, Planned customer built, stav
-  dveří); buňka dveří zeleně, když MC i MF na skladě vystačí, červeně, když chybí (pod stavem „MC ✓ · MF ✗“).
+  dveří v barvách matice podle čísla stavu 20–60); v buňce štítky **MC** a **MF** (zelený na skladě, červený chybí,
+  šedý dveře nejsou v JIT); sloupec **Materiál** vyjmenuje chybějící díly vozu („FR: MF …“).
 - **Karta Díly a sklad:** pokryto do / chybí od (vůz a dveře), stav skladu na konci dne, klik na díl ukáže dveře se
-  zbývajícím skladem. Excel: list Matrix a list Díly.
+  zbývajícím skladem.
+- **Excel:** list Priority (chybějící MC a MF seřazené podle stavby prvních nepokrytých dveří: chybí od, vůz a dveře,
+  sklad, potřeba, chybí ks, poslední chybějící), list Chybějící dveře (každé nepokryté dveře podle data), Matrix
+  a Díly.
 - Smyšlená ukázka: `sample-data/Material/` (vytvoří `node scripts/generate-material-sample.mjs`).
 
 ## Testovací data

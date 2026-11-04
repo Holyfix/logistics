@@ -70,6 +70,7 @@ export interface CarCoverage {
 
 /** Dveře, které díl potřebují (v pořadí stavby). */
 export interface Demand {
+  lot: string;
   productionNumber: string;
   door: Door;
   panel: string;
@@ -155,7 +156,7 @@ export function buildMaterialCoverage({ matrix, positions, bom, stock, today, sk
         const rest = (left.has(node.item) ? left.get(node.item)! : (stock.get(node.item) ?? 0)) - node.qty;
         left.set(node.item, rest);
         cell.parts.push({ item: node.item, kind, qty: node.qty, left: rest });
-        (demands.get(node.item) ?? demands.set(node.item, []).get(node.item)!).push({ productionNumber: o.productionNumber, door, panel, planned: o.planned, status, qty: node.qty });
+        (demands.get(node.item) ?? demands.set(node.item, []).get(node.item)!).push({ lot: o.lot, productionNumber: o.productionNumber, door, panel, planned: o.planned, status, qty: node.qty });
       }
       if (cell.parts.length) cell.state = cell.parts.some((p) => p.left < -1e-9) ? 'short' : 'ok';
       if (cell.state === 'short') car.short = true;
@@ -208,4 +209,38 @@ export function buildMaterialCoverage({ matrix, positions, bom, stock, today, sk
   const shortAt = (p: PartCoverage) => (p.firstShort ? (p.firstShort.planned ?? -Infinity) : Infinity);
   parts.sort((a, b) => PART_KINDS.indexOf(a.kind) - PART_KINDS.indexOf(b.kind) || shortAt(a) - shortAt(b) || a.item.localeCompare(b.item, 'en', { numeric: true }));
   return { days, cars, parts, doors, known, unknown, skippedDone };
+}
+
+/** Chybějící MC a MF vozu po dveřích (pro sloupec Materiál). */
+export function carMissing(car: CarCoverage): { door: Door; kind: PartKind; item: string }[] {
+  return DOORS.flatMap((door) => (car.doors[door]?.parts ?? []).filter((p) => p.left < -1e-9).map((p) => ({ door, kind: p.kind, item: p.item })));
+}
+
+/** Dveře, na které sklad dílu nestačí, s chybějícím množstvím (v pořadí stavby). */
+export interface ShortDemand extends Demand {
+  missing: number;
+}
+
+/** Díl, který chybí: kolik celkem a od kterých dveří (pro prioritní seznam). */
+export interface PartShortage {
+  part: PartCoverage;
+  missing: number;
+  demands: ShortDemand[];
+}
+
+/** Prioritní seznam: díly, které chybí, seřazené podle stavby prvních nepokrytých dveří. */
+export function shortages(parts: readonly PartCoverage[]): PartShortage[] {
+  return parts
+    .filter((p) => p.firstShort)
+    .map((part) => {
+      let left = part.stock ?? 0;
+      const demands: ShortDemand[] = [];
+      for (const d of part.demands) {
+        left -= d.qty;
+        // Dveře, které sklad pokryje jen zčásti, chybí jen o zbytek.
+        if (left < -1e-9) demands.push({ ...d, missing: Math.min(d.qty, -left) });
+      }
+      return { part, missing: demands.reduce((s, d) => s + d.missing, 0), demands };
+    })
+    .sort((a, b) => (a.part.firstShort!.planned ?? -Infinity) - (b.part.firstShort!.planned ?? -Infinity) || a.part.item.localeCompare(b.part.item, 'en', { numeric: true }));
 }

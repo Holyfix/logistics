@@ -40,10 +40,15 @@ describe('MaterialApp', () => {
     expect(screen.getByText(/Order Status Matrix: 4 vozů/)).toBeTruthy();
     // bez skladu chybí; V9 není v JIT
     const door = (pn: string) => rowOf(pn).querySelectorAll('td')[5]!;
-    expect(door('V1').className).toContain('mat-short');
-    expect(door('V1').textContent).toBe('20 - Container plannedMC ✗ · MF ✗');
-    expect(door('V9').className).toContain('mat-unknown');
-    expect(door('V9').textContent).toBe('20 - Container plannednení v JIT');
+    const badges = (pn: string) => [...door(pn).querySelectorAll('.mat-badge')].map((b) => `${b.textContent} ${b.className.split('mat-badge-')[1]}`);
+    expect(door('V1').className).toContain('mat-s20');
+    expect(door('V2').className).toContain('mat-s30');
+    expect(badges('V1')).toEqual(['MC short', 'MF short']);
+    expect(badges('V9')).toEqual(['MC unknown', 'MF unknown']);
+    // sloupec Materiál
+    const material = (pn: string) => rowOf(pn).querySelector('td.mat-missing')!.textContent;
+    expect(material('V1')).toBe('FL: MC MC-1, MF MF-1');
+    expect(material('V9')).toBe('není v JIT');
     // sklad MC 2 a MF 5 v kartě Díly a sklad
     fireEvent.click(screen.getByRole('tab', { name: 'Díly a sklad' }));
     fireEvent.change(screen.getByLabelText('Sklad MC-1'), { target: { value: '2' } });
@@ -59,7 +64,9 @@ describe('MaterialApp', () => {
     expect(detail.getAllByRole('row').slice(1).map((r) => cells(r).at(-1))).toEqual(['1', '0', '-1']);
     // zpět v Matrixu: V1 a V2 pokryté, V3 chybí MC
     fireEvent.click(screen.getByRole('tab', { name: 'Matrix' }));
-    expect(door('V2').className).toContain('mat-ok');
-    expect(door('V3').textContent).toBe('20 - Container plannedMC ✗ · MF ✓');
+    expect(badges('V2')).toEqual(['MC ok', 'MF ok']);
+    expect(material('V2')).toBe('vše na skladě');
+    expect(badges('V3')).toEqual(['MC short', 'MF ok']);
+    expect(material('V3')).toBe('FL: MC MC-1');
   });
 });
