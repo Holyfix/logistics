@@ -231,9 +231,38 @@ describe('export Sekvence', () => {
     sum: 'Celkem',
     sheetCoverage: 'Coverage',
     sheetDemand: 'Potreba po dnech',
+    sheetMatrix: 'Matrix',
+    lot: 'Lot',
+    productionNumber: 'Production number',
+    optionType: 'Option Type',
+    colors: 'MC / MF',
+    planned: 'Planned customer built',
+    status: 'Status',
+    material: 'Materiál',
+    matrixNote: 'pozn. matice',
   };
-  const [coverage, demand] = sequenceReport(t.parts, t.days, texts, { boundary: day(6), shortText: (p) => (p.firstShort ? `od ${p.firstShort.productionNumber}` : '') });
+  const [matrixSheet, coverage, demand] = sequenceReport(t.parts, t.days, texts, {
+    boundary: day(6),
+    shortText: (p) => (p.firstShort ? `od ${p.firstShort.productionNumber}` : ''),
+    cars: t.cars,
+    carTexts: (car) => ({ planned: `stavba ${car.productionNumber}`, material: car.short ? 'FL: chybí' : 'vše na skladě', tone: car.short ? 'short' : 'ok' }),
+  });
   const values = (row: (ReportCell | null)[] | undefined) => (row ?? []).map((c) => c?.value ?? null);
+
+  it('list Matrix: vozy jako v aplikaci, stav dveří v barvě matice a štítky MC a MF', () => {
+    expect(matrixSheet!.name).toBe('Matrix');
+    expect(values(matrixSheet!.data[4]).slice(0, 8)).toEqual(['Lot', 'Production number', 'Option Type', 'MC / MF', 'Planned customer built', 'Status FL', 'MC', 'MF']);
+    expect(values(matrixSheet!.data[4]).at(-1)).toBe('Materiál');
+    // T1 má MC i MF na skladě; T3 chybí MF
+    const t1 = matrixSheet!.data[5]!;
+    expect(values(t1).slice(0, 8)).toEqual(['1', 'T1', 'SR1', 'C1 / C1', 'stavba T1', '20 - Container planned', 'MC', 'MF']);
+    expect(t1[5]).toMatchObject({ backgroundColor: '#FFA500' });
+    expect([t1[6], t1[7]]).toMatchObject([{ backgroundColor: '#2E8B3E' }, { backgroundColor: '#2E8B3E' }]);
+    const t3 = matrixSheet!.data[7]!;
+    expect(t3[1]).toMatchObject({ value: 'T3', textColor: '#B42D2D' });
+    expect([t3[6], t3[7]]).toMatchObject([{ backgroundColor: '#2E8B3E' }, { backgroundColor: '#C62828' }]);
+    expect(t3.at(-1)).toMatchObject({ value: 'FL: chybí', textColor: '#B42D2D' });
+  });
 
   it('list Coverage: stav skladu na konci dne po druzích, záporné červeně, zítřek orámovaný', () => {
     expect([coverage!.name, demand!.name]).toEqual(['Coverage', 'Potreba po dnech']);
