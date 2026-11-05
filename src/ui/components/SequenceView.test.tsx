@@ -169,7 +169,7 @@ describe('Komponenty – karta Sekvence', () => {
     expect(screen.getByText('Chybí v klíči MC/MF: 2 kombinací (MC 1 · MF 1) · 2 dveří se nepočítá')).toBeTruthy();
     const rows = [...document.querySelectorAll('.check-parts-box tbody tr')].map((r) => [...r.querySelectorAll('td')].slice(0, 5).map((td) => td.textContent));
     expect(rows).toEqual([
-      ['MC', 'FR', 'SR1', 'C1', '1'],
+      ['MC', 'FR', 'TPO', '—', '1'],
       ['MF', 'FR', 'SR1', 'C1', '1'],
     ]);
   });

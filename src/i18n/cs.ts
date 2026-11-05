@@ -414,7 +414,7 @@ export const cs = {
       incomplete: 'Pro kartu Sekvence v Komponentách je potřeba Order Status Matrix a klíč MC/MF.',
       check: {
         summary: 'Chybí v klíči MC/MF: {n} kombinací (MC {mc} · MF {mf}) · {doors} dveří se nepočítá',
-        hint: 'Kombinace dveří, výbavy (Option Type) a barvy z Order Status Matrix, pro které klíč nemá díl. Doplňte je do klíče přesně takto (u zadních dveří stačí výbava bez „-HT“); do té doby jsou v Sekvenci šedě a nepočítají se.',
+        hint: 'Kombinace dveří, výbavy (Option Type) a barvy z Order Status Matrix, pro které klíč nemá díl. Doplňte je do klíče přesně takto (u zadních dveří stačí výbava bez „-HT“; MC pro SR1 a TPO jako Type „TPO“ s prázdnou barvou); do té doby jsou v Sekvenci šedě a nepočítají se.',
         complete: 'Klíč MC/MF pokrývá všechny vozy v matici.',
         download: 'Stáhnout seznam',
         fileName: 'chybi-v-klici',
@@ -1435,7 +1435,7 @@ export const cs = {
       legendShort: 'chybí',
       legendUnknown: 'chybí v klíči – díl nelze přesně určit, do potřeby se nepočítá',
       legendDone: 'bez štítku: zabaleno nebo odesláno (stav 50+), do potřeby se nepočítá',
-      note: 'Vozy v pořadí plánované stavby u zákazníka (Planned customer built), stav dveří v barvách Order Status Matrix. Maincarrier a Middlefield podle klíče MC/MF: přesná shoda Option Type, dveří a barvy ze sloupce MC / MF (první pro MC, druhá pro MF); jen zadní dveře se s „-HT“ hledají i bez „-HT“. Co v klíči přesně není (nebo má v klíči víc dílů), je šedě „chybí v klíči“ a nepočítá se. Sklad z načteného souboru skladu se spotřebovává v pořadí stavby; zabalené a odeslané dveře (stav 50 a víc) se nepočítají. Sloupec Materiál vyjmenuje chybějící díly vozu; najetím myší na dveře uvidíte díly a zbývající sklad.',
+      note: 'Vozy v pořadí plánované stavby u zákazníka (Planned customer built), stav dveří v barvách Order Status Matrix. Maincarrier a Middlefield podle klíče MC/MF: přesná shoda Option Type, dveří a barvy ze sloupce MC / MF (první pro MC, druhá pro MF); zadní dveře se s „-HT“ hledají i bez „-HT“; MC u SR1, SR1-HT, TPO a TPO-HT je TPO Maincarrier (v klíči Type „TPO“, barva se neporovnává); u MC SR2 se barva porovnává bez přípony „-ASQ“. Co v klíči přesně není (nebo má v klíči víc dílů), je šedě „chybí v klíči“ a nepočítá se. Sklad z načteného souboru skladu se spotřebovává v pořadí stavby; zabalené a odeslané dveře (stav 50 a víc) se nepočítají. Sloupec Materiál vyjmenuje chybějící díly vozu; najetím myší na dveře uvidíte díly a zbývající sklad.',
     },
     export: {
       button: 'Excel',

@@ -412,7 +412,7 @@ export const en: Messages = {
       incomplete: 'The Sequence tab in Components needs the Order Status Matrix and the MC/MF key.',
       check: {
         summary: 'Missing in the MC/MF key: {n} combinations (MC {mc} · MF {mf}) · {doors} doors not counted',
-        hint: 'Combinations of door, trim (Option Type) and colour from the Order Status Matrix with no part in the key. Add them to the key exactly like this (for rear doors the trim without “-HT” is enough); until then they are grey in Sequence and not counted.',
+        hint: 'Combinations of door, trim (Option Type) and colour from the Order Status Matrix with no part in the key. Add them to the key exactly like this (for rear doors the trim without “-HT” is enough; the MC for SR1 and TPO as Type “TPO” with an empty colour); until then they are grey in Sequence and not counted.',
         complete: 'The MC/MF key covers all cars in the matrix.',
         download: 'Download list',
         fileName: 'missing-in-key',
@@ -1433,7 +1433,7 @@ export const en: Messages = {
       legendShort: 'short',
       legendUnknown: 'missing in the key – part not exactly known, not counted in demand',
       legendDone: 'no badge: packed or shipped (status 50+), not counted in demand',
-      note: 'Cars in the order of planned customer build, door status in the Order Status Matrix colours. The Maincarrier and Middlefield come from the MC/MF key: an exact match of option type, door and colour from the MC / MF column (first for MC, second for MF); only rear doors with “-HT” are also looked up without “-HT”. Anything not exactly in the key (or with several parts in the key) is grey “missing in the key” and not counted. Stock from the loaded stock file is used up in build order; packed and shipped doors (status 50 and above) do not count. The Material column lists the missing parts of the car; hover a door to see the parts and remaining stock.',
+      note: 'Cars in the order of planned customer build, door status in the Order Status Matrix colours. The Maincarrier and Middlefield come from the MC/MF key: an exact match of option type, door and colour from the MC / MF column (first for MC, second for MF); rear doors with “-HT” are also looked up without “-HT”; the MC of SR1, SR1-HT, TPO and TPO-HT is the TPO Maincarrier (Type “TPO” in the key, colour not compared); for SR2 MC the colour is compared without the “-ASQ” suffix. Anything not exactly in the key (or with several parts in the key) is grey “missing in the key” and not counted. Stock from the loaded stock file is used up in build order; packed and shipped doors (status 50 and above) do not count. The Material column lists the missing parts of the car; hover a door to see the parts and remaining stock.',
     },
     export: {
       button: 'Excel',
