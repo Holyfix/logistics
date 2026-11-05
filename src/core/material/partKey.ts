@@ -40,6 +40,9 @@ const REAR: readonly Door[] = ['RL', 'RR'];
 
 /** Výbavy, které mají TPO Maincarrier (jeden díl na stranu, bez barvy a bez rozlišení vyhřívání). */
 const TPO_MC_TYPES = new Set(['SR1', 'SR1-HT', 'TPO', 'TPO-HT']);
+
+/** MC u SR1, SR1-HT, TPO a TPO-HT je TPO Maincarrier: do potřeby ani skladu se nepočítá, jen se označí jako TPO. */
+export const isTpoMaincarrier = (optionType: string) => TPO_MC_TYPES.has(optionType.trim().toUpperCase());
 const TPO = 'TPO';
 const ASQ = /-ASQ$/;
 

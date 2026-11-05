@@ -3081,6 +3081,10 @@ button.oil-step:disabled {
   background: #c62828;
 }
 
+.mat-badge-tpo {
+  background: #1d5c9e;
+}
+
 .mat-badge-unknown {
   background: #9aa5b1;
 }

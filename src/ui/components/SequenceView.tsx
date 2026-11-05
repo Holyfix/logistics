@@ -138,6 +138,7 @@ export function SequenceView({ today }: { today: DayNumber }) {
   const doorTitle = (cell: DoorCoverage) =>
     [
       ...cell.parts.map((p) => `${p.kind} ${p.item}: ${ts.matrix.left} ${qty(p.left)}`),
+      ...(cell.tpo ? [`MC: ${ts.matrix.tpoTitle}`] : []),
       ...cell.unknown.map((kind) => `${kind}: ${ts.matrix.undetermined}`),
     ].join('\n');
 
@@ -565,7 +566,10 @@ export function SequenceView({ today }: { today: DayNumber }) {
             <li>
               <i className="mat-badge mat-badge-unknown">MC</i> {ts.matrix.legendUnknown}
             </li>
-            <li>{ts.matrix.legendDone}</li>
+            <li>
+            <i className="mat-badge mat-badge-tpo">TPO</i> {ts.matrix.legendTpo}
+          </li>
+          <li>{ts.matrix.legendDone}</li>
           </ul>
           <p className="muted">{ts.matrix.note}</p>
         </div>
@@ -627,10 +631,17 @@ function CarRow({ car, time, title }: { car: CarCoverage; time: (s: Stamp | null
 
 /** Štítky MC a MF v buňce dveří: zelený na skladě, červený chybí, šedý neurčený (chybí v klíči). */
 function DoorBadges({ cell }: { cell: DoorCoverage }) {
-  if (cell.state === 'none' || cell.state === 'skipped') return null;
+  const { t } = useI18n();
+  if (cell.state === 'skipped' || (cell.state === 'none' && !cell.tpo)) return null;
   return (
     <span className="mat-badges">
       {PART_KINDS.map((kind) => {
+        if (kind === 'MC' && cell.tpo)
+          return (
+            <i key={kind} className="mat-badge mat-badge-tpo" title={t.sequence.matrix.tpoTitle}>
+              TPO
+            </i>
+          );
         const parts = cell.parts.filter((p) => p.kind === kind);
         const state = parts.length ? (parts.some((p) => p.left < -1e-9) ? 'short' : 'ok') : cell.unknown.includes(kind) ? 'unknown' : null;
         return (

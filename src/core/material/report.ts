@@ -46,7 +46,7 @@ export interface SequenceReportTexts {
 
 /** Barvy stavů jako v Order Status Matrix (podle čísla stavu) a štítky MC/MF jako v aplikaci. */
 const STATUS_FILL: Record<number, string> = { 20: '#FFA500', 25: '#F0E68C', 30: '#FFFF00', 40: '#ADD8E6', 45: '#40E0D0', 50: '#90EE90', 60: '#32CD32' };
-const BADGE_FILL = { ok: '#2E8B3E', short: '#C62828', unknown: '#9AA5B1' } as const;
+const BADGE_FILL = { ok: '#2E8B3E', short: '#C62828', unknown: '#9AA5B1', tpo: '#1D5C9E' } as const;
 const MATRIX_HEADER = '#4C68A2';
 
 /** Text řádku vozu: plánovaná stavba a sloupec Materiál (chybějící díly, „chybí v klíči“, nebo vše na skladě). */
@@ -58,7 +58,9 @@ export interface CarTexts {
 
 /** Stav dílu daného druhu u dveří: na skladě, chybí, chybí v klíči, nebo bez štítku (hotové, výklopné). */
 function badge(cell: DoorCoverage, kind: PartKind): keyof typeof BADGE_FILL | null {
-  if (cell.state === 'none' || cell.state === 'skipped') return null;
+  if (cell.state === 'skipped') return null;
+  if (kind === 'MC' && cell.tpo) return 'tpo';
+  if (cell.state === 'none') return null;
   const parts = cell.parts.filter((p) => p.kind === kind);
   if (parts.length) return parts.some((p) => p.left < -1e-9) ? 'short' : 'ok';
   return cell.unknown.includes(kind) ? 'unknown' : null;
@@ -92,7 +94,7 @@ function matrixSheet(cars: readonly CarCoverage[], texts: SequenceReportTexts, c
         const fill = STATUS_FILL[statusCode(cell.status) ?? -1];
         const mark = (kind: PartKind): ReportCell => {
           const b = badge(cell, kind);
-          return b ? { value: kind, align: 'center', fontWeight: 'bold', fontSize: 9, textColor: '#FFFFFF', backgroundColor: BADGE_FILL[b] } : { value: '' };
+          return b ? { value: b === 'tpo' ? 'TPO' : kind, align: 'center', fontWeight: 'bold', fontSize: 9, textColor: '#FFFFFF', backgroundColor: BADGE_FILL[b] } : { value: '' };
         };
         return [{ value: cell.status, textColor: '#4D4D4D', ...(fill ? { backgroundColor: fill } : {}) }, mark('MC'), mark('MF')];
       }),
