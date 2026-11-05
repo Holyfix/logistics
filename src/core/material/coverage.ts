@@ -5,7 +5,7 @@
 import type { DayNumber } from '../dates';
 import { dayOfStamp, DOORS, type Door, type Stamp } from './doors';
 import { statusCode, type MatrixOrder } from './matrix';
-import { keyType, lookupPart, PART_KINDS, partColour, type PartKey, type PartKind } from './partKey';
+import { lookupPart, missingCombo, PART_KINDS, type PartKey, type PartKind } from './partKey';
 
 /** Stav „Packed“ a vyšší: dveře jsou hotové, MC a MF už jsou spotřebované a do potřeby se nepočítají. */
 export const DONE_STATUS = 50;
@@ -224,8 +224,7 @@ export function missingKeys(cars: readonly CarCoverage[]): MissingKey[] {
   for (const car of cars)
     for (const door of DOORS)
       for (const kind of car.doors[door]?.unknown ?? []) {
-        const colour = partColour(car.colors, kind);
-        const optionType = keyType(door, car.optionType);
+        const { type: optionType, colour } = missingCombo(kind, door, car.optionType, car.colors);
         const id = `${kind}|${door}|${optionType}|${colour}`;
         const entry = byKey.get(id) ?? byKey.set(id, { kind, door, optionType, colour, doors: 0, first: car.planned }).get(id)!;
         entry.doors++;

@@ -1,6 +1,8 @@
 // Klíč MC/MF: Maincarrier a Middlefield podle dveří (Side), výbavy (Type = Option Type v matici) a barvy (Colour =
-// barva ze sloupce „MC / MF“ v matici: první pro MC, druhá pro MF). Platí jen přesná shoda; jediná výjimka je
-// vyhřívaná výbava („-HT“) u zadních dveří, které vyhřívanou variantu nemají. Co přesně nesedí, je „chybí v klíči“.
+// barva ze sloupce „MC / MF“ v matici: první pro MC, druhá pro MF). Platí jen přesná shoda; výjimky: vyhřívaná výbava
+// („-HT“) u zadních dveří, které vyhřívanou variantu nemají; MC u SR1, SR1-HT, TPO a TPO-HT je TPO Maincarrier bez
+// barvy (v klíči Type „TPO“, barva se neporovnává); u ostatního MC se barva porovnává bez přípony „-ASQ“.
+// Co přesně nesedí, je „chybí v klíči“.
 
 import { cellText, type Cell } from '../table';
 import { findColumn } from '../csv';
@@ -36,6 +38,22 @@ const HEATED = /-HT$/;
 /** Zadní dveře vyhřívanou variantu nemají: „SR2-HT“ se u nich hledá i jako „SR2“. */
 const REAR: readonly Door[] = ['RL', 'RR'];
 
+/** Výbavy, které mají TPO Maincarrier (jeden díl na stranu, bez barvy a bez rozlišení vyhřívání). */
+const TPO_MC_TYPES = new Set(['SR1', 'SR1-HT', 'TPO', 'TPO-HT']);
+const TPO = 'TPO';
+const ASQ = /-ASQ$/;
+
+/**
+ * Výbava a barva tak, jak se porovnávají s klíčem: MC u SR1, SR1-HT, TPO a TPO-HT → „TPO“ bez barvy; jinak výbava
+ * přesně a barva dílu (u MC bez přípony „-ASQ“).
+ */
+export function keyCombo(kind: PartKind, optionType: string, colour: string): { type: string; colour: string } {
+  const type = optionType.trim().toUpperCase();
+  if (kind === 'MC' && TPO_MC_TYPES.has(type)) return { type: TPO, colour: '' };
+  const c = colour.trim().toUpperCase();
+  return { type, colour: kind === 'MC' ? c.replace(ASQ, '') : c };
+}
+
 const keyOf = (kind: PartKind, door: Door, type: string, colour: string) => `${kind}|${door}|${type.trim().toUpperCase()}|${colour.trim().toUpperCase()}`;
 
 /**
@@ -60,7 +78,8 @@ export function parsePartKey(data: readonly Cell[][]): PartKeyResult {
     const description = col.description === -1 ? '' : cellText(row[col.description]);
     const kind = col.description === -1 ? 'MF' : partKind(description);
     if (!DOORS.includes(door) || !item || !type || !kind) continue;
-    const key = keyOf(kind, door, type, cellText(row[col.colour]));
+    const combo = keyCombo(kind, type, cellText(row[col.colour]));
+    const key = keyOf(kind, door, combo.type, combo.colour);
     const known = entries.get(key);
     if (known && known.item.toUpperCase() !== item.toUpperCase()) conflicts.add(key);
     else entries.set(key, { item, description });
@@ -81,13 +100,18 @@ export function keyType(door: Door, optionType: string): string {
   return REAR.includes(door) ? type.replace(/-HT$/i, '') : type;
 }
 
+/** Řádek, který v klíči chybí, tak jak ho zapsat: výbava (u zadních dveří bez „-HT“, u TPO Maincarrieru „TPO“) a barva. */
+export function missingCombo(kind: PartKind, door: Door, optionType: string, colors: string): { type: string; colour: string } {
+  const combo = keyCombo(kind, optionType, partColour(colors, kind));
+  return { type: keyType(door, combo.type), colour: combo.colour };
+}
+
 /**
- * Díl daného druhu pro dveře vozu podle klíče: jen přesná shoda dveří, výbavy a barvy. Zadní dveře (RL, RR) se
- * s vyhřívanou výbavou hledají i pod výbavou bez „-HT“ (SR2-HT → SR2), přednost má přesný řádek „-HT“.
+ * Díl daného druhu pro dveře vozu podle klíče: přesná shoda dveří, výbavy a barvy (s pravidly keyCombo pro MC). Zadní
+ * dveře (RL, RR) se s vyhřívanou výbavou hledají i pod výbavou bez „-HT“ (SR2-HT → SR2), přednost má přesný řádek „-HT“.
  */
 export function lookupPart(key: PartKey, kind: PartKind, door: Door, optionType: string, colors: string): PartKeyEntry | null {
-  const type = optionType.trim().toUpperCase();
-  const colour = partColour(colors, kind);
+  const { type, colour } = keyCombo(kind, optionType, partColour(colors, kind));
   const exact = key.entries.get(keyOf(kind, door, type, colour));
   if (exact || !REAR.includes(door) || !HEATED.test(type)) return exact ?? null;
   return key.entries.get(keyOf(kind, door, type.replace(HEATED, ''), colour)) ?? null;

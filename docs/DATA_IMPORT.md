@@ -346,8 +346,10 @@ Klíč MC/MF musí ležet ve složce `Sekvence`: mimo ni by se podle „Mapping�
   nikdy nepočítají (MC a MF už jsou v nich zabudované); ostatní dveře se stavem z matice se počítají.
 - **MC a MF pro dveře** podle klíče, jen **přesná shoda**: dveře (Side), výbava (Option Type = Type) a barva ze
   sloupce MC / MF (první hodnota pro MC, druhá pro MF, např. „C9 / C1“ → MC C9, MF C1), 1 ks na dveře. Velká a malá
-  písmena a mezery na okrajích nevadí. Jediná výjimka: **zadní dveře (RL, RR)** s vyhřívanou výbavou se hledají
-  i bez „-HT“ (SR2-HT → SR2), přednost má přesný řádek „-HT“. Druh dílu je podle popisu (jen „MC“, nebo jen „MF“;
+  písmena a mezery na okrajích nevadí. Výjimky: **zadní dveře (RL, RR)** s vyhřívanou výbavou se hledají i bez „-HT“
+  (SR2-HT → SR2), přednost má přesný řádek „-HT“; **MC u SR1, SR1-HT, TPO a TPO-HT** je TPO Maincarrier (jeden díl
+  …-ASQ na stranu) – v klíči řádek s Type „TPO“ a prázdnou barvou, barva ani vyhřívání se neporovnávají; **MC u SR2
+  a SR2-HT** se porovnává s barvou bez přípony „-ASQ“ („C9-ASQ“ = „C9“). Druh dílu je podle popisu (jen „MC“, nebo jen „MF“;
   řádek s oběma nebo bez nich se ignoruje). Kombinace, která má v klíči víc různých dílů, je nejednoznačná
   a nepoužije se (modul Data ji vypíše).
 - Co v klíči přesně není, **chybí v klíči**: ukáže se šedě (štítek, ve sloupci Materiál „chybí v klíči: MC FL, FR“,
