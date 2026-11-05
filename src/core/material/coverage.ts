@@ -5,7 +5,7 @@
 import type { DayNumber } from '../dates';
 import { dayOfStamp, DOORS, type Door, type Stamp } from './doors';
 import { statusCode, type MatrixOrder } from './matrix';
-import { lookupPart, missingCombo, PART_KINDS, type PartKey, type PartKind } from './partKey';
+import { isTpoMaincarrier, lookupPart, missingCombo, PART_KINDS, type PartKey, type PartKind } from './partKey';
 
 /** Stav „Packed“ a vyšší: dveře jsou hotové, MC a MF už jsou spotřebované a do potřeby se nepočítají. */
 export const DONE_STATUS = 50;
@@ -29,6 +29,8 @@ export interface DoorCoverage {
   door: Door;
   status: string;
   parts: DoorPart[];
+  /** MC je TPO Maincarrier (SR1, SR1-HT, TPO, TPO-HT): nepočítá se, jen se označí. */
+  tpo: boolean;
   /** Druhy dílů, které nejde určit (chybí v klíči). */
   unknown: PartKind[];
   state: DoorState;
@@ -115,7 +117,7 @@ export function buildMaterialCoverage({ matrix, key, stock, today }: MaterialInp
       const status = o.status[door];
       if (status === undefined) continue;
       doors++;
-      const cell: DoorCoverage = { door, status, parts: [], unknown: [], state: 'none' };
+      const cell: DoorCoverage = { door, status, parts: [], tpo: false, unknown: [], state: 'none' };
       car.doors[door] = cell;
       // Zabalené a odeslané dveře (stav 50+) už díly spotřebovaly: nepočítají se.
       if ((statusCode(status) ?? 0) >= DONE_STATUS) {
@@ -124,6 +126,11 @@ export function buildMaterialCoverage({ matrix, key, stock, today }: MaterialInp
         continue;
       }
       for (const kind of PART_KINDS) {
+        // TPO Maincarrier se do potřeby ani skladu nepočítá (ani jako „chybí v klíči“), jen se označí.
+        if (kind === 'MC' && door !== 'HB' && isTpoMaincarrier(o.optionType)) {
+          cell.tpo = true;
+          continue;
+        }
         // Z klíče 1 ks na dveře; výklopné dveře MC ani MF nemají, takže bez klíče nejsou „neznámé“.
         const keyed = lookupPart(key, kind, door, o.optionType, o.colors);
         if (!keyed) {

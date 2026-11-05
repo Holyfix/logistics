@@ -51,13 +51,13 @@ describe('Order Status Matrix', () => {
 describe('pokrytí MC a MF podle matice a klíče', () => {
   const key = parsePartKey([
     ['Side', 'Item Number', 'Type', 'Colour', 'Description'],
-    ['FL', 'MC-FL-1', 'SR1', 'C1', 'ASSY MC SR1 FRT LH'],
-    ['FL', 'MF-FL-1', 'SR1', 'C1', 'ASSY MF SR1 FRT LH'],
-    ['RR', 'MC-RR-1', 'SR1', 'C1', 'ASSY MC SR1 RR RH'],
-    ['RR', 'MF-RR-1', 'SR1', 'C1', 'ASSY MF SR1 RR RH'],
+    ['FL', 'MC-FL-1', 'SR2', 'C1', 'ASSY MC SR1 FRT LH'],
+    ['FL', 'MF-FL-1', 'SR2', 'C1', 'ASSY MF SR1 FRT LH'],
+    ['RR', 'MC-RR-1', 'SR2', 'C1', 'ASSY MC SR1 RR RH'],
+    ['RR', 'MF-RR-1', 'SR2', 'C1', 'ASSY MF SR1 RR RH'],
   ]);
   if (!key.ok) throw new Error();
-  const car = (lot: string, pn: string, planned: number | null, status: Record<string, string>) => ({ lot, productionNumber: pn, planned, optionType: 'SR1', colors: 'C1 / C1', status });
+  const car = (lot: string, pn: string, planned: number | null, status: Record<string, string>) => ({ lot, productionNumber: pn, planned, optionType: 'SR2', colors: 'C1 / C1', status });
   const matrix = new Map(
     [
       // zabalený vůz: nepočítá se
@@ -194,25 +194,17 @@ describe('klíč MC/MF (dveře, výbava, barva)', () => {
     const stock = { MC: new Map([['MC-KEY-FL', 5]]), MF: new Map([['MF-KEY-FL', 1]]) };
     const t = buildMaterialCoverage({ matrix, key: key.value, stock, today: day(5) });
     const [t1, t9] = t.cars;
-    expect(t1!.doors.FL).toMatchObject({ state: 'ok', unknown: [] });
-    expect(t1!.doors.FL!.parts).toEqual([
-      { item: 'MC-KEY-FL', kind: 'MC', qty: 1, left: 4 },
-      { item: 'MF-KEY-FL', kind: 'MF', qty: 1, left: 0 },
-    ]);
-    expect(t1!.doors.RR).toMatchObject({ state: 'unknown', parts: [], unknown: ['MC', 'MF'] });
-    // SR1-HT: MC je TPO Maincarrier z řádku TPO
-    expect(t9!.doors.FL).toMatchObject({ state: 'short', parts: [{ item: 'MC-KEY-FL', left: 3 }, { item: 'MF-KEY-FL-HT', left: -1 }], unknown: [] });
-    expect(t9!.doors.FR).toMatchObject({ state: 'unknown', unknown: ['MC', 'MF'] });
-    expect(t).toMatchObject({ known: 2, unknown: 2, unknownByKind: { MC: 2, MF: 2 } });
-    expect(carUndetermined(t9!)).toEqual([
-      { kind: 'MC', doors: ['FR'] },
-      { kind: 'MF', doors: ['FR'] },
-    ]);
-    // neurčené díly se nepočítají do potřeby
-    expect(t.parts.map((p) => p.item)).toEqual(['MC-KEY-FL', 'MF-KEY-FL-HT', 'MF-KEY-FL']);
+    // SR1 a SR1-HT: MC je TPO Maincarrier – jen označený, nepočítá se (ani jako chybí v klíči)
+    expect(t1!.doors.FL).toMatchObject({ state: 'ok', tpo: true, unknown: [] });
+    expect(t1!.doors.FL!.parts).toEqual([{ item: 'MF-KEY-FL', kind: 'MF', qty: 1, left: 0 }]);
+    expect(t1!.doors.RR).toMatchObject({ state: 'unknown', parts: [], tpo: true, unknown: ['MF'] });
+    expect(t9!.doors.FL).toMatchObject({ state: 'short', tpo: true, parts: [{ item: 'MF-KEY-FL-HT', left: -1 }], unknown: [] });
+    expect(t9!.doors.FR).toMatchObject({ state: 'unknown', tpo: true, unknown: ['MF'] });
+    expect(t).toMatchObject({ known: 2, unknown: 2, unknownByKind: { MC: 0, MF: 2 } });
+    expect(carUndetermined(t9!)).toEqual([{ kind: 'MF', doors: ['FR'] }]);
+    // neurčené díly a TPO Maincarrier se nepočítají do potřeby
+    expect(t.parts.map((p) => p.item)).toEqual(['MF-KEY-FL-HT', 'MF-KEY-FL']);
     expect(missingKeys(t.cars).map((m) => `${m.kind} ${m.door} ${m.optionType} ${m.colour} ${m.doors}`)).toEqual([
-      'MC FR TPO  1',
-      'MC RR TPO  1',
       'MF RR SR1 C1 1',
       'MF FR SR1-HT C1 1',
     ]);
@@ -223,11 +215,11 @@ describe('klíč MC/MF (dveře, výbava, barva)', () => {
 describe('export Sekvence', () => {
   const key = parsePartKey([
     ['Side', 'Item Number', 'Type', 'Colour', 'Description'],
-    ['FL', 'MC-1', 'SR1', 'C1', 'ASSY MC'],
-    ['FL', 'MF-1', 'SR1', 'C1', 'ASSY MF'],
+    ['FL', 'MC-1', 'SR2', 'C1', 'ASSY MC'],
+    ['FL', 'MF-1', 'SR2', 'C1', 'ASSY MF'],
   ]);
   if (!key.ok) throw new Error();
-  const car = (pn: string, planned: number) => ({ lot: '1', productionNumber: pn, planned, optionType: 'SR1', colors: 'C1 / C1', status: { FL: '20 - Container planned' } });
+  const car = (pn: string, planned: number) => ({ lot: '1', productionNumber: pn, planned, optionType: 'SR2', colors: 'C1 / C1', status: { FL: '20 - Container planned' } });
   const matrix = new Map([car('T1', at(5, 8)), car('T2', at(6, 8)), car('T3', at(6, 9))].map((c) => [c.productionNumber, c]));
   const t = buildMaterialCoverage({ matrix, key: key.value, stock: { MC: new Map([['MC-1', 5]]), MF: new Map([['MF-1', 1]]) }, today: day(5) });
   const texts = {
@@ -276,13 +268,21 @@ describe('export Sekvence', () => {
     expect(values(matrixSheet!.data[4]).at(-1)).toBe('Materiál');
     // T1 má MC i MF na skladě; T3 chybí MF
     const t1 = matrixSheet!.data[5]!;
-    expect(values(t1).slice(0, 8)).toEqual(['1', 'T1', 'SR1', 'C1 / C1', 'stavba T1', '20 - Container planned', 'MC', 'MF']);
+    expect(values(t1).slice(0, 8)).toEqual(['1', 'T1', 'SR2', 'C1 / C1', 'stavba T1', '20 - Container planned', 'MC', 'MF']);
     expect(t1[5]).toMatchObject({ backgroundColor: '#FFA500' });
     expect([t1[6], t1[7]]).toMatchObject([{ backgroundColor: '#2E8B3E' }, { backgroundColor: '#2E8B3E' }]);
     const t3 = matrixSheet!.data[7]!;
     expect(t3[1]).toMatchObject({ value: 'T3', textColor: '#B42D2D' });
     expect([t3[6], t3[7]]).toMatchObject([{ backgroundColor: '#2E8B3E' }, { backgroundColor: '#C62828' }]);
     expect(t3.at(-1)).toMatchObject({ value: 'FL: chybí', textColor: '#B42D2D' });
+  });
+
+  it('list Matrix: MC u SR1, SR1-HT, TPO a TPO-HT modře jako TPO a do dílů se nepočítá', () => {
+    const tpoCars = new Map([[ 'T9', { lot: '1', productionNumber: 'T9', planned: at(5, 8), optionType: 'TPO-HT', colors: 'C1-ASQ / C1', status: { FL: '20 - Container planned' } } ]]);
+    const c = buildMaterialCoverage({ matrix: tpoCars, key: key.value, stock: { MC: new Map(), MF: new Map() }, today: day(5) });
+    expect(c.parts.map((p) => p.kind)).toEqual([]);
+    const [m] = sequenceReport(c.parts, c.days, texts, { shortText: () => '', cars: c.cars });
+    expect(m!.data[5]![6]).toMatchObject({ value: 'TPO', backgroundColor: '#1D5C9E' });
   });
 
   it('list Coverage: stav skladu na konci dne po druzích, záporné červeně, zítřek orámovaný', () => {

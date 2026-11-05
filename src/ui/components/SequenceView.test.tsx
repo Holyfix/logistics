@@ -14,17 +14,17 @@ import { DataPage } from '../DataPage';
 const matrix = parseSequenceCsv(
   [
     'Lot;Production number;Option Type;MC / MF;Planned customer built;Status FL;Status FR;Status RL;Status RR;Status HB',
-    '6;V0;SR1;C1 / C1;04.11.2026 08:00;60 - Shipped;;;;',
-    '7;V1;SR1;C1 / C1;05.11.2026 08:00;20 - Container planned;;;;',
-    '7;V2;SR1;C1 / C1;05.11.2026 09:00;30 - Sequencelabel printed;;;;',
-    '8;V3;SR1;C1 / C1;06.11.2026 07:00;20 - Container planned;;;;',
+    '6;V0;SR2;C1 / C1;04.11.2026 08:00;60 - Shipped;;;;',
+    '7;V1;SR2;C1 / C1;05.11.2026 08:00;20 - Container planned;;;;',
+    '7;V2;SR2;C1 / C1;05.11.2026 09:00;30 - Sequencelabel printed;;;;',
+    '8;V3;SR2;C1 / C1;06.11.2026 07:00;20 - Container planned;;;;',
     // FR v klíči není
-    '8;V9;SR1;C1 / C1;06.11.2026 08:00;;20 - Container planned;;;',
+    '8;V9;SR2;C1 / C1;06.11.2026 08:00;;20 - Container planned;;;',
   ].join('\n'),
 );
 // Klíč MC/MF: díl podle dveří, výbavy a barvy
-const key = parseSequenceCsv('Side;Item Number;Type;Colour;Description\nFL;MF-1;SR1;C1;ASSY MF SR1 FRT LH\nFL;MC-1;SR1;C1;ASSY MC SR1 FRT LH');
-const onlyMf = parseSequenceCsv('Side;Item Number;Type;Colour;Description\nFL;MF-1;SR1;C1;ASSY MF SR1 FRT LH');
+const key = parseSequenceCsv('Side;Item Number;Type;Colour;Description\nFL;MF-1;SR2;C1;ASSY MF SR1 FRT LH\nFL;MC-1;SR2;C1;ASSY MC SR1 FRT LH');
+const onlyMf = parseSequenceCsv('Side;Item Number;Type;Colour;Description\nFL;MF-1;SR2;C1;ASSY MF SR1 FRT LH');
 // Komponenty se bez kusovníku nezobrazí; Sekvence ho nepotřebuje.
 const bom = parseBom([
   ['Level', 'Component Item', 'Description', 'Quantity Per', 'UM', 'Purchase/Manufacture'],
@@ -169,8 +169,8 @@ describe('Komponenty – karta Sekvence', () => {
     expect(screen.getByText('Chybí v klíči MC/MF: 2 kombinací (MC 1 · MF 1) · 2 dveří se nepočítá')).toBeTruthy();
     const rows = [...document.querySelectorAll('.check-parts-box tbody tr')].map((r) => [...r.querySelectorAll('td')].slice(0, 5).map((td) => td.textContent));
     expect(rows).toEqual([
-      ['MC', 'FR', 'TPO', '—', '1'],
-      ['MF', 'FR', 'SR1', 'C1', '1'],
+      ['MC', 'FR', 'SR2', 'C1', '1'],
+      ['MF', 'FR', 'SR2', 'C1', '1'],
     ]);
   });
 
@@ -196,6 +196,30 @@ describe('Komponenty – karta Sekvence', () => {
     fireEvent.click(kindFilter.getByRole('button', { name: 'Vše' }));
     fireEvent.click(screen.getByLabelText('Jen chybějící díly'));
     expect(rows().map((r) => r[0])).toEqual(['MF-1']);
+  });
+
+  it('MC u SR1, SR1-HT, TPO a TPO-HT: jen modrý štítek TPO, do zásoby se nepočítá', () => {
+    localStorage.setItem('logistics-locale', 'cs');
+    const tpoMatrix = parseSequenceCsv(
+      ['Lot;Production number;Option Type;MC / MF;Planned customer built;Status FL;Status FR;Status RL;Status RR;Status HB', '7;V7;SR1-HT;C1-ASQ / C1;05.11.2026 08:00;20 - Container planned;;;;'].join('\n'),
+    );
+    const tpoKey = parseSequenceCsv('Side;Item Number;Type;Colour;Description\nFL;MF-HT;SR1-HT;C1;ASSY MF SR1 HEAT. FRT LH');
+    if (tpoMatrix.type !== 'matrix' || tpoKey.type !== 'key') throw new Error();
+    const base = state(true);
+    render(
+      <I18nProvider>
+        <DataProvider initial={{ ...base, data: { ...base.data!, sequence: { matrix: { path: 'Sekvence/m.xlsx', lastModified: 0, orders: tpoMatrix.orders }, key: { path: 'Sekvence/k.xlsx', lastModified: 0, key: tpoKey.key } } } }}>
+          <ComponentsPage today={dayFromParts(2026, 11, 5)!} />
+        </DataProvider>
+      </I18nProvider>,
+    );
+    fireEvent.click(screen.getByRole('tab', { name: 'Sekvence' }));
+    expect(badges('V7')).toEqual(['TPO tpo', 'MF short']);
+    expect(material('V7')).toBe('FL: MF MF-HT');
+    // MC TPO se nehlásí jako chybějící v klíči ani nechybí
+    expect(screen.getByText('chybí dílů: MC 0 · MF 1')).toBeTruthy();
+    expect(screen.getByText(/nepočítají se do potřeby · MC 0 · MF 0 · 0 kombinací chybí v klíči/)).toBeTruthy();
+    expect(screen.getByText('TPO Maincarrier (SR1, SR1-HT, TPO, TPO-HT) – do zásoby se nepočítá')).toBeTruthy();
   });
 
   it('bez souborů ve složce Sekvence poradí, co uložit', () => {
