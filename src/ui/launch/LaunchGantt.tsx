@@ -3,8 +3,10 @@ import { dayToIso, isoWeek, mondayOf, parseDay, type DayNumber } from '../../cor
 import { formatDayShort, formatQuantity, type Locale } from '../../core/format';
 import {
   clampProgress,
+  customerColors,
   DAY_WIDTH,
   groupStatus,
+  isPassed,
   nextMonth,
   progressOf,
   renameProject,
@@ -49,6 +51,8 @@ export type GanttRow =
   | { type: 'empty'; key: string };
 
 const PROGRESS_QUICK = [0, 25, 50, 75, 100];
+/** Počet barev zákaznických fází (gantt-c0 … gantt-c5), pak se opakují. */
+const CUSTOMER_COLORS = 6;
 const COLUMNS = 5;
 
 interface Segment {
@@ -111,6 +115,7 @@ export function LaunchGantt({
   toggle,
   update,
   newItem,
+  reveal,
   removeItem,
   removeProject,
   renamed,
@@ -127,7 +132,9 @@ export function LaunchGantt({
   select: (s: Selection) => void;
   toggle: (key: string) => void;
   update: (plan: LaunchPlan) => void;
-  newItem: (project: string, kind: LaunchKind) => void;
+  newItem: (project: string, kind: LaunchKind, customer: boolean) => void;
+  /** Otevře řádek (i ve sbaleném projektu či fázi). */
+  reveal: (item: LaunchItem) => void;
   removeItem: (id: number) => void;
   removeProject: (name: string) => void;
   renamed: (from: string, to: string) => void;
@@ -164,59 +171,89 @@ export function LaunchGantt({
     </td>
   );
 
-  const summaryBar = (items: readonly LaunchItem[], status: LaunchStatus, progress: number, phase: boolean) => {
+  // Zákaznické termíny: barva podle fáze v projektu; interní řádky: barva podle plnění (stavu).
+  const colors = new Map(plan.projects.map((p) => [p.name, customerColors(plan.items.filter((i) => i.project === p.name))]));
+  const customerClass = (project: string, phase: string) => `gantt-c${(colors.get(project)?.get(phase) ?? 0) % CUSTOMER_COLORS}`;
+  const itemClass = (item: LaunchItem) => (item.customer ? `${customerClass(item.project, item.phase)}${isPassed(item, today) ? ' gantt-passed' : ''}` : `gantt-${statusOf(item, today)}`);
+  const itemTitle = (item: LaunchItem) => {
+    const status = statusOf(item, today);
+    const when = item.end === null ? tl.noDate : item.kind === 'task' && item.start !== null ? `${short(item.start)} – ${short(item.end)}` : short(item.end);
+    return `${item.name || tl.noName} · ${when} · ${item.customer ? `${tl.status.customer}${isPassed(item, today) ? ` (${tl.passed})` : ''}` : `${tl.status[status]} · ${item.progress} %`}`;
+  };
+
+  const summaryBar = (items: readonly LaunchItem[], status: LaunchStatus, progress: number | null, phaseClass: string | null) => {
     const span = spanOf(items);
     if (!span) return null;
+    const colour = status === 'customer' ? (phaseClass ?? 'gantt-customer') : `gantt-${status}`;
     return (
       <span
-        className={`gantt-sum gantt-${status}${phase ? ' gantt-sum-phase' : ''}`}
+        className={`gantt-sum ${colour}${phaseClass !== null ? ' gantt-sum-phase' : ''}`}
         style={{
           left: `${x(span.start)}px`,
           width: `${Math.max(x(span.end + 1) - x(span.start), 4)}px`,
         }}
-        title={`${short(span.start)} – ${short(span.end)} · ${progress} %`}
+        title={`${short(span.start)} – ${short(span.end)}${progress === null ? '' : ` · ${progress} %`}`}
       >
-        <span className="gantt-fill" style={{ width: `${progress}%` }} />
-        <span className="gantt-tag gantt-tag-out">{progress} %</span>
+        {progress !== null && <span className="gantt-fill" style={{ width: `${progress}%` }} />}
+        {progress !== null && <span className="gantt-tag gantt-tag-out">{progress} %</span>}
       </span>
     );
   };
 
-  const itemMark = (item: LaunchItem, status: LaunchStatus) => {
-    const title = `${item.name || tl.noName} · ${tl.status[status]} · ${item.progress} %`;
+  /** Bod v Ganttu (milník nebo pruh úkolu): kliknutím se řádek otevře; mini = ve sbaleném projektu či fázi, bez popisků. */
+  const itemMark = (item: LaunchItem, mini = false) => {
+    if (item.end === null) return null;
+    const open = (e: { stopPropagation: () => void }) => {
+      e.stopPropagation();
+      if (mini) reveal(item);
+      else select(selected?.type === 'item' && selected.id === item.id ? null : { type: 'item', id: item.id });
+    };
     const base =
-      item.baseline !== null && item.end !== null && item.baseline !== item.end ? (
+      !mini && item.baseline !== null && item.baseline !== item.end ? (
         <span className="gantt-base" style={{ left: `${x(item.baseline) + px / 2}px` }} title={`${tl.legendBaseline}: ${short(item.baseline)}`} aria-hidden="true" />
       ) : null;
-    if (item.end === null) return null;
     if (item.kind === 'milestone' || item.start === null) {
       return (
-        <>
+        <span key={item.id}>
           {base}
-          <span className={`gantt-ms gantt-${status}`} style={{ left: `${x(item.end) + px / 2}px` }} title={`${title} · ${short(item.end)}`} />
-          <span className="gantt-tag gantt-tag-ms" style={{ left: `${x(item.end) + px / 2 + 10}px` }}>
-            {short(item.end)}
-          </span>
-        </>
+          <button
+            type="button"
+            className={`gantt-ms ${itemClass(item)}${mini ? ' gantt-mini' : ''}`}
+            style={{ left: `${x(item.end) + px / 2}px` }}
+            title={itemTitle(item)}
+            aria-label={itemTitle(item)}
+            onClick={open}
+          />
+          {!mini && (
+            <span className="gantt-tag gantt-tag-ms" style={{ left: `${x(item.end) + px / 2 + 10}px` }}>
+              {short(item.end)}
+            </span>
+          )}
+        </span>
       );
     }
     return (
-      <>
+      <span key={item.id}>
         {base}
-        <span
-          className={`gantt-bar gantt-${status}`}
+        <button
+          type="button"
+          className={`gantt-bar ${itemClass(item)}${mini ? ' gantt-mini' : ''}`}
           style={{
             left: `${x(item.start)}px`,
             width: `${Math.max(x(item.end + 1) - x(item.start), 3)}px`,
           }}
-          title={`${title} · ${short(item.start)} – ${short(item.end)}`}
+          title={itemTitle(item)}
+          aria-label={itemTitle(item)}
+          onClick={open}
         >
-          <span className="gantt-fill" style={{ width: `${item.progress}%` }} />
-          <span className="gantt-tag gantt-tag-out">{short(item.end)}</span>
-        </span>
-      </>
+          {!item.customer && <span className="gantt-fill" style={{ width: `${item.progress}%` }} />}
+          {!mini && <span className="gantt-tag gantt-tag-out">{short(item.end)}</span>}
+        </button>
+      </span>
     );
   };
+  /** Body sbalené skupiny přes souhrnný pruh (nejdřív úkoly, milníky navrch). */
+  const miniMarks = (items: readonly LaunchItem[]) => [...items].sort((a, b) => Number(a.kind === 'milestone') - Number(b.kind === 'milestone')).map((i) => itemMark(i, true));
 
   const chevron = (key: string, isCollapsed: boolean, label: string) => (
     <button
@@ -307,16 +344,24 @@ export function LaunchGantt({
             if (row.type === 'phase') {
               const status = groupStatus(row.items, today);
               const progress = progressOf(row.items);
+              const project = row.items[0]!.project;
+              const phaseClass = row.items.some((i) => i.customer) ? customerClass(project, row.phase) : '';
               return (
                 <tr key={row.key} className="gantt-row-phase" onClick={() => toggle(row.key)}>
                   <td className="gantt-name gantt-depth-1">
                     {chevron(row.key, row.collapsed, row.phase)}
+                    {phaseClass && <i className={`gantt-swatch ${phaseClass}`} title={tl.status.customer} aria-hidden="true" />}
                     <span>{row.phase}</span>
                   </td>
                   <td className="gantt-owner" />
-                  <td className="gantt-progress n">{progress} %</td>
+                  <td className="gantt-progress n">{progress === null ? '—' : `${progress} %`}</td>
                   {dueCell(row.items)}
-                  {track(summaryBar(row.items, status, progress, true))}
+                  {track(
+                    <>
+                      {summaryBar(row.items, status, progress, phaseClass)}
+                      {row.collapsed && miniMarks(row.items)}
+                    </>,
+                  )}
                 </tr>
               );
             }
@@ -325,18 +370,36 @@ export function LaunchGantt({
               const progress = progressOf(row.items);
               const open = selected?.type === 'project' && selected.name === row.project.name;
               return [
-                <tr key={row.key} className={`gantt-row-project${open ? ' gantt-row-open' : ''}`} onClick={() => select(open ? null : { type: 'project', name: row.project.name })}>
+                <tr key={row.key} className={`gantt-row-project${open ? ' gantt-row-open' : ''}`} onClick={() => toggle(row.key)}>
                   <td className="gantt-name">
                     {chevron(row.key, row.collapsed, row.project.name)}
                     <strong>{row.project.name}</strong>
+                    <button
+                      type="button"
+                      className="gantt-edit"
+                      aria-label={`${tl.edit}: ${row.project.name}`}
+                      title={tl.edit}
+                      aria-pressed={open}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        select(open ? null : { type: 'project', name: row.project.name });
+                      }}
+                    >
+                      ✎
+                    </button>
                     {row.project.description && <small className="muted gantt-desc">{row.project.description}</small>}
                   </td>
                   <td className="gantt-owner" />
                   <td className="gantt-progress n">
-                    <strong>{progress} %</strong>
+                    <strong>{progress === null ? '—' : `${progress} %`}</strong>
                   </td>
                   {dueCell(row.items)}
-                  {track(summaryBar(row.items, status, progress, false))}
+                  {track(
+                    <>
+                      {summaryBar(row.items, status, progress, null)}
+                      {row.collapsed && miniMarks(row.items)}
+                    </>,
+                  )}
                 </tr>,
                 open && (
                   <tr key={`${row.key}-detail`} className="gantt-detail-row">
@@ -362,7 +425,7 @@ export function LaunchGantt({
                             })),
                           )
                         }
-                        add={(kind) => newItem(row.project.name, kind)}
+                        add={(kind, customer) => newItem(row.project.name, kind, customer)}
                         remove={() => {
                           if (window.confirm(tl.projectDetail.deleteConfirm.replace('{name}', row.project.name).replace('{n}', formatQuantity(row.items.length, locale))))
                             removeProject(row.project.name);
@@ -381,13 +444,21 @@ export function LaunchGantt({
             return [
               <tr key={row.key} className={`gantt-row-item${open ? ' gantt-row-open' : ''}`} onClick={() => select(open ? null : { type: 'item', id: item.id })}>
                 <td className={`gantt-name gantt-depth-${row.depth}`}>
-                  <i className={`gantt-dot gantt-${status}${item.kind === 'milestone' ? ' gantt-dot-ms' : ''}`} title={`${tl.kind[item.kind]} · ${tl.status[status]}`} aria-hidden="true" />
+                  <i className={`gantt-dot ${itemClass(item)}${item.kind === 'milestone' ? ' gantt-dot-ms' : ''}`} title={`${tl.kind[item.kind]} · ${tl.status[status]}`} aria-hidden="true" />
                   <span className="gantt-label" title={item.note || undefined}>
                     {item.name || <span className="muted">{tl.noName}</span>}
                   </span>
                 </td>
-                <td className="gantt-owner">{item.owner || '—'}</td>
-                <td className="gantt-progress n">{item.progress} %</td>
+                <td className="gantt-owner">{item.owner || (item.customer ? <span className="muted">{tl.customerOwner}</span> : '—')}</td>
+                <td className="gantt-progress n">
+                  {item.customer ? (
+                    <span className="muted" title={tl.customerProgress}>
+                      —
+                    </span>
+                  ) : (
+                    `${item.progress} %`
+                  )}
+                </td>
                 <td className="gantt-due">
                   {item.end === null ? <span className="muted">{tl.noDate}</span> : <span className={status === 'overdue' ? 'cell-short' : undefined}>{dayText(item.end, locale)}</span>}
                   {shift !== 0 && (
@@ -396,7 +467,7 @@ export function LaunchGantt({
                     </small>
                   )}
                 </td>
-                {track(itemMark(item, status))}
+                {track(itemMark(item))}
               </tr>,
               open && (
                 <tr key={`${row.key}-detail`} className="gantt-detail-row">
@@ -468,6 +539,16 @@ function ItemDetail({
             ))}
           </span>
         </div>
+        <div className="field">
+          <span>{td.source}</span>
+          <span className="segmented" role="group" aria-label={td.source}>
+            {([true, false] as const).map((c) => (
+              <button key={String(c)} type="button" aria-pressed={item.customer === c} onClick={() => change((i) => ({ ...i, customer: c }))}>
+                {t.launch.source[c ? 'customer' : 'internal']}
+              </button>
+            ))}
+          </span>
+        </div>
         {item.kind === 'task' && (
           <label className="field">
             <span>{td.start}</span>
@@ -487,32 +568,39 @@ function ItemDetail({
             ))}
           </datalist>
         </label>
-        <div className="field">
-          <span>{td.progress}</span>
-          <span className="gantt-progress-edit">
-            <input
-              type="number"
-              min={0}
-              max={100}
-              step={5}
-              aria-label={td.progress}
-              value={item.progress}
-              onChange={(e) =>
-                change((i) => ({
-                  ...i,
-                  progress: clampProgress(Number(e.target.value)),
-                }))
-              }
-            />
-            <span className="segmented" role="group" aria-label={`${td.progress}: ${item.name}`}>
-              {PROGRESS_QUICK.map((p) => (
-                <button key={p} type="button" aria-pressed={item.progress === p} onClick={() => change((i) => ({ ...i, progress: p }))}>
-                  {p}
-                </button>
-              ))}
+        {item.customer ? (
+          <div className="field">
+            <span>{td.progress}</span>
+            <small className="muted">{t.launch.customerProgress}</small>
+          </div>
+        ) : (
+          <div className="field">
+            <span>{td.progress}</span>
+            <span className="gantt-progress-edit">
+              <input
+                type="number"
+                min={0}
+                max={100}
+                step={5}
+                aria-label={td.progress}
+                value={item.progress}
+                onChange={(e) =>
+                  change((i) => ({
+                    ...i,
+                    progress: clampProgress(Number(e.target.value)),
+                  }))
+                }
+              />
+              <span className="segmented" role="group" aria-label={`${td.progress}: ${item.name}`}>
+                {PROGRESS_QUICK.map((p) => (
+                  <button key={p} type="button" aria-pressed={item.progress === p} onClick={() => change((i) => ({ ...i, progress: p }))}>
+                    {p}
+                  </button>
+                ))}
+              </span>
             </span>
-          </span>
-        </div>
+          </div>
+        )}
         <label className="field gantt-field-wide">
           <span>{td.note}</span>
           <textarea rows={2} value={item.note} onChange={(e) => change((i) => ({ ...i, note: e.target.value }))} />
@@ -552,7 +640,7 @@ function ProjectDetail({
   /** Přejmenuje projekt; false = název je prázdný nebo už použitý. */
   rename: (name: string) => boolean;
   describe: (description: string) => void;
-  add: (kind: LaunchKind) => void;
+  add: (kind: LaunchKind, customer: boolean) => void;
   remove: () => void;
   close: () => void;
 }) {
@@ -587,11 +675,14 @@ function ProjectDetail({
         </label>
       </div>
       <div className="actions-row">
-        <button type="button" className="button button-small button-primary" onClick={() => add('task')}>
+        <button type="button" className="button button-small button-primary" onClick={() => add('task', false)}>
           + {tp.addTask}
         </button>
-        <button type="button" className="button button-small button-primary" onClick={() => add('milestone')}>
+        <button type="button" className="button button-small button-primary" onClick={() => add('milestone', false)}>
           + {tp.addMilestone}
+        </button>
+        <button type="button" className="button button-small" onClick={() => add('milestone', true)}>
+          + {tp.addCustomer}
         </button>
         <button type="button" className="button button-small" onClick={close}>
           {tp.close}

@@ -3238,16 +3238,137 @@ button.oil-step:disabled {
   --g: var(--crit);
 }
 
-.gantt-active {
+.gantt-advanced {
   --g: var(--accent);
 }
 
-.gantt-planned {
+.gantt-started {
+  --g: #e8890c;
+}
+
+.gantt-open {
   --g: #8ea3b8;
 }
 
 .gantt-nodate {
   --g: var(--muted);
+}
+
+/* Termíny zákazníka: barva podle fáze projektu (plnění neovlivníme). */
+.gantt-customer {
+  --g: var(--ink-2);
+}
+
+.gantt-c0 {
+  --g: #7b4fc9;
+}
+
+.gantt-c1 {
+  --g: #0f9488;
+}
+
+.gantt-c2 {
+  --g: #c2378a;
+}
+
+.gantt-c3 {
+  --g: #b8641c;
+}
+
+.gantt-c4 {
+  --g: #3f51b5;
+}
+
+.gantt-c5 {
+  --g: #0a9cc0;
+}
+
+.gantt-passed {
+  opacity: 0.4;
+}
+
+button.gantt-ms,
+button.gantt-bar {
+  padding: 0;
+  border: 0;
+  font: inherit;
+  cursor: pointer;
+}
+
+button.gantt-bar {
+  z-index: 1;
+}
+
+button.gantt-bar.gantt-c0,
+button.gantt-bar.gantt-c1,
+button.gantt-bar.gantt-c2,
+button.gantt-bar.gantt-c3,
+button.gantt-bar.gantt-c4,
+button.gantt-bar.gantt-c5 {
+  background: var(--g);
+}
+
+button.gantt-ms {
+  z-index: 2;
+}
+
+button.gantt-ms:hover,
+button.gantt-ms:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 1px;
+  opacity: 1;
+}
+
+button.gantt-bar:hover,
+button.gantt-bar:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 1px;
+}
+
+.gantt-ms.gantt-mini {
+  top: 9px;
+  width: 11px;
+  height: 11px;
+  margin-left: -5.5px;
+}
+
+.gantt-bar.gantt-mini {
+  top: 10px;
+  height: 10px;
+}
+
+.gantt-swatch {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin-right: 6px;
+  border-radius: 2px;
+  background: var(--g);
+  vertical-align: middle;
+}
+
+.gantt-edit {
+  margin-left: 6px;
+  padding: 0 5px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.gantt-edit:hover,
+.gantt-edit[aria-pressed='true'] {
+  border-color: var(--line);
+  color: var(--accent);
+  background: var(--surface);
+}
+
+/* Přepínače v úpravě řádku jen tak široké jako tlačítka. */
+.gantt-detail .field > .segmented {
+  align-self: flex-start;
+  width: fit-content;
 }
 
 .gantt-bar,
@@ -3453,9 +3574,12 @@ button.oil-step:disabled {
 }
 
 .gantt-key-ms {
-  --g: var(--ink-2);
   width: 10px;
   transform: rotate(45deg);
+}
+
+.gantt-key-ms:not([class*='gantt-c']) {
+  --g: var(--ink-2);
 }
 
 .gantt-key-sum {

@@ -23,7 +23,9 @@ export interface LaunchItem {
   /** Původní termín před prvním posunem; null = termín se neposunul. */
   baseline: DayNumber | null;
   owner: string;
-  /** Plnění 0–100 %. */
+  /** Zákaznický termín (z plánu zákazníka, plnění neovlivníme) – jinak interní úkol či milník. */
+  customer: boolean;
+  /** Plnění 0–100 %; u zákaznických termínů se nepočítá. */
   progress: number;
   note: string;
 }
@@ -40,25 +42,39 @@ export interface LaunchPlan {
 
 export const emptyLaunch = (): LaunchPlan => ({ projects: [], items: [] });
 
-/** done = hotovo, overdue = po termínu, active = probíhá, planned = naplánováno, nodate = bez termínu. */
-export type LaunchStatus = 'done' | 'overdue' | 'active' | 'planned' | 'nodate';
+/**
+ * Stav interního řádku podle plnění: done = 100 %, overdue = po termínu, advanced = 50–99 %, started = 1–49 %,
+ * open = 0 %, nodate = bez termínu. Zákaznický termín má vždy customer (barva podle fáze, plnění neovlivníme).
+ */
+export type LaunchStatus = 'done' | 'overdue' | 'advanced' | 'started' | 'open' | 'nodate' | 'customer';
+
+/** Stavy interních řádků v pořadí pro legendu. */
+export const INTERNAL_STATUSES = ['overdue', 'open', 'started', 'advanced', 'done'] as const;
+
+const band = (progress: number): LaunchStatus => (progress >= 100 ? 'done' : progress >= 50 ? 'advanced' : progress > 0 ? 'started' : 'open');
 
 export function statusOf(item: LaunchItem, today: DayNumber): LaunchStatus {
+  if (item.customer) return 'customer';
   if (item.progress >= 100) return 'done';
   if (item.end === null) return 'nodate';
   if (item.end < today) return 'overdue';
-  if (item.progress > 0 || (item.kind === 'task' && item.start !== null && item.start <= today)) return 'active';
-  return 'planned';
+  return band(item.progress);
 }
 
-/** Stav skupiny (projekt, fáze): po termínu, když je něco po termínu; hotovo, když je hotové vše. */
+export const internalOf = (items: readonly LaunchItem[]) => items.filter((i) => !i.customer);
+
+/** Stav skupiny (projekt, fáze) z interních řádků: po termínu, když je něco po termínu, jinak podle průměrného plnění. */
 export function groupStatus(items: readonly LaunchItem[], today: DayNumber): LaunchStatus {
-  const states = items.map((i) => statusOf(i, today));
+  const internal = internalOf(items);
+  if (internal.length === 0) return 'customer';
+  const states = internal.map((i) => statusOf(i, today));
   if (states.includes('overdue')) return 'overdue';
-  if (states.length > 0 && states.every((s) => s === 'done')) return 'done';
-  if (states.some((s) => s === 'active' || s === 'done')) return 'active';
-  return states.some((s) => s === 'planned') ? 'planned' : 'nodate';
+  if (states.every((s) => s === 'nodate')) return 'nodate';
+  return band(progressOf(internal) ?? 0);
 }
+
+/** Zákaznický termín, který už proběhl. */
+export const isPassed = (item: LaunchItem, today: DayNumber) => item.customer && item.end !== null && item.end < today;
 
 /** Posun termínu ve dnech proti původnímu (kladný = později); 0 bez posunu. */
 export const shiftDays = (item: LaunchItem) => (item.baseline === null || item.end === null ? 0 : item.end - item.baseline);
@@ -69,9 +85,17 @@ export function spanOf(items: readonly LaunchItem[]): { start: DayNumber; end: D
   return days.length ? { start: Math.min(...days), end: Math.max(...days) } : null;
 }
 
-/** Plnění skupiny: průměr plnění úkolů a milníků (zaokrouhleno na celá procenta). */
-export function progressOf(items: readonly LaunchItem[]): number {
-  return items.length ? Math.round(items.reduce((s, i) => s + i.progress, 0) / items.length) : 0;
+/** Plnění skupiny: průměr plnění interních úkolů a milníků (zaokrouhleno); null, když interní nemá. */
+export function progressOf(items: readonly LaunchItem[]): number | null {
+  const internal = internalOf(items);
+  return internal.length ? Math.round(internal.reduce((s, i) => s + i.progress, 0) / internal.length) : null;
+}
+
+/** Barva zákaznických termínů podle fáze: pořadí fáze se zákaznickými termíny v projektu (0, 1, 2 …). */
+export function customerColors(items: readonly LaunchItem[]): Map<string, number> {
+  const colors = new Map<string, number>();
+  for (const g of phasesOf(items.filter((i) => i.customer))) colors.set(g.phase, colors.size);
+  return colors;
 }
 
 /** Datum, podle kterého se řadí (začátek úkolu, jinak termín); bez data na konec. */
@@ -127,20 +151,24 @@ export function removeProject(plan: LaunchPlan, name: string): LaunchPlan {
   };
 }
 
-/** Nový úkol (od dneška na 2 týdny) nebo milník (dnes) v projektu; fáze jako u posledního řádku projektu. */
-export function addItem(plan: LaunchPlan, project: string, kind: LaunchKind, today: DayNumber, phase?: string): { plan: LaunchPlan; id: number } {
+/**
+ * Nový úkol (od dneška na 2 týdny) nebo milník (dnes) v projektu; interní, pokud se neřekne jinak. Fáze jako
+ * u posledního řádku projektu stejného druhu (zákaznický / interní).
+ */
+export function addItem(plan: LaunchPlan, project: string, kind: LaunchKind, today: DayNumber, customer = false): { plan: LaunchPlan; id: number } {
   const id = nextId(plan);
-  const last = plan.items.filter((i) => i.project === project).at(-1);
+  const last = plan.items.filter((i) => i.project === project && i.customer === customer).at(-1);
   const item: LaunchItem = {
     id,
     project,
-    phase: phase ?? last?.phase ?? '',
+    phase: last?.phase ?? '',
     name: '',
     kind,
     start: kind === 'task' ? today : null,
     end: kind === 'task' ? today + 13 : today,
     baseline: null,
     owner: '',
+    customer,
     progress: 0,
     note: '',
   };
@@ -229,6 +257,7 @@ const COLUMNS = {
   end: ['Konec / termín', 'Termín', 'Konec', 'End', 'Due'],
   baseline: ['Původní termín', 'Baseline'],
   owner: ['Odpovědný', 'Owner', 'Responsible'],
+  source: ['Zdroj', 'Source'],
   progress: ['Plnění (%)', 'Plnění', 'Progress'],
   status: ['Stav', 'Status'],
   note: ['Poznámka', 'Note'],
@@ -242,10 +271,13 @@ const KIND_TEXT: Record<LaunchKind, string> = {
 const STATUS_TEXT: Record<LaunchStatus, string> = {
   done: 'Hotovo',
   overdue: 'Po termínu',
-  active: 'Probíhá',
-  planned: 'Naplánováno',
+  advanced: 'Rozpracováno 50–99 %',
+  started: 'Rozpracováno 1–49 %',
+  open: 'Nezahájeno',
   nodate: 'Bez termínu',
+  customer: 'Termín zákazníka',
 };
+const SOURCE_TEXT = { customer: 'Zákazník', internal: 'Interní' };
 
 const formatDate = (day: DayNumber | null) => {
   if (day === null) return null;
@@ -277,6 +309,7 @@ export function launchSheets(plan: LaunchPlan, today: DayNumber): LaunchSheet[] 
         COLUMNS.end[0],
         COLUMNS.baseline[0],
         COLUMNS.owner[0],
+        COLUMNS.source[0],
         COLUMNS.progress[0],
         COLUMNS.status[0],
         COLUMNS.note[0],
@@ -291,7 +324,8 @@ export function launchSheets(plan: LaunchPlan, today: DayNumber): LaunchSheet[] 
         formatDate(i.end),
         formatDate(i.baseline),
         i.owner || null,
-        i.progress,
+        i.customer ? SOURCE_TEXT.customer : SOURCE_TEXT.internal,
+        i.customer ? null : i.progress,
         STATUS_TEXT[statusOf(i, today)],
         i.note || null,
       ]),
@@ -333,6 +367,7 @@ export function parseLaunchWorkbook(sheets: readonly { name: string; data: Cell[
   const startC = col(COLUMNS.start);
   const baselineC = col(COLUMNS.baseline);
   const ownerC = col(COLUMNS.owner);
+  const sourceC = col(COLUMNS.source);
   const progressC = col(COLUMNS.progress);
   const noteC = col(COLUMNS.note);
   const text = (c: number, row: Cell[]) => (c === -1 ? '' : cellText(row[c]));
@@ -358,6 +393,8 @@ export function parseLaunchWorkbook(sheets: readonly { name: string; data: Cell[
       end,
       baseline: baseline === end ? null : baseline,
       owner: text(ownerC, row),
+      // Bez sloupce Zdroj jsou milníky termíny zákazníka a úkoly interní.
+      customer: sourceC === -1 ? kind === 'milestone' : /^(z[aá]k|cust)/i.test(text(sourceC, row)),
       progress: clampProgress(progressC === -1 ? 0 : (cellNumber(row[progressC]) ?? 0)),
       note: text(noteC, row),
     });
@@ -381,16 +418,16 @@ export function parseLaunchWorkbook(sheets: readonly { name: string; data: Cell[
 export interface LaunchSummary {
   projects: number;
   items: number;
-  /** Nehotové úkoly a milníky s termínem v minulosti. */
+  /** Nehotové interní úkoly a milníky s termínem v minulosti. */
   overdue: number;
-  /** Nejbližší nehotový milník od dneška. */
+  /** Nejbližší milník od dneška: zákaznický, nebo nehotový interní. */
   next: LaunchItem | null;
-  /** Průměrné plnění všech úkolů a milníků. */
-  progress: number;
+  /** Průměrné plnění interních úkolů a milníků; null bez interních. */
+  progress: number | null;
 }
 
 export function launchSummary(plan: LaunchPlan, today: DayNumber): LaunchSummary {
-  const next = plan.items.filter((i) => i.kind === 'milestone' && i.progress < 100 && i.end !== null && i.end >= today).sort((a, b) => a.end! - b.end! || a.id - b.id)[0];
+  const next = plan.items.filter((i) => i.kind === 'milestone' && (i.customer || i.progress < 100) && i.end !== null && i.end >= today).sort((a, b) => a.end! - b.end! || a.id - b.id)[0];
   return {
     projects: plan.projects.length,
     items: plan.items.length,

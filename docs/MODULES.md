@@ -218,12 +218,16 @@ Filtry projekt, kategorie, strana (LHD/RHD) a varianta z kmenových dat se ovliv
 ### Launch (náběh projektů)
 - ✅ Projekty → fáze → úkoly (pruh od–do) a milníky (jeden den); fáze a řádky se řadí podle data
 - ✅ Gantt s osou Týdny / Měsíce / Čtvrtletí (měřítko si prohlížeč pamatuje), kalendářní týdny, čára Dnes
-- ✅ Barva podle stavu: po termínu (červená), probíhá (modrá), naplánováno (šedomodrá), hotovo (zelená);
-  tmavší část pruhu = plnění. Projekt a fáze mají souhrnný pruh (od–do, průměr plnění, po termínu, když je
-  po termínu cokoli uvnitř)
-- ✅ Sbalení projektu a fáze; filtry projekt, odpovědný (po osobách), Vše / Nehotové / Po termínu
-- ✅ Úprava kliknutím na řádek: název, fáze, typ, začátek, konec / termín, odpovědný, plnění (%), poznámka; projekt:
-  název, popis, + Úkol, + Milník, smazání
+- ✅ **Termíny zákazníka** barevně podle fáze (každá fáze projektu svou barvou), proběhlé světle; plnění se u nich
+  nevede a do plnění ani „po termínu“ se nepočítají
+- ✅ **Interní** úkoly a milníky barvou podle plnění: po termínu (červená), 0 % (šedomodrá), 1–49 % (oranžová),
+  50–99 % (modrá), 100 % (zelená); tmavší část pruhu = plnění. Projekt a fáze mají souhrnný pruh (od–do, průměr
+  plnění interních, po termínu, když je po termínu cokoli interního uvnitř)
+- ✅ Kliknutí na řádek projektu či fáze ji sbalí / rozbalí; ve sbalené skupině jsou body vidět na souhrnném řádku
+- ✅ Kliknutí na bod v Ganttu (i ve sbaleném projektu) otevře jeho úpravu; filtry projekt, odpovědný (po osobách),
+  Vše / Nehotové / Po termínu
+- ✅ Úprava řádku: název, fáze, typ, zdroj (zákazník / interní), začátek, konec / termín, odpovědný, plnění (%),
+  poznámka; projekt přes ✎: název, popis, + Interní úkol, + Interní milník, + Termín zákazníka, smazání
 - ✅ Posun termínu: původní termín se zapamatuje, „posun +N d“ a čárkovaný kosočtverec v Ganttu; tlačítkem lze nový
   termín přijmout jako původní
 - ✅ Přehled nahoře: projekty, po termínu, nejbližší milník, plnění; na rozcestníku po termínu, jinak dní do milníku
