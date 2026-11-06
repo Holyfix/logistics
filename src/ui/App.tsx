@@ -10,6 +10,8 @@ import { DataPage } from './DataPage';
 import { HubPage } from './HubPage';
 import { InventoryPage } from './inventory/InventoryPage';
 import { KpiPage } from './kpi/KpiPage';
+import { LaunchPage } from './launch/LaunchPage';
+import { LaunchProvider } from './launch/LaunchProvider';
 import { ModulePage } from './ModulePage';
 import { OilPage } from './oil/OilPage';
 import { OilProvider } from './oil/OilProvider';
@@ -72,25 +74,28 @@ export function App() {
 
       <PlanningProvider>
         <OilProvider>
-          <main className="content">
-            {!supported && (
-              <div className="banner" role="status">
-                <strong>{t.support.title}</strong>
-                <span>{t.support.body}</span>
-              </div>
-            )}
-            {!current && <HubPage />}
-            {current?.id === 'dashboard' && <DashboardPage />}
-            {current?.id === 'data' && <DataPage />}
-            {current?.id === 'oil' && <OilPage />}
-            {current?.id === 'kpi' && <KpiPage />}
-            {current?.id === 'stock' && <InventoryPage />}
-            {current?.id === 'calloffs' && <CallOffsPage />}
-            {current?.id === 'coverage' && <CoveragePage />}
-            {current?.id === 'components' && <ComponentsPage />}
-            {current?.id === 'production' && <PlanningPage />}
-            {current && !['dashboard', 'data', 'calloffs', 'coverage', 'components', 'production', 'oil', 'kpi', 'stock'].includes(current.id) && <ModulePage module={current} />}
-          </main>
+          <LaunchProvider>
+            <main className="content">
+              {!supported && (
+                <div className="banner" role="status">
+                  <strong>{t.support.title}</strong>
+                  <span>{t.support.body}</span>
+                </div>
+              )}
+              {!current && <HubPage />}
+              {current?.id === 'dashboard' && <DashboardPage />}
+              {current?.id === 'data' && <DataPage />}
+              {current?.id === 'oil' && <OilPage />}
+              {current?.id === 'kpi' && <KpiPage />}
+              {current?.id === 'launch' && <LaunchPage />}
+              {current?.id === 'stock' && <InventoryPage />}
+              {current?.id === 'calloffs' && <CallOffsPage />}
+              {current?.id === 'coverage' && <CoveragePage />}
+              {current?.id === 'components' && <ComponentsPage />}
+              {current?.id === 'production' && <PlanningPage />}
+              {current && !['dashboard', 'data', 'calloffs', 'coverage', 'components', 'production', 'oil', 'kpi', 'launch', 'stock'].includes(current.id) && <ModulePage module={current} />}
+            </main>
+          </LaunchProvider>
         </OilProvider>
       </PlanningProvider>
 

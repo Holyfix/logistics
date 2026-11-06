@@ -11,13 +11,14 @@ import { parsePlanWorkbook, type PlanResult } from '../core/planning/plan';
 import { parseSettings, type PlanSettings } from '../core/planning/settings';
 import { parseKpiWorkbook, type KpiResult } from '../core/kpi';
 import { parseOilWorkbook, type OilResult } from '../core/oil';
+import { parseLaunchWorkbook, type LaunchResult } from '../core/launch';
 import { parseTransit, type TransitResult } from '../core/transit';
 import { parseSequenceCsv, parseSequenceSheets, type SequenceFile } from '../core/material/sequence';
 import { decodeText } from '../core/text';
 import type { SourceFormat } from '../core/sources';
 import type { Cell, DataTable } from '../core/table';
 
-export type ParseRequest = { id: number; kind: 'calloffs' | 'masterdata' | 'coverage' | 'stock' | 'bom' | 'plan' | 'planSettings' | 'oil' | 'kpi' | 'transit' | 'sequence'; format: SourceFormat; name: string; buffer: ArrayBuffer };
+export type ParseRequest = { id: number; kind: 'calloffs' | 'masterdata' | 'coverage' | 'stock' | 'bom' | 'plan' | 'planSettings' | 'oil' | 'kpi' | 'launch' | 'transit' | 'sequence'; format: SourceFormat; name: string; buffer: ArrayBuffer };
 
 export type ParseResponse =
   | { id: number; kind: 'calloffs'; result: ParseResult<CallOffExport> }
@@ -29,6 +30,7 @@ export type ParseResponse =
   | { id: number; kind: 'planSettings'; result: PlanSettings }
   | { id: number; kind: 'oil'; result: OilResult }
   | { id: number; kind: 'kpi'; result: KpiResult }
+  | { id: number; kind: 'launch'; result: LaunchResult }
   | { id: number; kind: 'transit'; result: TransitResult }
   | { id: number; kind: 'sequence'; result: SequenceFile }
   | { id: number; kind: 'error'; message: string };
@@ -56,6 +58,11 @@ self.onmessage = async (event: MessageEvent<ParseRequest>) => {
     if (kind === 'oil') {
       const sheets = (await readXlsxFile(buffer)).map((s) => ({ name: s.sheet, data: s.data as Cell[][] }));
       (self as unknown as Worker).postMessage({ id, kind, result: parseOilWorkbook(sheets) } satisfies ParseResponse);
+      return;
+    }
+    if (kind === 'launch') {
+      const sheets = (await readXlsxFile(buffer)).map((s) => ({ name: s.sheet, data: s.data as Cell[][] }));
+      (self as unknown as Worker).postMessage({ id, kind, result: parseLaunchWorkbook(sheets) } satisfies ParseResponse);
       return;
     }
     if (kind === 'kpi') {

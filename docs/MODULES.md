@@ -24,6 +24,7 @@ Pořadí skupin na rozcestníku (karty se čtou shora dolů po sloupcích):
 | Dodavatelé | **Příjem** | Co má dnes a zítra přijet a co je po termínu? | Fáze 9 |
 | Dodavatelé | **Dodavatelé** (OTD inbound) | Dodávají nám dodavatelé včas? | Později |
 | Řízení | **OIL** | Kdo co řeší a do kdy? | První verze hotová |
+| Řízení | **Launch** | Jak jsme na tom s náběhem nových projektů? | První verze hotová |
 | Řízení | **Reporty** | Týdenní souhrn pro vedení | Později |
 | Systém | **Data** | Jaká data jsou načtená a jsou v pořádku? | Hotové |
 | Systém | **Nastavení** | Prahy, horizont, jméno pro zápisy | Později |
@@ -214,11 +215,25 @@ Filtry projekt, kategorie, strana (LHD/RHD) a varianta z kmenových dat se ovliv
 - ✅ Uložení do `OIL/OIL.xlsx` ve sdílené složce (listy OIL, Komentáře, Posuny termínu)
 - ⏳ Živá společná editace (po přechodu na Firebase)
 
+### Launch (náběh projektů)
+- ✅ Projekty → fáze → úkoly (pruh od–do) a milníky (jeden den); fáze a řádky se řadí podle data
+- ✅ Gantt s osou Týdny / Měsíce / Čtvrtletí (měřítko si prohlížeč pamatuje), kalendářní týdny, čára Dnes
+- ✅ Barva podle stavu: po termínu (červená), probíhá (modrá), naplánováno (šedomodrá), hotovo (zelená);
+  tmavší část pruhu = plnění. Projekt a fáze mají souhrnný pruh (od–do, průměr plnění, po termínu, když je
+  po termínu cokoli uvnitř)
+- ✅ Sbalení projektu a fáze; filtry projekt, odpovědný (po osobách), Vše / Nehotové / Po termínu
+- ✅ Úprava kliknutím na řádek: název, fáze, typ, začátek, konec / termín, odpovědný, plnění (%), poznámka; projekt:
+  název, popis, + Úkol, + Milník, smazání
+- ✅ Posun termínu: původní termín se zapamatuje, „posun +N d“ a čárkovaný kosočtverec v Ganttu; tlačítkem lze nový
+  termín přijmout jako původní
+- ✅ Přehled nahoře: projekty, po termínu, nejbližší milník, plnění; na rozcestníku po termínu, jinak dní do milníku
+- ✅ Uložení do `Launch/Launch.xlsx` (listy Launch a Projekty)
+
 ### Nastavení
 - Prahy semaforu, horizont výhledu
 - Jméno uživatele pro zápisy (obaly; OIL ho už má ve svém modulu)
 
 ## Zápis dat
 
-Plánování, OIL a KPI už do sdílené složky zapisují (`Plan/`, `OIL/OIL.xlsx`, `KPI/KPI.xlsx`); Obaly a později Mimořádné přepravy přibudou. Bez serveru se záznamy ukládají
+Plánování, OIL, KPI a Launch už do sdílené složky zapisují (`Plan/`, `OIL/OIL.xlsx`, `KPI/KPI.xlsx`, `Launch/Launch.xlsx`); Obaly a později Mimořádné přepravy přibudou. Bez serveru se záznamy ukládají
 jako malé samostatné soubory do sdílené složky (návrh v [ADR 0003](adr/0003-zapis-do-sdilene-slozky.md)).

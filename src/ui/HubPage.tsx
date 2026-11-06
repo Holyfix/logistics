@@ -12,6 +12,8 @@ import { localToday, useComponents } from './components/useComponents';
 import { Icon } from './icons';
 import { AREAS, useDashboard } from './dashboard/useDashboard';
 import { useOilDraftList } from './oil/OilProvider';
+import { useLaunchDraftPlan } from './launch/LaunchProvider';
+import { launchSummary } from '../core/launch';
 import { GROUPS, MODULES, type ModuleDef, type ModuleId } from './modules';
 
 function StatusChip({ module }: { module: ModuleDef }) {
@@ -79,6 +81,9 @@ function useMetrics(): Partial<Record<ModuleId, ReactNode>> {
   const oilDraft = useOilDraftList();
   const oilList = oilDraft ?? state.data?.oil?.list ?? null;
   const oil = useMemo(() => (oilList ? oilAlerts(oilList, today) : null), [oilList, today]);
+  const launchDraft = useLaunchDraftPlan();
+  const launchPlan = launchDraft ?? state.data?.launch?.plan ?? null;
+  const launch = useMemo(() => (launchPlan?.projects.length ? launchSummary(launchPlan, today) : null), [launchPlan, today]);
 
   const metrics: Partial<Record<ModuleId, ReactNode>> = {};
   const tm = t.hub.metrics;
@@ -127,6 +132,17 @@ function useMetrics(): Partial<Record<ModuleId, ReactNode>> {
       : soon
         ? <Metric value={formatQuantity(soon, locale)} label={tm.oilSoon} tone="warn" title={title} />
         : <Metric value={formatQuantity(oil.length, locale)} label={tm.oilOpen} tone="ok" title={title} />;
+  }
+  // Launch: úkoly po termínu, jinak dní do nejbližšího milníku, jinak počet projektů.
+  if (launch) {
+    const th = t.launch.hub;
+    const next = launch.next;
+    const title = `${th.title}: ${formatQuantity(launch.projects, locale)} ${th.projects}, ${formatQuantity(launch.overdue, locale)} ${th.overdue}${next ? `, ${next.project} · ${next.name}: ${formatQuantity(next.end! - today, locale)} d` : ''}`;
+    metrics.launch = launch.overdue
+      ? <Metric value={formatQuantity(launch.overdue, locale)} label={th.overdue} tone="crit" title={title} />
+      : next
+        ? <Metric value={`${formatQuantity(next.end! - today, locale)} d`} label={th.next} tone="ok" title={title} />
+        : <Metric value={formatQuantity(launch.projects, locale)} label={th.projects} tone="ok" title={title} />;
   }
   // Dashboard: kolik oblastí hoří a kolik je pozor (stejně jako souhrn nahoře v Dashboardu).
   if (state.data) {

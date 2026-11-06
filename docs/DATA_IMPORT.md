@@ -18,6 +18,7 @@ Soubory se rozpoznají podle názvu (nezáleží na velikosti písmen ani diakri
 | Plánování: kapacity a plány linek | leží ve složce `Plan` (nebo `Plán`); `Kapacity.xlsx` = kapacity, ostatní = plány | XLSX (zapisuje aplikace) |
 | OIL (Open Issue List) | leží ve složce `OIL`, nebo název začíná „OIL“; platí nejnovější soubor | XLSX (zapisuje aplikace) |
 | KPI (SQCDP) | leží ve složce `KPI`, nebo název začíná „KPI“; platí nejnovější soubor | XLSX (zapisuje aplikace) |
+| Launch (náběh projektů) | leží ve složce `Launch`, nebo název začíná „Launch“; platí nejnovější soubor | XLSX (zapisuje aplikace) |
 | Doplněný transit (naše expedice, které coverage ještě nemá) | leží ve složce `Transit`, nebo název začíná „Transit“; všechny soubory | XLSX nebo CSV |
 | Sekvence: Order Status Matrix a klíč MC/MF | leží ve složce `Sekvence` (nebo `Sequence`); platí nejnovější soubor každého druhu | XLSX nebo CSV |
 
@@ -34,6 +35,7 @@ Logistics/
 ├── Plan/                 Plánování: Kapacity.xlsx a plány linek (ASSEMBLY_<projekt>.xlsx), zapisuje aplikace
 ├── OIL/                  OIL.xlsx (Open Issue List), zapisuje aplikace
 ├── KPI/                  KPI.xlsx (ukazatele SQCDP a denní zápisy), zapisuje aplikace
+├── Launch/               Launch.xlsx (fáze náběhu projektů), zapisuje aplikace
 ├── Transit/              doplněný transit: ranní expedice, které soubor coverage ještě nemá
 ├── Sekvence/             Order Status Matrix a klíč MC/MF pro kartu Sekvence v Komponentách
 └── Obaly/                později: Obaly
@@ -329,6 +331,24 @@ aplikace nabídne úvodní sadu ukazatelů. Když soubor mezitím změnil někdo
   z mapování, osob z OIL a dříve zapsaných příčin). U automatických ukazatelů je aplikace uloží sama při uložení dne
   (díly a lokace z Coverage, komponenty s projekty, body OIL po termínu s odpovědným).
 
+## Launch (složka Launch)
+
+Soubor `Launch/Launch.xlsx` **vytváří aplikace** tlačítkem Uložit v modulu Launch; lze ho ale připravit i ručně
+(např. milníky z plánu zákazníka) a aplikace ho načte. Když soubor mezitím změnil někdo jiný, aplikace se před
+přepsáním zeptá.
+
+| List | Obsah |
+|---|---|
+| **Launch** | ID, Projekt, Fáze, Název, Typ (Úkol / Milník), Začátek, Konec / termín, Původní termín, Odpovědný, Plnění (%), Stav, Poznámka |
+| **Projekty** | Projekt, Popis – pořadí projektů; list může chybět (projekty se pak vezmou z řádků) |
+
+- Povinné sloupce: **ID, Projekt, Název, Konec / termín** (anglicky ID, Project, Name, End). Data jako datum Excelu
+  nebo text `dd.mm.rrrr`.
+- **Typ:** Milník = jeden den (kosočtverec), Úkol = pruh od začátku do konce. Bez sloupce Typ jsou všechny řádky úkoly.
+- **Fáze** seskupí řádky projektu (např. Produkční testy, Kvalita, SOP); fáze i řádky se řadí podle data.
+- **Původní termín** doplní aplikace při prvním posunu termínu; v Ganttu je čárkovaný kosočtverec a u termínu
+  „posun +N d“. Sloupec **Stav** je jen pro čtení v Excelu (aplikace ho počítá z plnění a termínu).
+
 ## Sekvence (karta v Komponentách)
 
 Pokrytí **Maincarrieru (MC)** a **Middlefieldu (MF)** dveřních panelů ve formátu **Order Status Matrix**: karta **Sekvence** v modulu
@@ -350,7 +370,7 @@ Klíč MC/MF musí ležet ve složce `Sekvence`: mimo ni by se podle „Mapping�
   (SR2-HT → SR2), přednost má přesný řádek „-HT“; **MC u SR2 a SR2-HT** se porovnává s barvou bez přípony „-ASQ“
   („C9-ASQ“ = „C9“).
 - **MC u SR1, SR1-HT, TPO a TPO-HT** je TPO Maincarrier: do potřeby, skladu, Coverage ani PRIO Sorting se nepočítá
-  a v klíči ho nemusí být – u dveří je jen **modrý štítek TPO** (v aplikaci i na listu Matrix v exportu). Druh dílu je podle popisu (jen „MC“, nebo jen „MF“;
+  a v klíči ho nemusí být – u dveří je jen **modrý štítek MC** (v aplikaci i na listu Matrix v exportu). Druh dílu je podle popisu (jen „MC“, nebo jen „MF“;
   řádek s oběma nebo bez nich se ignoruje). Kombinace, která má v klíči víc různých dílů, je nejednoznačná
   a nepoužije se (modul Data ji vypíše).
 - Co v klíči přesně není, **chybí v klíči**: ukáže se šedě (štítek, ve sloupci Materiál „chybí v klíči: MC FL, FR“,

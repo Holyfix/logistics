@@ -87,6 +87,12 @@ const PATHS = {
       <rect x="3.5" y="16" width="3" height="3" rx=".5" />
     </>
   ),
+  launch: (
+    <>
+      <path d="M5.5 21V3.5" />
+      <path d="M5.5 4.5h12l-2.5 4 2.5 4h-12" />
+    </>
+  ),
   reports: (
     <>
       <path d="M7 3.5h7l4 4V20.5H6.5V3.5z" />

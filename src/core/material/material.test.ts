@@ -282,7 +282,7 @@ describe('export Sekvence', () => {
     const c = buildMaterialCoverage({ matrix: tpoCars, key: key.value, stock: { MC: new Map(), MF: new Map() }, today: day(5) });
     expect(c.parts.map((p) => p.kind)).toEqual([]);
     const [m] = sequenceReport(c.parts, c.days, texts, { shortText: () => '', cars: c.cars });
-    expect(m!.data[5]![6]).toMatchObject({ value: 'TPO', backgroundColor: '#1D5C9E' });
+    expect(m!.data[5]![6]).toMatchObject({ value: 'MC', backgroundColor: '#1D5C9E' });
   });
 
   it('list Coverage: stav skladu na konci dne po druzích, záporné červeně, zítřek orámovaný', () => {
