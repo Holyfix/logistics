@@ -18,6 +18,7 @@ import {
   shiftDays,
   statusOf,
   timelineRange,
+  timeProgress,
   updateItem,
   withEnd,
   withKind,
@@ -83,6 +84,14 @@ describe('Launch – stav a souhrny', () => {
     // Plnění jen z interních řádků; bez interních null.
     expect(progressOf(p1)).toBe(50);
     expect(progressOf([plan.items[4]!])).toBeNull();
+  });
+
+  it('termíny zákazníka: postup podle uplynulého času mezi prvním a posledním termínem', () => {
+    const customer = [item({ customer: true, kind: 'milestone', end: day(11, 1) }), item({ customer: true, kind: 'milestone', end: day(11, 11) })];
+    expect(timeProgress(customer, day(10, 1))).toBe(0);
+    expect(timeProgress(customer, today)).toBe(50);
+    expect(timeProgress(customer, day(12, 1))).toBe(100);
+    expect(timeProgress([], today)).toBeNull();
   });
 
   it('fáze v pořadí podle nejdřívějšího data, řádky ve fázi podle data', () => {

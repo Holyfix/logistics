@@ -6,6 +6,7 @@ import {
   customerColors,
   DAY_WIDTH,
   groupStatus,
+  internalOf,
   isPassed,
   nextMonth,
   progressOf,
@@ -14,6 +15,7 @@ import {
   spanOf,
   statusOf,
   timelineRange,
+  timeProgress,
   updateProject,
   withEnd,
   withKind,
@@ -23,7 +25,6 @@ import {
   type LaunchPlan,
   type LaunchProject,
   type LaunchScale,
-  type LaunchStatus,
 } from '../../core/launch';
 import { useI18n } from '../../i18n/I18nProvider';
 
@@ -184,22 +185,34 @@ export function LaunchGantt({
     return `${item.name || tl.noName} · ${when} · ${item.customer ? `${tl.status.customer}${isPassed(item, today) ? ` (${tl.passed})` : ''}` : `${tl.status[status]} · ${item.progress} %`}`;
   };
 
-  const summaryBar = (items: readonly LaunchItem[], status: LaunchStatus, progress: number | null, phaseClass: string | null) => {
-    const span = spanOf(items);
-    if (!span) return null;
-    const colour = status === 'customer' ? (phaseClass ?? 'gantt-customer') : `gantt-${status}`;
+  /**
+   * Souhrn projektu či fáze: termíny zákazníka a interní body každý svým pruhem (nad sebou, když jsou oba).
+   * Zákaznický pruh (barva fáze, u projektu tmavý) se vybarvuje podle uplynulého času mezi prvním a posledním
+   * termínem; interní pruh má barvu podle stavu a vybarví se podle průměrného plnění interních bodů.
+   */
+  const summaryBars = (items: readonly LaunchItem[], customerColour: string) => {
+    const customer = items.filter((i) => i.customer);
+    const internal = internalOf(items);
+    const both = customer.length > 0 && internal.length > 0;
+    const bar = (group: readonly LaunchItem[], colour: string, fill: number, place: string, title: string, tag: string | null) => {
+      const span = spanOf(group);
+      if (!span) return null;
+      return (
+        <span
+          className={`gantt-sum ${colour}${place}`}
+          style={{ left: `${x(span.start)}px`, width: `${Math.max(x(span.end + 1) - x(span.start), 4)}px` }}
+          title={`${title}: ${short(span.start)} – ${short(span.end)} · ${fill} %`}
+        >
+          <span className="gantt-fill" style={{ width: `${fill}%` }} />
+          {tag !== null && <span className="gantt-tag gantt-tag-out">{tag}</span>}
+        </span>
+      );
+    };
     return (
-      <span
-        className={`gantt-sum ${colour}${phaseClass !== null ? ' gantt-sum-phase' : ''}`}
-        style={{
-          left: `${x(span.start)}px`,
-          width: `${Math.max(x(span.end + 1) - x(span.start), 4)}px`,
-        }}
-        title={`${short(span.start)} – ${short(span.end)}${progress === null ? '' : ` · ${progress} %`}`}
-      >
-        {progress !== null && <span className="gantt-fill" style={{ width: `${progress}%` }} />}
-        {progress !== null && <span className="gantt-tag gantt-tag-out">{progress} %</span>}
-      </span>
+      <>
+        {customer.length > 0 && bar(customer, customerColour, timeProgress(customer, today) ?? 0, both ? ' gantt-sum-top' : '', tl.sumCustomer, null)}
+        {internal.length > 0 && bar(internal, `gantt-${groupStatus(internal, today)}`, progressOf(internal) ?? 0, both ? ' gantt-sum-bottom' : '', tl.sumInternal, `${progressOf(internal) ?? 0} %`)}
+      </>
     );
   };
 
@@ -345,7 +358,6 @@ export function LaunchGantt({
                 </tr>
               );
             if (row.type === 'phase') {
-              const status = groupStatus(row.items, today);
               const progress = progressOf(row.items);
               const project = row.items[0]!.project;
               const phaseClass = row.items.some((i) => i.customer) ? customerClass(project, row.phase) : '';
@@ -361,7 +373,7 @@ export function LaunchGantt({
                   {dueCell(row.items)}
                   {track(
                     <>
-                      {summaryBar(row.items, status, progress, phaseClass)}
+                      {summaryBars(row.items, phaseClass || 'gantt-customer')}
                       {row.collapsed && miniMarks(row.items)}
                     </>,
                   )}
@@ -369,7 +381,6 @@ export function LaunchGantt({
               );
             }
             if (row.type === 'project') {
-              const status = groupStatus(row.items, today);
               const progress = progressOf(row.items);
               const open = selected?.type === 'project' && selected.name === row.project.name;
               return [
@@ -399,7 +410,7 @@ export function LaunchGantt({
                   {dueCell(row.items)}
                   {track(
                     <>
-                      {summaryBar(row.items, status, progress, null)}
+                      {summaryBars(row.items, 'gantt-customer')}
                       {row.collapsed && miniMarks(row.items)}
                     </>,
                   )}
