@@ -36,6 +36,7 @@ const item = (over: Partial<LaunchItem>): LaunchItem => ({
   end: null,
   baseline: null,
   owner: '',
+  customer: false,
   progress: 0,
   note: '',
   ...over,
@@ -48,10 +49,10 @@ const plan: LaunchPlan = {
   ],
   items: [
     item({ id: 1, phase: 'Kvalita', name: 'Díly s PPA', kind: 'milestone', end: day(11, 11), owner: 'Kvalita' }),
-    item({ id: 2, phase: 'Testy', name: 'Díly pro test 1', kind: 'milestone', end: day(1, 11, 2027), owner: 'Logistika' }),
+    item({ id: 2, phase: 'Testy', name: 'Díly pro test 1', kind: 'milestone', end: day(1, 11, 2027), owner: 'Logistika', customer: true }),
     item({ id: 3, phase: 'Testy', name: 'Obaly', start: day(10, 20), end: day(11, 3), progress: 50, owner: 'Logistika / Nákup' }),
     item({ id: 4, phase: 'Kvalita', name: 'Uvolnění', kind: 'milestone', end: day(11, 1), progress: 100 }),
-    item({ id: 5, project: 'P2', name: 'SOP', kind: 'milestone', end: day(5, 1, 2027), baseline: day(4, 1, 2027) }),
+    item({ id: 5, project: 'P2', name: 'SOP', kind: 'milestone', end: day(5, 1, 2027), baseline: day(4, 1, 2027), customer: true }),
   ],
 };
 
@@ -59,19 +60,24 @@ describe('Launch – stav a souhrny', () => {
   it('stav úkolu a milníku podle plnění, termínu a začátku', () => {
     expect(statusOf(item({ progress: 100, end: day(11, 1) }), today)).toBe('done');
     expect(statusOf(item({ end: day(11, 5) }), today)).toBe('overdue');
-    expect(statusOf(item({ start: day(11, 1), end: day(11, 20) }), today)).toBe('active');
-    expect(statusOf(item({ start: day(11, 10), end: day(11, 20) }), today)).toBe('planned');
-    expect(statusOf(item({ kind: 'milestone', end: day(11, 20), progress: 25 }), today)).toBe('active');
-    expect(statusOf(item({ kind: 'milestone', end: day(11, 6) }), today)).toBe('planned');
+    expect(statusOf(item({ start: day(11, 1), end: day(11, 20) }), today)).toBe('open');
+    expect(statusOf(item({ start: day(11, 1), end: day(11, 20), progress: 25 }), today)).toBe('started');
+    expect(statusOf(item({ kind: 'milestone', end: day(11, 20), progress: 50 }), today)).toBe('advanced');
+    expect(statusOf(item({ kind: 'milestone', end: day(11, 6) }), today)).toBe('open');
     expect(statusOf(item({}), today)).toBe('nodate');
+    // Zákaznický termín plnění ani po termínu nemá.
+    expect(statusOf(item({ customer: true, kind: 'milestone', end: day(11, 1) }), today)).toBe('customer');
   });
 
   it('skupina: po termínu má přednost, hotovo jen když je hotové vše', () => {
     const p1 = plan.items.filter((i) => i.project === 'P1');
     expect(groupStatus(p1, today)).toBe('overdue');
     expect(groupStatus([plan.items[3]!], today)).toBe('done');
-    expect(groupStatus([plan.items[0]!, plan.items[3]!], today)).toBe('active');
-    expect(progressOf(p1)).toBe(38);
+    expect(groupStatus([plan.items[0]!, plan.items[3]!], today)).toBe('advanced');
+    expect(groupStatus([plan.items[1]!], today)).toBe('customer');
+    // Plnění jen z interních řádků; bez interních null.
+    expect(progressOf(p1)).toBe(50);
+    expect(progressOf([plan.items[4]!])).toBeNull();
   });
 
   it('fáze v pořadí podle nejdřívějšího data, řádky ve fázi podle data', () => {
@@ -83,7 +89,7 @@ describe('Launch – stav a souhrny', () => {
 
   it('přehled: po termínu, nejbližší nehotový milník a plnění', () => {
     const s = launchSummary(plan, today);
-    expect(s).toMatchObject({ projects: 2, items: 5, overdue: 1, progress: 30 });
+    expect(s).toMatchObject({ projects: 2, items: 5, overdue: 1, progress: 50 });
     expect(s.next?.id).toBe(1);
   });
 
@@ -136,7 +142,9 @@ describe('Launch – úpravy', () => {
     expect(t.id).toBe(6);
     expect(t.plan.items.at(-1)).toMatchObject({ kind: 'task', start: today, end: today + 13, phase: 'Kvalita' });
     const m = addItem(plan, 'P2', 'milestone', today);
-    expect(m.plan.items.at(-1)).toMatchObject({ kind: 'milestone', start: null, end: today, phase: '' });
+    expect(m.plan.items.at(-1)).toMatchObject({ kind: 'milestone', start: null, end: today, phase: '', customer: false });
+    // Termín zákazníka dostane fázi posledního zákaznického řádku.
+    expect(addItem(plan, 'P1', 'milestone', today, true).plan.items.at(-1)).toMatchObject({ customer: true, phase: 'Testy' });
   });
 });
 
@@ -144,7 +152,8 @@ describe('Launch – soubor', () => {
   it('uložení a načtení vrátí stejný plán', () => {
     const sheets = launchSheets(plan, today);
     expect(sheets.map((s) => s.name)).toEqual(['Launch', 'Projekty']);
-    expect(sheets[0]!.rows[0]).toEqual([3, 'P1', 'Testy', 'Obaly', 'Úkol', '20.10.2026', '03.11.2026', null, 'Logistika / Nákup', 50, 'Po termínu', null]);
+    expect(sheets[0]!.rows[0]).toEqual([3, 'P1', 'Testy', 'Obaly', 'Úkol', '20.10.2026', '03.11.2026', null, 'Logistika / Nákup', 'Interní', 50, 'Po termínu', null]);
+    expect(sheets[0]!.rows.find((r) => r[0] === 2)).toEqual([2, 'P1', 'Testy', 'Díly pro test 1', 'Milník', null, '11.01.2027', null, 'Logistika', 'Zákazník', null, 'Termín zákazníka', null]);
     const back = parseLaunchWorkbook(sheets.map((s) => ({ name: s.name, data: [s.header, ...s.rows] as Cell[][] })));
     expect(back.ok).toBe(true);
     if (!back.ok) return;
@@ -165,8 +174,9 @@ describe('Launch – soubor', () => {
     if (!r.ok) return;
     expect(r.value.projects).toEqual([{ name: 'X', description: '' }]);
     expect(r.value.items).toMatchObject([
-      { id: 1, kind: 'milestone', start: null, end: day(5, 1, 2027), progress: 100 },
-      { id: 2, kind: 'task', start: day(2, 1, 2027), end: day(2, 15, 2027), progress: 40 },
+      // Bez sloupce Zdroj jsou milníky termíny zákazníka a úkoly interní.
+      { id: 1, kind: 'milestone', start: null, end: day(5, 1, 2027), progress: 100, customer: true },
+      { id: 2, kind: 'task', start: day(2, 1, 2027), end: day(2, 15, 2027), progress: 40, customer: false },
     ]);
   });
 

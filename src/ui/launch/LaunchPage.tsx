@@ -5,6 +5,7 @@ import {
   addItem,
   addProject,
   emptyLaunch,
+  INTERNAL_STATUSES,
   launchSheets,
   launchSummary,
   phasesOf,
@@ -104,11 +105,15 @@ export function LaunchPage({ today = localToday() }: { today?: DayNumber } = {})
     setProject('');
     setSelected({ type: 'project', name: result.name });
   };
-  const newItem = (name: string, kind: LaunchKind) => {
-    const result = addItem(plan, name, kind, today);
+  const newItem = (name: string, kind: LaunchKind, customer: boolean) => {
+    const result = addItem(plan, name, kind, today, customer);
     update(result.plan);
-    setCollapsed((c) => new Set([...c].filter((k) => k !== `p|${name}`)));
-    setSelected({ type: 'item', id: result.id });
+    reveal(result.plan.items.at(-1)!);
+  };
+  /** Otevře řádek: rozbalí jeho projekt a fázi a vybere ho (klik na bod ve sbaleném projektu či fázi). */
+  const reveal = (item: LaunchItem) => {
+    setCollapsed((c) => new Set([...c].filter((k) => k !== `p|${item.project}` && k !== `f|${item.project}|${item.phase}`)));
+    setSelected({ type: 'item', id: item.id });
   };
   const save = () =>
     flow.run(async (force) => {
@@ -275,7 +280,7 @@ export function LaunchPage({ today = localToday() }: { today?: DayNumber } = {})
         </div>
         <div className="kpi">
           <span className="kpi-label">{tl.kpi.progress}</span>
-          <span className="kpi-value">{formatQuantity(summary.progress, locale)} %</span>
+          <span className="kpi-value">{summary.progress === null ? '—' : `${formatQuantity(summary.progress, locale)} %`}</span>
           <span className="kpi-note">{tl.kpi.progressNote}</span>
         </div>
       </div>
@@ -298,6 +303,7 @@ export function LaunchPage({ today = localToday() }: { today?: DayNumber } = {})
             toggle={toggle}
             update={update}
             newItem={newItem}
+            reveal={reveal}
             removeItem={(id) => {
               update(removeItem(plan, id));
               setSelected(null);
@@ -317,11 +323,24 @@ export function LaunchPage({ today = localToday() }: { today?: DayNumber } = {})
         )}
         <ul className="cov-legend">
           <li className="muted">{tl.legend}</li>
-          {(['overdue', 'active', 'planned', 'done'] as const).map((s) => (
+          {INTERNAL_STATUSES.map((s) => (
             <li key={s}>
               <i className={`gantt-key gantt-${s}`} aria-hidden="true" /> {tl.status[s]}
             </li>
           ))}
+        </ul>
+        <ul className="cov-legend">
+          <li className="muted">{tl.legendCustomer}</li>
+          {[0, 1, 2, 3, 4, 5].map((c) => (
+            <li key={c}>
+              <i className={`gantt-key gantt-key-ms gantt-c${c}`} aria-hidden="true" />
+            </li>
+          ))}
+          <li>
+            <i className="gantt-key gantt-key-ms gantt-c0 gantt-passed" aria-hidden="true" /> {tl.passed}
+          </li>
+        </ul>
+        <ul className="cov-legend">
           <li>
             <i className="gantt-key gantt-key-ms" aria-hidden="true" /> {tl.legendMilestone}
           </li>
