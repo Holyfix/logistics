@@ -1432,10 +1432,10 @@ export const en: Messages = {
       legendOk: 'in stock',
       legendShort: 'short',
       legendUnknown: 'missing in the key – part not exactly known, not counted in demand',
-      legendTpo: 'TPO Maincarrier (SR1, SR1-HT, TPO, TPO-HT) – not counted in stock',
+      legendTpo: 'TPO Maincarrier (SR1, SR1-HT, TPO, TPO-HT) – blue, not counted in stock',
       tpoTitle: 'TPO Maincarrier – not counted',
       legendDone: 'no badge: packed or shipped (status 50+), not counted in demand',
-      note: 'Cars in the order of planned customer build, door status in the Order Status Matrix colours. The Maincarrier and Middlefield come from the MC/MF key: an exact match of option type, door and colour from the MC / MF column (first for MC, second for MF); rear doors with “-HT” are also looked up without “-HT”; the MC of SR1, SR1-HT, TPO and TPO-HT is the TPO Maincarrier – not counted in stock, only marked with a blue TPO badge; for SR2 MC the colour is compared without the “-ASQ” suffix. Anything not exactly in the key (or with several parts in the key) is grey “missing in the key” and not counted. Stock from the loaded stock file is used up in build order; packed and shipped doors (status 50 and above) do not count. The Material column lists the missing parts of the car; hover a door to see the parts and remaining stock.',
+      note: 'Cars in the order of planned customer build, door status in the Order Status Matrix colours. The Maincarrier and Middlefield come from the MC/MF key: an exact match of option type, door and colour from the MC / MF column (first for MC, second for MF); rear doors with “-HT” are also looked up without “-HT”; the MC of SR1, SR1-HT, TPO and TPO-HT is the TPO Maincarrier – not counted in stock, only marked with a blue MC badge; for SR2 MC the colour is compared without the “-ASQ” suffix. Anything not exactly in the key (or with several parts in the key) is grey “missing in the key” and not counted. Stock from the loaded stock file is used up in build order; packed and shipped doors (status 50 and above) do not count. The Material column lists the missing parts of the car; hover a door to see the parts and remaining stock.',
     },
     export: {
       button: 'Excel',
@@ -1460,7 +1460,7 @@ export const en: Messages = {
       sorting: 'For sorting',
       missing: 'Short pcs',
       prioNote: 'For quality: only uncovered parts and how many pieces they lack per planned build day – these must be sorted from the locations before sorting (locations excluded from the MC and MF stock). For sorting = pieces in those locations (red when not enough); Short pcs = total uncovered. Within each kind by when the part runs short, on a tie more missing pieces first. Packed and shipped doors and parts missing in the key are not counted.',
-      matrixNote: 'All cars from the matrix in planned build order (without the filters from the app), door status in the Order Status Matrix colours. MC and MF: green in stock, red short, grey missing in the key, blue TPO Maincarrier (not counted); no badge = packed or shipped doors (status 50+), not counted.',
+      matrixNote: 'All cars from the matrix in planned build order (without the filters from the app), door status in the Order Status Matrix colours. MC and MF: green in stock, red short, grey missing in the key, blue MC = TPO Maincarrier (not counted); no badge = packed or shipped doors (status 50+), not counted.',
     },
   },
   footer: {

@@ -350,7 +350,7 @@ Klíč MC/MF musí ležet ve složce `Sekvence`: mimo ni by se podle „Mapping�
   (SR2-HT → SR2), přednost má přesný řádek „-HT“; **MC u SR2 a SR2-HT** se porovnává s barvou bez přípony „-ASQ“
   („C9-ASQ“ = „C9“).
 - **MC u SR1, SR1-HT, TPO a TPO-HT** je TPO Maincarrier: do potřeby, skladu, Coverage ani PRIO Sorting se nepočítá
-  a v klíči ho nemusí být – u dveří je jen **modrý štítek TPO** (v aplikaci i na listu Matrix v exportu). Druh dílu je podle popisu (jen „MC“, nebo jen „MF“;
+  a v klíči ho nemusí být – u dveří je jen **modrý štítek MC** (v aplikaci i na listu Matrix v exportu). Druh dílu je podle popisu (jen „MC“, nebo jen „MF“;
   řádek s oběma nebo bez nich se ignoruje). Kombinace, která má v klíči víc různých dílů, je nejednoznačná
   a nepoužije se (modul Data ji vypíše).
 - Co v klíči přesně není, **chybí v klíči**: ukáže se šedě (štítek, ve sloupci Materiál „chybí v klíči: MC FL, FR“,

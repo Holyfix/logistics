@@ -198,7 +198,7 @@ describe('Komponenty – karta Sekvence', () => {
     expect(rows().map((r) => r[0])).toEqual(['MF-1']);
   });
 
-  it('MC u SR1, SR1-HT, TPO a TPO-HT: jen modrý štítek TPO, do zásoby se nepočítá', () => {
+  it('MC u SR1, SR1-HT, TPO a TPO-HT: jen modrý štítek MC, do zásoby se nepočítá', () => {
     localStorage.setItem('logistics-locale', 'cs');
     const tpoMatrix = parseSequenceCsv(
       ['Lot;Production number;Option Type;MC / MF;Planned customer built;Status FL;Status FR;Status RL;Status RR;Status HB', '7;V7;SR1-HT;C1-ASQ / C1;05.11.2026 08:00;20 - Container planned;;;;'].join('\n'),
@@ -214,12 +214,12 @@ describe('Komponenty – karta Sekvence', () => {
       </I18nProvider>,
     );
     fireEvent.click(screen.getByRole('tab', { name: 'Sekvence' }));
-    expect(badges('V7')).toEqual(['TPO tpo', 'MF short']);
+    expect(badges('V7')).toEqual(['MC tpo', 'MF short']);
     expect(material('V7')).toBe('FL: MF MF-HT');
     // MC TPO se nehlásí jako chybějící v klíči ani nechybí
     expect(screen.getByText('chybí dílů: MC 0 · MF 1')).toBeTruthy();
     expect(screen.getByText(/nepočítají se do potřeby · MC 0 · MF 0 · 0 kombinací chybí v klíči/)).toBeTruthy();
-    expect(screen.getByText('TPO Maincarrier (SR1, SR1-HT, TPO, TPO-HT) – do zásoby se nepočítá')).toBeTruthy();
+    expect(screen.getByText('TPO Maincarrier (SR1, SR1-HT, TPO, TPO-HT) – modře, do zásoby se nepočítá')).toBeTruthy();
   });
 
   it('bez souborů ve složce Sekvence poradí, co uložit', () => {

@@ -567,7 +567,7 @@ export function SequenceView({ today }: { today: DayNumber }) {
               <i className="mat-badge mat-badge-unknown">MC</i> {ts.matrix.legendUnknown}
             </li>
             <li>
-            <i className="mat-badge mat-badge-tpo">TPO</i> {ts.matrix.legendTpo}
+            <i className="mat-badge mat-badge-tpo">MC</i> {ts.matrix.legendTpo}
           </li>
           <li>{ts.matrix.legendDone}</li>
           </ul>
@@ -639,7 +639,7 @@ function DoorBadges({ cell }: { cell: DoorCoverage }) {
         if (kind === 'MC' && cell.tpo)
           return (
             <i key={kind} className="mat-badge mat-badge-tpo" title={t.sequence.matrix.tpoTitle}>
-              TPO
+              MC
             </i>
           );
         const parts = cell.parts.filter((p) => p.kind === kind);

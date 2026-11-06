@@ -1434,10 +1434,10 @@ export const cs = {
       legendOk: 'na skladě',
       legendShort: 'chybí',
       legendUnknown: 'chybí v klíči – díl nelze přesně určit, do potřeby se nepočítá',
-      legendTpo: 'TPO Maincarrier (SR1, SR1-HT, TPO, TPO-HT) – do zásoby se nepočítá',
+      legendTpo: 'TPO Maincarrier (SR1, SR1-HT, TPO, TPO-HT) – modře, do zásoby se nepočítá',
       tpoTitle: 'TPO Maincarrier – nepočítá se',
       legendDone: 'bez štítku: zabaleno nebo odesláno (stav 50+), do potřeby se nepočítá',
-      note: 'Vozy v pořadí plánované stavby u zákazníka (Planned customer built), stav dveří v barvách Order Status Matrix. Maincarrier a Middlefield podle klíče MC/MF: přesná shoda Option Type, dveří a barvy ze sloupce MC / MF (první pro MC, druhá pro MF); zadní dveře se s „-HT“ hledají i bez „-HT“; MC u SR1, SR1-HT, TPO a TPO-HT je TPO Maincarrier – do zásoby se nepočítá, jen se označí modrým štítkem TPO; u MC SR2 se barva porovnává bez přípony „-ASQ“. Co v klíči přesně není (nebo má v klíči víc dílů), je šedě „chybí v klíči“ a nepočítá se. Sklad z načteného souboru skladu se spotřebovává v pořadí stavby; zabalené a odeslané dveře (stav 50 a víc) se nepočítají. Sloupec Materiál vyjmenuje chybějící díly vozu; najetím myší na dveře uvidíte díly a zbývající sklad.',
+      note: 'Vozy v pořadí plánované stavby u zákazníka (Planned customer built), stav dveří v barvách Order Status Matrix. Maincarrier a Middlefield podle klíče MC/MF: přesná shoda Option Type, dveří a barvy ze sloupce MC / MF (první pro MC, druhá pro MF); zadní dveře se s „-HT“ hledají i bez „-HT“; MC u SR1, SR1-HT, TPO a TPO-HT je TPO Maincarrier – do zásoby se nepočítá, jen se označí modrým štítkem MC; u MC SR2 se barva porovnává bez přípony „-ASQ“. Co v klíči přesně není (nebo má v klíči víc dílů), je šedě „chybí v klíči“ a nepočítá se. Sklad z načteného souboru skladu se spotřebovává v pořadí stavby; zabalené a odeslané dveře (stav 50 a víc) se nepočítají. Sloupec Materiál vyjmenuje chybějící díly vozu; najetím myší na dveře uvidíte díly a zbývající sklad.',
     },
     export: {
       button: 'Excel',
@@ -1462,7 +1462,7 @@ export const cs = {
       sorting: 'K sortingu',
       missing: 'Chybí ks',
       prioNote: 'Pro kvalitu: jen nepokryté díly a kolik kusů jim chybí po dnech plánované stavby – ty je potřeba vytřídit z lokací před sortingem (lokace vyřazené ze skladu MC a MF). K sortingu = kusy v těchto lokacích (červeně, když nestačí); Chybí ks = celkem nepokryto. V každém druhu podle toho, kdy díl začne chybět, při shodě víc chybějících kusů dřív. Zabalené a odeslané dveře a díly, které chybí v klíči, se nepočítají.',
-      matrixNote: 'Všechny vozy z matice v pořadí plánované stavby (bez filtrů z aplikace), stav dveří v barvách Order Status Matrix. MC a MF: zeleně na skladě, červeně chybí, šedě chybí v klíči, modře TPO Maincarrier (nepočítá se); bez štítku zabalené nebo odeslané dveře (stav 50+), které se nepočítají.',
+      matrixNote: 'Všechny vozy z matice v pořadí plánované stavby (bez filtrů z aplikace), stav dveří v barvách Order Status Matrix. MC a MF: zeleně na skladě, červeně chybí, šedě chybí v klíči, modře MC = TPO Maincarrier (nepočítá se); bez štítku zabalené nebo odeslané dveře (stav 50+), které se nepočítají.',
     },
   },
   footer: {

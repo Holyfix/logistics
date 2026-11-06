@@ -94,7 +94,7 @@ function matrixSheet(cars: readonly CarCoverage[], texts: SequenceReportTexts, c
         const fill = STATUS_FILL[statusCode(cell.status) ?? -1];
         const mark = (kind: PartKind): ReportCell => {
           const b = badge(cell, kind);
-          return b ? { value: b === 'tpo' ? 'TPO' : kind, align: 'center', fontWeight: 'bold', fontSize: 9, textColor: '#FFFFFF', backgroundColor: BADGE_FILL[b] } : { value: '' };
+          return b ? { value: kind, align: 'center', fontWeight: 'bold', fontSize: 9, textColor: '#FFFFFF', backgroundColor: BADGE_FILL[b] } : { value: '' };
         };
         return [{ value: cell.status, textColor: '#4D4D4D', ...(fill ? { backgroundColor: fill } : {}) }, mark('MC'), mark('MF')];
       }),
