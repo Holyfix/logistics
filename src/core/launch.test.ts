@@ -2,19 +2,23 @@ import { describe, expect, it } from 'vitest';
 import { dayFromParts } from './dates';
 import {
   addItem,
+  addLinked,
   addProject,
   emptyLaunch,
   groupStatus,
   launchSheets,
   launchSummary,
+  linkedItems,
   parseLaunchWorkbook,
   phasesOf,
   progressOf,
+  removeItem,
   removeProject,
   renameProject,
   shiftDays,
   statusOf,
   timelineRange,
+  updateItem,
   withEnd,
   withKind,
   withStart,
@@ -37,6 +41,7 @@ const item = (over: Partial<LaunchItem>): LaunchItem => ({
   baseline: null,
   owner: '',
   customer: false,
+  parent: null,
   progress: 0,
   note: '',
   ...over,
@@ -148,12 +153,51 @@ describe('Launch – úpravy', () => {
   });
 });
 
+describe('Launch – vlastní bod k milníku', () => {
+  it('čára od dneška do milníku ve stejné fázi; posun milníku posune i bod; smazání milníku bod odpojí', () => {
+    const r = addLinked(plan, 2, today)!;
+    const linked = r.plan.items.at(-1)!;
+    expect(linked).toMatchObject({ id: 6, project: 'P1', phase: 'Testy', kind: 'task', start: today, end: day(1, 11, 2027), parent: 2, customer: false });
+    expect(
+      linkedItems(r.plan.items)
+        .get(2)!
+        .map((i) => i.id),
+    ).toEqual([6]);
+    const moved = updateItem(r.plan, 2, (i) => withEnd(i, day(1, 18, 2027)));
+    expect(moved.items.find((i) => i.id === 6)).toMatchObject({ end: day(1, 18, 2027), baseline: day(1, 11, 2027) });
+    // Jiná úprava milníku termín bodu nemění.
+    expect(updateItem(r.plan, 2, (i) => ({ ...i, name: 'X' })).items.find((i) => i.id === 6)!.end).toBe(day(1, 11, 2027));
+    expect(removeItem(r.plan, 2).items.find((i) => i.id === 6)!.parent).toBeNull();
+    // K úkolu ani k milníku bez termínu se bod nepřidá; po termínu milníku začíná v den milníku.
+    expect(addLinked(plan, 3, today)).toBeNull();
+    expect(addLinked(plan, 4, today)!.plan.items.at(-1)!.start).toBe(day(11, 1));
+  });
+
+  it('soubor: sloupec Navazuje na; neplatná vazba se zahodí', () => {
+    const withLink = addLinked(plan, 2, today)!.plan;
+    const sheets = launchSheets(withLink, today);
+    const back = parseLaunchWorkbook(sheets.map((s) => ({ name: s.name, data: [s.header, ...s.rows] as Cell[][] })));
+    if (!back.ok) throw new Error();
+    expect(back.value.items.find((i) => i.id === 6)!.parent).toBe(2);
+    const data: Cell[][] = [
+      ['ID', 'Projekt', 'Název', 'Typ', 'Konec / termín', 'Navazuje na'],
+      [1, 'X', 'Úkol', 'Úkol', '1.2.2027', null],
+      [2, 'X', 'Na úkol', 'Úkol', '1.2.2027', 1],
+      [3, 'Y', 'Milník', 'Milník', '1.2.2027', null],
+      [4, 'X', 'Jiný projekt', 'Úkol', '1.2.2027', 3],
+    ];
+    const r = parseLaunchWorkbook([{ name: 'L', data }]);
+    if (!r.ok) throw new Error();
+    expect(r.value.items.map((i) => i.parent)).toEqual([null, null, null, null]);
+  });
+});
+
 describe('Launch – soubor', () => {
   it('uložení a načtení vrátí stejný plán', () => {
     const sheets = launchSheets(plan, today);
     expect(sheets.map((s) => s.name)).toEqual(['Launch', 'Projekty']);
-    expect(sheets[0]!.rows[0]).toEqual([3, 'P1', 'Testy', 'Obaly', 'Úkol', '20.10.2026', '03.11.2026', null, 'Logistika / Nákup', 'Interní', 50, 'Po termínu', null]);
-    expect(sheets[0]!.rows.find((r) => r[0] === 2)).toEqual([2, 'P1', 'Testy', 'Díly pro test 1', 'Milník', null, '11.01.2027', null, 'Logistika', 'Zákazník', null, 'Termín zákazníka', null]);
+    expect(sheets[0]!.rows[0]).toEqual([3, 'P1', 'Testy', 'Obaly', 'Úkol', '20.10.2026', '03.11.2026', null, 'Logistika / Nákup', 'Interní', null, 50, 'Po termínu', null]);
+    expect(sheets[0]!.rows.find((r) => r[0] === 2)).toEqual([2, 'P1', 'Testy', 'Díly pro test 1', 'Milník', null, '11.01.2027', null, 'Logistika', 'Zákazník', null, null, 'Termín zákazníka', null]);
     const back = parseLaunchWorkbook(sheets.map((s) => ({ name: s.name, data: [s.header, ...s.rows] as Cell[][] })));
     expect(back.ok).toBe(true);
     if (!back.ok) return;

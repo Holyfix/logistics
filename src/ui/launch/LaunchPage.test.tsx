@@ -21,6 +21,7 @@ const item = (over: Partial<LaunchItem>): LaunchItem => ({
   baseline: null,
   owner: '',
   customer: false,
+  parent: null,
   progress: 0,
   note: '',
   ...over,
@@ -175,6 +176,27 @@ describe('LaunchPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Upravit projekt: Projekt C' }));
     fireEvent.click(within(screen.getByRole('group', { name: 'Projekt: Projekt C' })).getByRole('button', { name: 'Smazat projekt' }));
     expect(names()).not.toContain('Projekt C');
+  });
+
+  it('vlastní bod k milníku: čára od dneška pod milníkem, termín se drží milníku', () => {
+    renderPage();
+    fireEvent.click(within(row('Díly pro test 1')).getByRole('button', { name: /^Díly pro test 1 · / }));
+    fireEvent.click(screen.getByRole('button', { name: '+ Vlastní bod do tohoto milníku' }));
+    const detail = screen.getByRole('group', { name: 'Úprava: (bez názvu)' });
+    fireEvent.change(within(detail).getByLabelText('Název'), { target: { value: 'Obaly k dispozici' } });
+    expect(names()).toEqual(['Projekt AZákazník 1', 'Testy', 'Obaly schválené', 'Díly pro test 1', '↳Obaly k dispozici', 'Kvalita', 'PPA zákazník', 'Díly s PPA', 'Projekt B', 'SOP']);
+    const line = row('Obaly k dispozici').querySelector('.gantt-bar')!;
+    expect(line.className).toContain('gantt-line');
+    expect(line.className).toContain('gantt-open');
+    expect(within(row('Obaly k dispozici')).getByText('11. 1. 2027')).toBeTruthy();
+    const editor = screen.getByRole('group', { name: 'Úprava: Obaly k dispozici' });
+    expect(within(editor).getByLabelText('Začátek')).toHaveProperty('value', '2026-11-06');
+    expect(within(editor).getByLabelText('Konec')).toHaveProperty('disabled', true);
+    expect(within(editor).getByText(/Navazuje na milník „Díly pro test 1“ \(11\. 1\. 2027\)\./)).toBeTruthy();
+    // Posun milníku posune i bod.
+    fireEvent.click(within(row('Díly pro test 1')).getByRole('button', { name: /^Díly pro test 1 · / }));
+    fireEvent.change(within(screen.getByRole('group', { name: 'Úprava: Díly pro test 1' })).getByLabelText('Termín'), { target: { value: '2027-01-25' } });
+    expect(within(row('Obaly k dispozici')).getByText('25. 1. 2027')).toBeTruthy();
   });
 
   it('bez souboru: prázdný Launch s výzvou založit projekt', () => {

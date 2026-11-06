@@ -25,6 +25,8 @@ export interface LaunchItem {
   owner: string;
   /** Zákaznický termín (z plánu zákazníka, plnění neovlivníme) – jinak interní úkol či milník. */
   customer: boolean;
+  /** Milník, ke kterému bod vede (od teď do milníku); termín se drží termínu milníku. null = samostatný řádek. */
+  parent: number | null;
   /** Plnění 0–100 %; u zákaznických termínů se nepočítá. */
   progress: number;
   note: string;
@@ -169,21 +171,63 @@ export function addItem(plan: LaunchPlan, project: string, kind: LaunchKind, tod
     baseline: null,
     owner: '',
     customer,
+    parent: null,
     progress: 0,
     note: '',
   };
   return { plan: { ...plan, items: [...plan.items, item] }, id };
 }
 
+/**
+ * Vlastní bod k milníku: interní úkol od dneška (nejpozději od termínu milníku) do termínu milníku, ve stejné fázi.
+ * Termín bodu se pak drží termínu milníku. Bez milníku s termínem se nic nepřidá (null).
+ */
+export function addLinked(plan: LaunchPlan, parentId: number, today: DayNumber): { plan: LaunchPlan; id: number } | null {
+  const parent = plan.items.find((i) => i.id === parentId);
+  if (!parent || parent.kind !== 'milestone' || parent.end === null) return null;
+  const id = nextId(plan);
+  const item: LaunchItem = {
+    id,
+    project: parent.project,
+    phase: parent.phase,
+    name: '',
+    kind: 'task',
+    start: Math.min(today, parent.end),
+    end: parent.end,
+    baseline: null,
+    owner: '',
+    customer: false,
+    parent: parent.id,
+    progress: 0,
+    note: '',
+  };
+  return { plan: { ...plan, items: [...plan.items, item] }, id };
+}
+
+/** Body navázané na milníky: ID milníku → body (podle začátku). */
+export function linkedItems(items: readonly LaunchItem[]): Map<number, LaunchItem[]> {
+  const map = new Map<number, LaunchItem[]>();
+  for (const item of [...items].sort((a, b) => (a.start ?? a.end ?? Infinity) - (b.start ?? b.end ?? Infinity) || a.id - b.id)) {
+    if (item.parent === null) continue;
+    map.set(item.parent, [...(map.get(item.parent) ?? []), item]);
+  }
+  return map;
+}
+
+/** Úprava řádku; posun termínu milníku posune i termín bodů, které na něj navazují. */
 export function updateItem(plan: LaunchPlan, id: number, change: (item: LaunchItem) => LaunchItem): LaunchPlan {
+  const before = plan.items.find((i) => i.id === id);
+  const after = before ? change(before) : null;
+  const moved = before && after && after.kind === 'milestone' && after.end !== null && after.end !== before.end;
   return {
     ...plan,
-    items: plan.items.map((i) => (i.id === id ? change(i) : i)),
+    items: plan.items.map((i) => (i.id === id ? after! : moved && i.parent === id ? withEnd(i, after.end) : i)),
   };
 }
 
+/** Smaže řádek; body navázané na smazaný milník zůstanou jako samostatné řádky. */
 export function removeItem(plan: LaunchPlan, id: number): LaunchPlan {
-  return { ...plan, items: plan.items.filter((i) => i.id !== id) };
+  return { ...plan, items: plan.items.filter((i) => i.id !== id).map((i) => (i.parent === id ? { ...i, parent: null } : i)) };
 }
 
 /** Nový termín; první změna existujícího termínu si zapamatuje původní termín (návrat na něj posun zruší). */
@@ -258,6 +302,7 @@ const COLUMNS = {
   baseline: ['Původní termín', 'Baseline'],
   owner: ['Odpovědný', 'Owner', 'Responsible'],
   source: ['Zdroj', 'Source'],
+  parent: ['Navazuje na', 'Linked to'],
   progress: ['Plnění (%)', 'Plnění', 'Progress'],
   status: ['Stav', 'Status'],
   note: ['Poznámka', 'Note'],
@@ -310,6 +355,7 @@ export function launchSheets(plan: LaunchPlan, today: DayNumber): LaunchSheet[] 
         COLUMNS.baseline[0],
         COLUMNS.owner[0],
         COLUMNS.source[0],
+        COLUMNS.parent[0],
         COLUMNS.progress[0],
         COLUMNS.status[0],
         COLUMNS.note[0],
@@ -325,6 +371,7 @@ export function launchSheets(plan: LaunchPlan, today: DayNumber): LaunchSheet[] 
         formatDate(i.baseline),
         i.owner || null,
         i.customer ? SOURCE_TEXT.customer : SOURCE_TEXT.internal,
+        i.parent,
         i.customer ? null : i.progress,
         STATUS_TEXT[statusOf(i, today)],
         i.note || null,
@@ -368,6 +415,7 @@ export function parseLaunchWorkbook(sheets: readonly { name: string; data: Cell[
   const baselineC = col(COLUMNS.baseline);
   const ownerC = col(COLUMNS.owner);
   const sourceC = col(COLUMNS.source);
+  const parentC = col(COLUMNS.parent);
   const progressC = col(COLUMNS.progress);
   const noteC = col(COLUMNS.note);
   const text = (c: number, row: Cell[]) => (c === -1 ? '' : cellText(row[c]));
@@ -395,9 +443,16 @@ export function parseLaunchWorkbook(sheets: readonly { name: string; data: Cell[
       owner: text(ownerC, row),
       // Bez sloupce Zdroj jsou milníky termíny zákazníka a úkoly interní.
       customer: sourceC === -1 ? kind === 'milestone' : /^(z[aá]k|cust)/i.test(text(sourceC, row)),
+      parent: parentC === -1 ? null : cellNumber(row[parentC]),
       progress: clampProgress(progressC === -1 ? 0 : (cellNumber(row[progressC]) ?? 0)),
       note: text(noteC, row),
     });
+  }
+
+  // Navázat lze jen na milník ve stejném projektu (jinak samostatný řádek).
+  for (const item of items) {
+    const parent = items.find((i) => i.id === item.parent);
+    if (!parent || parent === item || parent.kind !== 'milestone' || parent.project !== item.project) item.parent = null;
   }
 
   const projects: LaunchProject[] = [];
