@@ -3474,6 +3474,48 @@ button.gantt-bar:focus-visible {
   padding-left: 46px;
 }
 
+.gantt .gantt-depth-3 {
+  padding-left: 52px;
+}
+
+.gantt-link {
+  margin-right: 4px;
+  color: var(--muted);
+}
+
+/* Vlastní bod k milníku: tenká čára od začátku do termínu milníku s koncovou značkou. */
+button.gantt-bar.gantt-line {
+  top: 13px;
+  height: 4px;
+  border-radius: 2px;
+  overflow: visible;
+}
+
+button.gantt-bar.gantt-line::after {
+  content: '';
+  position: absolute;
+  right: -1px;
+  top: -5px;
+  width: 3px;
+  height: 14px;
+  border-radius: 1px;
+  background: var(--g);
+}
+
+button.gantt-bar.gantt-line .gantt-tag {
+  top: -5px;
+  left: calc(100% + 6px);
+}
+
+.gantt-key-line {
+  --g: var(--accent);
+  height: 4px;
+}
+
+.gantt-link-note {
+  margin: 0;
+}
+
 .gantt-chevron {
   width: 18px;
   margin-right: 4px;

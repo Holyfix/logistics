@@ -3,11 +3,13 @@ import type { DayNumber } from '../../core/dates';
 import { formatQuantity } from '../../core/format';
 import {
   addItem,
+  addLinked,
   addProject,
   emptyLaunch,
   INTERNAL_STATUSES,
   launchSheets,
   launchSummary,
+  linkedItems,
   phasesOf,
   removeItem,
   removeProject,
@@ -110,9 +112,18 @@ export function LaunchPage({ today = localToday() }: { today?: DayNumber } = {})
     update(result.plan);
     reveal(result.plan.items.at(-1)!);
   };
-  /** Otevře řádek: rozbalí jeho projekt a fázi a vybere ho (klik na bod ve sbaleném projektu či fázi). */
+  /** Vlastní bod k milníku: čára od dneška do termínu milníku, hned pod milníkem. */
+  const newLinked = (milestone: LaunchItem) => {
+    const result = addLinked(plan, milestone.id, today);
+    if (!result) return;
+    update(result.plan);
+    reveal(result.plan.items.at(-1)!);
+  };
+  /** Otevře řádek: rozbalí jeho projekt, fázi i fázi milníku, na který navazuje, a vybere ho (i klik na bod ve sbalené skupině). */
   const reveal = (item: LaunchItem) => {
-    setCollapsed((c) => new Set([...c].filter((k) => k !== `p|${item.project}` && k !== `f|${item.project}|${item.phase}`)));
+    const parent = plan.items.find((i) => i.id === item.parent);
+    const keys = new Set([`p|${item.project}`, `f|${item.project}|${item.phase}`, ...(parent ? [`f|${parent.project}|${parent.phase}`] : [])]);
+    setCollapsed((c) => new Set([...c].filter((k) => !keys.has(k))));
     setSelected({ type: 'item', id: item.id });
   };
   const save = () =>
@@ -168,7 +179,11 @@ export function LaunchPage({ today = localToday() }: { today?: DayNumber } = {})
     if (collapsed.has(key)) continue;
     if (all.length === 0) rows.push({ type: 'empty', key: `e|${p.name}` });
     const phases = phasesOf(all);
-    for (const group of phasesOf(shown)) {
+    // Body navázané na milník jsou hned pod ním (odsazené); bez zobrazeného milníku jako samostatné řádky.
+    const shownIds = new Set(shown.map((i) => i.id));
+    const linked = linkedItems(shown);
+    const top = shown.filter((i) => i.parent === null || !shownIds.has(i.parent));
+    for (const group of phasesOf(top)) {
       const phaseKey = `f|${p.name}|${group.phase}`;
       if (group.phase)
         rows.push({
@@ -179,13 +194,11 @@ export function LaunchPage({ today = localToday() }: { today?: DayNumber } = {})
           collapsed: collapsed.has(phaseKey),
         });
       if (group.phase && collapsed.has(phaseKey)) continue;
-      for (const item of group.items)
-        rows.push({
-          type: 'item',
-          key: `i|${item.id}`,
-          item,
-          depth: group.phase ? 2 : 1,
-        });
+      const depth = group.phase ? 2 : 1;
+      for (const item of group.items) {
+        rows.push({ type: 'item', key: `i|${item.id}`, item, depth });
+        for (const child of linked.get(item.id) ?? []) rows.push({ type: 'item', key: `i|${child.id}`, item: child, depth: (depth + 1) as 2 | 3 });
+      }
     }
   }
 
@@ -303,6 +316,7 @@ export function LaunchPage({ today = localToday() }: { today?: DayNumber } = {})
             toggle={toggle}
             update={update}
             newItem={newItem}
+            newLinked={newLinked}
             reveal={reveal}
             removeItem={(id) => {
               update(removeItem(plan, id));
@@ -346,6 +360,9 @@ export function LaunchPage({ today = localToday() }: { today?: DayNumber } = {})
           </li>
           <li>
             <i className="gantt-key gantt-key-sum" aria-hidden="true" /> {tl.legendSummary}
+          </li>
+          <li>
+            <i className="gantt-key gantt-key-line" aria-hidden="true" /> {tl.legendLine}
           </li>
           <li>
             <i className="gantt-key gantt-key-base" aria-hidden="true" /> {tl.legendBaseline}

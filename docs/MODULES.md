@@ -228,6 +228,9 @@ Filtry projekt, kategorie, strana (LHD/RHD) a varianta z kmenových dat se ovliv
   Vše / Nehotové / Po termínu
 - ✅ Úprava řádku: název, fáze, typ, zdroj (zákazník / interní), začátek, konec / termín, odpovědný, plnění (%),
   poznámka; projekt přes ✎: název, popis, + Interní úkol, + Interní milník, + Termín zákazníka, smazání
+- ✅ **Vlastní bod k milníku:** v úpravě milníku „+ Vlastní bod do tohoto milníku“ – interní úkol od dneška do
+  termínu milníku (např. obaly k dispozici do produkčního testu), v Ganttu tenká čára pod milníkem (↳), barva podle
+  plnění. Posun milníku posune i jeho body; bod jde od milníku odpojit, smazáním milníku se body odpojí
 - ✅ Posun termínu: původní termín se zapamatuje, „posun +N d“ a čárkovaný kosočtverec v Ganttu; tlačítkem lze nový
   termín přijmout jako původní
 - ✅ Přehled nahoře: projekty, po termínu, nejbližší milník, plnění; na rozcestníku po termínu, jinak dní do milníku

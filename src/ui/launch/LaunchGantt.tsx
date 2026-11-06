@@ -47,7 +47,7 @@ export type GanttRow =
       items: LaunchItem[];
       collapsed: boolean;
     }
-  | { type: 'item'; key: string; item: LaunchItem; depth: 1 | 2 }
+  | { type: 'item'; key: string; item: LaunchItem; depth: 1 | 2 | 3 }
   | { type: 'empty'; key: string };
 
 const PROGRESS_QUICK = [0, 25, 50, 75, 100];
@@ -115,6 +115,7 @@ export function LaunchGantt({
   toggle,
   update,
   newItem,
+  newLinked,
   reveal,
   removeItem,
   removeProject,
@@ -133,6 +134,8 @@ export function LaunchGantt({
   toggle: (key: string) => void;
   update: (plan: LaunchPlan) => void;
   newItem: (project: string, kind: LaunchKind, customer: boolean) => void;
+  /** Vlastní bod k milníku (čára od dneška do milníku). */
+  newLinked: (milestone: LaunchItem) => void;
   /** Otevře řádek (i ve sbaleném projektu či fázi). */
   reveal: (item: LaunchItem) => void;
   removeItem: (id: number) => void;
@@ -237,7 +240,7 @@ export function LaunchGantt({
         {base}
         <button
           type="button"
-          className={`gantt-bar ${itemClass(item)}${mini ? ' gantt-mini' : ''}`}
+          className={`gantt-bar ${itemClass(item)}${item.parent !== null ? ' gantt-line' : ''}${mini ? ' gantt-mini' : ''}`}
           style={{
             left: `${x(item.start)}px`,
             width: `${Math.max(x(item.end + 1) - x(item.start), 3)}px`,
@@ -444,6 +447,11 @@ export function LaunchGantt({
             return [
               <tr key={row.key} className={`gantt-row-item${open ? ' gantt-row-open' : ''}`} onClick={() => select(open ? null : { type: 'item', id: item.id })}>
                 <td className={`gantt-name gantt-depth-${row.depth}`}>
+                  {item.parent !== null && row.depth === 3 && (
+                    <span className="gantt-link" aria-hidden="true">
+                      ↳
+                    </span>
+                  )}
                   <i className={`gantt-dot ${itemClass(item)}${item.kind === 'milestone' ? ' gantt-dot-ms' : ''}`} title={`${tl.kind[item.kind]} · ${tl.status[status]}`} aria-hidden="true" />
                   <span className="gantt-label" title={item.note || undefined}>
                     {item.name || <span className="muted">{tl.noName}</span>}
@@ -474,6 +482,9 @@ export function LaunchGantt({
                   <td colSpan={COLUMNS}>
                     <ItemDetail
                       item={item}
+                      parent={plan.items.find((i) => i.id === item.parent) ?? null}
+                      linked={plan.items.filter((i) => i.parent === item.id).length}
+                      addLinked={() => newLinked(item)}
                       phases={[...new Set(plan.items.filter((i) => i.project === item.project && i.phase).map((i) => i.phase))]}
                       owners={owners}
                       change={(fn) => changeItem(item.id, fn)}
@@ -497,6 +508,9 @@ const isoOrEmpty = (d: DayNumber | null) => (d === null ? '' : dayToIso(d));
 
 function ItemDetail({
   item,
+  parent,
+  linked,
+  addLinked,
   phases,
   owners,
   change,
@@ -504,6 +518,11 @@ function ItemDetail({
   close,
 }: {
   item: LaunchItem;
+  /** Milník, na který bod navazuje. */
+  parent: LaunchItem | null;
+  /** Počet bodů navázaných na tento milník. */
+  linked: number;
+  addLinked: () => void;
   phases: string[];
   owners: string[];
   change: (fn: (item: LaunchItem) => LaunchItem) => void;
@@ -557,7 +576,14 @@ function ItemDetail({
         )}
         <label className="field">
           <span>{item.kind === 'task' ? td.end : td.date}</span>
-          <input type="date" value={isoOrEmpty(item.end)} onChange={(e) => change((i) => withEnd(i, parseDay(e.target.value)))} />
+          <input
+            type="date"
+            aria-label={item.kind === 'task' ? td.end : td.date}
+            value={isoOrEmpty(item.end)}
+            disabled={parent !== null}
+            onChange={(e) => change((i) => withEnd(i, parseDay(e.target.value)))}
+          />
+          {parent !== null && <small className="muted">{td.endLinked}</small>}
         </label>
         <label className="field">
           <span>{td.owner}</span>
@@ -606,6 +632,25 @@ function ItemDetail({
           <textarea rows={2} value={item.note} onChange={(e) => change((i) => ({ ...i, note: e.target.value }))} />
         </label>
       </div>
+      {parent !== null && (
+        <p className="gantt-link-note">
+          {td.linkedTo.replace('{name}', parent.name || t.launch.noName).replace('{date}', parent.end === null ? t.launch.noDate : dayText(parent.end, locale))}{' '}
+          <button type="button" className="button button-small" onClick={() => change((i) => ({ ...i, parent: null }))}>
+            {td.unlink}
+          </button>
+        </p>
+      )}
+      {item.kind === 'milestone' && item.end !== null && (
+        <p className="gantt-link-note">
+          <button type="button" className="button button-small button-primary" onClick={addLinked}>
+            + {td.addLinked}
+          </button>{' '}
+          <small className="muted">
+            {td.linkedHint}
+            {linked > 0 && ` ${td.linkedCount.replace('{n}', formatQuantity(linked, locale))}`}
+          </small>
+        </p>
+      )}
       {shift !== 0 && item.baseline !== null && (
         <p className="gantt-shift-note">
           {td.shift.replace('{days}', `${shift > 0 ? '+' : ''}${formatQuantity(shift, locale)}`).replace('{date}', dayText(item.baseline, locale))}{' '}

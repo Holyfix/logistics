@@ -339,7 +339,7 @@ přepsáním zeptá.
 
 | List | Obsah |
 |---|---|
-| **Launch** | ID, Projekt, Fáze, Název, Typ (Úkol / Milník), Začátek, Konec / termín, Původní termín, Odpovědný, Zdroj (Zákazník / Interní), Plnění (%), Stav, Poznámka |
+| **Launch** | ID, Projekt, Fáze, Název, Typ (Úkol / Milník), Začátek, Konec / termín, Původní termín, Odpovědný, Zdroj (Zákazník / Interní), Navazuje na (ID milníku), Plnění (%), Stav, Poznámka |
 | **Projekty** | Projekt, Popis – pořadí projektů; list může chybět (projekty se pak vezmou z řádků) |
 
 - Povinné sloupce: **ID, Projekt, Název, Konec / termín** (anglicky ID, Project, Name, End). Data jako datum Excelu
@@ -347,6 +347,8 @@ přepsáním zeptá.
 - **Typ:** Milník = jeden den (kosočtverec), Úkol = pruh od začátku do konce. Bez sloupce Typ jsou všechny řádky úkoly.
 - **Zdroj:** Zákazník = termín z plánu zákazníka (barva podle fáze, plnění se nepočítá, proběhlé světle),
   Interní = náš úkol či milník (barva podle plnění). Bez sloupce Zdroj jsou milníky termíny zákazníka a úkoly interní.
+- **Navazuje na:** ID milníku ve stejném projektu, ke kterému vlastní bod vede (čára od začátku do termínu milníku);
+  termín bodu se drží termínu milníku. Neplatná vazba se při načtení zahodí.
 - **Fáze** seskupí řádky projektu (např. Produkční testy, Kvalita, SOP); fáze i řádky se řadí podle data.
 - **Původní termín** doplní aplikace při prvním posunu termínu; v Ganttu je čárkovaný kosočtverec a u termínu
   „posun +N d“. Sloupec **Stav** je jen pro čtení v Excelu (aplikace ho počítá z plnění a termínu).
