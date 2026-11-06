@@ -18,6 +18,7 @@ Soubory se rozpoznají podle názvu (nezáleží na velikosti písmen ani diakri
 | Plánování: kapacity a plány linek | leží ve složce `Plan` (nebo `Plán`); `Kapacity.xlsx` = kapacity, ostatní = plány | XLSX (zapisuje aplikace) |
 | OIL (Open Issue List) | leží ve složce `OIL`, nebo název začíná „OIL“; platí nejnovější soubor | XLSX (zapisuje aplikace) |
 | KPI (SQCDP) | leží ve složce `KPI`, nebo název začíná „KPI“; platí nejnovější soubor | XLSX (zapisuje aplikace) |
+| Launch (náběh projektů) | leží ve složce `Launch`, nebo název začíná „Launch“; platí nejnovější soubor | XLSX (zapisuje aplikace) |
 | Doplněný transit (naše expedice, které coverage ještě nemá) | leží ve složce `Transit`, nebo název začíná „Transit“; všechny soubory | XLSX nebo CSV |
 | Sekvence: Order Status Matrix a klíč MC/MF | leží ve složce `Sekvence` (nebo `Sequence`); platí nejnovější soubor každého druhu | XLSX nebo CSV |
 
@@ -34,6 +35,7 @@ Logistics/
 ├── Plan/                 Plánování: Kapacity.xlsx a plány linek (ASSEMBLY_<projekt>.xlsx), zapisuje aplikace
 ├── OIL/                  OIL.xlsx (Open Issue List), zapisuje aplikace
 ├── KPI/                  KPI.xlsx (ukazatele SQCDP a denní zápisy), zapisuje aplikace
+├── Launch/               Launch.xlsx (fáze náběhu projektů), zapisuje aplikace
 ├── Transit/              doplněný transit: ranní expedice, které soubor coverage ještě nemá
 ├── Sekvence/             Order Status Matrix a klíč MC/MF pro kartu Sekvence v Komponentách
 └── Obaly/                později: Obaly
@@ -328,6 +330,24 @@ aplikace nabídne úvodní sadu ukazatelů. Když soubor mezitím změnil někdo
 - **Detaily** (nepovinné): u ručního ukazatele mimo cíl se vyplní v Zápisu dne (víc řádků, nabídky projektů a dílů
   z mapování, osob z OIL a dříve zapsaných příčin). U automatických ukazatelů je aplikace uloží sama při uložení dne
   (díly a lokace z Coverage, komponenty s projekty, body OIL po termínu s odpovědným).
+
+## Launch (složka Launch)
+
+Soubor `Launch/Launch.xlsx` **vytváří aplikace** tlačítkem Uložit v modulu Launch; lze ho ale připravit i ručně
+(např. milníky z plánu zákazníka) a aplikace ho načte. Když soubor mezitím změnil někdo jiný, aplikace se před
+přepsáním zeptá.
+
+| List | Obsah |
+|---|---|
+| **Launch** | ID, Projekt, Fáze, Název, Typ (Úkol / Milník), Začátek, Konec / termín, Původní termín, Odpovědný, Plnění (%), Stav, Poznámka |
+| **Projekty** | Projekt, Popis – pořadí projektů; list může chybět (projekty se pak vezmou z řádků) |
+
+- Povinné sloupce: **ID, Projekt, Název, Konec / termín** (anglicky ID, Project, Name, End). Data jako datum Excelu
+  nebo text `dd.mm.rrrr`.
+- **Typ:** Milník = jeden den (kosočtverec), Úkol = pruh od začátku do konce. Bez sloupce Typ jsou všechny řádky úkoly.
+- **Fáze** seskupí řádky projektu (např. Produkční testy, Kvalita, SOP); fáze i řádky se řadí podle data.
+- **Původní termín** doplní aplikace při prvním posunu termínu; v Ganttu je čárkovaný kosočtverec a u termínu
+  „posun +N d“. Sloupec **Stav** je jen pro čtení v Excelu (aplikace ho počítá z plnění a termínu).
 
 ## Sekvence (karta v Komponentách)
 

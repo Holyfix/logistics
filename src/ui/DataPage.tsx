@@ -377,7 +377,7 @@ export function DataPage() {
 
           <div className="panel">
             <h2>{t.data.planning.heading}</h2>
-            {data.plans.length === 0 && !data.planSettings && !data.oil ? (
+            {data.plans.length === 0 && !data.planSettings && !data.oil && !data.launch ? (
               <p>{t.data.planning.none}</p>
             ) : (
               <div className="table-scroll">
@@ -407,6 +407,16 @@ export function DataPage() {
                           OIL: {formatQuantity(data.oil.list.items.length, locale)} {t.data.planning.oilItems}
                         </td>
                         <td>{new Date(data.oil.lastModified).toLocaleString(locale === 'cs' ? 'cs-CZ' : 'en-GB', { dateStyle: 'short', timeStyle: 'short' })}</td>
+                      </tr>
+                    )}
+                    {data.launch && (
+                      <tr>
+                        <td>{data.launch.path}</td>
+                        <td>
+                          Launch: {formatQuantity(data.launch.plan.projects.length, locale)} {t.data.planning.launchProjects}, {formatQuantity(data.launch.plan.items.length, locale)}{' '}
+                          {t.data.planning.launchItems}
+                        </td>
+                        <td>{new Date(data.launch.lastModified).toLocaleString(locale === 'cs' ? 'cs-CZ' : 'en-GB', { dateStyle: 'short', timeStyle: 'short' })}</td>
                       </tr>
                     )}
                     {data.plans.map((p) => (

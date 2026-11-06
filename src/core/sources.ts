@@ -1,6 +1,6 @@
 // Rozpoznání souborů ve sdílené složce podle cesty a názvu.
 
-export type SourceKind = 'calloffs' | 'masterdata' | 'coverage' | 'stock' | 'bom' | 'plan' | 'planSettings' | 'oil' | 'kpi' | 'transit' | 'sequence' | 'ignored';
+export type SourceKind = 'calloffs' | 'masterdata' | 'coverage' | 'stock' | 'bom' | 'plan' | 'planSettings' | 'oil' | 'kpi' | 'launch' | 'transit' | 'sequence' | 'ignored';
 export type SourceFormat = 'csv' | 'xlsx';
 
 function normalize(s: string): string {
@@ -27,6 +27,7 @@ export function formatOf(path: string): SourceFormat | null {
  * Plánování: Excel ve složce „plán“ / „plan“: „Kapacity…“ = nastavení kapacit, ostatní = plány linek.
  * OIL: Excel ve složce „oil“ nebo s názvem začínajícím „oil“.
  * KPI: Excel ve složce „kpi“ nebo s názvem začínajícím „kpi“.
+ * Launch: Excel ve složce „launch“ nebo s názvem začínajícím „launch“ (náběh projektů).
  * Doplněný transit: soubor ve složce „transit“ nebo s názvem začínajícím „transit“ (naše expedice, které coverage ještě nemá).
  * Sekvence: soubory ve složce „sekvence“ / „sequence“ (Order Status Matrix a klíč MC/MF; druh se pozná podle obsahu).
  * Dočasné soubory Excelu (~$…) se ignorují.
@@ -40,6 +41,7 @@ export function classifyPath(path: string): SourceKind {
   if (folders.some((f) => /^(sekvence|sequence)$/.test(f))) return 'sequence';
   // Dřívější složka samostatné stránky pokrytí materiálu: soubory z ní se nečtou (patří do složky Sekvence).
   if (folders.some((f) => /^(material|materialy?)$/.test(f))) return 'ignored';
+  if (folders.includes('launch') || /^launch[ _.-]/.test(name)) return formatOf(path) === 'xlsx' ? 'launch' : 'ignored';
   if (/kmenov|master|mapping/.test(name)) return 'masterdata';
   if (folders.some((f) => /^(plan|planovani|planning)$/.test(f))) {
     if (formatOf(path) !== 'xlsx') return 'ignored';
