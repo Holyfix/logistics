@@ -7,6 +7,7 @@ import { changeOf, type PeriodCount } from '../../core/calloffs/views';
 import { formatPercent, formatQuantity, formatSigned } from '../../core/format';
 import type { MasterItem } from '../../core/masterdata';
 import { useI18n } from '../../i18n/I18nProvider';
+import { CompareTree } from './CompareTree';
 import { ExportButtons, type ExportTable } from './ExportButtons';
 import { ItemFieldCells, ItemFieldHeaders, itemFieldValues, useItemFieldLabels } from './ItemFields';
 
@@ -279,6 +280,8 @@ export function CompareView({ exports, filter, master, filters }: Props) {
           </table>
         </div>
       </div>
+
+      <CompareTree rows={rows} periods={periods} master={master} labelA={labelA} labelB={labelB} fileBase={fileBase} />
 
       <div className="panel">
         <div className="panel-head">

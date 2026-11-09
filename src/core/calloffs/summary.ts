@@ -22,6 +22,8 @@ export interface SummaryNode {
   diff: number | null;
   /** Součet předchozího exportu v týchž obdobích (základ pro změnu v %); null bez předchozího exportu. */
   previousTotal: number | null;
+  /** Předchozí export po obdobích (obdobím, která nepokrývá, 0); null bez předchozího exportu. */
+  previousValues: number[] | null;
   /** Směny po obdobích (kusy ÷ výkon za směnu kategorie dílu, jen díly s výkonem); null, když výkon nemá žádný díl. */
   shifts: number[] | null;
   /** Kolik dílů uzlu výkon za směnu nemá (směny jsou pak neúplné). */
@@ -74,6 +76,7 @@ export function summarize(rows: readonly CurrentRow[], master: ReadonlyMap<strin
       .map(([label, list]): SummaryNode => {
         const key = `${parent}|${field}:${label}`;
         const values = Array.from({ length: periods }, (_, k) => list.reduce((s, r) => s + r.values[k]!, 0));
+        const previousValues = Array.from({ length: periods }, (_, k) => list.reduce((s, r) => s + (r.previous[k] ?? 0), 0));
         let diff = 0;
         let previousTotal = 0;
         for (const r of list)
@@ -93,6 +96,7 @@ export function summarize(rows: readonly CurrentRow[], master: ReadonlyMap<strin
           total: values.reduce((a, b) => a + b, 0),
           diff: hasPrevious ? diff : null,
           previousTotal: hasPrevious ? previousTotal : null,
+          previousValues: hasPrevious ? previousValues : null,
           ...(() => {
             const s = shiftsOf(list, perShift, periods);
             return { shifts: s?.values ?? null, shiftsMissing: s ? s.missing : perShift ? list.length : 0 };

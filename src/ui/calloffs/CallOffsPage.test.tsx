@@ -124,7 +124,7 @@ describe('CallOffsPage', () => {
   it('porovná dva exporty po týdnech, po dílech a v matici vývoje', () => {
     renderPage(state);
     fireEvent.click(screen.getByRole('tab', { name: 'Porovnání exportů' }));
-    const [summary, items, matrix] = screen.getAllByRole('table');
+    const [summary, , items, matrix] = screen.getAllByRole('table');
     const cells = (row: HTMLElement) => [...row.querySelectorAll('td')].map((td) => td.textContent);
     expect(cells(within(summary!).getByText('Rozdíl').closest('tr')!)).toEqual(['Rozdíl', '+50', '+50']);
     // Jen změněné díly.
@@ -144,12 +144,40 @@ describe('CallOffsPage', () => {
     const newer = exportOf('Odvolavky_CW42.csv', ['2001,SHIFT,12.10.2026,20', '2001,SHIFT,19.10.2026,10', '2002,SAME,12.10.2026,5']);
     renderPage({ ...state, data: { ...state.data!, exports: [older, newer], master: null } });
     fireEvent.click(screen.getByRole('tab', { name: 'Porovnání exportů' }));
-    const items = () => screen.getAllByRole('table')[1]!;
+    const items = () => screen.getAllByRole('table')[2]!;
     expect(screen.getByText('Žádný díl se mezi vybranými exporty nezměnil.')).toBeTruthy();
     expect(screen.getByText(/Jen změněné díly/).textContent).toContain('(0 z 2)');
-    fireEvent.click(screen.getByRole('button', { name: 'Rozdíl po týdnech' }));
+    fireEvent.click(within(screen.getByRole('group', { name: 'Zobrazení' })).getByRole('button', { name: 'Rozdíl po týdnech' }));
     expect(within(items()).getByText('2001')).toBeTruthy();
     expect(within(items()).queryByText('2002')).toBeNull();
+  });
+
+  it('porovnání po projektech: stejný strom jako přehled, součty obou exportů, rozdíl a změna, po týdnech rozdíl', () => {
+    renderPage(state);
+    fireEvent.click(screen.getByRole('tab', { name: 'Porovnání exportů' }));
+    const table = screen.getByRole('table', { name: 'Porovnání po projektech' });
+    const rows = () => [...table.querySelectorAll('tbody tr')].map((tr) => [...tr.querySelectorAll('td')].map((td) => td.textContent));
+    expect(rows()).toEqual([
+      ['▾P100 · 1 dílů', '100', '150', '+50', '+50 %'],
+      ['▾DP · 1 dílů', '100', '150', '+50', '+50 %'],
+      ['▾LHD · 1 dílů', '100', '150', '+50', '+50 %'],
+      ['SR2 · 1 dílů', '100', '150', '+50', '+50 %'],
+      ['▾P300 · 1 dílů', '50', '50', '0', '0 %'],
+      ['▾DP · 1 dílů', '50', '50', '0', '0 %'],
+      ['RHD · 1 dílů', '50', '50', '0', '0 %'],
+      // Díl bez mapování: požadavek jen v týdnu, který starší export neobsahuje, se neporovnává.
+      ['▾bez projektu · 1 dílů', '0', '0', '0', '—'],
+      ['bez kategorie · 1 dílů', '0', '0', '0', '—'],
+    ]);
+    expect([...table.querySelectorAll('tfoot td')].map((td) => td.textContent)).toEqual(['Celkem', '150', '200', '+50', '+33,3 %']);
+    // Jen projekty a rozdíl po týdnech.
+    fireEvent.click(within(table.closest('.panel') as HTMLElement).getByRole('button', { name: 'Projekty' }));
+    fireEvent.click(within(table.closest('.panel') as HTMLElement).getByRole('button', { name: 'Rozdíl po týdnech' }));
+    expect(rows()).toEqual([
+      ['▸P100 · 1 dílů', '+50', '+50'],
+      ['▸P300 · 1 dílů', '0', '0'],
+      ['▸bez projektu · 1 dílů', '0', '0'],
+    ]);
   });
 
   it('porovnání s jedním exportem vysvětlí, co chybí', () => {
