@@ -3388,9 +3388,20 @@ button.gantt-bar:focus-visible {
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--g) 60%, var(--surface));
 }
 
-.gantt-sum-phase {
-  top: 12px;
+/* Termíny zákazníka a interní body nad sebou, když má projekt či fáze oboje. */
+.gantt-sum-top {
+  top: 7px;
   height: 6px;
+}
+
+.gantt-sum-bottom {
+  top: 17px;
+  height: 6px;
+}
+
+.gantt-sum-top .gantt-tag,
+.gantt-sum-bottom .gantt-tag {
+  top: -4px;
 }
 
 .gantt-fill {
@@ -3625,9 +3636,13 @@ button.gantt-bar.gantt-line .gantt-tag {
 }
 
 .gantt-key-sum {
-  --g: var(--ink-2);
   height: 6px;
-  opacity: 0.6;
+}
+
+/* Klíč souhrnu: polovina vybarvená, polovina světlá jako u pruhu. */
+.gantt-key-sum-c,
+.gantt-key-sum-i {
+  background: linear-gradient(to right, var(--g) 50%, color-mix(in srgb, var(--g) 30%, var(--surface)) 50%);
 }
 
 .gantt-key-base {

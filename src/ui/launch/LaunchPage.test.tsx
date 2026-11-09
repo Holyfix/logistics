@@ -103,7 +103,15 @@ describe('LaunchPage', () => {
     // Projekt: plnění jen z interních řádků, termín = nejpozdější datum, po termínu kvůli internímu úkolu.
     expect(row('Projekt A').querySelector('.gantt-progress')!.textContent).toBe('25 %');
     expect(row('Projekt A').querySelector('.gantt-due')!.textContent).toBe('11. 1. 2027');
-    expect(row('Projekt A').querySelector('.gantt-sum')!.classList.contains('gantt-overdue')).toBe(true);
+    // Souhrn: termíny zákazníka a interní body každý svým pruhem; zákaznický se vybarví podle uplynulého času
+    // (1. 11. 2026 – 11. 1. 2027, dnes 6. 11. → 7 %), interní podle plnění (25 %).
+    const [customerBar, internalBar] = [...row('Projekt A').querySelectorAll('.gantt-sum')] as HTMLElement[];
+    expect(customerBar!.className).toBe('gantt-sum gantt-customer gantt-sum-top');
+    expect((customerBar!.querySelector('.gantt-fill') as HTMLElement).style.width).toBe('7%');
+    expect(internalBar!.className).toBe('gantt-sum gantt-overdue gantt-sum-bottom');
+    expect((internalBar!.querySelector('.gantt-fill') as HTMLElement).style.width).toBe('25%');
+    // Fáze jen se zákaznickými termíny má jeden pruh v barvě fáze.
+    expect([...row('Testy').querySelectorAll('.gantt-sum')].map((b) => b.className)).toEqual(['gantt-sum gantt-c1 gantt-sum-top', 'gantt-sum gantt-overdue gantt-sum-bottom']);
     // Interní: barva podle plnění.
     expect(row('Obaly schválené').querySelector('.gantt-bar')!.className).toContain('gantt-overdue');
     expect(row('Díly s PPA').querySelector('.gantt-ms')!.className).toContain('gantt-open');

@@ -221,8 +221,10 @@ Filtry projekt, kategorie, strana (LHD/RHD) a varianta z kmenových dat se ovliv
 - ✅ **Termíny zákazníka** barevně podle fáze (každá fáze projektu svou barvou), proběhlé světle; plnění se u nich
   nevede a do plnění ani „po termínu“ se nepočítají
 - ✅ **Interní** úkoly a milníky barvou podle plnění: po termínu (červená), 0 % (šedomodrá), 1–49 % (oranžová),
-  50–99 % (modrá), 100 % (zelená); tmavší část pruhu = plnění. Projekt a fáze mají souhrnný pruh (od–do, průměr
-  plnění interních, po termínu, když je po termínu cokoli interního uvnitř)
+  50–99 % (modrá), 100 % (zelená); tmavší část pruhu = plnění
+- ✅ **Souhrn projektu a fáze** dvěma pruhy nad sebou: termíny zákazníka (barva fáze, u projektu tmavá) se vybarvují
+  podle uplynulého času mezi prvním a posledním termínem; interní body mají vlastní pruh s barvou podle stavu
+  a vybarvením podle průměrného plnění (po termínu, když je po termínu cokoli interního uvnitř)
 - ✅ Kliknutí na řádek projektu či fáze ji sbalí / rozbalí; ve sbalené skupině jsou body vidět na souhrnném řádku
 - ✅ Kliknutí na bod v Ganttu (i ve sbaleném projektu) otevře jeho úpravu; filtry projekt, odpovědný (po osobách),
   Vše / Nehotové / Po termínu

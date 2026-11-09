@@ -93,6 +93,18 @@ export function progressOf(items: readonly LaunchItem[]): number | null {
   return internal.length ? Math.round(internal.reduce((s, i) => s + i.progress, 0) / internal.length) : null;
 }
 
+/**
+ * Jak daleko jsou termíny zákazníka podle data: kolik procent doby od prvního do posledního termínu už uplynulo
+ * (0 % před prvním, 100 % po posledním). Plnění zákaznických termínů neovlivníme, proto se počítá jen z kalendáře.
+ */
+export function timeProgress(items: readonly LaunchItem[], today: DayNumber): number | null {
+  const span = spanOf(items);
+  if (!span) return null;
+  if (today < span.start) return 0;
+  if (today >= span.end) return 100;
+  return Math.round(((today - span.start) / (span.end - span.start)) * 100);
+}
+
 /** Barva zákaznických termínů podle fáze: pořadí fáze se zákaznickými termíny v projektu (0, 1, 2 …). */
 export function customerColors(items: readonly LaunchItem[]): Map<string, number> {
   const colors = new Map<string, number>();

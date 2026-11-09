@@ -359,7 +359,10 @@ export function LaunchPage({ today = localToday() }: { today?: DayNumber } = {})
             <i className="gantt-key gantt-key-ms" aria-hidden="true" /> {tl.legendMilestone}
           </li>
           <li>
-            <i className="gantt-key gantt-key-sum" aria-hidden="true" /> {tl.legendSummary}
+            <i className="gantt-key gantt-key-sum gantt-key-sum-c gantt-c0" aria-hidden="true" /> {tl.legendSummaryCustomer}
+          </li>
+          <li>
+            <i className="gantt-key gantt-key-sum gantt-key-sum-i gantt-advanced" aria-hidden="true" /> {tl.legendSummaryInternal}
           </li>
           <li>
             <i className="gantt-key gantt-key-line" aria-hidden="true" /> {tl.legendLine}
