@@ -233,6 +233,15 @@ export function previousWorkday(today: DayNumber): DayNumber {
   return day;
 }
 
+/**
+ * Den, za který se písmeno ukáže na rozcestníku: dnešek, když má písmeno za dnešek uloženou hodnotu (ukazatele se
+ * stavem v den zápisu, např. D a P z dat aplikace), jinak předchozí pracovní den (výsledky dne z ranního zápisu).
+ */
+export function hubDay(data: KpiData, letter: Letter, today: DayNumber): DayNumber {
+  const entry = entryOf(data, today);
+  return entry && letterStatus(data, letter, entry) !== null ? today : previousWorkday(today);
+}
+
 /** Zápis dne (nahradí dřívější zápis téhož dne). */
 export function withEntry(data: KpiData, entry: KpiEntry): KpiData {
   return { ...data, entries: [...data.entries.filter((e) => e.day !== entry.day), entry].sort((a, b) => a.day - b.day) };

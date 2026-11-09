@@ -878,7 +878,7 @@ export const cs = {
         q_claims: ['Záměna dílu', 'Poškozený obal nebo díl', 'Chybná etiketa', 'Chybné množství', 'Chybný doklad'],
       },
     },
-    hub: { title: 'KPI za {day}' },
+    hub: { title: 'KPI podle dne zápisu', letter: 'za {day}' },
   },
   oil: {
     noData: 'OIL se ukládá do sdílené složky (OIL/OIL.xlsx). Nejdřív vyberte složku v modulu Data.',

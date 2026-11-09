@@ -3,7 +3,7 @@ import { callOffSummary } from '../core/calloffs/views';
 import { COMPONENT_SOON_DAYS } from '../core/components/compute';
 import { oilAlerts } from '../core/dashboard';
 import { dayToIso, weekday } from '../core/dates';
-import { dayState, defaultKpis, LETTERS, previousWorkday } from '../core/kpi';
+import { dayState, defaultKpis, hubDay, LETTERS } from '../core/kpi';
 import { buildCoverage, SHORTAGE_DAYS, shortage } from '../core/coverage/compute';
 import { formatDayShort, formatQuantity } from '../core/format';
 import { useI18n } from '../i18n/I18nProvider';
@@ -165,18 +165,20 @@ function useMetrics(): Partial<Record<ModuleId, ReactNode>> {
       </span>
     );
   }
-  // KPI: písmena SQCDP obarvená podle předchozího pracovního dne (nezapsaný den = šedá).
+  // KPI: každé písmeno barvou za den, ke kterému jsou jeho hodnoty uložené – dnešek, když je za dnešek zapsané
+  // (stav v den zápisu), jinak předchozí pracovní den (nezapsaný den = šedá).
   if (state.data) {
     const kpi = state.data.kpi?.data ?? defaultKpis(t.kpi.defaults);
-    const day = previousWorkday(today);
-    const states = LETTERS.map((letter) => ({ letter, state: dayState(kpi, letter, day, today) }));
-    const tk = t.kpi.hub;
-    const dayText = `${t.calloffs.weekdays[weekday(day) - 1]} ${formatDayShort(dayToIso(day), locale)}`;
-    const title = `${tk.title.replace('{day}', dayText)}: ${states.map((s) => `${s.letter} ${t.kpi.dayTitle[s.state]}`).join(', ')}`;
+    const dayText = (day: number) => `${t.calloffs.weekdays[weekday(day) - 1]} ${formatDayShort(dayToIso(day), locale)}`;
+    const states = LETTERS.map((letter) => {
+      const day = hubDay(kpi, letter, today);
+      return { letter, day, state: dayState(kpi, letter, day, today), text: `${letter} ${t.kpi.hub.letter.replace('{day}', dayText(day))}` };
+    });
+    const title = `${t.kpi.hub.title}: ${states.map((s) => `${s.text}: ${t.kpi.dayTitle[s.state]}`).join(', ')}`;
     metrics.kpi = (
       <span className="metric hub-kpi" title={title} aria-label={title}>
         {states.map((s) => (
-          <span key={s.letter} className={`hub-kpi-letter hub-kpi-${s.state}`}>
+          <span key={s.letter} className={`hub-kpi-letter hub-kpi-${s.state}${s.day === today ? ' hub-kpi-today' : ''}`} title={`${s.text}: ${t.kpi.dayTitle[s.state]}`}>
             {s.letter}
           </span>
         ))}
