@@ -2123,7 +2123,7 @@ button.oil-step:disabled {
   font-size: 13px;
 }
 
-/* Písmena SQCDP na rozcestníku: barva za den, ke kterému jsou hodnoty písmene uložené (dnešek podtržený). */
+/* Písmena SQCDP na rozcestníku: barva za den, ke kterému jsou hodnoty písmene uložené  */
 .hub-kpi {
   gap: 4px;
 }
@@ -2147,12 +2147,6 @@ button.oil-step:disabled {
 .hub-kpi-red {
   color: #d8404b;
   opacity: 1;
-}
-
-.hub-kpi-today {
-  text-decoration: underline;
-  text-decoration-thickness: 2px;
-  text-underline-offset: 3px;
 }
 
 /* OIL: písmeno SQCDP v seznamu a v detailu bodu. */

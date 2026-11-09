@@ -84,7 +84,7 @@ describe('HubPage', () => {
     kpi = withEntry(kpi, { day: today, author: '', at: '', values: { d_customer: 20, p_oil: 5 } });
     renderHub([cw42], null, kpi);
     const badges = [...screen.getByRole('link', { name: /KPI/ }).querySelectorAll('.hub-kpi-letter')];
-    expect(badges.map((b) => b.className.replace('hub-kpi-letter ', ''))).toEqual(['hub-kpi-green', 'hub-kpi-none', 'hub-kpi-none', 'hub-kpi-red hub-kpi-today', 'hub-kpi-red hub-kpi-today']);
+    expect(badges.map((b) => b.className.replace('hub-kpi-letter ', ''))).toEqual(['hub-kpi-green', 'hub-kpi-none', 'hub-kpi-none', 'hub-kpi-red', 'hub-kpi-red']);
     expect(badges[3]!.getAttribute('title')).toMatch(/^D za .+: mimo cíl$/);
   });
 
