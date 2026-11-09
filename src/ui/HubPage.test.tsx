@@ -78,6 +78,16 @@ describe('HubPage', () => {
     expect(badges.map((b) => b.className.replace('hub-kpi-letter ', ''))).toEqual(['hub-kpi-red', 'hub-kpi-green', 'hub-kpi-none', 'hub-kpi-yellow', 'hub-kpi-none']);
   });
 
+  it('u KPI písmeno s hodnotou za dnešek (stav v den zápisu) má barvu za dnešek, ostatní za předchozí pracovní den', () => {
+    const today = localToday();
+    let kpi = withEntry(defaultKpis(cs.kpi.defaults), { day: previousWorkday(today), author: '', at: '', values: { s_injury: 0, d_customer: 0, p_absent: 0 } });
+    kpi = withEntry(kpi, { day: today, author: '', at: '', values: { d_customer: 20, p_oil: 5 } });
+    renderHub([cw42], null, kpi);
+    const badges = [...screen.getByRole('link', { name: /KPI/ }).querySelectorAll('.hub-kpi-letter')];
+    expect(badges.map((b) => b.className.replace('hub-kpi-letter ', ''))).toEqual(['hub-kpi-green', 'hub-kpi-none', 'hub-kpi-none', 'hub-kpi-red hub-kpi-today', 'hub-kpi-red hub-kpi-today']);
+    expect(badges[3]!.getAttribute('title')).toMatch(/^D za .+: mimo cíl$/);
+  });
+
   it('u KPI bez zápisu jsou písmena šedá', () => {
     renderHub([cw42]);
     const badges = [...screen.getByRole('link', { name: /KPI/ }).querySelectorAll('.hub-kpi-letter')];

@@ -876,7 +876,7 @@ export const en: Messages = {
         q_claims: ['Wrong part', 'Damaged package or part', 'Wrong label', 'Wrong quantity', 'Wrong document'],
       },
     },
-    hub: { title: 'KPI for {day}' },
+    hub: { title: 'KPI by day of entry', letter: 'for {day}' },
   },
   oil: {
     noData: 'The OIL is saved in the shared folder (OIL/OIL.xlsx). Choose the folder in the Data module first.',
