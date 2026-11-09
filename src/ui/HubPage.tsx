@@ -172,13 +172,13 @@ function useMetrics(): Partial<Record<ModuleId, ReactNode>> {
     const dayText = (day: number) => `${t.calloffs.weekdays[weekday(day) - 1]} ${formatDayShort(dayToIso(day), locale)}`;
     const states = LETTERS.map((letter) => {
       const day = hubDay(kpi, letter, today);
-      return { letter, day, state: dayState(kpi, letter, day, today), text: `${letter} ${t.kpi.hub.letter.replace('{day}', dayText(day))}` };
+      return { letter, state: dayState(kpi, letter, day, today), text: `${letter} ${t.kpi.hub.letter.replace('{day}', dayText(day))}` };
     });
     const title = `${t.kpi.hub.title}: ${states.map((s) => `${s.text}: ${t.kpi.dayTitle[s.state]}`).join(', ')}`;
     metrics.kpi = (
       <span className="metric hub-kpi" title={title} aria-label={title}>
         {states.map((s) => (
-          <span key={s.letter} className={`hub-kpi-letter hub-kpi-${s.state}${s.day === today ? ' hub-kpi-today' : ''}`} title={`${s.text}: ${t.kpi.dayTitle[s.state]}`}>
+          <span key={s.letter} className={`hub-kpi-letter hub-kpi-${s.state}`} title={`${s.text}: ${t.kpi.dayTitle[s.state]}`}>
             {s.letter}
           </span>
         ))}
