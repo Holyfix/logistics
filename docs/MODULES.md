@@ -109,6 +109,9 @@ Filtry projekt, kategorie, strana (LHD/RHD) a varianta z kmenových dat se ovliv
 - ⏳ **Přehled od začátku roku:** požadavek na každý týden z exportu téhož týdne, po dílech i celkem;
   odesláno z kumulativu jako doplňková informace
 - ⏳ **Porovnání exportů:** dva libovolné exporty po týdnech a dílech, matice vývoje odvolávek
+  - ✅ **Porovnání po projektech:** stejný strom jako Přehled po projektech (Projekt → Kategorie → Strana → Varianta,
+    sbalení na úroveň), u každého uzlu součet staršího a novějšího exportu, rozdíl a změna v %, nebo rozdíl po
+    týdnech; export do Excelu / CSV
   (řádky = exporty, sloupce = týdny dodání)
 
 ### Coverage
