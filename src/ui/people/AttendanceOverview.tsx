@@ -198,6 +198,39 @@ export function AttendanceOverview({
         </div>
       </div>
 
+      <div className="panel">
+        <div className="panel-head">
+          <h2>{ta.top.heading}</h2>
+          <span className="muted">{rangeText}</span>
+        </div>
+        <div className="att-top">
+          {ALL_COLUMNS.map((c) => {
+            const best = all
+              .map((r) => ({ name: r.person.name, value: c.value(r) }))
+              .filter((x) => (c.kind === 'signed' ? Math.abs(x.value) >= 0.005 : x.value > 0))
+              .sort((a, b) => b.value - a.value || a.name.localeCompare(b.name, 'cs'))
+              .slice(0, TOP);
+            return (
+              <div key={c.id} className="att-top-card">
+                <h3>{ta.top.titles[c.id]}</h3>
+                {best.length === 0 ? (
+                  <p className="muted">{ta.top.none}</p>
+                ) : (
+                  <ol>
+                    {best.map((x) => (
+                      <li key={x.name}>
+                        <span>{x.name}</span>
+                        <strong>{cell(c, x.value)}</strong>
+                      </li>
+                    ))}
+                  </ol>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
       {month && (
         <div className="panel">
           <div className="panel-head">
@@ -262,39 +295,6 @@ export function AttendanceOverview({
           </ul>
         </div>
       )}
-
-      <div className="panel">
-        <div className="panel-head">
-          <h2>{ta.top.heading}</h2>
-          <span className="muted">{rangeText}</span>
-        </div>
-        <div className="att-top">
-          {ALL_COLUMNS.map((c) => {
-            const best = all
-              .map((r) => ({ name: r.person.name, value: c.value(r) }))
-              .filter((x) => (c.kind === 'signed' ? Math.abs(x.value) >= 0.005 : x.value > 0))
-              .sort((a, b) => b.value - a.value || a.name.localeCompare(b.name, 'cs'))
-              .slice(0, TOP);
-            return (
-              <div key={c.id} className="att-top-card">
-                <h3>{ta.top.titles[c.id]}</h3>
-                {best.length === 0 ? (
-                  <p className="muted">{ta.top.none}</p>
-                ) : (
-                  <ol>
-                    {best.map((x) => (
-                      <li key={x.name}>
-                        <span>{x.name}</span>
-                        <strong>{cell(c, x.value)}</strong>
-                      </li>
-                    ))}
-                  </ol>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </div>
 
       <div className="panel">
         <div className="panel-head">
