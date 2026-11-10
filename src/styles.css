@@ -4087,3 +4087,8 @@ details.panel > summary {
 .vac-cell.vac-holiday {
   cursor: default;
 }
+
+/* Docházka: dnešek, který export už obsahuje, ale není uzavřený (do přesčasů a salda se nepočítá). */
+.att-calendar td.att-open {
+  background-image: repeating-linear-gradient(135deg, transparent 0 4px, color-mix(in srgb, #e07b00 14%, transparent) 4px 8px);
+}

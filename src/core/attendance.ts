@@ -268,9 +268,14 @@ export interface AttendanceSummary {
 
 const is = (category: string, pattern: RegExp) => pattern.test(category.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase());
 
-/** Přehled osob za období (měsíc „2026-11“ nebo vše). */
-export function summarize(data: AttendanceData, month: string | null): AttendanceSummary[] {
+/**
+ * Přehled osob za období (měsíc „2026-11“ nebo vše). S dneškem se odpracováno, započteno, přesčasy a fond počítají jen
+ * do včerejška: dnešní den nemusí být uzavřený (rozpracovaná směna by přesčas a saldo zkreslila).
+ */
+export function summarize(data: AttendanceData, month: string | null, today?: DayNumber): AttendanceSummary[] {
   const inMonth = (day: DayNumber) => !month || dayToIso(day).startsWith(month);
+  const cutoff = today === undefined ? Infinity : today - 1;
+  const closedOnly = (category: string) => is(category, /odpracovano|zapocteno|^prescas|^uzna/);
   const rows = new Map<string, AttendanceSummary>(
     data.people.map((p) => [
       p.id,
@@ -300,6 +305,7 @@ export function summarize(data: AttendanceData, month: string | null): Attendanc
     if (!row || !inMonth(v.day)) continue;
     row.byCategory.set(v.category, (row.byCategory.get(v.category) ?? 0) + v.value);
     const c = v.category;
+    if (v.day > cutoff && closedOnly(c)) continue;
     if (is(c, /^fond/)) row.fond += v.value;
     else if (is(c, /odpracovano/)) row.worked += v.value;
     else if (is(c, /zapocteno/)) row.credited += v.value;
@@ -319,7 +325,7 @@ export function summarize(data: AttendanceData, month: string | null): Attendanc
   }
   // Dny podle zkratek a fond do posledního dne, za který export obsahuje odpracovaný nebo započtený čas.
   // Započteno export uvádí i dopředu (svátky, plánované nepřítomnosti), proto rozhoduje poslední den s odpracovaným časem.
-  const lastDay = Math.max(-Infinity, ...data.values.filter((v) => inMonth(v.day) && is(v.category, /odpracovano/)).map((v) => v.day));
+  const lastDay = Math.min(cutoff, Math.max(-Infinity, ...data.values.filter((v) => inMonth(v.day) && is(v.category, /odpracovano/)).map((v) => v.day)));
   const creditedToDate = new Map<string, number>();
   for (const v of data.values) if (inMonth(v.day) && v.day <= lastDay && is(v.category, /zapocteno/)) creditedToDate.set(v.person, (creditedToDate.get(v.person) ?? 0) + v.value);
   for (const [person, days] of dayInfos(data, month)) {
@@ -336,10 +342,21 @@ export function summarize(data: AttendanceData, month: string | null): Attendanc
 
 // --- Přesčasy za období ---
 
-/** Poslední den, za který export obsahuje odpracovaný čas (konec „dneška“ v datech); null bez dat. */
+/** Poslední den, za který export obsahuje odpracovaný čas; null bez dat. */
 export function lastWorkedDay(data: AttendanceData): DayNumber | null {
   const days = data.values.filter((v) => is(v.category, /odpracovano/)).map((v) => v.day);
   return days.length ? Math.max(...days) : null;
+}
+
+/**
+ * Referenční den přesčasů a salda: poslední den s odpracovaným časem, nejvýš včerejšek – dnešní den nemusí být uzavřený.
+ * null bez uzavřeného dne.
+ */
+export function closedDay(data: AttendanceData, today: DayNumber): DayNumber | null {
+  const last = lastWorkedDay(data);
+  if (last === null) return null;
+  const day = Math.min(last, today - 1);
+  return data.values.some((v) => v.day <= day) ? day : null;
 }
 
 export type OvertimePeriod = 'week' | 'month' | 'year' | 'total';

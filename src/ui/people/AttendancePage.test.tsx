@@ -3,6 +3,7 @@ import readXlsxFile from 'read-excel-file/node';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { parseAttendanceSheets } from '../../core/attendance';
+import { dayFromParts } from '../../core/dates';
 import { decryptOffice, isEncryptedOffice, OfficeCryptoError } from '../../core/officeCrypto';
 import type { Cell } from '../../core/table';
 import { I18nProvider } from '../../i18n/I18nProvider';
@@ -55,7 +56,8 @@ function renderPage() {
     <I18nProvider>
       <DataProvider initial={state}>
         <AttendanceProvider>
-          <AttendancePage />
+          {/* Den po exportu: poslední den exportu je uzavřený. */}
+          <AttendancePage today={dayFromParts(2026, 11, 20)!} />
         </AttendanceProvider>
       </DataProvider>
     </I18nProvider>,

@@ -255,7 +255,9 @@ Filtry projekt, kategorie, strana (LHD/RHD) a varianta z kmenových dat se ovliv
 - ✅ **Kalendář měsíce**: lidé × dny se zkratkou dne (HO, DOV, L, N, SC, NV) barevně, ½ = půl dne, víkendy šedě,
   státní svátky vlastní barvou, dnešek orámovaný; po najetí myší detail dne
 - ✅ **Přesčasy k dispozici** po lidech za kalendářní týden, měsíc, rok a celkem (všechny načtené exporty), dopočítané
-  z denní evidence k poslednímu dni s docházkou; řazení kliknutím na sloupec
+  z denní evidence k poslednímu uzavřenému dni s docházkou; řazení kliknutím na sloupec
+- ✅ **Dnešek se nepočítá** do odpracovaného, fondu, salda ani přesčasů (směna nemusí být uzavřená); v kalendáři je
+  šrafovaný. Export z dřívějška: jeho poslední den je uzavřený a počítá se
 - ✅ **Souhrn po lidech** ve skupinách Čas / Přesčasy / Mimo kancelář / Nepřítomnost, řazení kliknutím na sloupec,
   nuly prázdné; filtr střediska; rozbalitelná tabulka všech mzdových složek
 - ✅ Dny podle zkratek: ze mzdových složek (celý nebo půl dne podle hodin proti fondu) a z poznámky dne; stejná zkratka
