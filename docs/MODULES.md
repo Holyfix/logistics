@@ -252,8 +252,10 @@ Filtry projekt, kategorie, strana (LHD/RHD) a varianta z kmenových dat se ovliv
 - ✅ Ukazatele za měsíc (nebo všechny): odpracováno (fond do dneška, saldo), přesčasy k dispozici (čistý součet „Přesčas evidence“
   včetně záporných dnů: +1 h a −1,5 h = −0,5 h), uznáno a k uznání, home office
   a služební cesty, nepřítomnost (dovolená, lékař, nemoc, náhradní volno) ve dnech
-- ✅ **Kalendář měsíce**: lidé × dny se zkratkou dne (HO, DOV, L, N, SC, NV) barevně, ½ = půl dne, víkendy a svátky
-  šedě; po najetí myší detail dne
+- ✅ **Kalendář měsíce**: lidé × dny se zkratkou dne (HO, DOV, L, N, SC, NV) barevně, ½ = půl dne, víkendy šedě,
+  státní svátky vlastní barvou, dnešek orámovaný; po najetí myší detail dne
+- ✅ **Přesčasy k dispozici** po lidech za kalendářní týden, měsíc, rok a celkem (všechny načtené exporty), dopočítané
+  z denní evidence k poslednímu dni s docházkou; řazení kliknutím na sloupec
 - ✅ **Souhrn po lidech** ve skupinách Čas / Přesčasy / Mimo kancelář / Nepřítomnost, řazení kliknutím na sloupec,
   nuly prázdné; filtr střediska; rozbalitelná tabulka všech mzdových složek
 - ✅ Dny podle zkratek: ze mzdových složek (celý nebo půl dne podle hodin proti fondu) a z poznámky dne; stejná zkratka
@@ -263,7 +265,7 @@ Filtry projekt, kategorie, strana (LHD/RHD) a varianta z kmenových dat se ovliv
 - ✅ Na rozcestníku jen stav zamčeno / odemčeno (žádná čísla)
 
 ### Dovolené
-- ✅ Kalendář měsíce: lidé × dny, víkendy a státní svátky ČR (včetně Velikonoc), dnešek; schváleno plně, plánováno
+- ✅ Kalendář měsíce: lidé × dny, víkendy šedě, státní svátky ČR (včetně Velikonoc) vlastní barvou, dnešek; schváleno plně, plánováno
   šrafovaně, půl dne napůl. Klik na pracovní den přidá dovolenou, klik na dovolenou ji otevře k úpravě
 - ✅ Řádek Na dovolené: kolik lidí chybí v den, nad limitem „Max. současně“ červeně
 - ✅ Nárok a čerpání za rok: nárok, převod, celkem, vyčerpáno (do dneška), naplánováno (z toho neschváleno), zbývá;

@@ -88,6 +88,13 @@ describe('Docházka', () => {
     // Řazení podle dovolené: Kučera první.
     fireEvent.click(within(table).getByRole('button', { name: 'Dovolená' }));
     expect(within(table).getAllByRole('row')[2]!.textContent).toContain('Kučera Petr');
+    // Přesčasy za období: týden 9.–10. 11., měsíc, rok, celkem.
+    const overtime = screen.getByRole('table', { name: 'Přesčasy k dispozici' });
+    const tomas = within(overtime).getByText('Šťáva Tomáš').closest('tr')!;
+    expect([...tomas.querySelectorAll('td.n')].map((td) => td.textContent)).toEqual(['−1,0', '−1,0', '−1,0', '−1,0']);
+    expect(within(overtime).getByText('9. 11. – 10. 11.')).toBeTruthy();
+    // Kalendář: 17. 11. státní svátek.
+    expect(calendar.querySelectorAll('thead th.att-day')[16]!.className).toContain('att-holiday');
     fireEvent.click(screen.getByRole('button', { name: '🔒 Zamknout' }));
     await waitFor(() => expect(screen.queryByText('Nováková Jana')).toBeNull());
     expect(screen.getByText(/Docházka je zamčená/)).toBeTruthy();

@@ -2,7 +2,7 @@
 // fond, odpracováno, přesčasy, uznané přesčasy, home office, lékař, dovolená, nemoc, služební cesty, náhradní volno.
 
 import { findColumn } from './csv';
-import { dayToIso, type DayNumber } from './dates';
+import { dayFromParts, dayToIso, mondayOf, type DayNumber } from './dates';
 import { cellDay, cellNumber, cellText, type Cell } from './table';
 
 export interface AttendancePerson {
@@ -332,4 +332,43 @@ export function summarize(data: AttendanceData, month: string | null): Attendanc
   }
   for (const row of rows.values()) row.balance = (creditedToDate.get(row.person.id) ?? 0) - row.fondToDate;
   return [...rows.values()];
+}
+
+// --- Přesčasy za období ---
+
+/** Poslední den, za který export obsahuje odpracovaný čas (konec „dneška“ v datech); null bez dat. */
+export function lastWorkedDay(data: AttendanceData): DayNumber | null {
+  const days = data.values.filter((v) => is(v.category, /odpracovano/)).map((v) => v.day);
+  return days.length ? Math.max(...days) : null;
+}
+
+export type OvertimePeriod = 'week' | 'month' | 'year' | 'total';
+export const OVERTIME_PERIODS: readonly OvertimePeriod[] = ['week', 'month', 'year', 'total'];
+
+/** Období přesčasů k referenčnímu dni: kalendářní týden (po–ne), měsíc a rok do referenčního dne, celkem vše načtené. */
+export function overtimeRanges(data: AttendanceData, reference: DayNumber): Record<OvertimePeriod, { from: DayNumber; to: DayNumber }> {
+  const [y, m] = dayToIso(reference).split('-').map(Number) as [number, number];
+  const first = Math.min(reference, ...data.values.map((v) => v.day));
+  return {
+    week: { from: mondayOf(reference), to: reference },
+    month: { from: dayFromParts(y, m, 1)!, to: reference },
+    year: { from: dayFromParts(y, 1, 1)!, to: reference },
+    total: { from: first, to: reference },
+  };
+}
+
+/**
+ * Přesčasy k dispozici po lidech za období: čistý součet denní „Přesčas evidence“ (kladné i záporné dny) v rozsahu dnů.
+ * Dny po referenčním dni (budoucí část měsíce) se nepočítají.
+ */
+export function overtimeByPeriod(data: AttendanceData, reference: DayNumber): Map<string, Record<OvertimePeriod, number>> {
+  const ranges = overtimeRanges(data, reference);
+  const result = new Map<string, Record<OvertimePeriod, number>>(data.people.map((p) => [p.id, { week: 0, month: 0, year: 0, total: 0 }]));
+  for (const v of data.values) {
+    if (!is(v.category, /^prescas/)) continue;
+    const row = result.get(v.person);
+    if (!row) continue;
+    for (const period of OVERTIME_PERIODS) if (v.day >= ranges[period].from && v.day <= ranges[period].to) row[period] += v.value;
+  }
+  return result;
 }

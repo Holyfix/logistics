@@ -107,6 +107,8 @@ export function VacationsPage({ today = localToday() }: { today?: DayNumber } = 
       const total = y * 12 + (m - 1) + delta;
       return { y: Math.floor(total / 12), m: (total % 12) + 1 };
     });
+  // Víkend šedě, státní svátek vlastní barvou.
+  const offClass = (day: DayNumber) => (isHoliday(day) ? ' vac-holiday' : isWorkday(day) ? '' : ' vac-off');
   const entryAt = (person: string, day: DayNumber) => data.entries.find((e) => e.person === person && e.from <= day && day <= e.to);
   const awayCount = (day: DayNumber) => new Set(awayOn(data, day).filter((e) => people.some((p) => p.name === e.person)).map((e) => e.person)).size;
 
@@ -221,7 +223,7 @@ export function VacationsPage({ today = localToday() }: { today?: DayNumber } = 
                 <tr>
                   <th className="sticky-col">{tv.person}</th>
                   {monthDays.map((d) => (
-                    <th key={d} className={`vac-day${isWorkday(d) ? '' : ' vac-off'}${d === today ? ' vac-today' : ''}`} title={isHoliday(d) ? tv.holiday : undefined}>
+                    <th key={d} className={`vac-day${offClass(d)}${d === today ? ' vac-today' : ''}`} title={isHoliday(d) ? tv.holiday : undefined}>
                       <span>{Number(dayToIso(d).slice(8))}</span>
                       <small>{t.calloffs.weekdays[weekday(d) - 1]!.slice(0, 2)}</small>
                     </th>
@@ -238,7 +240,7 @@ export function VacationsPage({ today = localToday() }: { today?: DayNumber } = 
                     {monthDays.map((d) => {
                       const entry = entryAt(p.name, d);
                       const off = !isWorkday(d);
-                      const cls = `vac-cell${off ? ' vac-off' : ''}${d === today ? ' vac-today' : ''}${entry && !off ? ` vac-${entry.status}${entry.half ? ' vac-half' : ''}` : ''}${entry && entry.id === selected ? ' vac-selected' : ''}`;
+                      const cls = `vac-cell${offClass(d)}${d === today ? ' vac-today' : ''}${entry && !off ? ` vac-${entry.status}${entry.half ? ' vac-half' : ''}` : ''}${entry && entry.id === selected ? ' vac-selected' : ''}`;
                       const title = entry ? `${p.name}: ${range(entry, locale)} · ${tv.status[entry.status]}${entry.half ? ` · ${tv.legend.half}` : ''}${entry.note ? ` · ${entry.note}` : ''}` : isHoliday(d) ? tv.holiday : undefined;
                       return (
                         <td key={d} className={cls} title={title} onClick={() => clickCell(p.name, d)}>
@@ -256,7 +258,7 @@ export function VacationsPage({ today = localToday() }: { today?: DayNumber } = 
                     const n = awayCount(d);
                     const over = data.maxAway !== null && n > data.maxAway;
                     return (
-                      <td key={d} className={`vac-count${over ? ' vac-over' : ''}${isWorkday(d) ? '' : ' vac-off'}`} title={over ? tv.overLimit.replace('{n}', String(data.maxAway)) : undefined}>
+                      <td key={d} className={`vac-count${over ? ' vac-over' : ''}${offClass(d)}`} title={over ? tv.overLimit.replace('{n}', String(data.maxAway)) : undefined}>
                         {n || ''}
                       </td>
                     );
@@ -277,7 +279,10 @@ export function VacationsPage({ today = localToday() }: { today?: DayNumber } = 
             <i className="vac-key vac-approved vac-half" aria-hidden="true" /> {tv.legend.half}
           </li>
           <li>
-            <i className="vac-key vac-off" aria-hidden="true" /> {tv.legend.holiday}
+            <i className="vac-key vac-off" aria-hidden="true" /> {tv.legend.weekend}
+          </li>
+          <li>
+            <i className="vac-key vac-holiday" aria-hidden="true" /> {tv.holiday}
           </li>
         </ul>
         <p className="muted">{tv.calendarHint}</p>

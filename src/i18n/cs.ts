@@ -1132,9 +1132,17 @@ export const cs = {
       absenceNote: 'dní: dovolená {dov} · lékař {l} · nemoc {n} · NV {nv}',
     },
     codes: { HO: 'home office', DOV: 'dovolená', L: 'lékař', N: 'nemoc', SC: 'služební cesta', NV: 'náhradní volno' },
+    overtime: {
+      heading: 'Přesčasy k dispozici',
+      reference: 'k {date} (poslední den s docházkou)',
+      periods: { week: 'Týden', month: 'Měsíc', year: 'Rok', total: 'Celkem' },
+      note: 'Dopočítané z denní evidence přesčasu (kladné i záporné dny; lékař přesčas nesnižuje, NV a dřívější odchod ano) za kalendářní týden, měsíc a rok do posledního dne s docházkou; Celkem = všechny načtené exporty. Pro rok a celkem uložte do složky s docházkou exporty všech měsíců. Řadíte kliknutím na záhlaví.',
+    },
     calendar: {
       heading: 'Kalendář měsíce',
       legendNote: '½ = půl dne, + = víc zkratek v jednom dni (detail po najetí myší)',
+      holiday: 'státní svátek',
+      today: 'dnes',
     },
     table: {
       heading: 'Souhrn po lidech',
@@ -1191,7 +1199,7 @@ export const cs = {
     overLimit: 'víc než limit {n}',
     holiday: 'státní svátek',
     calendarHint: 'Kliknutím na pracovní den přidáte dovolenou, kliknutím na dovolenou ji upravíte.',
-    legend: { approved: 'schváleno', planned: 'plánováno', half: 'půl dne', holiday: 'víkend a svátek', today: 'dnes' },
+    legend: { approved: 'schváleno', planned: 'plánováno', half: 'půl dne', weekend: 'víkend', today: 'dnes' },
     status: { planned: 'Plánováno', approved: 'Schváleno' },
     entry: {
       label: 'Dovolená',
