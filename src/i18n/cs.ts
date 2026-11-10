@@ -1146,7 +1146,7 @@ export const cs = {
         fondToDate: 'Fond do posledního dne s odpracovaným časem',
         worked: 'Celkem odpracováno',
         balance: 'Započteno − fond do posledního dne s odpracovaným časem',
-        overtime: 'Přesčasy k dispozici: čistý součet přesčasu v evidenci za dny (kladné i záporné)',
+        overtime: 'Přesčasy k dispozici: čistý součet přesčasu v evidenci za dny (kladné i záporné); lékař přesčas nesnižuje, NV a dřívější odchod ano',
         approved: 'Uznané přesčasy (složky Uznáno …)',
         toApprove: 'Čas k uznání (složky Uznat …)',
         HO: 'Dny home office (HO v poznámce, 1/2HO = ½)',

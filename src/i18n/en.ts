@@ -1144,7 +1144,7 @@ export const en: Messages = {
         fondToDate: 'Fund up to the last day with worked time',
         worked: 'Total worked',
         balance: 'Credited − fund up to the last day with worked time',
-        overtime: 'Available overtime: net sum of daily overtime in the records (positive and negative days)',
+        overtime: 'Available overtime: net sum of daily overtime in the records (positive and negative days); a doctor visit does not reduce it, time off in lieu and leaving early do',
         approved: 'Approved overtime (Uznáno … components)',
         toApprove: 'Time to approve (Uznat … components)',
         HO: 'Home office days (HO in the note, 1/2HO = ½)',

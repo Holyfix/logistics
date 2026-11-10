@@ -78,14 +78,16 @@ describe('Docházka', () => {
     const rows = summarize(await loadSample(), '2026-11');
     const jana = rows.find((r) => r.person.name === 'Nováková Jana')!;
     // Odpracováno do 10. 11. (7 pracovních dní): fond 56 h, započteno 57,5 h.
-    // Přesčasy k dispozici: +1,5 h (2. 11.) a −4 h (3. 11.) = −2,5 h.
-    expect(jana).toMatchObject({ fond: 160, fondToDate: 56, worked: 53.5, balance: 1.5, overtime: -2.5, approved: 1.5, doctor: 4 });
+    // Přesčasy k dispozici: +1,5 h (2. 11.); 3. 11. 4 h práce + 4 h lékař = 0 (lékař přesčas nesnižuje).
+    expect(jana).toMatchObject({ fond: 160, fondToDate: 56, worked: 53.5, balance: 1.5, overtime: 1.5, approved: 1.5, doctor: 4 });
     expect(Object.fromEntries(jana.days)).toEqual({ L: 0.5, HO: 1.5 });
     const petr = rows.find((r) => r.person.name === 'Kučera Petr')!;
     // Dovolená ze mzdové složky i z poznámky se počítá jednou.
     expect(petr).toMatchObject({ worked: 40, vacationHours: 16, balance: 0 });
     expect(Object.fromEntries(petr.days)).toEqual({ DOV: 2 });
     const tomas = rows.find((r) => r.person.name === 'Šťáva Tomáš')!;
+    // Dřívější odchod (7 h z 8) snižuje přesčas i saldo.
+    expect(tomas).toMatchObject({ worked: 55, overtime: -1, balance: -1 });
     expect(Object.fromEntries(tomas.days)).toEqual({ SC: 1, NV: 1 });
     expect(summarize(await loadSample(), '2026-10').every((r) => r.worked === 0)).toBe(true);
   });
