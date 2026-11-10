@@ -12,13 +12,17 @@ import { parseSettings, type PlanSettings } from '../core/planning/settings';
 import { parseKpiWorkbook, type KpiResult } from '../core/kpi';
 import { parseOilWorkbook, type OilResult } from '../core/oil';
 import { parseLaunchWorkbook, type LaunchResult } from '../core/launch';
+import { parseAttendanceSheets, type AttendanceResult } from '../core/attendance';
+import { decryptOffice, isEncryptedOffice, OfficeCryptoError } from '../core/officeCrypto';
+import { parseSkillWorkbook, type SkillResult } from '../core/skills';
+import { parseVacationWorkbook, type VacationResult } from '../core/vacations';
 import { parseTransit, type TransitResult } from '../core/transit';
 import { parseSequenceCsv, parseSequenceSheets, type SequenceFile } from '../core/material/sequence';
 import { decodeText } from '../core/text';
 import type { SourceFormat } from '../core/sources';
 import type { Cell, DataTable } from '../core/table';
 
-export type ParseRequest = { id: number; kind: 'calloffs' | 'masterdata' | 'coverage' | 'stock' | 'bom' | 'plan' | 'planSettings' | 'oil' | 'kpi' | 'launch' | 'transit' | 'sequence'; format: SourceFormat; name: string; buffer: ArrayBuffer };
+export type ParseRequest = { id: number; kind: 'calloffs' | 'masterdata' | 'coverage' | 'stock' | 'bom' | 'plan' | 'planSettings' | 'oil' | 'kpi' | 'launch' | 'vacations' | 'skills' | 'attendance' | 'transit' | 'sequence'; format: SourceFormat; name: string; buffer: ArrayBuffer; password?: string };
 
 export type ParseResponse =
   | { id: number; kind: 'calloffs'; result: ParseResult<CallOffExport> }
@@ -31,6 +35,9 @@ export type ParseResponse =
   | { id: number; kind: 'oil'; result: OilResult }
   | { id: number; kind: 'kpi'; result: KpiResult }
   | { id: number; kind: 'launch'; result: LaunchResult }
+  | { id: number; kind: 'vacations'; result: VacationResult }
+  | { id: number; kind: 'skills'; result: SkillResult }
+  | { id: number; kind: 'attendance'; result: AttendanceResult | { ok: false; error: 'wrongPassword' | 'unsupported' | 'corrupt'; columns: string[] }; encrypted: boolean }
   | { id: number; kind: 'transit'; result: TransitResult }
   | { id: number; kind: 'sequence'; result: SequenceFile }
   | { id: number; kind: 'error'; message: string };
@@ -46,7 +53,7 @@ async function readTable(format: SourceFormat, buffer: ArrayBuffer): Promise<Dat
 }
 
 self.onmessage = async (event: MessageEvent<ParseRequest>) => {
-  const { id, kind, format, name, buffer } = event.data;
+  const { id, kind, format, name, buffer, password } = event.data;
   try {
     if (kind === 'coverage') {
       // Soubory pokrytí mají víc listů; formát se pozná podle obsahu listu.
@@ -58,6 +65,29 @@ self.onmessage = async (event: MessageEvent<ParseRequest>) => {
     if (kind === 'oil') {
       const sheets = (await readXlsxFile(buffer)).map((s) => ({ name: s.sheet, data: s.data as Cell[][] }));
       (self as unknown as Worker).postMessage({ id, kind, result: parseOilWorkbook(sheets) } satisfies ParseResponse);
+      return;
+    }
+    if (kind === 'attendance') {
+      // Export docházky: šifrovaný se rozšifruje heslem jen v paměti; špatné heslo nebo nepodporované šifrování se nahlásí.
+      const encrypted = isEncryptedOffice(buffer);
+      let plain = buffer;
+      if (encrypted) {
+        try {
+          plain = await decryptOffice(buffer, password ?? '');
+        } catch (error) {
+          const code = error instanceof OfficeCryptoError && error.code !== 'notEncrypted' ? error.code : 'corrupt';
+          (self as unknown as Worker).postMessage({ id, kind, encrypted, result: { ok: false, error: code, columns: [] } } satisfies ParseResponse);
+          return;
+        }
+      }
+      const sheets = (await readXlsxFile(plain)).map((s) => s.data as Cell[][]);
+      (self as unknown as Worker).postMessage({ id, kind, encrypted, result: parseAttendanceSheets(sheets) } satisfies ParseResponse);
+      return;
+    }
+    if (kind === 'vacations' || kind === 'skills') {
+      const sheets = (await readXlsxFile(buffer)).map((s) => ({ name: s.sheet, data: s.data as Cell[][] }));
+      const response: ParseResponse = kind === 'vacations' ? { id, kind, result: parseVacationWorkbook(sheets) } : { id, kind, result: parseSkillWorkbook(sheets) };
+      (self as unknown as Worker).postMessage(response);
       return;
     }
     if (kind === 'launch') {

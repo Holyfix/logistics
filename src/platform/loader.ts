@@ -10,6 +10,8 @@ import type { PlanSettings } from '../core/planning/settings';
 import type { KpiData } from '../core/kpi';
 import type { OilList } from '../core/oil';
 import type { LaunchPlan } from '../core/launch';
+import type { SkillData } from '../core/skills';
+import type { VacationData } from '../core/vacations';
 import type { MatrixOrder } from '../core/material/matrix';
 import type { PartKey } from '../core/material/partKey';
 import { applyTransit, type TransitEntry } from '../core/transit';
@@ -45,6 +47,12 @@ export interface LoadedData {
   kpi: { path: string; lastModified: number; data: KpiData } | null;
   /** Launch (Launch/Launch.xlsx): nejnovější soubor; bez souboru chybí. */
   launch?: { path: string; lastModified: number; plan: LaunchPlan };
+  /** Dovolené (Lide/Dovolene.xlsx): nejnovější soubor; bez souboru chybí. */
+  vacations?: { path: string; lastModified: number; data: VacationData };
+  /** Exporty docházky (obvykle šifrované): jen obsah souborů, rozšifrují se až v modulu Docházka heslem. */
+  attendance?: { path: string; lastModified: number; buffer: ArrayBuffer }[];
+  /** Skill Matrix (Lide/SkillMatrix.xlsx): nejnovější soubor; bez souboru chybí. */
+  skills?: { path: string; lastModified: number; data: SkillData };
   /** Sekvence (složka Sekvence): nejnovější Order Status Matrix a klíč MC/MF. */
   sequence?: {
     matrix: { path: string; lastModified: number; orders: Map<string, MatrixOrder> } | null;
@@ -83,16 +91,27 @@ async function parseInWorker(request: Omit<ParseRequest, 'id' | 'buffer'> & { fi
   } catch (error) {
     return { id: 0, kind: 'error', message: error instanceof Error ? error.message : String(error) };
   }
+  return sendToWorker({ kind: request.kind, format: request.format, name: request.name }, buffer);
+}
+
+/**
+ * Export docházky: rozšifrování heslem a zpracování na pozadí. Obsah souboru se předá kopií (originál zůstane
+ * v načtených datech pro další odemčení); heslo se nikam neukládá.
+ */
+export function parseAttendance(file: { path: string; buffer: ArrayBuffer }, password: string): Promise<ParseResponse> {
+  return sendToWorker({ kind: 'attendance', format: 'xlsx', name: file.path, password }, file.buffer.slice(0));
+}
+
+function sendToWorker(request: Omit<ParseRequest, 'id' | 'buffer'>, buffer: ArrayBuffer): Promise<ParseResponse> {
   worker ??= new Worker(new URL('./parse.worker.ts', import.meta.url), { type: 'module' });
   worker.onmessage = (event: MessageEvent<ParseResponse>) => {
     pending.get(event.data.id)?.(event.data);
     pending.delete(event.data.id);
   };
   const id = nextId++;
-  const { kind, format, name } = request;
   return new Promise((resolve) => {
     pending.set(id, resolve);
-    worker!.postMessage({ id, kind, format, name, buffer } satisfies ParseRequest, [buffer]);
+    worker!.postMessage({ id, ...request, buffer } satisfies ParseRequest, [buffer]);
   });
 }
 
@@ -109,6 +128,9 @@ export async function loadFolder(source: FolderSource, onProgress: (p: LoadProgr
   const oilFiles = files.filter((f) => classifyPath(f.path) === 'oil').sort((a, b) => b.lastModified - a.lastModified);
   const kpiFiles = files.filter((f) => classifyPath(f.path) === 'kpi').sort((a, b) => b.lastModified - a.lastModified);
   const launchFiles = files.filter((f) => classifyPath(f.path) === 'launch').sort((a, b) => b.lastModified - a.lastModified);
+  const vacationFiles = files.filter((f) => classifyPath(f.path) === 'vacations').sort((a, b) => b.lastModified - a.lastModified);
+  const skillFiles = files.filter((f) => classifyPath(f.path) === 'skills').sort((a, b) => b.lastModified - a.lastModified);
+  const attendanceFiles = files.filter((f) => classifyPath(f.path) === 'attendance').sort((a, b) => a.path.localeCompare(b.path));
   const transitFiles = files.filter((f) => classifyPath(f.path) === 'transit').sort((a, b) => a.path.localeCompare(b.path));
   const sequenceFiles = files.filter((f) => classifyPath(f.path) === 'sequence').sort((a, b) => b.lastModified - a.lastModified);
 
@@ -127,7 +149,7 @@ export async function loadFolder(source: FolderSource, onProgress: (p: LoadProgr
   }
 
   const parsed: { file: SourceFile; exp: CallOffExport }[] = [];
-  const total = calloffFiles.length + (masterFiles.length > 0 ? 1 : 0) + coverageFiles.size + (stockFiles.length > 0 ? 1 : 0) + bomFiles.length + planFiles.length + (settingsFiles.length > 0 ? 1 : 0) + (oilFiles.length > 0 ? 1 : 0) + (kpiFiles.length > 0 ? 1 : 0) + (launchFiles.length > 0 ? 1 : 0) + transitFiles.length + sequenceFiles.length;
+  const total = calloffFiles.length + (masterFiles.length > 0 ? 1 : 0) + coverageFiles.size + (stockFiles.length > 0 ? 1 : 0) + bomFiles.length + planFiles.length + (settingsFiles.length > 0 ? 1 : 0) + (oilFiles.length > 0 ? 1 : 0) + (kpiFiles.length > 0 ? 1 : 0) + (launchFiles.length > 0 ? 1 : 0) + (vacationFiles.length > 0 ? 1 : 0) + (skillFiles.length > 0 ? 1 : 0) + transitFiles.length + sequenceFiles.length;
   let done = 0;
   onProgress({ done, total });
 
@@ -278,6 +300,31 @@ export async function loadFolder(source: FolderSource, onProgress: (p: LoadProgr
     onProgress({ done: ++done, total });
   }
 
+  // Lidé: Dovolené a Skill Matrix – platí nejnovější soubor každého druhu.
+  let vacations: LoadedData['vacations'];
+  let skills: LoadedData['skills'];
+  for (const [kind, list] of [['vacations', vacationFiles], ['skills', skillFiles]] as const) {
+    const file = list[0];
+    if (!file) continue;
+    const response = await parseInWorker({ kind, format: 'xlsx', name: file.path, file: file.file });
+    if (response.kind === 'vacations' && response.result.ok) vacations = { path: file.path, lastModified: file.lastModified, data: response.result.value };
+    else if (response.kind === 'skills' && response.result.ok) skills = { path: file.path, lastModified: file.lastModified, data: response.result.value };
+    else if ((response.kind === 'vacations' || response.kind === 'skills') && !response.result.ok) failed.push({ path: file.path, reason: 'missingColumns', detail: response.result.columns.join(', ') });
+    else if (response.kind === 'error') failed.push({ path: file.path, reason: 'unreadable', detail: response.message });
+    for (const older of list.slice(1)) failed.push({ path: older.path, reason: 'superseded', detail: file.path });
+    onProgress({ done: ++done, total });
+  }
+
+  // Docházka: soubory se jen přečtou; rozšifrují a zpracují se až po zadání hesla v modulu.
+  const attendance: NonNullable<LoadedData['attendance']> = [];
+  for (const file of attendanceFiles) {
+    try {
+      attendance.push({ path: file.path, lastModified: file.lastModified, buffer: await file.file.arrayBuffer() });
+    } catch (error) {
+      failed.push({ path: file.path, reason: 'unreadable', detail: error instanceof Error ? error.message : String(error) });
+    }
+  }
+
   // Sekvence: platí nejnovější matice a nejnovější klíč MC/MF, starší se jen vypíšou.
   let sequence: LoadedData['sequence'];
   for (const file of sequenceFiles) {
@@ -306,6 +353,9 @@ export async function loadFolder(source: FolderSource, onProgress: (p: LoadProgr
     oil,
     kpi,
     ...(launch ? { launch } : {}),
+    ...(vacations ? { vacations } : {}),
+    ...(skills ? { skills } : {}),
+    ...(attendance.length ? { attendance } : {}),
     ...(sequence ? { sequence } : {}),
     ...(withTransit ? { transit: { files: transitData.map((t) => t.path), entries: withTransit.entries } } : {}),
     failed,
