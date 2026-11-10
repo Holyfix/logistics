@@ -25,7 +25,7 @@ Pořadí skupin na rozcestníku (karty se čtou shora dolů po sloupcích):
 | Dodavatelé | **Dodavatelé** (OTD inbound) | Dodávají nám dodavatelé včas? | Později |
 | Řízení | **OIL** | Kdo co řeší a do kdy? | První verze hotová |
 | Řízení | **Launch** | Jak jsme na tom s náběhem nových projektů? | První verze hotová |
-| Lidé | **Docházka** | Přesčasy, HO, absence, lékař a dovolená přehledně (pod heslem) | Fáze 10 |
+| Lidé | **Docházka** | Přesčasy, HO, absence, lékař a dovolená přehledně (pod heslem) | První verze hotová |
 | Lidé | **Dovolené** | Kdo má kdy dovolenou a kolik zbývá? | První verze hotová |
 | Lidé | **Skill Matrix** | Kdo co umí, kde chybí zástup a co propadá? | První verze hotová |
 | Řízení | **Reporty** | Týdenní souhrn pro vedení | Později |
@@ -243,6 +243,17 @@ Filtry projekt, kategorie, strana (LHD/RHD) a varianta z kmenových dat se ovliv
   termín přijmout jako původní
 - ✅ Přehled nahoře: projekty, po termínu, nejbližší milník, plnění; na rozcestníku po termínu, jinak dní do milníku
 - ✅ Uložení do `Launch/Launch.xlsx` (listy Launch a Projekty)
+
+### Docházka
+- ✅ Export ze systému docházky uložený jako .xlsx **zašifrovaný heslem v Excelu** (Soubor → Informace → Zamknout
+  sešit → Šifrovat pomocí hesla); aplikace ho rozšifruje jen v paměti prohlížeče po zadání hesla (šifrování Agile,
+  AES), heslo ani rozšifrovaná data neukládá. Zamkne se tlačítkem, po 30 minutách nebo novým načtením složky;
+  nešifrovaný soubor aplikace přečte, ale upozorní na něj
+- ✅ Přehled za měsíc (nebo všechny): odpracováno, započteno, fond, přesčasy (kladné z evidence), uznáno a k uznání,
+  home office (HO, 1/2HO z poznámky dne), lékař, dovolená, nemoc, služební cesty, náhradní volno, noční
+- ✅ Tabulka po lidech se součtem, filtr střediska, rozbalitelná tabulka všech mzdových složek
+- ✅ Více měsíců: každý měsíční export zvlášť ve složce, stejný den platí z pozdějšího souboru
+- ✅ Na rozcestníku jen stav zamčeno / odemčeno (žádná čísla)
 
 ### Dovolené
 - ✅ Kalendář měsíce: lidé × dny, víkendy a státní svátky ČR (včetně Velikonoc), dnešek; schváleno plně, plánováno

@@ -19,6 +19,7 @@ Soubory se rozpoznají podle názvu (nezáleží na velikosti písmen ani diakri
 | OIL (Open Issue List) | leží ve složce `OIL`, nebo název začíná „OIL“; platí nejnovější soubor | XLSX (zapisuje aplikace) |
 | KPI (SQCDP) | leží ve složce `KPI`, nebo název začíná „KPI“; platí nejnovější soubor | XLSX (zapisuje aplikace) |
 | Launch (náběh projektů) | leží ve složce `Launch`, nebo název začíná „Launch“; platí nejnovější soubor | XLSX (zapisuje aplikace) |
+| Docházka (export ze systému docházky) | leží ve složce `Dochazka` / `Attendance`, nebo název začíná „pruchody“ / „dochazka“ / „attendance“; všechny soubory (měsíce) | XLSX, zašifrovaný heslem v Excelu |
 | Lidé: Dovolené a Skill Matrix | název začíná „Dovolen“ / „Vacation“, nebo „Skill“ (doporučeně ve složce `Lide`); platí nejnovější soubor | XLSX (zapisuje aplikace) |
 | Doplněný transit (naše expedice, které coverage ještě nemá) | leží ve složce `Transit`, nebo název začíná „Transit“; všechny soubory | XLSX nebo CSV |
 | Sekvence: Order Status Matrix a klíč MC/MF | leží ve složce `Sekvence` (nebo `Sequence`); platí nejnovější soubor každého druhu | XLSX nebo CSV |
@@ -332,6 +333,18 @@ aplikace nabídne úvodní sadu ukazatelů. Když soubor mezitím změnil někdo
 - **Detaily** (nepovinné): u ručního ukazatele mimo cíl se vyplní v Zápisu dne (víc řádků, nabídky projektů a dílů
   z mapování, osob z OIL a dříve zapsaných příčin). U automatických ukazatelů je aplikace uloží sama při uložení dne
   (díly a lokace z Coverage, komponenty s projekty, body OIL po termínu s odpovědným).
+
+## Docházka (složka Lide/Dochazka)
+
+Export ze systému docházky (list s řádky **osoba × mzdová složka** a sloupci dnů). Uložte ho jako **.xlsx zašifrovaný
+heslem**: v Excelu **Soubor → Informace → Zamknout sešit → Šifrovat pomocí hesla** (u exportu .xls nejdřív Uložit
+jako .xlsx; když je tlačítko šedé, Povolit úpravy, nebo Uložit jako → Nástroje → Obecné možnosti → Heslo pro otevření).
+
+- Povinné sloupce: **Mzdová složka**, **Příjmení Jméno** (dále Osobní číslo, Středisko, Prac. poměr) a sloupce
+  s datem dne; sloupce „Suma za týden / měsíc“ se nepočítají. Text ve špatném kódování (Pøíjmení) aplikace opraví.
+- Řádek **Poznámka** nese zkratky dne: HO, DOV, SC, NV, lékař; „1/2“ před zkratkou = půl dne.
+- Každý měsíc je samostatný soubor; všechny soubory se odemykají stejným heslem.
+- Smyšlená ukázka: `sample-data/Lide/Dochazka/pruchody_vzor_11-2026.xlsx`, heslo `vzor2026`.
 
 ## Lidé (složka Lide)
 

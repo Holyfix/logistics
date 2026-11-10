@@ -17,6 +17,7 @@ import { launchSummary } from '../core/launch';
 import { trainingAlerts, uncovered } from '../core/skills';
 import { awayOn, emptyVacations } from '../core/vacations';
 import { useSkillsDraftValue, useVacationsDraftValue } from './people/drafts';
+import { useAttendanceUnlocked } from './people/AttendanceProvider';
 import { GROUPS, MODULES, type ModuleDef, type ModuleId } from './modules';
 
 function StatusChip({ module }: { module: ModuleDef }) {
@@ -86,6 +87,7 @@ function useMetrics(): Partial<Record<ModuleId, ReactNode>> {
   const oil = useMemo(() => (oilList ? oilAlerts(oilList, today) : null), [oilList, today]);
   const launchDraft = useLaunchDraftPlan();
   const launchPlan = launchDraft ?? state.data?.launch?.plan ?? null;
+  const attendanceUnlocked = useAttendanceUnlocked();
   const vacationDraft = useVacationsDraftValue();
   const vacationData = vacationDraft ?? state.data?.vacations?.data ?? null;
   const skillDraft = useSkillsDraftValue();
@@ -150,6 +152,11 @@ function useMetrics(): Partial<Record<ModuleId, ReactNode>> {
       : next
         ? <Metric value={`${formatQuantity(next.end! - today, locale)} d`} label={th.next} tone="ok" title={title} />
         : <Metric value={formatQuantity(launch.projects, locale)} label={th.projects} tone="ok" title={title} />;
+  }
+  // Docházka: jen zda je zamčená (čísla se na rozcestníku neukazují).
+  if (state.data?.attendance?.length) {
+    const ta = t.attendance.hub;
+    metrics.attendance = <Metric value={attendanceUnlocked ? '🔓' : '🔒'} label={attendanceUnlocked ? ta.unlocked : ta.locked} title={`${state.data.attendance.length} ${ta.files}`} />;
   }
   // Dovolené: kolik lidí je dnes na dovolené (pozor nad limitem souběhu).
   if (vacationData?.people.length) {

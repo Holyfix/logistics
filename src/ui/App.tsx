@@ -12,6 +12,8 @@ import { InventoryPage } from './inventory/InventoryPage';
 import { KpiPage } from './kpi/KpiPage';
 import { LaunchPage } from './launch/LaunchPage';
 import { LaunchProvider } from './launch/LaunchProvider';
+import { AttendancePage } from './people/AttendancePage';
+import { AttendanceProvider } from './people/AttendanceProvider';
 import { SkillsProvider, VacationsProvider } from './people/drafts';
 import { SkillsPage } from './people/SkillsPage';
 import { VacationsPage } from './people/VacationsPage';
@@ -80,6 +82,7 @@ export function App() {
           <LaunchProvider>
             <VacationsProvider>
               <SkillsProvider>
+                <AttendanceProvider>
             <main className="content">
               {!supported && (
                 <div className="banner" role="status">
@@ -93,6 +96,7 @@ export function App() {
               {current?.id === 'oil' && <OilPage />}
               {current?.id === 'kpi' && <KpiPage />}
               {current?.id === 'launch' && <LaunchPage />}
+              {current?.id === 'attendance' && <AttendancePage />}
               {current?.id === 'vacations' && <VacationsPage />}
               {current?.id === 'skills' && <SkillsPage />}
               {current?.id === 'stock' && <InventoryPage />}
@@ -100,8 +104,9 @@ export function App() {
               {current?.id === 'coverage' && <CoveragePage />}
               {current?.id === 'components' && <ComponentsPage />}
               {current?.id === 'production' && <PlanningPage />}
-              {current && !['dashboard', 'data', 'calloffs', 'coverage', 'components', 'production', 'oil', 'kpi', 'launch', 'vacations', 'skills', 'stock'].includes(current.id) && <ModulePage module={current} />}
+              {current && !['dashboard', 'data', 'calloffs', 'coverage', 'components', 'production', 'oil', 'kpi', 'launch', 'attendance', 'vacations', 'skills', 'stock'].includes(current.id) && <ModulePage module={current} />}
             </main>
+                </AttendanceProvider>
               </SkillsProvider>
             </VacationsProvider>
           </LaunchProvider>

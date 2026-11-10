@@ -3919,3 +3919,24 @@ button.gantt-bar.gantt-line .gantt-tag {
   width: 100%;
   min-width: 100px;
 }
+
+/* Docházka: zamčený formulář a sbalitelné mzdové složky. */
+.att-lock-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: flex-end;
+}
+
+.att-lock-row .field {
+  width: min(100%, 320px);
+}
+
+.att-summary-heading {
+  display: inline;
+  margin-left: 6px;
+}
+
+details.panel > summary {
+  cursor: pointer;
+}
