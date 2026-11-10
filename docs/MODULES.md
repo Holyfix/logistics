@@ -257,7 +257,7 @@ Filtry projekt, kategorie, strana (LHD/RHD) a varianta z kmenových dat se ovliv
 - ✅ **Kalendář měsíce**: lidé × dny se zkratkou dne (HO, DOV, L, N, SC, NV) barevně, ½ = půl dne, víkendy šedě,
   státní svátky vlastní barvou, dnešek orámovaný; po najetí myší detail dne
 - ✅ **TOP 5 jmen u každé položky** (přesčasy k dispozici, uznáno, k uznání, HO, služební cesty, dovolená, lékař,
-  nemoc, NV) za zvolené období, mezi kalendářem a souhrnem
+  nemoc, NV) za zvolené období, nad kalendářem
 - ✅ **Souhrn po lidech**: přesčasy k dispozici, mimo kancelář a nepřítomnost za zvolené období (fond, odpracováno
   ani saldo se nezobrazují)
 - ✅ **Dnešek se nepočítá** do přesčasů (směna nemusí být uzavřená); v kalendáři je
