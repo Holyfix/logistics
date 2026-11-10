@@ -249,17 +249,20 @@ Filtry projekt, kategorie, strana (LHD/RHD) a varianta z kmenových dat se ovliv
   sešit → Šifrovat pomocí hesla); aplikace ho rozšifruje jen v paměti prohlížeče po zadání hesla (šifrování Agile,
   AES), heslo ani rozšifrovaná data neukládá. Zamkne se tlačítkem, po 30 minutách nebo novým načtením složky;
   nešifrovaný soubor aplikace přečte, ale upozorní na něj
-- ✅ Ukazatele za zvolené období: odpracováno (fond do dneška, saldo = započteno − fond), přesčasy k dispozici (čistý součet „Přesčas evidence“
+- ✅ **Přepínač období Týden / Měsíc / Rok / Celkem** v horní liště (kalendářní období k poslednímu uzavřenému dni,
+  měsíc podle výběru nahoře) platí pro ukazatele, TOP 5 i souhrn
+- ✅ Ukazatele za zvolené období: přesčasy k dispozici (čistý součet „Přesčas evidence“
   včetně záporných dnů: +1 h a −1,5 h = −0,5 h), uznáno a k uznání, home office
   a služební cesty, nepřítomnost (dovolená, lékař, nemoc, náhradní volno) ve dnech
 - ✅ **Kalendář měsíce**: lidé × dny se zkratkou dne (HO, DOV, L, N, SC, NV) barevně, ½ = půl dne, víkendy šedě,
   státní svátky vlastní barvou, dnešek orámovaný; po najetí myší detail dne
-- ✅ **Souhrn po lidech s přepínačem Týden / Měsíc / Rok / Celkem** (kalendářní období k poslednímu uzavřenému dni,
-  měsíc podle výběru nahoře): čas, přesčasy k dispozici, mimo kancelář a nepřítomnost; ukazatele nahoře podle
-  zvoleného období
-- ✅ **Dnešek se nepočítá** do odpracovaného, fondu, salda ani přesčasů (směna nemusí být uzavřená); v kalendáři je
+- ✅ **TOP 5 jmen u každé položky** (přesčasy k dispozici, uznáno, k uznání, HO, služební cesty, dovolená, lékař,
+  nemoc, NV) za zvolené období, mezi kalendářem a souhrnem
+- ✅ **Souhrn po lidech**: přesčasy k dispozici, mimo kancelář a nepřítomnost za zvolené období (fond, odpracováno
+  ani saldo se nezobrazují)
+- ✅ **Dnešek se nepočítá** do přesčasů (směna nemusí být uzavřená); v kalendáři je
   šrafovaný. Export z dřívějška: jeho poslední den je uzavřený a počítá se
-- ✅ Souhrn ve skupinách Čas / Přesčasy / Mimo kancelář / Nepřítomnost, řazení kliknutím na sloupec, nuly prázdné;
+- ✅ Souhrn ve skupinách Přesčasy / Mimo kancelář / Nepřítomnost, řazení kliknutím na sloupec, nuly prázdné;
   filtr střediska; rozbalitelná tabulka všech mzdových složek
 - ✅ Dny podle zkratek: ze mzdových složek (celý nebo půl dne podle hodin proti fondu) a z poznámky dne; stejná zkratka
   z obou zdrojů se počítá jednou

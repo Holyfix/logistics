@@ -77,10 +77,14 @@ describe('Docházka', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Odemknout' }));
     const table = await screen.findByRole('table', { name: 'Souhrn po lidech' }, { timeout: 5000 });
     const row = within(table).getByText('Nováková Jana').closest('tr')!;
-    // Fond do dneška, odprac., saldo | evidence, uznáno, k uznání | HO, sl. cesta | dovolená, lékař, nemoc, NV (nuly prázdné).
-    expect([...row.querySelectorAll('td.n')].map((td) => td.textContent)).toEqual(['56,0', '53,5', '+1,5', '+1,5', '1,5', '', '1,5', '', '', '0,5', '', '']);
+    // Evidence, uznáno, k uznání | HO, sl. cesta | dovolená, lékař, nemoc, NV (nuly prázdné).
+    expect([...row.querySelectorAll('td.n')].map((td) => td.textContent)).toEqual(['+1,5', '1,5', '', '1,5', '', '', '0,5', '', '']);
     const kpi = screen.getAllByText('Home office').find((el) => el.classList.contains('kpi-label'))!.parentElement!;
     expect(kpi.querySelector('.kpi-value')!.textContent).toBe('1,5');
+    // TOP 5: přesčasy k dispozici – Nováková +1,5 před Šťávou −1,0 (záporné na konci).
+    const top = screen.getByRole('heading', { name: 'Přesčasy k dispozici (h)' }).parentElement!;
+    expect([...top.querySelectorAll('li')].map((li) => li.textContent)).toEqual(['Nováková Jana+1,5', 'Šťáva Tomáš−1,0']);
+    expect(screen.getByRole('heading', { name: 'Nemoc (dny)' }).parentElement!.textContent).toContain('nikdo');
     // Kalendář: 9. 11. home office, 10. 11. půl dne HO.
     const calendar = screen.getByRole('table', { name: 'Kalendář měsíce' });
     const cells = within(calendar).getByText('Nováková Jana').closest('tr')!.querySelectorAll('td.att-cell');
@@ -93,8 +97,8 @@ describe('Docházka', () => {
     // Přepnutí na týden 9.–15. 11.: souhrn i ukazatele za týden.
     fireEvent.click(screen.getByRole('button', { name: 'Týden' }));
     const tomas = within(table).getByText('Šťáva Tomáš').closest('tr')!;
-    expect([...tomas.querySelectorAll('td.n')].map((td) => td.textContent)).toEqual(['16,0', '15,0', '−1,0', '−1,0', '', '', '', '', '', '', '', '1']);
-    expect(screen.getByText(/9\. 11\. – 15\. 11\. 2026/)).toBeTruthy();
+    expect([...tomas.querySelectorAll('td.n')].map((td) => td.textContent)).toEqual(['−1,0', '', '', '', '', '', '', '', '1']);
+    expect(screen.getAllByText(/9\. 11\. – 15\. 11\. 2026/).length).toBeGreaterThan(0);
     // Kalendář: 17. 11. státní svátek.
     expect(calendar.querySelectorAll('thead th.att-day')[16]!.className).toContain('att-holiday');
     fireEvent.click(screen.getByRole('button', { name: '🔒 Zamknout' }));

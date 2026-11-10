@@ -4092,3 +4092,47 @@ details.panel > summary {
 .att-calendar td.att-open {
   background-image: repeating-linear-gradient(135deg, transparent 0 4px, color-mix(in srgb, #e07b00 14%, transparent) 4px 8px);
 }
+
+/* Docházka: TOP 5 jmen u každé položky. */
+.att-top {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 230px), 1fr));
+  gap: 12px 16px;
+}
+
+.att-top-card {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.att-top-card h3 {
+  margin: 0 0 6px;
+  font: 600 13px/1.3 var(--font-display);
+  color: var(--ink-2);
+}
+
+.att-top-card ol {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 13px;
+}
+
+.att-top-card li + li {
+  margin-top: 2px;
+}
+
+.att-top-card li span {
+  margin-right: 8px;
+}
+
+.att-top-card li strong {
+  float: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.att-top-card p {
+  margin: 0;
+  font-size: 13px;
+}

@@ -24,22 +24,14 @@ const hours = (n: number, locale: Locale) => n.toLocaleString(locale === 'cs' ? 
 const signedHours = (n: number, locale: Locale) => `${n > 0 ? '+' : n < 0 ? '−' : ''}${hours(Math.abs(n), locale)}`;
 const daysText = (n: number, locale: Locale) => n.toLocaleString(locale === 'cs' ? 'cs-CZ' : 'en-GB', { maximumFractionDigits: 1 });
 
-type ColumnId = 'fondToDate' | 'worked' | 'balance' | 'overtime' | 'approved' | 'toApprove' | DayCode;
+type ColumnId = 'overtime' | 'approved' | 'toApprove' | DayCode;
 interface Column {
   id: ColumnId;
   value: (r: AttendanceSummary) => number;
   kind: 'hours' | 'signed' | 'days';
 }
 
-const COLUMNS: { group: 'time' | 'overtime' | 'away' | 'absence'; columns: Column[] }[] = [
-  {
-    group: 'time',
-    columns: [
-      { id: 'fondToDate', value: (r) => r.fondToDate, kind: 'hours' },
-      { id: 'worked', value: (r) => r.worked, kind: 'hours' },
-      { id: 'balance', value: (r) => r.balance, kind: 'signed' },
-    ],
-  },
+const COLUMNS: { group: 'overtime' | 'away' | 'absence'; columns: Column[] }[] = [
   {
     group: 'overtime',
     columns: [
@@ -52,6 +44,8 @@ const COLUMNS: { group: 'time' | 'overtime' | 'away' | 'absence'; columns: Colum
   { group: 'absence', columns: (['DOV', 'L', 'N', 'NV'] as const).map((c) => ({ id: c, value: (r: AttendanceSummary) => r.days.get(c) ?? 0, kind: 'days' as const })) },
 ];
 const ALL_COLUMNS = COLUMNS.flatMap((g) => g.columns);
+/** Kolik jmen ukázat u každé položky v panelu TOP. */
+const TOP = 5;
 
 /** Přehled odemčené docházky: ukazatele, kalendář měsíce (kdo kdy HO, dovolená, lékař …) a souhrn po lidech. */
 export function AttendanceOverview({
@@ -82,7 +76,7 @@ export function AttendanceOverview({
   // Výchozí je nejnovější měsíc.
   const month = chosenMonth === undefined ? (months[0] ?? null) : chosenMonth;
   const centers = useMemo(() => [...new Set(data.people.map((p) => p.center).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'cs')), [data]);
-  // Dnešek se do přesčasů a salda nepočítá, když ho export už obsahuje (směna nemusí být uzavřená).
+  // Dnešek se do přesčasů nepočítá, když ho export už obsahuje (směna nemusí být uzavřená).
   const last = lastWorkedDay(data);
   const todayOpen = last !== null && last >= today;
   const reference = closedDay(data, today);
@@ -163,6 +157,14 @@ export function AttendanceOverview({
             </select>
           </label>
         )}
+        <span className="segmented" role="group" aria-label={ta.period}>
+          {SUMMARY_PERIODS.map((p) => (
+            <button key={p} type="button" aria-pressed={period === p} onClick={() => setPeriod(p)}>
+              {ta.periods[p]}
+            </button>
+          ))}
+        </span>
+        <span className="muted">{rangeText}</span>
         <span className="filters-break" role="presentation" />
         <button type="button" className="button" onClick={lock}>
           🔒 {ta.lock}
@@ -177,11 +179,6 @@ export function AttendanceOverview({
       ))}
 
       <div className="kpis">
-        <div className="kpi">
-          <span className="kpi-label">{ta.kpi.worked}</span>
-          <span className="kpi-value">{h(sum((r) => r.worked))} h</span>
-          <span className="kpi-note">{ta.kpi.workedNote.replace('{fond}', h(sum((r) => r.fondToDate))).replace('{balance}', signedHours(sum((r) => r.balance), locale))}</span>
-        </div>
         <div className="kpi">
           <span className="kpi-label">{ta.kpi.overtime}</span>
           <span className={`kpi-value${sum((r) => r.overtime) < 0 ? ' cell-short' : ''}`}>{signedHours(sum((r) => r.overtime), locale)} h</span>
@@ -268,14 +265,40 @@ export function AttendanceOverview({
 
       <div className="panel">
         <div className="panel-head">
+          <h2>{ta.top.heading}</h2>
+          <span className="muted">{rangeText}</span>
+        </div>
+        <div className="att-top">
+          {ALL_COLUMNS.map((c) => {
+            const best = all
+              .map((r) => ({ name: r.person.name, value: c.value(r) }))
+              .filter((x) => (c.kind === 'signed' ? Math.abs(x.value) >= 0.005 : x.value > 0))
+              .sort((a, b) => b.value - a.value || a.name.localeCompare(b.name, 'cs'))
+              .slice(0, TOP);
+            return (
+              <div key={c.id} className="att-top-card">
+                <h3>{ta.top.titles[c.id]}</h3>
+                {best.length === 0 ? (
+                  <p className="muted">{ta.top.none}</p>
+                ) : (
+                  <ol>
+                    {best.map((x) => (
+                      <li key={x.name}>
+                        <span>{x.name}</span>
+                        <strong>{cell(c, x.value)}</strong>
+                      </li>
+                    ))}
+                  </ol>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="panel">
+        <div className="panel-head">
           <h2>{tt.heading}</h2>
-          <span className="segmented" role="group" aria-label={ta.period}>
-            {SUMMARY_PERIODS.map((p) => (
-              <button key={p} type="button" aria-pressed={period === p} onClick={() => setPeriod(p)}>
-                {ta.periods[p]}
-              </button>
-            ))}
-          </span>
           <span className="muted">
             {rangeText}
             {reference !== null && ` · ${ta.closedTo.replace('{date}', fullDate(reference))}`}
