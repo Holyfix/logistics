@@ -1100,7 +1100,7 @@ export const cs = {
   attendance: {
     noData: 'Docházka se čte ze sdílené složky. Nejdřív vyberte složku v modulu Data.',
     noDataAction: 'Vybrat složku',
-    noFiles: 'Ve sdílené složce není export docházky. Uložte export jako .xlsx zašifrovaný heslem (Soubor → Informace → Zamknout sešit → Šifrovat pomocí hesla) do složky Lide/Dochazka; název může zůstat pruchody_….xlsx.',
+    noFiles: 'Ve sdílené složce není export docházky. Uložte export jako .xlsx zašifrovaný heslem (Soubor → Informace → Zamknout sešit → Šifrovat pomocí hesla) do složky Attendance nebo Dochazka (např. People/Attendance); název souboru může být libovolný.',
     locked: 'Docházka je zamčená',
     lockedNote: 'Soubory se rozšifrují jen v tomto prohlížeči a jen do zamčení; heslo se nikam neukládá.',
     files: 'Soubory: {list}',

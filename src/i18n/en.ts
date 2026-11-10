@@ -1098,7 +1098,7 @@ export const en: Messages = {
   attendance: {
     noData: 'Attendance is read from the shared folder. Choose the folder in the Data module first.',
     noDataAction: 'Choose folder',
-    noFiles: 'There is no attendance export in the shared folder. Save the export as .xlsx encrypted with a password (File → Info → Protect Workbook → Encrypt with Password) to the Lide/Dochazka folder; the name can stay pruchody_….xlsx.',
+    noFiles: 'There is no attendance export in the shared folder. Save the export as .xlsx encrypted with a password (File → Info → Protect Workbook → Encrypt with Password) to an Attendance or Dochazka folder (e.g. People/Attendance); the file name can be anything.',
     locked: 'Attendance is locked',
     lockedNote: 'The files are decrypted only in this browser and only until locked; the password is not stored anywhere.',
     files: 'Files: {list}',

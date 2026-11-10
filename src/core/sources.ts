@@ -64,6 +64,19 @@ export function classifyPath(path: string): SourceKind {
 }
 
 /**
+ * Složka modulů Lidé (Dovolené, Skill Matrix): nadřazená složka exportů docházky („People/Attendance/…“ → „People“),
+ * jinak výchozí „Lide“. Nové soubory se tak uloží vedle docházky.
+ */
+export function peopleFolder(attendancePaths: readonly string[]): string {
+  for (const path of attendancePaths) {
+    const parts = path.split('/');
+    const index = parts.slice(0, -1).findIndex((p) => /^(dochazka|attendance)$/.test(normalize(p)));
+    if (index > 0) return parts.slice(0, index).join('/');
+  }
+  return 'Lide';
+}
+
+/**
  * Destinace a projekt z cesty souboru coverage: Coverage/<destinace>/<projekt>/soubor.xlsx.
  * Chybějící úroveň zůstane prázdná. Názvy se berou ze složek, aplikace je nemá napevno.
  */

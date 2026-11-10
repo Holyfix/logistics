@@ -30,6 +30,7 @@ import {
   type Level,
   type SkillData,
 } from '../../core/skills';
+import { peopleFolder } from '../../core/sources';
 import { useI18n } from '../../i18n/I18nProvider';
 import { xlsxBlob } from '../../platform/download';
 import { localToday } from '../components/useComponents';
@@ -40,7 +41,6 @@ import { SaveStatus, useSaveFlow } from '../planning/SaveStatus';
 import { AddRow, NameInput } from './NameInput';
 import { useSkillsDraft } from './drafts';
 
-const FILE = 'Lide/SkillMatrix.xlsx';
 
 const fullDate = (day: DayNumber, locale: Locale) => `${formatDayShort(dayToIso(day), locale)}${locale === 'cs' ? ' ' : '/'}${dayToIso(day).slice(0, 4)}`;
 const ball = (level: Level) => (level * 25) as Progress;
@@ -90,7 +90,7 @@ export function SkillsPage({ today = localToday() }: { today?: DayNumber } = {})
   const update = (next: SkillData) => setDraft(next);
   const save = () =>
     flow.run(async (force) => {
-      const path = loaded.skills?.path ?? FILE;
+      const path = loaded.skills?.path ?? `${peopleFolder((loaded.attendance ?? []).map((f) => f.path))}/SkillMatrix.xlsx`;
       const result = await saveFile(path, () => xlsxBlob(skillSheets(data)), loaded.skills?.lastModified ?? null, force);
       if (result.status === 'saved') {
         updateData((d) => ({ ...d, skills: { path: result.path, lastModified: result.lastModified, data } }));
