@@ -45,7 +45,7 @@ import { useSkillsDraft } from './drafts';
 const fullDate = (day: DayNumber, locale: Locale) => `${formatDayShort(dayToIso(day), locale)}${locale === 'cs' ? ' ' : '/'}${dayToIso(day).slice(0, 4)}`;
 const ball = (level: Level) => (level * 25) as Progress;
 
-/** Skill Matrix: lidé × činnosti (úroveň 0–4), zástupnost a školení s platností. Ukládá se do Lide/SkillMatrix.xlsx. */
+/** Skill Matrix: lidé × činnosti (úroveň 0–4), zástupnost a školení s platností. Ukládá se do People/SkillMatrix.xlsx (vedle složky s docházkou). */
 export function SkillsPage({ today = localToday() }: { today?: DayNumber } = {}) {
   const { t, locale } = useI18n();
   const ts = t.skills;

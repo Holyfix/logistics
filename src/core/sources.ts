@@ -30,7 +30,8 @@ export function formatOf(path: string): SourceFormat | null {
  * Launch: Excel ve složce „launch“ nebo s názvem začínajícím „launch“ (náběh projektů).
  * Docházka: Excel ve složce „dochazka“ / „attendance“, nebo s názvem začínajícím „pruchody“ / „dochazka“ / „attendance“
  *   (export docházky, obvykle zašifrovaný heslem).
- * Lidé: Excel s názvem začínajícím „dovolen“ / „vacation“ (Dovolené) nebo „skill“ (Skill Matrix), např. Lide/Dovolene.xlsx.
+ * Lidé: Excel ve složce „Holiday“ / „Dovolene“ nebo s názvem začínajícím „dovolen“ / „vacation“ (Dovolené, např.
+ *   People/Holiday/Dovolene.xlsx); s názvem začínajícím „skill“ (Skill Matrix).
  * Doplněný transit: soubor ve složce „transit“ nebo s názvem začínajícím „transit“ (naše expedice, které coverage ještě nemá).
  * Sekvence: soubory ve složce „sekvence“ / „sequence“ (Order Status Matrix a klíč MC/MF; druh se pozná podle obsahu).
  * Dočasné soubory Excelu (~$…) se ignorují.
@@ -46,7 +47,7 @@ export function classifyPath(path: string): SourceKind {
   if (folders.some((f) => /^(material|materialy?)$/.test(f))) return 'ignored';
   if (folders.includes('launch') || /^launch[ _.-]/.test(name)) return formatOf(path) === 'xlsx' ? 'launch' : 'ignored';
   if (folders.some((f) => /^(dochazka|attendance)$/.test(f)) || /^(pruchody|dochazk|attendance)/.test(name)) return formatOf(path) === 'xlsx' ? 'attendance' : 'ignored';
-  if (/^(dovolen|vacation)/.test(name)) return formatOf(path) === 'xlsx' ? 'vacations' : 'ignored';
+  if (folders.some((f) => /^(holidays?|dovolene|vacations?)$/.test(f)) || /^(dovolen|vacation)/.test(name)) return formatOf(path) === 'xlsx' ? 'vacations' : 'ignored';
   if (/^skill/.test(name)) return formatOf(path) === 'xlsx' ? 'skills' : 'ignored';
   if (/kmenov|master|mapping/.test(name)) return 'masterdata';
   if (folders.some((f) => /^(plan|planovani|planning)$/.test(f))) {

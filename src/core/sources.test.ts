@@ -40,6 +40,8 @@ describe('classifyPath', () => {
     ['Lide/SkillMatrix.xlsx', 'skills'],
     ['Skill_matrix_sklad.xlsx', 'skills'],
     ['Lide/Dovolene.csv', 'ignored'],
+    ['People/Holiday/Dovolene.xlsx', 'vacations'],
+    ['People/Holiday/plan 2027.xlsx', 'vacations'],
     ['Lide/Dochazka/pruchody_01112026-30112026.xlsx', 'attendance'],
     ['Docházka/listopad.xlsx', 'attendance'],
     ['People/Attendance/Attendance_11-2026.xlsx', 'attendance'],

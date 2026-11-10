@@ -36,7 +36,7 @@ const days = (n: number, locale: Locale) => n.toLocaleString(locale === 'cs' ? '
 const fullDate = (day: DayNumber, locale: Locale) => `${formatDayShort(dayToIso(day), locale)}${locale === 'cs' ? ' ' : '/'}${dayToIso(day).slice(0, 4)}`;
 const range = (e: VacationEntry, locale: Locale) => (e.from === e.to ? fullDate(e.from, locale) : `${formatDayShort(dayToIso(e.from), locale)} – ${fullDate(e.to, locale)}`);
 
-/** Dovolené: kalendář po lidech, nárok a čerpání v roce, seznam dovolených. Ukládá se do Lide/Dovolene.xlsx. */
+/** Dovolené: kalendář po lidech, nárok a čerpání v roce, seznam dovolených. Ukládá se do People/Holiday/Dovolene.xlsx (vedle složky s docházkou). */
 export function VacationsPage({ today = localToday() }: { today?: DayNumber } = {}) {
   const { t, locale } = useI18n();
   const tv = t.vacations;
@@ -88,7 +88,7 @@ export function VacationsPage({ today = localToday() }: { today?: DayNumber } = 
   const update = (next: VacationData) => setDraft(next);
   const save = () =>
     flow.run(async (force) => {
-      const path = loaded.vacations?.path ?? `${peopleFolder((loaded.attendance ?? []).map((f) => f.path))}/Dovolene.xlsx`;
+      const path = loaded.vacations?.path ?? `${peopleFolder((loaded.attendance ?? []).map((f) => f.path))}/Holiday/Dovolene.xlsx`;
       const result = await saveFile(path, () => xlsxBlob(vacationSheets(data)), loaded.vacations?.lastModified ?? null, force);
       if (result.status === 'saved') {
         updateData((d) => ({ ...d, vacations: { path: result.path, lastModified: result.lastModified, data } }));

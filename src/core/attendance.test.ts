@@ -1,7 +1,8 @@
 import { readFileSync } from 'node:fs';
 import readXlsxFile from 'read-excel-file/node';
 import { describe, expect, it } from 'vitest';
-import { fixEncoding, mergeAttendance, monthsOf, noteCodes, parseAttendanceSheets, summarize, type AttendanceData } from './attendance';
+import { dayInfos, fixEncoding, mergeAttendance, monthsOf, noteCodes, parseAttendanceSheets, personName, summarize, type AttendanceData } from './attendance';
+import { dayFromParts } from './dates';
 import { decryptOffice, isEncryptedOffice, isPlainXlsx, OfficeCryptoError } from './officeCrypto';
 import type { Cell } from './table';
 
@@ -33,12 +34,21 @@ describe('Šifrovaný sešit Excelu', () => {
 });
 
 describe('Docházka', () => {
-  it('opraví text exportu ve špatném kódování, správný text nechá', () => {
+  it('opraví text exportu ve špatném kódování (Windows-1250 čtené jako Windows-1252), správný text nechá', () => {
     expect(fixEncoding('Pøíjmení Jméno')).toBe('Příjmení Jméno');
     expect(fixEncoding('Lékaø')).toBe('Lékař');
+    expect(fixEncoding('Kuèera')).toBe('Kučera');
+    // „ť“ je ve Windows-1250 bajt 0x9D, který Windows-1252 nemá – v exportu zbyde neviditelný řídicí znak.
+    expect(fixEncoding('\u0160\u009dáva')).toBe('Šťáva');
     expect(fixEncoding('Příjmení')).toBe('Příjmení');
-    expect(fixEncoding('Poznámka')).toBe('Poznámka');
+    expect(fixEncoding('Šťáva Kučera')).toBe('Šťáva Kučera');
+    expect(fixEncoding('Poznámka – ok')).toBe('Poznámka – ok');
     expect(fixEncoding('HO')).toBe('HO');
+  });
+
+  it('jméno bez pozice za čárkou', () => {
+    expect(personName('Novák Jan, Logistik')).toBe('Novák Jan');
+    expect(personName('Novák Jan')).toBe('Novák Jan');
   });
 
   it('zkratky z poznámky dne', () => {
@@ -52,33 +62,40 @@ describe('Docházka', () => {
     expect([...noteCodes('72.5')]).toEqual([]);
   });
 
-  it('načte export: lidé, mzdové složky po dnech (bez týdenních součtů), poznámky', async () => {
+  it('načte export: lidé bez pozice a s opravenou diakritikou, mzdové složky po dnech, poznámky', async () => {
     const data = await loadSample();
     expect(data.people.map((p) => [p.name, p.center])).toEqual([
       ['Nováková Jana', 'Sklad A'],
-      ['Dvořák Petr', 'Sklad A'],
-      ['Svoboda Tomáš', 'Expedice B'],
+      ['Kučera Petr', 'Sklad A'],
+      ['Šťáva Tomáš', 'Expedice B'],
     ]);
-    expect(data.categories).toEqual(['Fond', 'Celkem odpracováno', 'Přesčas evidence', 'Lékař', 'Uznáno .před', 'Dovolená', 'Služební cesta']);
+    expect(data.categories).toEqual(['Fond', 'Celkem odpracováno', 'Celkem započteno', 'Přesčas evidence', 'Lékař', 'Uznáno .před', 'Dovolená', 'Služební cesta']);
     expect(monthsOf(data)).toEqual(['2026-11']);
     expect(data.notes).toHaveLength(7);
   });
 
-  it('přehled po lidech: fond, odpracováno, přesčasy, lékař, dovolená, HO a další z poznámek', async () => {
+  it('přehled po lidech: fond do dneška, saldo, přesčasy a dny podle zkratek (bez dvojího počítání)', async () => {
     const rows = summarize(await loadSample(), '2026-11');
     const jana = rows.find((r) => r.person.name === 'Nováková Jana')!;
-    expect(jana).toMatchObject({ fond: 160, worked: 53.5, overtime: 1.5, approved: 1.5, doctor: 4 });
-    expect([...jana.codes]).toEqual([
-      ['LÉKAŘ', 1],
-      ['HO', 1.5],
-    ]);
-    const petr = rows.find((r) => r.person.name === 'Dvořák Petr')!;
-    expect(petr).toMatchObject({ worked: 40, vacationHours: 16, overtime: 0 });
-    expect(petr.codes.get('DOV')).toBe(2);
-    const tomas = rows.find((r) => r.person.name === 'Svoboda Tomáš')!;
-    expect(tomas).toMatchObject({ tripHours: 8 });
-    expect(tomas.codes.get('NV')).toBe(1);
+    // Odpracováno do 10. 11. (7 pracovních dní): fond 56 h, započteno 57,5 h.
+    expect(jana).toMatchObject({ fond: 160, fondToDate: 56, worked: 53.5, balance: 1.5, overtime: 1.5, approved: 1.5, doctor: 4 });
+    expect(Object.fromEntries(jana.days)).toEqual({ L: 0.5, HO: 1.5 });
+    const petr = rows.find((r) => r.person.name === 'Kučera Petr')!;
+    // Dovolená ze mzdové složky i z poznámky se počítá jednou.
+    expect(petr).toMatchObject({ worked: 40, vacationHours: 16, balance: 0 });
+    expect(Object.fromEntries(petr.days)).toEqual({ DOV: 2 });
+    const tomas = rows.find((r) => r.person.name === 'Šťáva Tomáš')!;
+    expect(Object.fromEntries(tomas.days)).toEqual({ SC: 1, NV: 1 });
     expect(summarize(await loadSample(), '2026-10').every((r) => r.worked === 0)).toBe(true);
+  });
+
+  it('den osoby: zkratky, odpracováno a fond', async () => {
+    const data = await loadSample();
+    const jana = dayInfos(data, '2026-11').get('900001')!;
+    const day = (d: number) => jana.get(dayFromParts(2026, 11, d)!)!;
+    expect(Object.fromEntries(day(3).codes)).toEqual({ L: 0.5 });
+    expect(day(3)).toMatchObject({ worked: 4, fond: 8 });
+    expect(Object.fromEntries(day(10).codes)).toEqual({ HO: 0.5 });
   });
 
   it('více měsíců: pozdější export přepíše stejný den', async () => {
@@ -86,6 +103,6 @@ describe('Docházka', () => {
     const b: AttendanceData = { ...a, values: a.values.map((v) => ({ ...v, value: v.category === 'Fond' ? 7.5 : v.value })) };
     const merged = mergeAttendance([a, b]);
     expect(merged.values).toHaveLength(a.values.length);
-    expect(summarize(merged, null).find((r) => r.person.name === 'Dvořák Petr')!.fond).toBe(150);
+    expect(summarize(merged, null).find((r) => r.person.name === 'Kučera Petr')!.fond).toBe(150);
   });
 });
