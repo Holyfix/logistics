@@ -28,7 +28,7 @@ const COLUMNS: { group: 'time' | 'overtime' | 'away' | 'absence'; columns: Colum
   {
     group: 'overtime',
     columns: [
-      { id: 'overtime', value: (r) => r.overtime, kind: 'hours' },
+      { id: 'overtime', value: (r) => r.overtime, kind: 'signed' },
       { id: 'approved', value: (r) => r.approved, kind: 'hours' },
       { id: 'toApprove', value: (r) => r.toApprove, kind: 'hours' },
     ],
@@ -149,7 +149,7 @@ export function AttendanceOverview({
         </div>
         <div className="kpi">
           <span className="kpi-label">{ta.kpi.overtime}</span>
-          <span className="kpi-value">{h(sum((r) => r.overtime))} h</span>
+          <span className={`kpi-value${sum((r) => r.overtime) < 0 ? ' cell-short' : ''}`}>{signedHours(sum((r) => r.overtime), locale)} h</span>
           <span className="kpi-note">{ta.kpi.overtimeNote.replace('{approved}', h(sum((r) => r.approved))).replace('{toApprove}', h(sum((r) => r.toApprove)))}</span>
         </div>
         <div className="kpi">

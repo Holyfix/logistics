@@ -249,7 +249,8 @@ Filtry projekt, kategorie, strana (LHD/RHD) a varianta z kmenových dat se ovliv
   sešit → Šifrovat pomocí hesla); aplikace ho rozšifruje jen v paměti prohlížeče po zadání hesla (šifrování Agile,
   AES), heslo ani rozšifrovaná data neukládá. Zamkne se tlačítkem, po 30 minutách nebo novým načtením složky;
   nešifrovaný soubor aplikace přečte, ale upozorní na něj
-- ✅ Ukazatele za měsíc (nebo všechny): odpracováno (fond do dneška, saldo), přesčasy (uznáno, k uznání), home office
+- ✅ Ukazatele za měsíc (nebo všechny): odpracováno (fond do dneška, saldo), přesčasy k dispozici (čistý součet „Přesčas evidence“
+  včetně záporných dnů: +1 h a −1,5 h = −0,5 h), uznáno a k uznání, home office
   a služební cesty, nepřítomnost (dovolená, lékař, nemoc, náhradní volno) ve dnech
 - ✅ **Kalendář měsíce**: lidé × dny se zkratkou dne (HO, DOV, L, N, SC, NV) barevně, ½ = půl dne, víkendy a svátky
   šedě; po najetí myší detail dne
