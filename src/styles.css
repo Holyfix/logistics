@@ -4050,3 +4050,45 @@ details.panel > summary {
 .att-sort[aria-pressed='true'] {
   color: var(--accent);
 }
+
+/* Docházka a Dovolené: státní svátek vlastní barvou, dnešek orámovaný. */
+.att-holiday,
+.vac-holiday {
+  background: color-mix(in srgb, #e07b00 16%, var(--surface));
+}
+
+.att-today,
+.vac-calendar .vac-today {
+  box-shadow: inset 2px 0 0 #e07b00, inset -2px 0 0 #e07b00;
+}
+
+.att-calendar thead .att-today {
+  color: #b35f00;
+  font-weight: 800;
+}
+
+.att-key-day {
+  width: 16px;
+  min-width: 16px;
+  height: 12px;
+  padding: 0;
+  vertical-align: middle;
+  border: 1px solid var(--line);
+}
+
+.att-range {
+  display: block;
+  font-size: 10px;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.vac-cell.vac-holiday {
+  cursor: default;
+}
+
+/* Docházka: dnešek, který export už obsahuje, ale není uzavřený (do přesčasů a salda se nepočítá). */
+.att-calendar td.att-open {
+  background-image: repeating-linear-gradient(135deg, transparent 0 4px, color-mix(in srgb, #e07b00 14%, transparent) 4px 8px);
+}

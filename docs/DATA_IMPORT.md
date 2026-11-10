@@ -344,7 +344,9 @@ jako .xlsx; když je tlačítko šedé, Povolit úpravy, nebo Uložit jako → N
   s datem dne; sloupce „Suma za týden / měsíc“ se nepočítají. Ve jméně se vynechá vše za čárkou (titul, pozice).
 - **Diakritika:** systém docházky ukládá české znaky v kódování Windows-1252 („Kuèera“, „Pøíjmení“, „ť“ zmizí).
   Aplikace text převede zpět na Windows-1250, takže se jména zobrazí správně; soubor se nemění.
-- **Přesčasy k dispozici** = čistý součet „Přesčas evidence“ po dnech (kladné i záporné). Systém docházky ho počítá
+- **Přesčasy k dispozici** = čistý součet denní „Přesčas evidence“ (kladné i záporné dny) za týden, měsíc, rok a celkem;
+  pro rok a celkem uložte do složky exporty všech měsíců. Dnešní den se nepočítá (nemusí být uzavřený), výpočet je
+  do včerejška, nebo do posledního dne exportu, je-li starší. Systém docházky ho počítá
   jako pracovní doba + lékař − fond, takže lékař přesčas nesnižuje; snižuje ho NV nebo dřívější odchod.
 - Řádek **Poznámka** nese zkratky dne: HO, DOV, SC, NV, lékař; „1/2“ před zkratkou = půl dne.
 - Každý měsíc je samostatný soubor ve složce `Attendance` nebo `Dochazka` (např. `People/Attendance/`); název souboru je

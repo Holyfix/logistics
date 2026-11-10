@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { mergeAttendance, type AttendanceData } from '../../core/attendance';
+import type { DayNumber } from '../../core/dates';
 import { useI18n } from '../../i18n/I18nProvider';
 import { parseAttendance } from '../../platform/loader';
 import { useData } from '../data/DataProvider';
@@ -10,7 +11,7 @@ import { useAttendance } from './AttendanceProvider';
 const fileName = (path: string) => path.split('/').pop() ?? path;
 
 /** Docházka: export docházky zašifrovaný heslem, rozšifrovaný jen v paměti; přehled přesčasů, HO, absencí po lidech. */
-export function AttendancePage() {
+export function AttendancePage({ today }: { today?: DayNumber } = {}) {
   const { t } = useI18n();
   const ta = t.attendance;
   const { state } = useData();
@@ -120,6 +121,7 @@ export function AttendancePage() {
     <section className="page" aria-labelledby="page-title">
       {head}
       <AttendanceOverview
+        {...(today !== undefined ? { today } : {})}
         data={unlocked.data}
         plainFiles={unlocked.plainFiles}
         month={month}

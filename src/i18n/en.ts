@@ -1130,9 +1130,20 @@ export const en: Messages = {
       absenceNote: 'days: vacation {dov} · doctor {l} · sick {n} · time off {nv}',
     },
     codes: { HO: 'home office', DOV: 'vacation', L: 'doctor', N: 'sick leave', SC: 'business trip', NV: 'time off in lieu' },
+    openDayNote: 'today is not counted (day not closed)',
+    closedTo: 'worked, balance and overtime up to {date}',
+    overtime: {
+      heading: 'Available overtime',
+      reference: 'as of {date} (last closed day with attendance)',
+      periods: { week: 'Week', month: 'Month', year: 'Year', total: 'Total' },
+      note: 'Calculated from the daily overtime records (positive and negative days; a doctor visit does not reduce it, time off in lieu and leaving early do) for the calendar week, month and year up to the last day with attendance; Total = all loaded exports. For year and total, keep the exports of all months in the attendance folder. Click a header to sort.',
+    },
     calendar: {
       heading: 'Month calendar',
       legendNote: '½ = half day, + = more codes on one day (details on hover)',
+      holiday: 'public holiday',
+      today: 'today',
+      openDay: 'today – day not closed yet, not counted in overtime and balance',
     },
     table: {
       heading: 'Summary by person',
@@ -1189,7 +1200,7 @@ export const en: Messages = {
     overLimit: 'more than the limit {n}',
     holiday: 'public holiday',
     calendarHint: 'Click a working day to add a vacation, click a vacation to edit it.',
-    legend: { approved: 'approved', planned: 'planned', half: 'half day', holiday: 'weekend and holiday', today: 'today' },
+    legend: { approved: 'approved', planned: 'planned', half: 'half day', weekend: 'weekend', today: 'today' },
     status: { planned: 'Planned', approved: 'Approved' },
     entry: {
       label: 'Vacation',

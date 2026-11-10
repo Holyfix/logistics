@@ -1,7 +1,21 @@
 import { readFileSync } from 'node:fs';
 import readXlsxFile from 'read-excel-file/node';
 import { describe, expect, it } from 'vitest';
-import { dayInfos, fixEncoding, mergeAttendance, monthsOf, noteCodes, parseAttendanceSheets, personName, summarize, type AttendanceData } from './attendance';
+import {
+  closedDay,
+  dayInfos,
+  fixEncoding,
+  lastWorkedDay,
+  mergeAttendance,
+  monthsOf,
+  noteCodes,
+  overtimeByPeriod,
+  overtimeRanges,
+  parseAttendanceSheets,
+  personName,
+  summarize,
+  type AttendanceData,
+} from './attendance';
 import { dayFromParts } from './dates';
 import { decryptOffice, isEncryptedOffice, isPlainXlsx, OfficeCryptoError } from './officeCrypto';
 import type { Cell } from './table';
@@ -99,6 +113,34 @@ describe('Docházka', () => {
     expect(Object.fromEntries(day(3).codes)).toEqual({ L: 0.5 });
     expect(day(3)).toMatchObject({ worked: 4, fond: 8 });
     expect(Object.fromEntries(day(10).codes)).toEqual({ HO: 0.5 });
+  });
+
+  it('přesčasy za týden, měsíc, rok a celkem k poslednímu dni s docházkou', async () => {
+    const data = await loadSample();
+    const reference = lastWorkedDay(data)!;
+    expect(reference).toBe(dayFromParts(2026, 11, 10));
+    const ranges = overtimeRanges(data, reference);
+    expect(ranges.week).toEqual({ from: dayFromParts(2026, 11, 9), to: reference });
+    expect(ranges.month.from).toBe(dayFromParts(2026, 11, 1));
+    expect(ranges.year.from).toBe(dayFromParts(2026, 1, 1));
+    const byPeriod = overtimeByPeriod(data, reference);
+    expect(byPeriod.get('900001')).toEqual({ week: 0, month: 1.5, year: 1.5, total: 1.5 });
+    expect(byPeriod.get('900003')).toEqual({ week: -1, month: -1, year: -1, total: -1 });
+    // Starší měsíc přidá do roku a celkem, do týdne ani měsíce ne.
+    const october: AttendanceData = { ...data, values: [{ person: '900001', category: 'Přesčas evidence', day: dayFromParts(2026, 10, 15)!, value: 2 }] };
+    expect(overtimeByPeriod(mergeAttendance([october, data]), reference).get('900001')).toEqual({ week: 0, month: 1.5, year: 3.5, total: 3.5 });
+  });
+
+  it('dnešek se do přesčasů, salda, fondu ani odpracovaného nepočítá (den nemusí být uzavřený)', async () => {
+    const data = await loadSample();
+    // Export obsahuje 10. 11. – když je to dnešek, počítá se jen do 9. 11.
+    const today = dayFromParts(2026, 11, 10)!;
+    expect(closedDay(data, today)).toBe(dayFromParts(2026, 11, 9));
+    const tomas = summarize(data, '2026-11', today).find((r) => r.person.name === 'Šťáva Tomáš')!;
+    expect(tomas).toMatchObject({ fondToDate: 48, worked: 48, overtime: 0, balance: 0 });
+    // Den po exportu: poslední den exportu je uzavřený a počítá se.
+    expect(closedDay(data, dayFromParts(2026, 11, 11)!)).toBe(today);
+    expect(summarize(data, '2026-11', dayFromParts(2026, 11, 11)!).find((r) => r.person.name === 'Šťáva Tomáš')).toMatchObject({ overtime: -1, balance: -1 });
   });
 
   it('více měsíců: pozdější export přepíše stejný den', async () => {
