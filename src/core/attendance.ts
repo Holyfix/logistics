@@ -238,7 +238,7 @@ export interface AttendanceSummary {
   fond: number;
   worked: number;
   credited: number;
-  /** Kladné přesčasy z evidence (součet dnů s přesčasem). */
+  /** Přesčasy k dispozici: čistý součet „Přesčas evidence“ po dnech (kladné i záporné dny, +1 h a −1,5 h = −0,5 h). */
   overtime: number;
   /** Uznané přesčasy (složky „Uznáno …“). */
   approved: number;
@@ -303,7 +303,7 @@ export function summarize(data: AttendanceData, month: string | null): Attendanc
     if (is(c, /^fond/)) row.fond += v.value;
     else if (is(c, /odpracovano/)) row.worked += v.value;
     else if (is(c, /zapocteno/)) row.credited += v.value;
-    else if (is(c, /^prescas/) && v.value > 0) row.overtime += v.value;
+    else if (is(c, /^prescas/)) row.overtime += v.value;
     else if (is(c, /^uznano/)) row.approved += v.value;
     else if (is(c, /^uznat/)) row.toApprove += v.value;
     else if (is(c, /^lekar/)) row.doctor += v.value;
