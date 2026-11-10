@@ -12,6 +12,9 @@ import { InventoryPage } from './inventory/InventoryPage';
 import { KpiPage } from './kpi/KpiPage';
 import { LaunchPage } from './launch/LaunchPage';
 import { LaunchProvider } from './launch/LaunchProvider';
+import { SkillsProvider, VacationsProvider } from './people/drafts';
+import { SkillsPage } from './people/SkillsPage';
+import { VacationsPage } from './people/VacationsPage';
 import { ModulePage } from './ModulePage';
 import { OilPage } from './oil/OilPage';
 import { OilProvider } from './oil/OilProvider';
@@ -75,6 +78,8 @@ export function App() {
       <PlanningProvider>
         <OilProvider>
           <LaunchProvider>
+            <VacationsProvider>
+              <SkillsProvider>
             <main className="content">
               {!supported && (
                 <div className="banner" role="status">
@@ -88,13 +93,17 @@ export function App() {
               {current?.id === 'oil' && <OilPage />}
               {current?.id === 'kpi' && <KpiPage />}
               {current?.id === 'launch' && <LaunchPage />}
+              {current?.id === 'vacations' && <VacationsPage />}
+              {current?.id === 'skills' && <SkillsPage />}
               {current?.id === 'stock' && <InventoryPage />}
               {current?.id === 'calloffs' && <CallOffsPage />}
               {current?.id === 'coverage' && <CoveragePage />}
               {current?.id === 'components' && <ComponentsPage />}
               {current?.id === 'production' && <PlanningPage />}
-              {current && !['dashboard', 'data', 'calloffs', 'coverage', 'components', 'production', 'oil', 'kpi', 'launch', 'stock'].includes(current.id) && <ModulePage module={current} />}
+              {current && !['dashboard', 'data', 'calloffs', 'coverage', 'components', 'production', 'oil', 'kpi', 'launch', 'vacations', 'skills', 'stock'].includes(current.id) && <ModulePage module={current} />}
             </main>
+              </SkillsProvider>
+            </VacationsProvider>
           </LaunchProvider>
         </OilProvider>
       </PlanningProvider>

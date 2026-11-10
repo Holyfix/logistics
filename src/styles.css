@@ -3671,3 +3671,251 @@ button.gantt-bar.gantt-line .gantt-tag {
     grid-column: auto;
   }
 }
+
+/* Lidé: společné prvky (název s potvrzením, přidání položky, úzké číselné pole). */
+.cell-warn {
+  color: #b77900;
+  font-weight: 600;
+}
+
+.input-narrow {
+  width: 72px;
+}
+
+.name-input,
+.add-row {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.add-row input {
+  min-width: 240px;
+}
+
+/* Dovolené: kalendář měsíce (lidé × dny). */
+.vac-calendar th,
+.vac-calendar td {
+  padding: 4px 6px;
+}
+
+.vac-calendar .vac-day {
+  min-width: 26px;
+  text-align: center;
+  line-height: 1.1;
+}
+
+.vac-calendar .vac-day span,
+.vac-calendar .vac-day small {
+  display: block;
+}
+
+.vac-calendar .vac-day small {
+  font-size: 9px;
+}
+
+.vac-cell,
+.vac-count {
+  min-width: 26px;
+  height: 26px;
+  text-align: center;
+  border-left: 1px solid var(--grid);
+}
+
+.vac-cell {
+  cursor: pointer;
+}
+
+.vac-cell.vac-off {
+  cursor: default;
+}
+
+.vac-off {
+  background: var(--weekend-bg);
+}
+
+.vac-today {
+  box-shadow: inset 2px 0 0 #f0a020, inset -2px 0 0 #f0a020;
+}
+
+.vac-approved {
+  background: #4f9a26;
+  color: #fff;
+}
+
+.vac-planned {
+  background: repeating-linear-gradient(135deg, #b9dca5 0 4px, #e3f1da 4px 8px);
+}
+
+.vac-cell.vac-half.vac-approved {
+  background: linear-gradient(to right, #4f9a26 50%, transparent 50%);
+  color: var(--ink);
+}
+
+.vac-cell.vac-half.vac-planned {
+  background: linear-gradient(to right, #b9dca5 50%, transparent 50%);
+}
+
+.vac-selected {
+  outline: 2px solid var(--ink);
+  outline-offset: -2px;
+}
+
+.vac-count {
+  font-weight: 600;
+  font-size: 12px;
+}
+
+.vac-over {
+  background: var(--negative-bg);
+  color: var(--crit);
+}
+
+.vac-key {
+  display: inline-block;
+  width: 16px;
+  height: 12px;
+  border-radius: 2px;
+  vertical-align: middle;
+  border: 1px solid var(--line);
+}
+
+.vac-key.vac-half.vac-approved {
+  background: linear-gradient(to right, #4f9a26 50%, var(--surface) 50%);
+}
+
+.vac-month {
+  min-width: 140px;
+  text-transform: capitalize;
+}
+
+.vac-month:disabled {
+  opacity: 1;
+  cursor: default;
+}
+
+.vac-editor {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+  align-items: flex-end;
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: 8px;
+  background: var(--accent-soft);
+}
+
+.vac-note input {
+  min-width: 220px;
+}
+
+.vac-row {
+  cursor: pointer;
+}
+
+.vac-chip {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.vac-chip.vac-approved {
+  background: color-mix(in srgb, #4f9a26 22%, var(--surface));
+}
+
+.vac-chip.vac-planned {
+  background: color-mix(in srgb, var(--warn) 25%, var(--surface));
+}
+
+.vac-balance input:not(.input-narrow) {
+  min-width: 120px;
+}
+
+/* Skill Matrix: matice dovedností a školení. */
+.skill-matrix th.skill-area {
+  text-align: center;
+  border-bottom: 1px solid var(--line);
+}
+
+.skill-matrix th.skill-col {
+  text-align: center;
+  white-space: normal;
+  min-width: 72px;
+  max-width: 110px;
+}
+
+.skill-cell {
+  text-align: center;
+}
+
+.skill-level {
+  padding: 2px;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  cursor: pointer;
+  line-height: 0;
+}
+
+.skill-level:hover,
+.skill-level:focus-visible {
+  outline: 2px solid var(--accent);
+}
+
+.skill-training input {
+  width: 140px;
+}
+
+.skill-training small {
+  display: block;
+  font-size: 11px;
+}
+
+.skill-expired {
+  background: var(--negative-bg);
+}
+
+.skill-expired small {
+  color: var(--crit);
+  font-weight: 600;
+}
+
+.skill-soon {
+  background: color-mix(in srgb, var(--warn) 22%, var(--surface));
+}
+
+.skill-ok {
+  background: color-mix(in srgb, var(--good) 12%, var(--surface));
+}
+
+.skill-key {
+  display: inline-block;
+  width: 16px;
+  height: 12px;
+  border-radius: 2px;
+  vertical-align: middle;
+  border: 1px solid var(--line);
+}
+
+.skill-key.skill-none {
+  background: var(--surface);
+}
+
+.skill-lists {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr));
+  gap: 18px 24px;
+}
+
+.skill-lists h3 {
+  margin: 0 0 6px;
+}
+
+.skill-lists .table input:not(.input-narrow) {
+  width: 100%;
+  min-width: 100px;
+}

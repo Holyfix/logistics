@@ -19,6 +19,7 @@ Soubory se rozpoznají podle názvu (nezáleží na velikosti písmen ani diakri
 | OIL (Open Issue List) | leží ve složce `OIL`, nebo název začíná „OIL“; platí nejnovější soubor | XLSX (zapisuje aplikace) |
 | KPI (SQCDP) | leží ve složce `KPI`, nebo název začíná „KPI“; platí nejnovější soubor | XLSX (zapisuje aplikace) |
 | Launch (náběh projektů) | leží ve složce `Launch`, nebo název začíná „Launch“; platí nejnovější soubor | XLSX (zapisuje aplikace) |
+| Lidé: Dovolené a Skill Matrix | název začíná „Dovolen“ / „Vacation“, nebo „Skill“ (doporučeně ve složce `Lide`); platí nejnovější soubor | XLSX (zapisuje aplikace) |
 | Doplněný transit (naše expedice, které coverage ještě nemá) | leží ve složce `Transit`, nebo název začíná „Transit“; všechny soubory | XLSX nebo CSV |
 | Sekvence: Order Status Matrix a klíč MC/MF | leží ve složce `Sekvence` (nebo `Sequence`); platí nejnovější soubor každého druhu | XLSX nebo CSV |
 
@@ -36,6 +37,7 @@ Logistics/
 ├── OIL/                  OIL.xlsx (Open Issue List), zapisuje aplikace
 ├── KPI/                  KPI.xlsx (ukazatele SQCDP a denní zápisy), zapisuje aplikace
 ├── Launch/               Launch.xlsx (fáze náběhu projektů), zapisuje aplikace
+├── Lide/                 Dovolene.xlsx a SkillMatrix.xlsx, zapisuje aplikace
 ├── Transit/              doplněný transit: ranní expedice, které soubor coverage ještě nemá
 ├── Sekvence/             Order Status Matrix a klíč MC/MF pro kartu Sekvence v Komponentách
 └── Obaly/                později: Obaly
@@ -330,6 +332,20 @@ aplikace nabídne úvodní sadu ukazatelů. Když soubor mezitím změnil někdo
 - **Detaily** (nepovinné): u ručního ukazatele mimo cíl se vyplní v Zápisu dne (víc řádků, nabídky projektů a dílů
   z mapování, osob z OIL a dříve zapsaných příčin). U automatických ukazatelů je aplikace uloží sama při uložení dne
   (díly a lokace z Coverage, komponenty s projekty, body OIL po termínu s odpovědným).
+
+## Lidé (složka Lide)
+
+Soubory **vytváří aplikace** tlačítkem Uložit v modulech Dovolené a Skill Matrix. Rozpoznají se podle názvu (začíná
+„Dovolen“ / „Vacation“, nebo „Skill“), doporučené umístění je složka `Lide`. Platí nejnovější soubor každého druhu.
+
+| Soubor | Listy |
+|---|---|
+| `Lide/Dovolene.xlsx` | **Lidé** (Jméno, Tým), **Nárok** (Jméno, Rok, Nárok (dny), Převod (dny)), **Dovolené** (ID, Jméno, Od, Do, Půl dne, Stav – Plánováno / Schváleno, Pracovních dní, Poznámka), **Nastavení** (Max. současně na dovolené) |
+| `Lide/SkillMatrix.xlsx` | **Lidé** (Jméno, Tým), **Činnosti** (Činnost, Oblast, Min. samostatně), **Dovednosti** (Jméno, Činnost, Úroveň 1–4), **Matice** (jen pro čtení), **Školení** (Školení, Platnost (měsíců), prázdné = trvale), **Absolvováno** (Jméno, Školení, Datum, Platí do) |
+
+- Pracovní dny dovolené jsou bez víkendů a státních svátků ČR; sloupec Pracovních dní je jen pro čtení v Excelu.
+- Soubory obsahují jména lidí: uvidí je každý, kdo má přístup do sdílené složky. Neukládejte důvody nepřítomnosti
+  ani zdravotní údaje.
 
 ## Launch (složka Launch)
 

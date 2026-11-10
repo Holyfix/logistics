@@ -17,6 +17,9 @@ export type ModuleId =
   | 'suppliers'
   | 'oil'
   | 'launch'
+  | 'attendance'
+  | 'vacations'
+  | 'skills'
   | 'reports'
   | 'data'
   | 'settings';
@@ -27,6 +30,7 @@ export type ModuleGroup =
   | 'material'
   | 'production'
   | 'suppliers'
+  | 'people'
   | 'management'
   | 'system';
 
@@ -47,6 +51,7 @@ export const GROUPS: ModuleGroup[] = [
   'material',
   'production',
   'suppliers',
+  'people',
   'management',
   'system',
 ];
@@ -64,6 +69,9 @@ export const MODULES: ModuleDef[] = [
   { id: 'production', group: 'production', icon: 'production', status: { kind: 'available' } },
   { id: 'inbound', group: 'suppliers', icon: 'inbound', status: { kind: 'planned', phase: 9 } },
   { id: 'suppliers', group: 'suppliers', icon: 'suppliers', status: { kind: 'later' } },
+  { id: 'attendance', group: 'people', icon: 'attendance', status: { kind: 'planned', phase: 10 } },
+  { id: 'vacations', group: 'people', icon: 'vacations', status: { kind: 'available' } },
+  { id: 'skills', group: 'people', icon: 'skills', status: { kind: 'available' } },
   { id: 'oil', group: 'management', icon: 'actions', status: { kind: 'available' } },
   { id: 'launch', group: 'management', icon: 'launch', status: { kind: 'available' } },
   { id: 'reports', group: 'management', icon: 'reports', status: { kind: 'later' } },

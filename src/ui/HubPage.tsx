@@ -14,6 +14,9 @@ import { AREAS, useDashboard } from './dashboard/useDashboard';
 import { useOilDraftList } from './oil/OilProvider';
 import { useLaunchDraftPlan } from './launch/LaunchProvider';
 import { launchSummary } from '../core/launch';
+import { trainingAlerts, uncovered } from '../core/skills';
+import { awayOn, emptyVacations } from '../core/vacations';
+import { useSkillsDraftValue, useVacationsDraftValue } from './people/drafts';
 import { GROUPS, MODULES, type ModuleDef, type ModuleId } from './modules';
 
 function StatusChip({ module }: { module: ModuleDef }) {
@@ -83,6 +86,10 @@ function useMetrics(): Partial<Record<ModuleId, ReactNode>> {
   const oil = useMemo(() => (oilList ? oilAlerts(oilList, today) : null), [oilList, today]);
   const launchDraft = useLaunchDraftPlan();
   const launchPlan = launchDraft ?? state.data?.launch?.plan ?? null;
+  const vacationDraft = useVacationsDraftValue();
+  const vacationData = vacationDraft ?? state.data?.vacations?.data ?? null;
+  const skillDraft = useSkillsDraftValue();
+  const skillData = skillDraft ?? state.data?.skills?.data ?? null;
   const launch = useMemo(() => (launchPlan?.projects.length ? launchSummary(launchPlan, today) : null), [launchPlan, today]);
 
   const metrics: Partial<Record<ModuleId, ReactNode>> = {};
@@ -143,6 +150,27 @@ function useMetrics(): Partial<Record<ModuleId, ReactNode>> {
       : next
         ? <Metric value={`${formatQuantity(next.end! - today, locale)} d`} label={th.next} tone="ok" title={title} />
         : <Metric value={formatQuantity(launch.projects, locale)} label={th.projects} tone="ok" title={title} />;
+  }
+  // Dovolené: kolik lidí je dnes na dovolené (pozor nad limitem souběhu).
+  if (vacationData?.people.length) {
+    const tv = t.vacations.hub;
+    const away = [...new Set(awayOn(vacationData ?? emptyVacations(), today).map((e) => e.person))];
+    const over = vacationData.maxAway !== null && away.length > vacationData.maxAway;
+    metrics.vacations = <Metric value={formatQuantity(away.length, locale)} label={tv.today} tone={over ? 'warn' : 'ok'} title={`${tv.today}: ${away.join(', ') || '—'}${over ? ` (${tv.over})` : ''}`} />;
+  }
+  // Skill Matrix: propadlá školení (hoří), končící školení a činnosti bez zástupu (pozor).
+  if (skillData?.people.length) {
+    const tk = t.skills.hub;
+    const alerts = trainingAlerts(skillData, today);
+    const missing = uncovered(skillData).length;
+    const title = `${t.modules.skills.title}: ${alerts.expired.length} ${tk.expired}, ${alerts.soon.length} ${tk.soon}, ${missing} ${tk.uncovered}`;
+    metrics.skills = alerts.expired.length
+      ? <Metric value={formatQuantity(alerts.expired.length, locale)} label={tk.expired} tone="crit" title={title} />
+      : alerts.soon.length
+        ? <Metric value={formatQuantity(alerts.soon.length, locale)} label={tk.soon} tone="warn" title={title} />
+        : missing
+          ? <Metric value={formatQuantity(missing, locale)} label={tk.uncovered} tone="warn" title={title} />
+          : <Metric value="✓" label={tk.ok} tone="ok" title={title} />;
   }
   // Dashboard: kolik oblastí hoří a kolik je pozor (stejně jako souhrn nahoře v Dashboardu).
   if (state.data) {

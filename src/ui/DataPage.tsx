@@ -377,7 +377,7 @@ export function DataPage() {
 
           <div className="panel">
             <h2>{t.data.planning.heading}</h2>
-            {data.plans.length === 0 && !data.planSettings && !data.oil && !data.launch ? (
+            {data.plans.length === 0 && !data.planSettings && !data.oil && !data.launch && !data.vacations && !data.skills ? (
               <p>{t.data.planning.none}</p>
             ) : (
               <div className="table-scroll">
@@ -417,6 +417,24 @@ export function DataPage() {
                           {t.data.planning.launchItems}
                         </td>
                         <td>{new Date(data.launch.lastModified).toLocaleString(locale === 'cs' ? 'cs-CZ' : 'en-GB', { dateStyle: 'short', timeStyle: 'short' })}</td>
+                      </tr>
+                    )}
+                    {data.vacations && (
+                      <tr>
+                        <td>{data.vacations.path}</td>
+                        <td>
+                          {t.modules.vacations.title}: {formatQuantity(data.vacations.data.people.length, locale)} {t.data.planning.people}, {formatQuantity(data.vacations.data.entries.length, locale)} {t.data.planning.vacationEntries}
+                        </td>
+                        <td>{new Date(data.vacations.lastModified).toLocaleString(locale === 'cs' ? 'cs-CZ' : 'en-GB', { dateStyle: 'short', timeStyle: 'short' })}</td>
+                      </tr>
+                    )}
+                    {data.skills && (
+                      <tr>
+                        <td>{data.skills.path}</td>
+                        <td>
+                          {t.modules.skills.title}: {formatQuantity(data.skills.data.people.length, locale)} {t.data.planning.people}, {formatQuantity(data.skills.data.activities.length, locale)} {t.data.planning.activities}
+                        </td>
+                        <td>{new Date(data.skills.lastModified).toLocaleString(locale === 'cs' ? 'cs-CZ' : 'en-GB', { dateStyle: 'short', timeStyle: 'short' })}</td>
                       </tr>
                     )}
                     {data.plans.map((p) => (

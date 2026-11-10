@@ -77,6 +77,11 @@ funkce (plánování).
 ### Fáze 8: KPI
 ### Fáze 9: Příjem a Zásoby
 
+### Fáze 10: Lidé (probíhá)
+- ✅ Dovolené: plán, nárok a čerpání, státní svátky ČR, limit souběhu
+- ✅ Skill Matrix: dovednosti 0–4, zástupnost, školení s platností
+- ⏳ Docházka: KPI z exportu docházky (přesčasy, HO, absence, lékař, dovolená), šifrovaný soubor pod heslem
+
 Obsah modulů je v [MODULES.md](MODULES.md).
 
 ### Později

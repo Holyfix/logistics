@@ -93,6 +93,26 @@ const PATHS = {
       <path d="M5.5 4.5h12l-2.5 4 2.5 4h-12" />
     </>
   ),
+  attendance: (
+    <>
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="M12 7v5l3.5 2" />
+    </>
+  ),
+  vacations: (
+    <>
+      <circle cx="12" cy="9" r="3.5" />
+      <path d="M12 2.5v1.5M12 14v1.5M5.5 9H4M20 9h-1.5M7.4 4.4l1 1M15.6 4.4l-1 1M7.4 13.6l1-1M15.6 13.6l-1-1" />
+      <path d="M3 20.5c2-1.5 4-1.5 6 0s4 1.5 6 0 4-1.5 6 0" />
+    </>
+  ),
+  skills: (
+    <>
+      <rect x="3.5" y="3.5" width="17" height="17" rx="1.5" />
+      <path d="M3.5 9.5h17M9.5 3.5v17" />
+      <circle cx="15" cy="15" r="2.2" />
+    </>
+  ),
   reports: (
     <>
       <path d="M7 3.5h7l4 4V20.5H6.5V3.5z" />

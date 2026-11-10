@@ -25,6 +25,9 @@ Pořadí skupin na rozcestníku (karty se čtou shora dolů po sloupcích):
 | Dodavatelé | **Dodavatelé** (OTD inbound) | Dodávají nám dodavatelé včas? | Později |
 | Řízení | **OIL** | Kdo co řeší a do kdy? | První verze hotová |
 | Řízení | **Launch** | Jak jsme na tom s náběhem nových projektů? | První verze hotová |
+| Lidé | **Docházka** | Přesčasy, HO, absence, lékař a dovolená přehledně (pod heslem) | Fáze 10 |
+| Lidé | **Dovolené** | Kdo má kdy dovolenou a kolik zbývá? | První verze hotová |
+| Lidé | **Skill Matrix** | Kdo co umí, kde chybí zástup a co propadá? | První verze hotová |
 | Řízení | **Reporty** | Týdenní souhrn pro vedení | Později |
 | Systém | **Data** | Jaká data jsou načtená a jsou v pořádku? | Hotové |
 | Systém | **Nastavení** | Prahy, horizont, jméno pro zápisy | Později |
@@ -240,6 +243,26 @@ Filtry projekt, kategorie, strana (LHD/RHD) a varianta z kmenových dat se ovliv
   termín přijmout jako původní
 - ✅ Přehled nahoře: projekty, po termínu, nejbližší milník, plnění; na rozcestníku po termínu, jinak dní do milníku
 - ✅ Uložení do `Launch/Launch.xlsx` (listy Launch a Projekty)
+
+### Dovolené
+- ✅ Kalendář měsíce: lidé × dny, víkendy a státní svátky ČR (včetně Velikonoc), dnešek; schváleno plně, plánováno
+  šrafovaně, půl dne napůl. Klik na pracovní den přidá dovolenou, klik na dovolenou ji otevře k úpravě
+- ✅ Řádek Na dovolené: kolik lidí chybí v den, nad limitem „Max. současně“ červeně
+- ✅ Nárok a čerpání za rok: nárok, převod, celkem, vyčerpáno (do dneška), naplánováno (z toho neschváleno), zbývá;
+  nárok bez zápisu z minulého roku, jinak 20 dní
+- ✅ Seznam dovolených v roce se schválením jedním kliknutím; filtr týmu
+- ✅ Přehled: dnes na dovolené, tento týden, neschválené dny, zbývá celkem; na rozcestníku dnes na dovolené
+- ✅ Uložení do `Lide/Dovolene.xlsx` (listy Lidé, Nárok, Dovolené, Nastavení)
+
+### Skill Matrix
+- ✅ Matice lidé × činnosti (sloupce po oblastech), úroveň 0–4 kolečkem: neumí, zaučuje se, pod dohledem,
+  samostatně, může školit; klik zvýší úroveň
+- ✅ Zástupnost: řádek Samostatně (3–4) proti minimu činnosti, pod minimem červeně
+- ✅ Školení a průkazy: datum absolvování, platí do podle platnosti v měsících (prázdné = trvale), po platnosti
+  červeně, do 30 dní oranžově
+- ✅ Seznamy lidí, činností a školení (přejmenování přenese zápisy, smazání s potvrzením); filtr týmu
+- ✅ Přehled: bez zástupu, po platnosti, končí do 30 dní; na rozcestníku nejzávažnější z nich
+- ✅ Uložení do `Lide/SkillMatrix.xlsx` (listy Lidé, Činnosti, Dovednosti, Matice pro čtení, Školení, Absolvováno)
 
 ### Nastavení
 - Prahy semaforu, horizont výhledu
