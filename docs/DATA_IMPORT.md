@@ -334,27 +334,33 @@ aplikace nabídne úvodní sadu ukazatelů. Když soubor mezitím změnil někdo
   z mapování, osob z OIL a dříve zapsaných příčin). U automatických ukazatelů je aplikace uloží sama při uložení dne
   (díly a lokace z Coverage, komponenty s projekty, body OIL po termínu s odpovědným).
 
-## Docházka (složka Lide/Dochazka)
+## Docházka (složka Attendance / Dochazka)
 
 Export ze systému docházky (list s řádky **osoba × mzdová složka** a sloupci dnů). Uložte ho jako **.xlsx zašifrovaný
 heslem**: v Excelu **Soubor → Informace → Zamknout sešit → Šifrovat pomocí hesla** (u exportu .xls nejdřív Uložit
 jako .xlsx; když je tlačítko šedé, Povolit úpravy, nebo Uložit jako → Nástroje → Obecné možnosti → Heslo pro otevření).
 
 - Povinné sloupce: **Mzdová složka**, **Příjmení Jméno** (dále Osobní číslo, Středisko, Prac. poměr) a sloupce
-  s datem dne; sloupce „Suma za týden / měsíc“ se nepočítají. Text ve špatném kódování (Pøíjmení) aplikace opraví.
+  s datem dne; sloupce „Suma za týden / měsíc“ se nepočítají. Ve jméně se vynechá vše za čárkou (titul, pozice).
+- **Diakritika:** systém docházky ukládá české znaky v kódování Windows-1252 („Kuèera“, „Pøíjmení“, „ť“ zmizí).
+  Aplikace text převede zpět na Windows-1250, takže se jména zobrazí správně; soubor se nemění.
 - Řádek **Poznámka** nese zkratky dne: HO, DOV, SC, NV, lékař; „1/2“ před zkratkou = půl dne.
-- Každý měsíc je samostatný soubor; všechny soubory se odemykají stejným heslem.
+- Každý měsíc je samostatný soubor ve složce `Attendance` nebo `Dochazka` (např. `People/Attendance/`); název souboru je
+  libovolný, mimo tyto složky se pozná podle názvu (pruchody…, dochazka…, attendance…). Všechny soubory se odemykají
+  stejným heslem.
 - Smyšlená ukázka: `sample-data/Lide/Dochazka/pruchody_vzor_11-2026.xlsx`, heslo `vzor2026`.
 
 ## Lidé (složka Lide)
 
-Soubory **vytváří aplikace** tlačítkem Uložit v modulech Dovolené a Skill Matrix. Rozpoznají se podle názvu (začíná
-„Dovolen“ / „Vacation“, nebo „Skill“), doporučené umístění je složka `Lide`. Platí nejnovější soubor každého druhu.
+Soubory **vytváří aplikace** tlačítkem Uložit v modulech Dovolené a Skill Matrix. Dovolené se rozpoznají podle složky
+`Holiday` / `Dovolene` nebo názvu (začíná „Dovolen“ / „Vacation“), Skill Matrix podle názvu („Skill…“). Nový soubor se
+uloží vedle složky s docházkou: u `People/Attendance/` jako `People/Holiday/Dovolene.xlsx` a `People/SkillMatrix.xlsx`,
+bez docházky do složky `Lide`. Platí nejnovější soubor každého druhu.
 
 | Soubor | Listy |
 |---|---|
-| `Lide/Dovolene.xlsx` | **Lidé** (Jméno, Tým), **Nárok** (Jméno, Rok, Nárok (dny), Převod (dny)), **Dovolené** (ID, Jméno, Od, Do, Půl dne, Stav – Plánováno / Schváleno, Pracovních dní, Poznámka), **Nastavení** (Max. současně na dovolené) |
-| `Lide/SkillMatrix.xlsx` | **Lidé** (Jméno, Tým), **Činnosti** (Činnost, Oblast, Min. samostatně), **Dovednosti** (Jméno, Činnost, Úroveň 1–4), **Matice** (jen pro čtení), **Školení** (Školení, Platnost (měsíců), prázdné = trvale), **Absolvováno** (Jméno, Školení, Datum, Platí do) |
+| `People/Holiday/Dovolene.xlsx` | **Lidé** (Jméno, Tým), **Nárok** (Jméno, Rok, Nárok (dny), Převod (dny)), **Dovolené** (ID, Jméno, Od, Do, Půl dne, Stav – Plánováno / Schváleno, Pracovních dní, Poznámka), **Nastavení** (Max. současně na dovolené) |
+| `People/SkillMatrix.xlsx` | **Lidé** (Jméno, Tým), **Činnosti** (Činnost, Oblast, Min. samostatně), **Dovednosti** (Jméno, Činnost, Úroveň 1–4), **Matice** (jen pro čtení), **Školení** (Školení, Platnost (měsíců), prázdné = trvale), **Absolvováno** (Jméno, Školení, Datum, Platí do) |
 
 - Pracovní dny dovolené jsou bez víkendů a státních svátků ČR; sloupec Pracovních dní je jen pro čtení v Excelu.
 - Soubory obsahují jména lidí: uvidí je každý, kdo má přístup do sdílené složky. Neukládejte důvody nepřítomnosti

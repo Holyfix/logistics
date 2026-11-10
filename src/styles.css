@@ -3940,3 +3940,113 @@ button.gantt-bar.gantt-line .gantt-tag {
 details.panel > summary {
   cursor: pointer;
 }
+
+/* Docházka: kalendář měsíce (lidé × dny se zkratkou dne) a souhrn se skupinami sloupců. */
+.att-calendar th,
+.att-calendar td {
+  padding: 4px 4px;
+}
+
+.att-calendar .att-day {
+  min-width: 30px;
+  text-align: center;
+  line-height: 1.1;
+}
+
+.att-calendar .att-day span,
+.att-calendar .att-day small {
+  display: block;
+}
+
+.att-calendar .att-day small {
+  font-size: 9px;
+}
+
+.att-cell {
+  min-width: 30px;
+  height: 26px;
+  text-align: center;
+  font-size: 10px;
+  font-weight: 700;
+  border-left: 1px solid var(--grid);
+}
+
+.att-cell sup {
+  font-size: 8px;
+}
+
+.att-off {
+  background: var(--weekend-bg);
+}
+
+.att-HO {
+  --a: #2f6fb3;
+}
+
+.att-DOV {
+  --a: #4f9a26;
+}
+
+.att-L {
+  --a: #8a4fc9;
+}
+
+.att-N {
+  --a: #c8414a;
+}
+
+.att-SC {
+  --a: #0f8a80;
+}
+
+.att-NV {
+  --a: #7a8794;
+}
+
+.att-cell[class*='att-HO'],
+.att-cell.att-DOV,
+.att-cell.att-L,
+.att-cell.att-N,
+.att-cell.att-SC,
+.att-cell.att-NV {
+  background: color-mix(in srgb, var(--a) 22%, var(--surface));
+  color: color-mix(in srgb, var(--a) 80%, var(--ink));
+}
+
+.att-key {
+  display: inline-block;
+  min-width: 26px;
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-size: 10px;
+  font-weight: 700;
+  font-style: normal;
+  text-align: center;
+  background: color-mix(in srgb, var(--a) 22%, var(--surface));
+  color: color-mix(in srgb, var(--a) 80%, var(--ink));
+}
+
+.att-summary th.att-group {
+  text-align: center;
+  border-left: 2px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+.att-summary .att-group-start {
+  border-left: 2px solid var(--line);
+}
+
+.att-sort {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.att-sort[aria-pressed='true'] {
+  color: var(--accent);
+}

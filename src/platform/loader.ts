@@ -47,11 +47,11 @@ export interface LoadedData {
   kpi: { path: string; lastModified: number; data: KpiData } | null;
   /** Launch (Launch/Launch.xlsx): nejnovější soubor; bez souboru chybí. */
   launch?: { path: string; lastModified: number; plan: LaunchPlan };
-  /** Dovolené (Lide/Dovolene.xlsx): nejnovější soubor; bez souboru chybí. */
+  /** Dovolené (People/Holiday/Dovolene.xlsx): nejnovější soubor; bez souboru chybí. */
   vacations?: { path: string; lastModified: number; data: VacationData };
   /** Exporty docházky (obvykle šifrované): jen obsah souborů, rozšifrují se až v modulu Docházka heslem. */
   attendance?: { path: string; lastModified: number; buffer: ArrayBuffer }[];
-  /** Skill Matrix (Lide/SkillMatrix.xlsx): nejnovější soubor; bez souboru chybí. */
+  /** Skill Matrix (People/SkillMatrix.xlsx): nejnovější soubor; bez souboru chybí. */
   skills?: { path: string; lastModified: number; data: SkillData };
   /** Sekvence (složka Sekvence): nejnovější Order Status Matrix a klíč MC/MF. */
   sequence?: {

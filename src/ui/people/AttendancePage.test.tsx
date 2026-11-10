@@ -73,12 +73,21 @@ describe('Docházka', () => {
     expect(await screen.findByRole('alert')).toHaveProperty('textContent', 'Špatné heslo.');
     fireEvent.change(screen.getByLabelText('Heslo'), { target: { value: 'vzor2026' } });
     fireEvent.click(screen.getByRole('button', { name: 'Odemknout' }));
-    const table = await screen.findByRole('table', { name: 'Přehled po lidech' }, { timeout: 5000 });
+    const table = await screen.findByRole('table', { name: 'Souhrn po lidech' }, { timeout: 5000 });
     const row = within(table).getByText('Nováková Jana').closest('tr')!;
-    // Fond, odprac., započteno, přesčas, uznáno, k uznání, HO, lékař …
-    expect([...row.querySelectorAll('td.n')].slice(0, 8).map((td) => td.textContent)).toEqual(['160,0', '53,5', '0', '1,5', '1,5', '0', '1,5', '4,0']);
+    // Fond do dneška, odprac., saldo | evidence, uznáno, k uznání | HO, sl. cesta | dovolená, lékař, nemoc, NV (nuly prázdné).
+    expect([...row.querySelectorAll('td.n')].map((td) => td.textContent)).toEqual(['56,0', '53,5', '+1,5', '1,5', '1,5', '', '1,5', '', '', '0,5', '', '']);
     const kpi = screen.getAllByText('Home office').find((el) => el.classList.contains('kpi-label'))!.parentElement!;
     expect(kpi.querySelector('.kpi-value')!.textContent).toBe('1,5');
+    // Kalendář: 9. 11. home office, 10. 11. půl dne HO.
+    const calendar = screen.getByRole('table', { name: 'Kalendář měsíce' });
+    const cells = within(calendar).getByText('Nováková Jana').closest('tr')!.querySelectorAll('td.att-cell');
+    expect(cells[8]!.textContent).toBe('HO');
+    expect(cells[9]!.textContent).toBe('½HO');
+    expect(cells[2]!.className).toContain('att-L');
+    // Řazení podle dovolené: Kučera první.
+    fireEvent.click(within(table).getByRole('button', { name: 'Dovolená' }));
+    expect(within(table).getAllByRole('row')[2]!.textContent).toContain('Kučera Petr');
     fireEvent.click(screen.getByRole('button', { name: '🔒 Zamknout' }));
     await waitFor(() => expect(screen.queryByText('Nováková Jana')).toBeNull());
     expect(screen.getByText(/Docházka je zamčená/)).toBeTruthy();

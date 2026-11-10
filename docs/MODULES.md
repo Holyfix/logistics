@@ -249,9 +249,15 @@ Filtry projekt, kategorie, strana (LHD/RHD) a varianta z kmenových dat se ovliv
   sešit → Šifrovat pomocí hesla); aplikace ho rozšifruje jen v paměti prohlížeče po zadání hesla (šifrování Agile,
   AES), heslo ani rozšifrovaná data neukládá. Zamkne se tlačítkem, po 30 minutách nebo novým načtením složky;
   nešifrovaný soubor aplikace přečte, ale upozorní na něj
-- ✅ Přehled za měsíc (nebo všechny): odpracováno, započteno, fond, přesčasy (kladné z evidence), uznáno a k uznání,
-  home office (HO, 1/2HO z poznámky dne), lékař, dovolená, nemoc, služební cesty, náhradní volno, noční
-- ✅ Tabulka po lidech se součtem, filtr střediska, rozbalitelná tabulka všech mzdových složek
+- ✅ Ukazatele za měsíc (nebo všechny): odpracováno (fond do dneška, saldo), přesčasy (uznáno, k uznání), home office
+  a služební cesty, nepřítomnost (dovolená, lékař, nemoc, náhradní volno) ve dnech
+- ✅ **Kalendář měsíce**: lidé × dny se zkratkou dne (HO, DOV, L, N, SC, NV) barevně, ½ = půl dne, víkendy a svátky
+  šedě; po najetí myší detail dne
+- ✅ **Souhrn po lidech** ve skupinách Čas / Přesčasy / Mimo kancelář / Nepřítomnost, řazení kliknutím na sloupec,
+  nuly prázdné; filtr střediska; rozbalitelná tabulka všech mzdových složek
+- ✅ Dny podle zkratek: ze mzdových složek (celý nebo půl dne podle hodin proti fondu) a z poznámky dne; stejná zkratka
+  z obou zdrojů se počítá jednou
+- ✅ Jméno bez pozice (text za čárkou se vynechá); oprava diakritiky z exportu (Windows-1250 čtené jako Windows-1252)
 - ✅ Více měsíců: každý měsíční export zvlášť ve složce, stejný den platí z pozdějšího souboru
 - ✅ Na rozcestníku jen stav zamčeno / odemčeno (žádná čísla)
 
@@ -263,7 +269,7 @@ Filtry projekt, kategorie, strana (LHD/RHD) a varianta z kmenových dat se ovliv
   nárok bez zápisu z minulého roku, jinak 20 dní
 - ✅ Seznam dovolených v roce se schválením jedním kliknutím; filtr týmu
 - ✅ Přehled: dnes na dovolené, tento týden, neschválené dny, zbývá celkem; na rozcestníku dnes na dovolené
-- ✅ Uložení do `Lide/Dovolene.xlsx` (listy Lidé, Nárok, Dovolené, Nastavení)
+- ✅ Uložení do `People/Holiday/Dovolene.xlsx` (vedle složky s docházkou) (listy Lidé, Nárok, Dovolené, Nastavení)
 
 ### Skill Matrix
 - ✅ Matice lidé × činnosti (sloupce po oblastech), úroveň 0–4 kolečkem: neumí, zaučuje se, pod dohledem,
@@ -273,7 +279,7 @@ Filtry projekt, kategorie, strana (LHD/RHD) a varianta z kmenových dat se ovliv
   červeně, do 30 dní oranžově
 - ✅ Seznamy lidí, činností a školení (přejmenování přenese zápisy, smazání s potvrzením); filtr týmu
 - ✅ Přehled: bez zástupu, po platnosti, končí do 30 dní; na rozcestníku nejzávažnější z nich
-- ✅ Uložení do `Lide/SkillMatrix.xlsx` (listy Lidé, Činnosti, Dovednosti, Matice pro čtení, Školení, Absolvováno)
+- ✅ Uložení do `People/SkillMatrix.xlsx` (vedle složky s docházkou) (listy Lidé, Činnosti, Dovednosti, Matice pro čtení, Školení, Absolvováno)
 
 ### Nastavení
 - Prahy semaforu, horizont výhledu

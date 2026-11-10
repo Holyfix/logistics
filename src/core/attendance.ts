@@ -38,10 +38,6 @@ export interface AttendanceData {
 
 export const emptyAttendance = (): AttendanceData => ({ people: [], values: [], notes: [], categories: [] });
 
-/**
- * Text z exportu, který Excel přečetl ve špatném kódování (Windows-1250 jako Latin-1: „Pøíjmení“ místo „Příjmení“).
- * Opraví se jen text ze znaků do 255 se znakem nad 127; správný český text obsahuje znaky nad 255 (č, ř, š …).
- */
 const decoder = (() => {
   try {
     return new TextDecoder('windows-1250');
@@ -49,10 +45,31 @@ const decoder = (() => {
     return null;
   }
 })();
+
+/** Znaky Windows-1252 v rozsahu 0x80–0x9F (ostatní bajty odpovídají znaku se stejným kódem). */
+const CP1252_HIGH = '€\u0081‚ƒ„…†‡ˆ‰Š‹Œ\u008dŽ\u008f\u0090‘’“”•–—˜™š›œ\u009džŸ';
+const CP1252: ReadonlyMap<string, number> = new Map([...CP1252_HIGH].map((c, i) => [c, 0x80 + i]));
+
+/**
+ * Text z exportu, který systém docházky přečetl ve špatném kódování: české znaky (Windows-1250) jako západoevropské
+ * (Windows-1252), např. „Pøíjmení“, „Kuèera“. Text se převede zpět na bajty podle Windows-1252 a přečte jako
+ * Windows-1250. Správný český text se nezmění: znaky č, ř, ě, ť … ve Windows-1252 nejsou, takový text se nechá být,
+ * a společné znaky (á, í, š, ž …) mají v obou kódováních stejný bajt.
+ */
 export function fixEncoding(text: string): string {
-  if (!decoder || ![...text].some((c) => c.charCodeAt(0) >= 0x80) || [...text].some((c) => c.charCodeAt(0) > 0xff)) return text;
-  return decoder.decode(Uint8Array.from(text, (c) => c.charCodeAt(0)));
+  if (!decoder || ![...text].some((c) => c.charCodeAt(0) >= 0x80)) return text;
+  const bytes: number[] = [];
+  for (const c of text) {
+    const code = c.charCodeAt(0);
+    const byte = code < 0x80 || (code >= 0xa0 && code <= 0xff) ? code : CP1252.get(c);
+    if (byte === undefined) return text;
+    bytes.push(byte);
+  }
+  return decoder.decode(Uint8Array.from(bytes));
 }
+
+/** Jméno bez pozice: v exportu je za čárkou titul nebo pozice („Novák Jan, Logistik“ → „Novák Jan“). */
+export const personName = (text: string) => text.split(',')[0]!.trim();
 
 const COLUMNS = {
   category: ['Mzdová složka', 'Složka', 'Category'],
@@ -88,7 +105,7 @@ export function parseAttendanceSheets(sheets: readonly Cell[][][]): AttendanceRe
     const people = new Map<string, AttendancePerson>();
     for (const row of data.slice(headerIndex + 1)) {
       const category = text(row[catC]);
-      const name = text(row[nameC]);
+      const name = personName(text(row[nameC]));
       if (!category || !name) continue;
       const id = (idC === -1 ? '' : text(row[idC])) || name;
       if (!people.has(id)) people.set(id, { id, name, center: centerC === -1 ? '' : text(row[centerC]), contract: contractC === -1 ? '' : text(row[contractC]) });
@@ -151,6 +168,69 @@ export function noteCodes(note: string): Map<string, number> {
   return codes;
 }
 
+// --- Dny: co osoba v den dělala ---
+
+/** Zkratky dne: home office, dovolená, lékař, nemoc, služební cesta, náhradní volno. */
+export const DAY_CODES = ['HO', 'DOV', 'L', 'N', 'SC', 'NV'] as const;
+export type DayCode = (typeof DAY_CODES)[number];
+
+const NOTE_ALIASES: Record<string, DayCode> = { HO: 'HO', DOV: 'DOV', LÉKAŘ: 'L', LEKAR: 'L', L: 'L', NEMOC: 'N', PN: 'N', N: 'N', SC: 'SC', NV: 'NV' };
+
+export interface DayInfo {
+  /** Zkratky dne s podílem dne (1 = celý den, 0,5 = půl dne). */
+  codes: Map<DayCode, number>;
+  /** Odpracováno v hodinách. */
+  worked: number;
+  /** Fond dne v hodinách. */
+  fond: number;
+  /** Hodiny podle mzdových složek dne (pro popisek). */
+  hours: Map<string, number>;
+}
+
+const share = (hours: number, fond: number) => (hours >= (fond || 8) * 0.75 ? 1 : 0.5);
+
+/**
+ * Den osoby: zkratky z mzdových složek (Dovolená, Lékař, Nemoc, Služební cesta – celý nebo půl dne podle hodin
+ * proti fondu) a z poznámky (HO, DOV, SC, NV, lékař; „1/2“ = půl dne). Stejná zkratka z obou zdrojů se počítá jednou
+ * a podíl dne se vezme z hodin mzdové složky.
+ */
+export function dayInfos(data: AttendanceData, month: string | null): Map<string, Map<DayNumber, DayInfo>> {
+  const inMonth = (day: DayNumber) => !month || dayToIso(day).startsWith(month);
+  const result = new Map<string, Map<DayNumber, DayInfo>>();
+  const info = (person: string, day: DayNumber) => {
+    let days = result.get(person);
+    if (!days) result.set(person, (days = new Map()));
+    let d = days.get(day);
+    if (!d) days.set(day, (d = { codes: new Map(), worked: 0, fond: 0, hours: new Map() }));
+    return d;
+  };
+  const setCode = (d: DayInfo, code: DayCode, value: number) => d.codes.set(code, Math.max(d.codes.get(code) ?? 0, value));
+  for (const v of data.values) {
+    if (!inMonth(v.day)) continue;
+    const d = info(v.person, v.day);
+    d.hours.set(v.category, (d.hours.get(v.category) ?? 0) + v.value);
+    if (is(v.category, /^fond/)) d.fond += v.value;
+    else if (is(v.category, /odpracovano/)) d.worked += v.value;
+  }
+  for (const days of result.values())
+    for (const d of days.values())
+      for (const [category, hours] of d.hours) {
+        if (hours <= 0) continue;
+        const code: DayCode | null = is(category, /^dovolena/) ? 'DOV' : is(category, /^lekar/) ? 'L' : is(category, /^nemoc/) ? 'N' : is(category, /^sluzebni/) ? 'SC' : null;
+        if (code) setCode(d, code, share(hours, d.fond));
+      }
+  for (const n of data.notes) {
+    if (!inMonth(n.day)) continue;
+    const d = info(n.person, n.day);
+    for (const [raw, part] of noteCodes(n.text)) {
+      const code = NOTE_ALIASES[raw];
+      // Hodiny ze mzdové složky mají přednost; poznámka doplní jen zkratku, kterou složky nemají (HO, NV …).
+      if (code && !d.codes.has(code)) d.codes.set(code, Math.min(1, part));
+    }
+  }
+  return result;
+}
+
 // --- Přehled po lidech ---
 
 export interface AttendanceSummary {
@@ -176,6 +256,12 @@ export interface AttendanceSummary {
   night: number;
   /** Dny podle poznámek (HO, DOV, SC, NV, LÉKAŘ …). */
   codes: Map<string, number>;
+  /** Dny podle zkratek dne (HO, DOV, L, N, SC, NV) ze mzdových složek i poznámek. */
+  days: Map<DayCode, number>;
+  /** Fond do posledního dne s docházkou (bez budoucích dnů). */
+  fondToDate: number;
+  /** Saldo: započteno − fond, obojí do posledního dne s odpracovaným časem. */
+  balance: number;
   /** Součet každé mzdové složky. */
   byCategory: Map<string, number>;
 }
@@ -188,7 +274,25 @@ export function summarize(data: AttendanceData, month: string | null): Attendanc
   const rows = new Map<string, AttendanceSummary>(
     data.people.map((p) => [
       p.id,
-      { person: p, fond: 0, worked: 0, credited: 0, overtime: 0, approved: 0, toApprove: 0, doctor: 0, vacationHours: 0, sickHours: 0, tripHours: 0, night: 0, codes: new Map(), byCategory: new Map() },
+      {
+        person: p,
+        fond: 0,
+        worked: 0,
+        credited: 0,
+        overtime: 0,
+        approved: 0,
+        toApprove: 0,
+        doctor: 0,
+        vacationHours: 0,
+        sickHours: 0,
+        tripHours: 0,
+        night: 0,
+        codes: new Map(),
+        days: new Map(),
+        fondToDate: 0,
+        balance: 0,
+        byCategory: new Map(),
+      },
     ]),
   );
   for (const v of data.values) {
@@ -211,7 +315,21 @@ export function summarize(data: AttendanceData, month: string | null): Attendanc
   for (const n of data.notes) {
     const row = rows.get(n.person);
     if (!row || !inMonth(n.day)) continue;
-    for (const [code, share] of noteCodes(n.text)) row.codes.set(code, (row.codes.get(code) ?? 0) + share);
+    for (const [code, part] of noteCodes(n.text)) row.codes.set(code, (row.codes.get(code) ?? 0) + part);
   }
+  // Dny podle zkratek a fond do posledního dne, za který export obsahuje odpracovaný nebo započtený čas.
+  // Započteno export uvádí i dopředu (svátky, plánované nepřítomnosti), proto rozhoduje poslední den s odpracovaným časem.
+  const lastDay = Math.max(-Infinity, ...data.values.filter((v) => inMonth(v.day) && is(v.category, /odpracovano/)).map((v) => v.day));
+  const creditedToDate = new Map<string, number>();
+  for (const v of data.values) if (inMonth(v.day) && v.day <= lastDay && is(v.category, /zapocteno/)) creditedToDate.set(v.person, (creditedToDate.get(v.person) ?? 0) + v.value);
+  for (const [person, days] of dayInfos(data, month)) {
+    const row = rows.get(person);
+    if (!row) continue;
+    for (const [day, d] of days) {
+      if (day <= lastDay) row.fondToDate += d.fond;
+      for (const [code, part] of d.codes) row.days.set(code, (row.days.get(code) ?? 0) + part);
+    }
+  }
+  for (const row of rows.values()) row.balance = (creditedToDate.get(row.person.id) ?? 0) - row.fondToDate;
   return [...rows.values()];
 }

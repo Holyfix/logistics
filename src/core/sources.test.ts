@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { classifyPath, coverageScope } from './sources';
+import { classifyPath, coverageScope, peopleFolder } from './sources';
 
 describe('classifyPath', () => {
   it.each([
@@ -40,8 +40,11 @@ describe('classifyPath', () => {
     ['Lide/SkillMatrix.xlsx', 'skills'],
     ['Skill_matrix_sklad.xlsx', 'skills'],
     ['Lide/Dovolene.csv', 'ignored'],
+    ['People/Holiday/Dovolene.xlsx', 'vacations'],
+    ['People/Holiday/plan 2027.xlsx', 'vacations'],
     ['Lide/Dochazka/pruchody_01112026-30112026.xlsx', 'attendance'],
     ['Docházka/listopad.xlsx', 'attendance'],
+    ['People/Attendance/Attendance_11-2026.xlsx', 'attendance'],
     ['pruchody_01102026-31102026.xls', 'ignored'],
     ['OIL/OIL.csv', 'ignored'],
     ['Plán/poznamky.csv', 'ignored'],
@@ -59,5 +62,12 @@ describe('coverageScope', () => {
     expect(coverageScope('Logistics/Coverage/Lokalita A/P100/report.xlsx')).toEqual({ location: 'Lokalita A', project: 'P100' });
     expect(coverageScope('Coverage/Lokalita B/report.xlsx')).toEqual({ location: 'Lokalita B', project: '' });
     expect(coverageScope('Coverage/report.xlsx')).toEqual({ location: '', project: '' });
+  });
+
+  it('složka modulů Lidé: vedle exportů docházky, jinak Lide', () => {
+    expect(peopleFolder(['People/Attendance/pruchody_01112026-30112026.xlsx'])).toBe('People');
+    expect(peopleFolder(['Logistics/People/Docházka/listopad.xlsx'])).toBe('Logistics/People');
+    expect(peopleFolder(['pruchody_01112026.xlsx'])).toBe('Lide');
+    expect(peopleFolder([])).toBe('Lide');
   });
 });
