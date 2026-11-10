@@ -1132,12 +1132,8 @@ export const en: Messages = {
     codes: { HO: 'home office', DOV: 'vacation', L: 'doctor', N: 'sick leave', SC: 'business trip', NV: 'time off in lieu' },
     openDayNote: 'today is not counted (day not closed)',
     closedTo: 'worked, balance and overtime up to {date}',
-    overtime: {
-      heading: 'Available overtime',
-      reference: 'as of {date} (last closed day with attendance)',
-      periods: { week: 'Week', month: 'Month', year: 'Year', total: 'Total' },
-      note: 'Calculated from the daily overtime records (positive and negative days; a doctor visit does not reduce it, time off in lieu and leaving early do) for the calendar week, month and year up to the last day with attendance; Total = all loaded exports. For year and total, keep the exports of all months in the attendance folder. Click a header to sort.',
-    },
+    period: 'Summary period',
+    periods: { week: 'Week', month: 'Month', year: 'Year', total: 'Total' },
     calendar: {
       heading: 'Month calendar',
       legendNote: '½ = half day, + = more codes on one day (details on hover)',
@@ -1154,7 +1150,7 @@ export const en: Messages = {
       titles: {
         fondToDate: 'Fund up to the last day with worked time',
         worked: 'Total worked',
-        balance: 'Credited − fund up to the last day with worked time',
+        balance: 'Balance = credited − fund (up to the last closed day): hours missing (−) or extra (+) against the fund, with excused absence (vacation, doctor, holiday) counted as worked',
         overtime: 'Available overtime: net sum of daily overtime in the records (positive and negative days); a doctor visit does not reduce it, time off in lieu and leaving early do',
         approved: 'Approved overtime (Uznáno … components)',
         toApprove: 'Time to approve (Uznat … components)',
@@ -1165,7 +1161,7 @@ export const en: Messages = {
         N: 'Sick days',
         NV: 'Time off in lieu days',
       },
-      note: 'Click a column header to sort from the largest. Days come from the day codes: payroll components (vacation, doctor, sick leave, business trip – full or half day by hours) and the note (HO, NV …).',
+      note: 'Switch the period with Week / Month (chosen above) / Year / Total – calendar periods up to the last closed day; for year and total keep the exports of all months. Click a column header to sort from the largest. Days come from the day codes: payroll components (vacation, doctor, sick leave, business trip – full or half day by hours) and the note (HO, NV …).',
     },
     detail: {
       heading: 'All payroll components',

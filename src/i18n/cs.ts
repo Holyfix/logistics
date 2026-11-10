@@ -1134,12 +1134,8 @@ export const cs = {
     codes: { HO: 'home office', DOV: 'dovolená', L: 'lékař', N: 'nemoc', SC: 'služební cesta', NV: 'náhradní volno' },
     openDayNote: 'dnešek se nepočítá (neuzavřený den)',
     closedTo: 'odpracováno, saldo a přesčasy do {date}',
-    overtime: {
-      heading: 'Přesčasy k dispozici',
-      reference: 'k {date} (poslední uzavřený den s docházkou)',
-      periods: { week: 'Týden', month: 'Měsíc', year: 'Rok', total: 'Celkem' },
-      note: 'Dopočítané z denní evidence přesčasu (kladné i záporné dny; lékař přesčas nesnižuje, NV a dřívější odchod ano) za kalendářní týden, měsíc a rok do posledního dne s docházkou; Celkem = všechny načtené exporty. Pro rok a celkem uložte do složky s docházkou exporty všech měsíců. Řadíte kliknutím na záhlaví.',
-    },
+    period: 'Období souhrnu',
+    periods: { week: 'Týden', month: 'Měsíc', year: 'Rok', total: 'Celkem' },
     calendar: {
       heading: 'Kalendář měsíce',
       legendNote: '½ = půl dne, + = víc zkratek v jednom dni (detail po najetí myší)',
@@ -1156,7 +1152,7 @@ export const cs = {
       titles: {
         fondToDate: 'Fond do posledního dne s odpracovaným časem',
         worked: 'Celkem odpracováno',
-        balance: 'Započteno − fond do posledního dne s odpracovaným časem',
+        balance: 'Saldo = započteno − fond (do posledního uzavřeného dne): kolik hodin chybí (−) nebo přebývá (+) proti fondu, když se omluvená nepřítomnost (dovolená, lékař, svátek) počítá jako odpracovaná',
         overtime: 'Přesčasy k dispozici: čistý součet přesčasu v evidenci za dny (kladné i záporné); lékař přesčas nesnižuje, NV a dřívější odchod ano',
         approved: 'Uznané přesčasy (složky Uznáno …)',
         toApprove: 'Čas k uznání (složky Uznat …)',
@@ -1167,7 +1163,7 @@ export const cs = {
         N: 'Dny nemoci',
         NV: 'Dny náhradního volna',
       },
-      note: 'Kliknutím na záhlaví sloupce seřadíte od největšího. Dny jsou podle zkratek dne: ze mzdových složek (dovolená, lékař, nemoc, služební cesta – celý nebo půl dne podle hodin) a z poznámky (HO, NV …).',
+      note: 'Období přepnete tlačítky Týden / Měsíc (zvolený nahoře) / Rok / Celkem – kalendářní období k poslednímu uzavřenému dni; pro rok a celkem uložte exporty všech měsíců. Kliknutím na záhlaví sloupce seřadíte od největšího. Dny jsou podle zkratek dne: ze mzdových složek (dovolená, lékař, nemoc, služební cesta – celý nebo půl dne podle hodin) a z poznámky (HO, NV …).',
     },
     detail: {
       heading: 'Všechny mzdové složky',

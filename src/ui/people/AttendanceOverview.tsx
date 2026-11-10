@@ -5,15 +5,14 @@ import {
   closedDay,
   lastWorkedDay,
   monthsOf,
-  OVERTIME_PERIODS,
-  overtimeByPeriod,
-  overtimeRanges,
+  periodRange,
+  SUMMARY_PERIODS,
   summarize,
   type AttendanceData,
   type AttendanceSummary,
   type DayCode,
   type DayInfo,
-  type OvertimePeriod,
+  type SummaryPeriod,
 } from '../../core/attendance';
 import { dayFromParts, dayToIso, weekday, type DayNumber } from '../../core/dates';
 import { localToday } from '../components/useComponents';
@@ -78,16 +77,22 @@ export function AttendanceOverview({
   const ta = t.attendance;
   const tt = ta.table;
   const [sort, setSort] = useState<ColumnId | 'name'>('name');
-  const [overtimeSort, setOvertimeSort] = useState<OvertimePeriod | 'name'>('name');
+  const [period, setPeriod] = useState<SummaryPeriod>('month');
   const months = useMemo(() => monthsOf(data), [data]);
   // Výchozí je nejnovější měsíc.
   const month = chosenMonth === undefined ? (months[0] ?? null) : chosenMonth;
   const centers = useMemo(() => [...new Set(data.people.map((p) => p.center).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'cs')), [data]);
-  const all = useMemo(() => summarize(data, month, today).filter((r) => !center || r.person.center === center), [data, month, center, today]);
   // Dnešek se do přesčasů a salda nepočítá, když ho export už obsahuje (směna nemusí být uzavřená).
   const last = lastWorkedDay(data);
   const todayOpen = last !== null && last >= today;
   const reference = closedDay(data, today);
+  // Období souhrnu: týden, měsíc (zvolený nahoře), rok nebo celkem k poslednímu uzavřenému dni.
+  const range = useMemo(() => {
+    if (period === 'month' && month === null) return null;
+    const anchor = reference ?? last ?? today;
+    return periodRange(data, period, anchor, period === 'month' ? month : null);
+  }, [data, period, month, reference, last, today]);
+  const all = useMemo(() => summarize(data, range, today).filter((r) => !center || r.person.center === center), [data, range, center, today]);
   const days = useMemo(() => dayInfos(data, month), [data, month]);
   const sortColumn = ALL_COLUMNS.find((c) => c.id === sort);
   const rows = sortColumn ? [...all].sort((a, b) => sortColumn.value(b) - sortColumn.value(a) || a.person.name.localeCompare(b.person.name, 'cs')) : all;
@@ -106,18 +111,9 @@ export function AttendanceOverview({
     return c.kind === 'days' ? d(v) : h(v);
   };
 
-  // Přesčasy za týden, měsíc, rok a celkem k poslednímu dni s odpracovaným časem (bez ohledu na vybraný měsíc).
-  const overtime = useMemo(() => {
-    if (reference === null) return null;
-    const values = overtimeByPeriod(data, reference);
-    const people = data.people.filter((p) => !center || p.center === center);
-    const rows = people.map((person) => ({ person, values: values.get(person.id)! }));
-    if (overtimeSort !== 'name') rows.sort((a, b) => b.values[overtimeSort] - a.values[overtimeSort] || a.person.name.localeCompare(b.person.name, 'cs'));
-    return { reference, ranges: overtimeRanges(data, reference), rows };
-  }, [data, center, overtimeSort, reference]);
   const fullDate = (day: DayNumber) => `${Number(dayToIso(day).slice(8))}. ${Number(dayToIso(day).slice(5, 7))}. ${dayToIso(day).slice(0, 4)}`;
   const shortDate = (day: DayNumber) => `${Number(dayToIso(day).slice(8))}. ${Number(dayToIso(day).slice(5, 7))}.`;
-  const signedCell = (v: number) => (Math.abs(v) < 0.005 ? '' : <span className={v < 0 ? 'cell-short' : 'delta-up'}>{signedHours(v, locale)}</span>);
+  const rangeText = range ? `${shortDate(range.from)} – ${fullDate(range.to)}` : ta.allMonths;
 
   // Dny vybraného měsíce pro kalendář.
   const monthDays = useMemo(() => {
@@ -270,70 +266,18 @@ export function AttendanceOverview({
         </div>
       )}
 
-      {overtime && (
-        <div className="panel">
-          <div className="panel-head">
-            <h2>{ta.overtime.heading}</h2>
-            <span className="muted">
-              {ta.overtime.reference.replace('{date}', fullDate(overtime.reference))}
-              {todayOpen && ` · ${ta.openDayNote}`}
-            </span>
-          </div>
-          <div className="table-scroll table-tall">
-            <table className="table table-data att-overtime" aria-label={ta.overtime.heading}>
-              <thead>
-                <tr>
-                  <th className="sticky-col">
-                    <button type="button" className="att-sort" aria-pressed={overtimeSort === 'name'} onClick={() => setOvertimeSort('name')}>
-                      {tt.name}
-                    </button>
-                  </th>
-                  {OVERTIME_PERIODS.map((p) => (
-                    <th key={p} className="n" title={`${fullDate(overtime.ranges[p].from)} – ${fullDate(overtime.ranges[p].to)}`}>
-                      <button type="button" className="att-sort" aria-pressed={overtimeSort === p} onClick={() => setOvertimeSort(overtimeSort === p ? 'name' : p)}>
-                        {ta.overtime.periods[p]}
-                        {overtimeSort === p && ' ▼'}
-                      </button>
-                      <small className="att-range">
-                        {shortDate(overtime.ranges[p].from)} – {shortDate(overtime.ranges[p].to)}
-                      </small>
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {overtime.rows.map(({ person, values }) => (
-                  <tr key={person.id}>
-                    <td className="sticky-col">{person.name}</td>
-                    {OVERTIME_PERIODS.map((p) => (
-                      <td key={p} className="n">
-                        {signedCell(values[p])}
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-              <tfoot>
-                <tr>
-                  <td className="sticky-col">{tt.total}</td>
-                  {OVERTIME_PERIODS.map((p) => (
-                    <td key={p} className="n">
-                      {signedCell(overtime.rows.reduce((s, r) => s + r.values[p], 0)) || '0'}
-                    </td>
-                  ))}
-                </tr>
-              </tfoot>
-            </table>
-          </div>
-          <p className="muted">{ta.overtime.note}</p>
-        </div>
-      )}
-
       <div className="panel">
         <div className="panel-head">
           <h2>{tt.heading}</h2>
+          <span className="segmented" role="group" aria-label={ta.period}>
+            {SUMMARY_PERIODS.map((p) => (
+              <button key={p} type="button" aria-pressed={period === p} onClick={() => setPeriod(p)}>
+                {ta.periods[p]}
+              </button>
+            ))}
+          </span>
           <span className="muted">
-            {month ? monthName(month) : ta.allMonths}
+            {rangeText}
             {reference !== null && ` · ${ta.closedTo.replace('{date}', fullDate(reference))}`}
             {todayOpen && ` · ${ta.openDayNote}`}
           </span>

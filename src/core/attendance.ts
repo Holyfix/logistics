@@ -168,6 +168,18 @@ export function noteCodes(note: string): Map<string, number> {
   return codes;
 }
 
+// --- Období ---
+
+/** Období přehledu: měsíc „2026-11“, rozsah dnů (včetně krajů), nebo null = vše. */
+export type Period = string | { from: DayNumber; to: DayNumber } | null;
+
+/** Patří den do období? */
+export function inPeriod(period: Period): (day: DayNumber) => boolean {
+  if (period === null) return () => true;
+  if (typeof period === 'string') return (day) => dayToIso(day).startsWith(period);
+  return (day) => day >= period.from && day <= period.to;
+}
+
 // --- Dny: co osoba v den dělala ---
 
 /** Zkratky dne: home office, dovolená, lékař, nemoc, služební cesta, náhradní volno. */
@@ -194,8 +206,8 @@ const share = (hours: number, fond: number) => (hours >= (fond || 8) * 0.75 ? 1 
  * proti fondu) a z poznámky (HO, DOV, SC, NV, lékař; „1/2“ = půl dne). Stejná zkratka z obou zdrojů se počítá jednou
  * a podíl dne se vezme z hodin mzdové složky.
  */
-export function dayInfos(data: AttendanceData, month: string | null): Map<string, Map<DayNumber, DayInfo>> {
-  const inMonth = (day: DayNumber) => !month || dayToIso(day).startsWith(month);
+export function dayInfos(data: AttendanceData, month: Period): Map<string, Map<DayNumber, DayInfo>> {
+  const inMonth = inPeriod(month);
   const result = new Map<string, Map<DayNumber, DayInfo>>();
   const info = (person: string, day: DayNumber) => {
     let days = result.get(person);
@@ -269,11 +281,11 @@ export interface AttendanceSummary {
 const is = (category: string, pattern: RegExp) => pattern.test(category.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase());
 
 /**
- * Přehled osob za období (měsíc „2026-11“ nebo vše). S dneškem se odpracováno, započteno, přesčasy a fond počítají jen
+ * Přehled osob za období (měsíc „2026-11“, rozsah dnů od–do, nebo vše). S dneškem se odpracováno, započteno, přesčasy a fond počítají jen
  * do včerejška: dnešní den nemusí být uzavřený (rozpracovaná směna by přesčas a saldo zkreslila).
  */
-export function summarize(data: AttendanceData, month: string | null, today?: DayNumber): AttendanceSummary[] {
-  const inMonth = (day: DayNumber) => !month || dayToIso(day).startsWith(month);
+export function summarize(data: AttendanceData, month: Period, today?: DayNumber): AttendanceSummary[] {
+  const inMonth = inPeriod(month);
   const cutoff = today === undefined ? Infinity : today - 1;
   const closedOnly = (category: string) => is(category, /odpracovano|zapocteno|^prescas|^uzna/);
   const rows = new Map<string, AttendanceSummary>(
@@ -340,7 +352,7 @@ export function summarize(data: AttendanceData, month: string | null, today?: Da
   return [...rows.values()];
 }
 
-// --- Přesčasy za období ---
+// --- Uzavřený den a období ---
 
 /** Poslední den, za který export obsahuje odpracovaný čas; null bez dat. */
 export function lastWorkedDay(data: AttendanceData): DayNumber | null {
@@ -359,33 +371,19 @@ export function closedDay(data: AttendanceData, today: DayNumber): DayNumber | n
   return data.values.some((v) => v.day <= day) ? day : null;
 }
 
-export type OvertimePeriod = 'week' | 'month' | 'year' | 'total';
-export const OVERTIME_PERIODS: readonly OvertimePeriod[] = ['week', 'month', 'year', 'total'];
-
-/** Období přesčasů k referenčnímu dni: kalendářní týden (po–ne), měsíc a rok do referenčního dne, celkem vše načtené. */
-export function overtimeRanges(data: AttendanceData, reference: DayNumber): Record<OvertimePeriod, { from: DayNumber; to: DayNumber }> {
-  const [y, m] = dayToIso(reference).split('-').map(Number) as [number, number];
-  const first = Math.min(reference, ...data.values.map((v) => v.day));
-  return {
-    week: { from: mondayOf(reference), to: reference },
-    month: { from: dayFromParts(y, m, 1)!, to: reference },
-    year: { from: dayFromParts(y, 1, 1)!, to: reference },
-    total: { from: first, to: reference },
-  };
-}
+export type SummaryPeriod = 'week' | 'month' | 'year' | 'total';
+export const SUMMARY_PERIODS: readonly SummaryPeriod[] = ['week', 'month', 'year', 'total'];
 
 /**
- * Přesčasy k dispozici po lidech za období: čistý součet denní „Přesčas evidence“ (kladné i záporné dny) v rozsahu dnů.
- * Dny po referenčním dni (budoucí část měsíce) se nepočítají.
+ * Kalendářní období přehledu k referenčnímu dni (poslední uzavřený den): týden po–ne, měsíc (zvolený měsíc „2026-11“,
+ * jinak měsíc referenčního dne), rok a celkem (vše načtené). Hodiny se v nich počítají jen do uzavřeného dne.
  */
-export function overtimeByPeriod(data: AttendanceData, reference: DayNumber): Map<string, Record<OvertimePeriod, number>> {
-  const ranges = overtimeRanges(data, reference);
-  const result = new Map<string, Record<OvertimePeriod, number>>(data.people.map((p) => [p.id, { week: 0, month: 0, year: 0, total: 0 }]));
-  for (const v of data.values) {
-    if (!is(v.category, /^prescas/)) continue;
-    const row = result.get(v.person);
-    if (!row) continue;
-    for (const period of OVERTIME_PERIODS) if (v.day >= ranges[period].from && v.day <= ranges[period].to) row[period] += v.value;
-  }
-  return result;
+export function periodRange(data: AttendanceData, period: SummaryPeriod, reference: DayNumber, month: string | null): { from: DayNumber; to: DayNumber } {
+  const [y, m] = (month ?? dayToIso(reference).slice(0, 7)).split('-').map(Number) as [number, number];
+  const ry = Number(dayToIso(reference).slice(0, 4));
+  if (period === 'week') return { from: mondayOf(reference), to: mondayOf(reference) + 6 };
+  if (period === 'month') return { from: dayFromParts(y, m, 1)!, to: (m === 12 ? dayFromParts(y + 1, 1, 1)! : dayFromParts(y, m + 1, 1)!) - 1 };
+  if (period === 'year') return { from: dayFromParts(ry, 1, 1)!, to: dayFromParts(ry, 12, 31)! };
+  const days = [...data.values.map((v) => v.day), ...data.notes.map((n) => n.day)];
+  return { from: Math.min(reference, ...days), to: Math.max(reference, ...days) };
 }
