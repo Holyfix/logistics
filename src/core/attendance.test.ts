@@ -9,8 +9,7 @@ import {
   mergeAttendance,
   monthsOf,
   noteCodes,
-  overtimeByPeriod,
-  overtimeRanges,
+  periodRange,
   parseAttendanceSheets,
   personName,
   summarize,
@@ -115,20 +114,21 @@ describe('Docházka', () => {
     expect(Object.fromEntries(day(10).codes)).toEqual({ HO: 0.5 });
   });
 
-  it('přesčasy za týden, měsíc, rok a celkem k poslednímu dni s docházkou', async () => {
+  it('období souhrnu: týden, měsíc, rok a celkem k poslednímu uzavřenému dni', async () => {
     const data = await loadSample();
     const reference = lastWorkedDay(data)!;
     expect(reference).toBe(dayFromParts(2026, 11, 10));
-    const ranges = overtimeRanges(data, reference);
-    expect(ranges.week).toEqual({ from: dayFromParts(2026, 11, 9), to: reference });
-    expect(ranges.month.from).toBe(dayFromParts(2026, 11, 1));
-    expect(ranges.year.from).toBe(dayFromParts(2026, 1, 1));
-    const byPeriod = overtimeByPeriod(data, reference);
-    expect(byPeriod.get('900001')).toEqual({ week: 0, month: 1.5, year: 1.5, total: 1.5 });
-    expect(byPeriod.get('900003')).toEqual({ week: -1, month: -1, year: -1, total: -1 });
+    expect(periodRange(data, 'week', reference, null)).toEqual({ from: dayFromParts(2026, 11, 9), to: dayFromParts(2026, 11, 15) });
+    expect(periodRange(data, 'month', reference, '2026-10')).toEqual({ from: dayFromParts(2026, 10, 1), to: dayFromParts(2026, 10, 31) });
+    expect(periodRange(data, 'year', reference, null)).toEqual({ from: dayFromParts(2026, 1, 1), to: dayFromParts(2026, 12, 31) });
+    const week = summarize(data, periodRange(data, 'week', reference, null));
+    expect(week.find((r) => r.person.name === 'Šťáva Tomáš')).toMatchObject({ overtime: -1, worked: 15 });
+    expect(Object.fromEntries(week.find((r) => r.person.name === 'Šťáva Tomáš')!.days)).toEqual({ NV: 1 });
     // Starší měsíc přidá do roku a celkem, do týdne ani měsíce ne.
     const october: AttendanceData = { ...data, values: [{ person: '900001', category: 'Přesčas evidence', day: dayFromParts(2026, 10, 15)!, value: 2 }] };
-    expect(overtimeByPeriod(mergeAttendance([october, data]), reference).get('900001')).toEqual({ week: 0, month: 1.5, year: 3.5, total: 3.5 });
+    const merged = mergeAttendance([october, data]);
+    const overtime = (period: 'week' | 'month' | 'year' | 'total') => summarize(merged, periodRange(merged, period, reference, period === 'month' ? '2026-11' : null)).find((r) => r.person.id === '900001')!.overtime;
+    expect([overtime('week'), overtime('month'), overtime('year'), overtime('total')]).toEqual([0, 1.5, 3.5, 3.5]);
   });
 
   it('dnešek se do přesčasů, salda, fondu ani odpracovaného nepočítá (den nemusí být uzavřený)', async () => {
