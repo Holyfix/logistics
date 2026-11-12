@@ -1,8 +1,9 @@
 // Launch: náběh nových projektů – projekty, fáze, úkoly a milníky s termínem, odpovědným a plněním.
 // Ukládá se jako Excel do složky Launch ve sdílené složce (list úkolů a milníků a list projektů).
 
+import { DAY_WIDTH, monthStart, nextMonth, rangeOfDays, type TimelineScale } from './timeline';
 import { findColumn } from './csv';
-import { dayFromParts, dayToIso, type DayNumber } from './dates';
+import { dayToIso, type DayNumber } from './dates';
 import { cellDay, cellNumber, cellText, type Cell } from './table';
 
 /** task = úkol s začátkem a koncem (pruh), milestone = milník k jednomu dni (kosočtverec). */
@@ -270,35 +271,13 @@ export const clampProgress = (value: number) => Math.min(100, Math.max(0, Math.r
 
 // --- Časová osa ---
 
-export type LaunchScale = 'week' | 'month' | 'quarter';
-
-/** Šířka dne v pixelech podle měřítka. */
-export const DAY_WIDTH: Record<LaunchScale, number> = {
-  week: 14,
-  month: 5,
-  quarter: 1.6,
-};
-
-const ymd = (day: DayNumber) => {
-  const [y, m, d] = dayToIso(day).split('-').map(Number) as [number, number, number];
-  return { y, m, d };
-};
-export const monthStart = (day: DayNumber) => {
-  const { y, m } = ymd(day);
-  return dayFromParts(y, m, 1)!;
-};
-/** První den následujícího měsíce. */
-export const nextMonth = (day: DayNumber) => {
-  const { y, m } = ymd(day);
-  return m === 12 ? dayFromParts(y + 1, 1, 1)! : dayFromParts(y, m + 1, 1)!;
-};
+export type LaunchScale = TimelineScale;
+export { DAY_WIDTH, monthStart, nextMonth };
 
 /** Rozsah osy: celé měsíce od nejdřívějšího po nejpozdější datum, vždy včetně dneška (a týden rezervy na obou stranách). */
 export function timelineRange(items: readonly LaunchItem[], today: DayNumber): { from: DayNumber; to: DayNumber } {
   const span = spanOf(items);
-  const first = Math.min(span?.start ?? today, today) - 7;
-  const last = Math.max(span?.end ?? today, today) + 7;
-  return { from: monthStart(first), to: nextMonth(last) };
+  return rangeOfDays(span ? [span.start, span.end] : [], today);
 }
 
 // --- Soubor Launch.xlsx ---
@@ -338,8 +317,8 @@ const SOURCE_TEXT = { customer: 'Zákazník', internal: 'Interní' };
 
 const formatDate = (day: DayNumber | null) => {
   if (day === null) return null;
-  const { y, m, d } = ymd(day);
-  return `${String(d).padStart(2, '0')}.${String(m).padStart(2, '0')}.${y}`;
+  const [y, m, d] = dayToIso(day).split('-');
+  return `${d}.${m}.${y}`;
 };
 
 export interface LaunchSheet {

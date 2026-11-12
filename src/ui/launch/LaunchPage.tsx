@@ -29,28 +29,12 @@ import { Icon } from '../icons';
 import { SaveStatus, useSaveFlow } from '../planning/SaveStatus';
 import { dayText, LaunchGantt, type GanttRow, type Selection } from './LaunchGantt';
 import { useLaunchDraft } from './LaunchProvider';
+import { readScale, saveScale, ScaleSwitch } from '../timeline/useTimeline';
 
 const LAUNCH_FILE = 'Launch/Launch.xlsx';
 const SCALE_KEY = 'launch-scale';
 
 type Filter = 'all' | 'open' | 'overdue';
-
-function readScale(): LaunchScale {
-  try {
-    const value = localStorage.getItem(SCALE_KEY);
-    return value === 'week' || value === 'quarter' ? value : 'month';
-  } catch {
-    return 'month';
-  }
-}
-
-function saveScale(scale: LaunchScale) {
-  try {
-    localStorage.setItem(SCALE_KEY, scale);
-  } catch {
-    // Bez úložiště se měřítko jen nezapamatuje.
-  }
-}
 
 /** Launch: náběh nových projektů – Gantt po projektech a fázích, úpravy přímo v řádcích. Ukládá se do Launch/Launch.xlsx. */
 export function LaunchPage({ today = localToday() }: { today?: DayNumber } = {}) {
@@ -65,7 +49,7 @@ export function LaunchPage({ today = localToday() }: { today?: DayNumber } = {})
   const [project, setProject] = useState('');
   const [owner, setOwner] = useState('');
   const [filter, setFilter] = useState<Filter>('all');
-  const [scale, setScale] = useState<LaunchScale>(readScale);
+  const [scale, setScale] = useState<LaunchScale>(() => readScale(SCALE_KEY, 'month'));
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
   const [selected, setSelected] = useState<Selection>(null);
 
@@ -240,21 +224,15 @@ export function LaunchPage({ today = localToday() }: { today?: DayNumber } = {})
             </button>
           ))}
         </div>
-        <div className="segmented" role="group" aria-label={tl.scale}>
-          {(['week', 'month', 'quarter'] as const).map((s) => (
-            <button
-              key={s}
-              type="button"
-              aria-pressed={scale === s}
-              onClick={() => {
-                setScale(s);
-                saveScale(s);
-              }}
-            >
-              {tl.scales[s]}
-            </button>
-          ))}
-        </div>
+        <ScaleSwitch
+          scale={scale}
+          label={tl.scale}
+          labels={tl.scales}
+          onChange={(s) => {
+            setScale(s);
+            saveScale(SCALE_KEY, s);
+          }}
+        />
         <span className="filters-break" role="presentation" />
         <button type="button" className="button" disabled={flow.busy} onClick={() => void save()}>
           {tl.save}

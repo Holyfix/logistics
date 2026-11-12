@@ -3146,6 +3146,11 @@ button.oil-step:disabled {
   text-overflow: ellipsis;
 }
 
+/* Přebije obecné zalamování první buňky tabulky (.table td:first-child): dlouhý název se zkrátí s „…“. */
+.gantt td.gantt-name {
+  white-space: nowrap;
+}
+
 .gantt .gantt-owner {
   left: 260px;
   width: 120px;
@@ -4396,171 +4401,14 @@ details.panel > summary {
   font-size: 12px;
 }
 
-/* Obaly – časová osa (Gantt): popisky vlevo, týdny, sloupec bez termínu vpravo. */
-.pack-gantt {
-  display: grid;
-  grid-template-columns: 320px minmax(0, 1fr) 84px;
-  font-size: 13px;
-  border-top: 1px solid var(--line);
-}
-
-.pack-gantt > div {
-  min-height: 30px;
-  border-bottom: 1px solid var(--grid);
-}
-
-.pg-head {
-  position: relative;
-  padding: 6px 8px;
-  font-family: var(--font-display);
-  font-weight: 600;
-  font-size: 12px;
-  color: var(--muted);
-  background: var(--surface-2);
-  border-bottom-color: var(--line) !important;
-}
-
-.pg-axis {
-  display: grid;
-  padding: 0;
-}
-
-.pg-axis > span {
-  padding: 4px 0 16px;
-  text-align: center;
-  white-space: nowrap;
-  border-left: 1px solid var(--grid);
-}
-
-.pg-axis > span small {
-  display: block;
-  font-family: var(--font-body);
-  font-weight: 400;
-  font-size: 10px;
-}
-
-.pg-axis > span.pg-now {
-  color: var(--crit);
-}
-
-.pg-axis .pg-today-label {
-  position: absolute;
-  bottom: 2px;
-  transform: translateX(-50%);
-  z-index: 3;
-  padding: 0 4px;
-  font-size: 10px;
-  color: #fff;
-  background: var(--crit);
-  border: 0;
-  border-radius: 3px;
-}
-
-.pg-nodate {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--muted);
-  font-size: 12px;
-  border-left: 1px solid var(--line);
-}
-
-.pg-label {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-  padding: 4px 8px;
-}
-
-.pg-item,
-.pg-item-track {
-  background: var(--surface-2);
-}
-
-.pg-item {
+/* Obaly – časová osa: tabulka a osa jako v Launch (.gantt), pruh u bodu podle stavu, kroky jako kosočtverce. */
+.pack-gantt .pack-row td.gantt-name {
   box-shadow: inset 4px 0 0 var(--oil-color, var(--line));
-  padding-left: 10px;
 }
 
-.pg-caret,
-.pg-name {
-  padding: 0;
-  font: inherit;
-  color: inherit;
-  background: none;
-  border: 0;
-  cursor: pointer;
-}
-
-.pg-caret {
-  width: 16px;
-  flex: none;
-  color: var(--muted);
-}
-
-.pg-name {
-  min-width: 0;
-  overflow: hidden;
+.pack-gantt .pg-step-current td.gantt-name,
+.pack-gantt .pg-step-late td.gantt-name {
   font-weight: 600;
-  text-align: left;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.pg-name:hover {
-  color: var(--accent);
-  text-decoration: underline;
-}
-
-.pg-label small {
-  flex: none;
-  font-size: 11px;
-}
-
-.pg-count {
-  margin-left: auto;
-  color: var(--muted);
-}
-
-.pg-step {
-  padding-left: 30px;
-  color: var(--ink-2);
-}
-
-.pg-step > span {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.pg-step > small {
-  margin-left: auto;
-}
-
-.pg-step-current > span,
-.pg-step-late > span {
-  font-weight: 600;
-  color: var(--ink);
-}
-
-.pg-track {
-  position: relative;
-  height: 100%;
-  min-height: 30px;
-  background-image: linear-gradient(to right, var(--grid) 1px, transparent 1px);
-}
-
-.pg-today {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  z-index: 2;
-  width: 2px;
-  margin-left: -1px;
-  background: var(--crit);
-  pointer-events: none;
 }
 
 .pg-span {

@@ -114,22 +114,28 @@ describe('PackagingPage', () => {
     expect(screen.getAllByRole('row').filter((r) => r.classList.contains('oil-row')).map((r) => r.textContent)).toHaveLength(2); // otevřený detail zůstává
   });
 
-  it('časová osa: body se stejnými filtry, kroky jako kosočtverce, klik otevře detail v seznamu', () => {
+  it('časová osa: stejná osa jako Launch, body se stejnými filtry, kroky jako kosočtverce, klik otevře detail', () => {
     renderPage();
     fireEvent.click(screen.getByRole('button', { name: 'Časová osa' }));
-    expect(screen.queryByRole('table', { name: /Souhrn/ })).toBeNull();
+    expect(screen.getByRole('group', { name: 'Měřítko' })).toBeTruthy();
     const gantt = screen.getByRole('table', { name: 'Časová osa bodů' });
-    // Otevřené body (Rack IP, KLT), sbalené: kroky s termínem na řádku bodu, krok bez termínu v posledním sloupci.
-    expect(within(gantt).getAllByRole('rowheader').map((r) => r.textContent)).toEqual(['▸Rack IPP1001/3', '▸KLT 3dílnéP2000/1']);
+    const names = () => [...gantt.querySelectorAll('tbody tr')].map((r) => r.querySelector('td')!.textContent);
+    // Otevřené body (po termínu nahoře), sbalené: kroky s termínem jako kosočtverce na řádku bodu.
+    expect(names()).toEqual(['▸Rack IP✎P100', '▸KLT 3dílné✎P200']);
+    expect(gantt.querySelector('tbody tr')!.textContent).toContain('1/3');
     expect(gantt.querySelectorAll('.pg-dia').length).toBe(3);
     expect(gantt.querySelectorAll('.pg-dia.pg-done').length).toBe(1);
     expect(gantt.querySelectorAll('.pg-dia.pg-late').length).toBe(1);
-    expect(within(gantt).getByText('1× ?')).toBeTruthy();
-    // Rozbalení: řádky kroků.
+    expect(gantt.querySelector('.gantt-today')).toBeTruthy();
+    // Rozbalení: řádky kroků, krok bez termínu.
     fireEvent.click(screen.getByRole('button', { name: 'Rozbalit kroky: Rack IP' }));
-    expect(within(gantt).getAllByRole('rowheader').map((r) => r.textContent)).toContain('3. DodáníSvoboda');
-    // Klik na název: seznam s otevřeným detailem.
-    fireEvent.click(within(gantt).getByRole('button', { name: 'KLT 3dílné' }));
+    expect(names()).toContain('3. Dodání');
+    expect(gantt.textContent).toContain('bez termínu');
+    // Měřítko si prohlížeč pamatuje.
+    fireEvent.click(screen.getByRole('button', { name: 'Měsíce' }));
+    expect(localStorage.getItem('packaging-scale')).toBe('month');
+    // ✎: seznam s otevřeným detailem.
+    fireEvent.click(screen.getByRole('button', { name: 'Otevřít detail: KLT 3dílné' }));
     expect(screen.getByLabelText('Krok 1')).toHaveProperty('value', 'Hledání dodavatele');
     expect(localStorage.getItem('logistics-packaging-view')).toBe('list');
   });

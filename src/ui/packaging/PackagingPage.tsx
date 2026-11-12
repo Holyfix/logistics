@@ -35,12 +35,15 @@ import { Icon } from '../icons';
 import { SaveStatus, useSaveFlow } from '../planning/SaveStatus';
 import { usePackagingDraft } from './drafts';
 import { PackagingTimeline } from './PackagingTimeline';
+import { readScale, saveScale, ScaleSwitch } from '../timeline/useTimeline';
+import type { TimelineScale } from '../../core/timeline';
 
 const PACKAGING_FILE = 'Obaly/Obaly.xlsx';
 /** Jméno pro komentáře a posuny: stejné jako v OIL. */
 const NAME_KEY = 'logistics-user-name';
 /** Zvolený pohled (seznam / časová osa) si prohlížeč pamatuje. */
 const VIEW_KEY = 'logistics-packaging-view';
+const SCALE_KEY = 'packaging-scale';
 
 type View = 'list' | 'timeline';
 
@@ -122,6 +125,7 @@ export function PackagingPage({ today = localToday() }: { today?: DayNumber } = 
   const [openId, setOpenId] = useState<number | null>(null);
   const [notice, setNotice] = useState('');
   const [view, setViewState] = useState<View>(readView);
+  const [scale, setScale] = useState<TimelineScale>(() => readScale(SCALE_KEY, 'week'));
   const setView = (v: View) => {
     setViewState(v);
     saveView(v);
@@ -230,6 +234,17 @@ export function PackagingPage({ today = localToday() }: { today?: DayNumber } = 
             </button>
           ))}
         </div>
+        {view === 'timeline' && (
+          <ScaleSwitch
+            scale={scale}
+            label={tp.timeline.scale}
+            labels={tp.timeline.scales}
+            onChange={(s) => {
+              setScale(s);
+              saveScale(SCALE_KEY, s);
+            }}
+          />
+        )}
         <div className="segmented" role="group" aria-label={tp.filter}>
           {(['open', 'overdue', 'week', 'done', 'all'] as const).map((f) => (
             <button key={f} type="button" aria-pressed={filter === f} onClick={() => setFilter(f)}>
@@ -332,6 +347,7 @@ export function PackagingPage({ today = localToday() }: { today?: DayNumber } = 
             <PackagingTimeline
               items={shown}
               today={today}
+              scale={scale}
               onOpen={(id) => {
                 setView('list');
                 setOpenId(id);
