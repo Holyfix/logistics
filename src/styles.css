@@ -4415,6 +4415,37 @@ details.panel > summary {
   font-weight: 600;
 }
 
+/* Obaly: širší sloupec Bod / krok a dlouhý text se zalomí (celý text kroku je vidět, ne „…“). */
+.pack-gantt td.gantt-name,
+.pack-gantt th.gantt-name {
+  width: 400px;
+  min-width: 400px;
+  max-width: 400px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.pack-gantt .gantt-owner {
+  left: 400px;
+}
+
+.pack-gantt .gantt-progress {
+  left: 520px;
+}
+
+.pack-gantt .gantt-due {
+  left: 584px;
+}
+
+@media (max-width: 900px) {
+  .pack-gantt td.gantt-name,
+  .pack-gantt th.gantt-name {
+    width: 240px;
+    min-width: 240px;
+    max-width: 240px;
+  }
+}
+
 .pg-span {
   position: absolute;
   top: 50%;
