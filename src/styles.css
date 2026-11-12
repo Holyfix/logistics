@@ -3178,6 +3178,8 @@ button.oil-step:disabled {
   height: 24px;
   padding: 0;
   overflow: hidden;
+  /* Vlastní vrstva: pruhy a značky (z-index uvnitř) se při posunu osy schovají pod zamrzlé sloupce vlevo. */
+  isolation: isolate;
 }
 
 .gantt-seg {
@@ -3213,6 +3215,8 @@ button.oil-step:disabled {
   height: 30px;
   padding: 0;
   overflow: hidden;
+  /* Vlastní vrstva: pruhy a značky (z-index uvnitř) se při posunu osy schovají pod zamrzlé sloupce vlevo. */
+  isolation: isolate;
 }
 
 .gantt .gantt-weeks {
