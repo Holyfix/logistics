@@ -4136,3 +4136,262 @@ details.panel > summary {
   margin: 0;
   font-size: 13px;
 }
+
+/* Obaly: sledování bodů – pruh u řádku podle aktuálního kroku, řetízek kroků a kroky v detailu. */
+.pack-overdue,
+.pack-chip-overdue {
+  --oil-color: var(--crit);
+}
+
+.pack-week,
+.pack-chip-week {
+  --oil-color: var(--warn);
+}
+
+.pack-open,
+.pack-chip-open {
+  --oil-color: var(--accent);
+}
+
+.pack-done,
+.pack-chip-done {
+  --oil-color: var(--good);
+}
+
+.pack-cancelled,
+.pack-chip-cancelled {
+  --oil-color: var(--muted);
+}
+
+.pack-cancelled td {
+  color: var(--muted);
+}
+
+.pack-warn {
+  color: #a86a00;
+}
+
+.pack-table td.oil-text {
+  width: 28%;
+  min-width: 220px;
+}
+
+.pack-table td.pack-last {
+  max-width: 260px;
+  white-space: normal;
+  font-size: 13px;
+}
+
+.pack-table td.pack-waiting {
+  min-width: 180px;
+  white-space: normal;
+}
+
+.pack-chain {
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+}
+
+.pack-chain small {
+  margin-left: 8px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.pack-dot {
+  position: relative;
+  display: inline-block;
+  width: 13px;
+  height: 13px;
+  flex: none;
+  border: 2px solid #8a9bab;
+  border-radius: 50%;
+  background: var(--surface);
+  vertical-align: -2px;
+}
+
+.pack-chain .pack-dot + .pack-dot {
+  margin-left: 9px;
+}
+
+.pack-chain .pack-dot + .pack-dot::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  right: calc(100% + 2px);
+  width: 9px;
+  height: 2px;
+  transform: translateY(-50%);
+  background: var(--line);
+}
+
+.pack-chain .pack-dot-done + .pack-dot-done::before {
+  background: var(--good);
+}
+
+.pack-dot-done {
+  border-color: var(--good);
+  background: var(--good);
+}
+
+.pack-dot-current {
+  border: 3px solid var(--warn);
+}
+
+.pack-dot-late {
+  border: 3px solid var(--crit);
+}
+
+.pack-detail-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  gap: 12px 24px;
+}
+
+@media (max-width: 900px) {
+  .pack-detail-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.pack-steps {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.pack-step {
+  position: relative;
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr);
+  gap: 10px;
+  padding: 6px 8px;
+  border-radius: 6px;
+}
+
+/* Svislá čára mezi kroky. */
+.pack-step:not(:last-child)::before {
+  content: '';
+  position: absolute;
+  left: 20px;
+  top: 34px;
+  bottom: -8px;
+  width: 2px;
+  background: var(--line);
+}
+
+.pack-step-current {
+  background: color-mix(in srgb, var(--warn) 10%, var(--surface));
+}
+
+.pack-step-late {
+  background: var(--negative-bg);
+}
+
+.pack-step-dot {
+  position: relative;
+  z-index: 1;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink-2);
+  vertical-align: middle;
+}
+
+.pack-step-dot.pack-dot-done {
+  color: #fff;
+}
+
+.pack-step-dot.pack-dot-late {
+  color: var(--crit);
+}
+
+.pack-step-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.pack-step-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.pack-step-row input {
+  font: inherit;
+  color: inherit;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 5px 8px;
+  min-width: 0;
+}
+
+.pack-step-text {
+  flex: 3 1 220px;
+}
+
+.pack-step-done .pack-step-text {
+  color: var(--ink-2);
+}
+
+.pack-step-owner {
+  flex: 1 1 120px;
+}
+
+.pack-step-tools {
+  display: inline-flex;
+  gap: 2px;
+}
+
+.pack-step-tools button {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  font: 600 14px/1 var(--font-body);
+  color: var(--ink-2);
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.pack-step-tools button:hover:not(:disabled) {
+  border-color: var(--line);
+  background: var(--surface);
+}
+
+.pack-step-tools button:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.pack-step-tools .pack-step-done-button {
+  color: var(--good);
+}
+
+.pack-step-tools .pack-step-remove {
+  color: var(--crit);
+}
+
+.pack-step-state {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.pack-step-state small {
+  font-size: 12px;
+}

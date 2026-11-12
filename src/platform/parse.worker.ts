@@ -12,6 +12,8 @@ import { parseSettings, type PlanSettings } from '../core/planning/settings';
 import { parseKpiWorkbook, type KpiResult } from '../core/kpi';
 import { parseOilWorkbook, type OilResult } from '../core/oil';
 import { parseLaunchWorkbook, type LaunchResult } from '../core/launch';
+import { parsePackagingWorkbook, type PackagingResult } from '../core/packaging';
+import { dayFromParts } from '../core/dates';
 import { parseAttendanceSheets, type AttendanceResult } from '../core/attendance';
 import { decryptOffice, isEncryptedOffice, OfficeCryptoError } from '../core/officeCrypto';
 import { parseSkillWorkbook, type SkillResult } from '../core/skills';
@@ -22,7 +24,7 @@ import { decodeText } from '../core/text';
 import type { SourceFormat } from '../core/sources';
 import type { Cell, DataTable } from '../core/table';
 
-export type ParseRequest = { id: number; kind: 'calloffs' | 'masterdata' | 'coverage' | 'stock' | 'bom' | 'plan' | 'planSettings' | 'oil' | 'kpi' | 'launch' | 'vacations' | 'skills' | 'attendance' | 'transit' | 'sequence'; format: SourceFormat; name: string; buffer: ArrayBuffer; password?: string };
+export type ParseRequest = { id: number; kind: 'calloffs' | 'masterdata' | 'coverage' | 'stock' | 'bom' | 'plan' | 'planSettings' | 'oil' | 'kpi' | 'launch' | 'packaging' | 'vacations' | 'skills' | 'attendance' | 'transit' | 'sequence'; format: SourceFormat; name: string; buffer: ArrayBuffer; password?: string };
 
 export type ParseResponse =
   | { id: number; kind: 'calloffs'; result: ParseResult<CallOffExport> }
@@ -35,6 +37,7 @@ export type ParseResponse =
   | { id: number; kind: 'oil'; result: OilResult }
   | { id: number; kind: 'kpi'; result: KpiResult }
   | { id: number; kind: 'launch'; result: LaunchResult }
+  | { id: number; kind: 'packaging'; result: PackagingResult }
   | { id: number; kind: 'vacations'; result: VacationResult }
   | { id: number; kind: 'skills'; result: SkillResult }
   | { id: number; kind: 'attendance'; result: AttendanceResult | { ok: false; error: 'wrongPassword' | 'unsupported' | 'corrupt'; columns: string[] }; encrypted: boolean }
@@ -88,6 +91,14 @@ self.onmessage = async (event: MessageEvent<ParseRequest>) => {
       const sheets = (await readXlsxFile(buffer)).map((s) => ({ name: s.sheet, data: s.data as Cell[][] }));
       const response: ParseResponse = kind === 'vacations' ? { id, kind, result: parseVacationWorkbook(sheets) } : { id, kind, result: parseSkillWorkbook(sheets) };
       (self as unknown as Worker).postMessage(response);
+      return;
+    }
+    if (kind === 'packaging') {
+      const sheets = (await readXlsxFile(buffer)).map((s) => ({ name: s.sheet, data: s.data as Cell[][] }));
+      // Dnešek (místní) pro rok u termínů „16.11.“ a CW bez roku v checklistu.
+      const now = new Date();
+      const today = dayFromParts(now.getFullYear(), now.getMonth() + 1, now.getDate())!;
+      (self as unknown as Worker).postMessage({ id, kind, result: parsePackagingWorkbook(sheets, today) } satisfies ParseResponse);
       return;
     }
     if (kind === 'launch') {

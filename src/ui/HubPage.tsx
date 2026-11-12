@@ -14,6 +14,8 @@ import { AREAS, useDashboard } from './dashboard/useDashboard';
 import { useOilDraftList } from './oil/OilProvider';
 import { useLaunchDraftPlan } from './launch/LaunchProvider';
 import { launchSummary } from '../core/launch';
+import { statusOf as packStatusOf } from '../core/packaging';
+import { usePackagingDraftValue } from './packaging/drafts';
 import { trainingAlerts, uncovered } from '../core/skills';
 import { awayOn, emptyVacations } from '../core/vacations';
 import { useSkillsDraftValue, useVacationsDraftValue } from './people/drafts';
@@ -86,6 +88,8 @@ function useMetrics(): Partial<Record<ModuleId, ReactNode>> {
   const oilList = oilDraft ?? state.data?.oil?.list ?? null;
   const oil = useMemo(() => (oilList ? oilAlerts(oilList, today) : null), [oilList, today]);
   const launchDraft = useLaunchDraftPlan();
+  const packagingDraft = usePackagingDraftValue();
+  const packagingList = packagingDraft ?? state.data?.packaging?.list ?? null;
   const launchPlan = launchDraft ?? state.data?.launch?.plan ?? null;
   const attendanceUnlocked = useAttendanceUnlocked();
   const vacationDraft = useVacationsDraftValue();
@@ -152,6 +156,20 @@ function useMetrics(): Partial<Record<ModuleId, ReactNode>> {
       : next
         ? <Metric value={`${formatQuantity(next.end! - today, locale)} d`} label={th.next} tone="ok" title={title} />
         : <Metric value={formatQuantity(launch.projects, locale)} label={th.projects} tone="ok" title={title} />;
+  }
+  // Obaly: body po termínu, jinak s termínem tento týden, jinak počet otevřených.
+  if (packagingList?.items.length) {
+    const th = t.packaging.hub;
+    const states = packagingList.items.map((i) => packStatusOf(i, today));
+    const overdue = states.filter((s) => s === 'overdue').length;
+    const week = states.filter((s) => s === 'week').length;
+    const open = states.filter((s) => s !== 'done' && s !== 'cancelled').length;
+    const title = `${th.title}: ${overdue} ${th.overdue}, ${week} ${th.week}, ${open} ${th.open}`;
+    metrics.packaging = overdue
+      ? <Metric value={formatQuantity(overdue, locale)} label={th.overdue} tone="crit" title={title} />
+      : week
+        ? <Metric value={formatQuantity(week, locale)} label={th.week} tone="warn" title={title} />
+        : <Metric value={formatQuantity(open, locale)} label={th.open} tone="ok" title={title} />;
   }
   // Docházka: jen zda je zamčená (čísla se na rozcestníku neukazují).
   if (state.data?.attendance?.length) {

@@ -20,6 +20,8 @@ import { VacationsPage } from './people/VacationsPage';
 import { ModulePage } from './ModulePage';
 import { OilPage } from './oil/OilPage';
 import { OilProvider } from './oil/OilProvider';
+import { PackagingPage } from './packaging/PackagingPage';
+import { PackagingProvider } from './packaging/drafts';
 import { PlanningPage } from './planning/PlanningPage';
 import { PlanningProvider } from './planning/PlanningProvider';
 import { findModule, type ModuleDef } from './modules';
@@ -80,6 +82,7 @@ export function App() {
       <PlanningProvider>
         <OilProvider>
           <LaunchProvider>
+            <PackagingProvider>
             <VacationsProvider>
               <SkillsProvider>
                 <AttendanceProvider>
@@ -96,6 +99,7 @@ export function App() {
               {current?.id === 'oil' && <OilPage />}
               {current?.id === 'kpi' && <KpiPage />}
               {current?.id === 'launch' && <LaunchPage />}
+              {current?.id === 'packaging' && <PackagingPage />}
               {current?.id === 'attendance' && <AttendancePage />}
               {current?.id === 'vacations' && <VacationsPage />}
               {current?.id === 'skills' && <SkillsPage />}
@@ -104,11 +108,12 @@ export function App() {
               {current?.id === 'coverage' && <CoveragePage />}
               {current?.id === 'components' && <ComponentsPage />}
               {current?.id === 'production' && <PlanningPage />}
-              {current && !['dashboard', 'data', 'calloffs', 'coverage', 'components', 'production', 'oil', 'kpi', 'launch', 'attendance', 'vacations', 'skills', 'stock'].includes(current.id) && <ModulePage module={current} />}
+              {current && !['dashboard', 'data', 'calloffs', 'coverage', 'components', 'production', 'oil', 'kpi', 'launch', 'packaging', 'attendance', 'vacations', 'skills', 'stock'].includes(current.id) && <ModulePage module={current} />}
             </main>
                 </AttendanceProvider>
               </SkillsProvider>
             </VacationsProvider>
+            </PackagingProvider>
           </LaunchProvider>
         </OilProvider>
       </PlanningProvider>

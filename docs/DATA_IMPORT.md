@@ -19,6 +19,7 @@ Soubory se rozpoznají podle názvu (nezáleží na velikosti písmen ani diakri
 | OIL (Open Issue List) | leží ve složce `OIL`, nebo název začíná „OIL“; platí nejnovější soubor | XLSX (zapisuje aplikace) |
 | KPI (SQCDP) | leží ve složce `KPI`, nebo název začíná „KPI“; platí nejnovější soubor | XLSX (zapisuje aplikace) |
 | Launch (náběh projektů) | leží ve složce `Launch`, nebo název začíná „Launch“; platí nejnovější soubor | XLSX (zapisuje aplikace) |
+| Obaly (sledování bodů) | leží ve složce `Obaly` / `Packaging`, nebo název začíná „Obaly“; platí nejnovější soubor aplikace | XLSX (zapisuje aplikace) |
 | Docházka (export ze systému docházky) | leží ve složce `Dochazka` / `Attendance`, nebo název začíná „pruchody“ / „dochazka“ / „attendance“; všechny soubory (měsíce) | XLSX, zašifrovaný heslem v Excelu |
 | Lidé: Dovolené a Skill Matrix | název začíná „Dovolen“ / „Vacation“, nebo „Skill“ (doporučeně ve složce `Lide`); platí nejnovější soubor | XLSX (zapisuje aplikace) |
 | Doplněný transit (naše expedice, které coverage ještě nemá) | leží ve složce `Transit`, nebo název začíná „Transit“; všechny soubory | XLSX nebo CSV |
@@ -41,7 +42,7 @@ Logistics/
 ├── Lide/                 Dovolene.xlsx a SkillMatrix.xlsx, zapisuje aplikace
 ├── Transit/              doplněný transit: ranní expedice, které soubor coverage ještě nemá
 ├── Sekvence/             Order Status Matrix a klíč MC/MF pro kartu Sekvence v Komponentách
-└── Obaly/                později: Obaly
+└── Obaly/                Obaly.xlsx (sledování bodů pro obaly), zapisuje aplikace
 ```
 
 Složky pro další moduly jsou návrh, upřesní se při jejich vývoji. Soubory, které aplikace nezná, ignoruje.
@@ -391,6 +392,28 @@ přepsáním zeptá.
 - **Fáze** seskupí řádky projektu (např. Produkční testy, Kvalita, SOP); fáze i řádky se řadí podle data.
 - **Původní termín** doplní aplikace při prvním posunu termínu; v Ganttu je čárkovaný kosočtverec a u termínu
   „posun +N d“. Sloupec **Stav** je jen pro čtení v Excelu (aplikace ho počítá z plnění a termínu).
+
+## Obaly (složka Obaly)
+
+Soubor `Obaly/Obaly.xlsx` **vytváří aplikace** tlačítkem Uložit v modulu Obaly. Když soubor mezitím změnil někdo
+jiný, aplikace se před přepsáním zeptá.
+
+| List | Obsah |
+|---|---|
+| **Obaly** | Číslo, Bod, Projekt, Stav (poznámka), Založeno, Stav bodu, Čeká se na, Kdo, Termín kroku, Kroky splněno |
+| **Kroky** | Číslo, Pořadí, Krok, Odpovědný, Termín, Splněno (den splnění) |
+| **Komentáře** | Číslo, Kdy, Kdo, Komentář |
+| **Posuny termínu** | Číslo, Krok, Kdy, Kdo, Z, Na, Důvod |
+
+- Povinné jsou listy s Číslo + Bod a Číslo + Pořadí + Krok; ostatní sloupce a listy jsou volitelné. Data jako datum
+  Excelu nebo `dd.mm.rrrr`.
+- **Stav bodu, Čeká se na, Kdo, Termín kroku, Kroky splněno** jsou jen pro čtení v Excelu (aplikace je počítá
+  z kroků); zpět se čte jen „Zrušeno“.
+- **Import checklistu** (tlačítko v modulu): sešit s listem, který má sloupec **Description** (nebo Popis) a sloupce
+  **Step 0, Step 1 …** (nebo Krok 1 …); sloupec **Status** se převezme jako stav / poznámka, Project jako projekt.
+  Z textu kroku se oddělí termín (`16.11.` – rok nejblíž dnešku, `16.11.2026`, `CW50` / `CW02/27` = pátek týdne)
+  a jméno v závorce; krok se dvěma termíny zůstane celý. Bod se stavem DONE / Hotovo bez kroků je hotový.
+  Checklist ležící ve složce Obaly se při načtení složky nečte – jen importuje.
 
 ## Sekvence (karta v Komponentách)
 
