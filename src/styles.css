@@ -3146,6 +3146,11 @@ button.oil-step:disabled {
   text-overflow: ellipsis;
 }
 
+/* Přebije obecné zalamování první buňky tabulky (.table td:first-child): dlouhý název se zkrátí s „…“. */
+.gantt td.gantt-name {
+  white-space: nowrap;
+}
+
 .gantt .gantt-owner {
   left: 260px;
   width: 120px;
@@ -4394,4 +4399,88 @@ details.panel > summary {
 
 .pack-step-state small {
   font-size: 12px;
+}
+
+/* Obaly – časová osa: tabulka a osa jako v Launch (.gantt), pruh u bodu podle stavu, kroky jako kosočtverce. */
+.pack-gantt .pack-row td.gantt-name {
+  box-shadow: inset 4px 0 0 var(--oil-color, var(--line));
+}
+
+.pack-gantt .pg-step-current td.gantt-name,
+.pack-gantt .pg-step-late td.gantt-name {
+  font-weight: 600;
+}
+
+.pg-span {
+  position: absolute;
+  top: 50%;
+  height: 8px;
+  transform: translateY(-50%);
+  overflow: hidden;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--muted) 25%, var(--surface));
+}
+
+.pg-fill {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--good) 55%, var(--surface));
+}
+
+.pg-span-key {
+  position: relative;
+  top: auto;
+  display: inline-block;
+  width: 26px;
+  transform: none;
+  vertical-align: 0;
+}
+
+.pg-span-key .pg-fill {
+  width: 12px;
+}
+
+.pg-dia {
+  position: absolute;
+  top: 50%;
+  z-index: 3;
+  width: 13px;
+  height: 13px;
+  padding: 0;
+  transform: translate(-50%, -50%) rotate(45deg);
+  border: 2px solid #8a9bab;
+  background: var(--surface);
+  cursor: pointer;
+}
+
+.pg-dia:hover {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.pg-dia-inline {
+  position: relative;
+  top: auto;
+  display: inline-block;
+  transform: rotate(45deg);
+  vertical-align: -1px;
+  margin: 0 3px;
+  cursor: default;
+}
+
+.pg-done {
+  border-color: var(--good);
+  background: var(--good);
+}
+
+.pg-current {
+  border: 3px solid var(--warn);
+}
+
+.pg-late {
+  border-color: var(--crit);
+  background: var(--crit);
 }

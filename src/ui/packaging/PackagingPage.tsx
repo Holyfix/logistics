@@ -34,10 +34,34 @@ import { useData } from '../data/DataProvider';
 import { Icon } from '../icons';
 import { SaveStatus, useSaveFlow } from '../planning/SaveStatus';
 import { usePackagingDraft } from './drafts';
+import { PackagingTimeline } from './PackagingTimeline';
+import { readScale, saveScale, ScaleSwitch } from '../timeline/useTimeline';
+import type { TimelineScale } from '../../core/timeline';
 
 const PACKAGING_FILE = 'Obaly/Obaly.xlsx';
 /** Jméno pro komentáře a posuny: stejné jako v OIL. */
 const NAME_KEY = 'logistics-user-name';
+/** Zvolený pohled (seznam / časová osa) si prohlížeč pamatuje. */
+const VIEW_KEY = 'logistics-packaging-view';
+const SCALE_KEY = 'packaging-scale';
+
+type View = 'list' | 'timeline';
+
+function readView(): View {
+  try {
+    return localStorage.getItem(VIEW_KEY) === 'timeline' ? 'timeline' : 'list';
+  } catch {
+    return 'list';
+  }
+}
+
+function saveView(view: View) {
+  try {
+    localStorage.setItem(VIEW_KEY, view);
+  } catch {
+    // Bez úložiště se pohled jen nezapamatuje.
+  }
+}
 
 type Filter = 'open' | 'overdue' | 'week' | 'done' | 'all';
 type StepKind = 'done' | 'current' | 'late' | 'next';
@@ -100,6 +124,12 @@ export function PackagingPage({ today = localToday() }: { today?: DayNumber } = 
   const [name, setName] = useState(readName);
   const [openId, setOpenId] = useState<number | null>(null);
   const [notice, setNotice] = useState('');
+  const [view, setViewState] = useState<View>(readView);
+  const [scale, setScale] = useState<TimelineScale>(() => readScale(SCALE_KEY, 'week'));
+  const setView = (v: View) => {
+    setViewState(v);
+    saveView(v);
+  };
   const fileInput = useRef<HTMLInputElement>(null);
 
   const projects = useMemo(() => [...new Set(list.items.map((i) => i.project).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'cs')), [list]);
@@ -197,6 +227,24 @@ export function PackagingPage({ today = localToday() }: { today?: DayNumber } = 
         <button type="button" className="button button-primary" onClick={add}>
           + {tp.add}
         </button>
+        <div className="segmented" role="group" aria-label={tp.view}>
+          {(['list', 'timeline'] as const).map((v) => (
+            <button key={v} type="button" aria-pressed={view === v} onClick={() => setView(v)}>
+              {tp.views[v]}
+            </button>
+          ))}
+        </div>
+        {view === 'timeline' && (
+          <ScaleSwitch
+            scale={scale}
+            label={tp.timeline.scale}
+            labels={tp.timeline.scales}
+            onChange={(s) => {
+              setScale(s);
+              saveScale(SCALE_KEY, s);
+            }}
+          />
+        )}
         <div className="segmented" role="group" aria-label={tp.filter}>
           {(['open', 'overdue', 'week', 'done', 'all'] as const).map((f) => (
             <button key={f} type="button" aria-pressed={filter === f} onClick={() => setFilter(f)}>
@@ -291,114 +339,136 @@ export function PackagingPage({ today = localToday() }: { today?: DayNumber } = 
         </div>
       </div>
 
-      <div className="panel">
-        {list.items.length === 0 ? (
-          <p className="muted">{tp.emptyList}</p>
-        ) : shown.length === 0 ? (
-          <p className="muted">{tp.empty}</p>
-        ) : (
-          <div className="table-scroll">
-            <table className="table table-data oil-table pack-table">
-              <thead>
-                <tr>
-                  <th className="n">{tp.table.id}</th>
-                  <th>{tp.table.item}</th>
-                  <th>{tp.table.steps}</th>
-                  <th>{tp.table.last}</th>
-                  <th>{tp.table.waiting}</th>
-                  <th>{tp.table.owner}</th>
-                  <th>{tp.table.due}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {shown.map((item) => {
-                  const s = status(item);
-                  const expanded = openId === item.id;
-                  const k = currentIndex(item);
-                  const step = item.steps[k];
-                  const last = lastDone(item);
-                  return [
-                    <tr key={item.id} className={`oil-row pack-${s}${expanded ? ' oil-row-open' : ''}`} onClick={() => setOpenId(expanded ? null : item.id)}>
-                      <td className="n">
-                        <strong>{item.id}</strong>
-                      </td>
-                      <td className="oil-text">
-                        <strong className="oil-clamp" title={item.title}>
-                          {item.title || tp.noTitle}
-                        </strong>
-                        {(item.project || item.note) && (
-                          <small className="muted oil-clamp" title={item.note}>
-                            {[item.project, item.note].filter(Boolean).join(' · ')}
-                          </small>
-                        )}
-                      </td>
-                      <td>{item.steps.length ? <StepChain item={item} today={today} /> : <span className="muted">{tp.noSteps}</span>}</td>
-                      <td className="pack-last">
-                        {last ? (
-                          <>
-                            ✓ {last.text} <span className="muted">· {formatDayShort(dayToIso(last.done!), locale)}</span>
-                          </>
-                        ) : (
-                          <span className="muted">—</span>
-                        )}
-                      </td>
-                      <td className="pack-waiting">{step ? <strong>{step.text || '—'}</strong> : <span className={`oil-chip oil-chip-${s === 'cancelled' ? 'cancelled' : 'done'}`}>{tp.status[s]}</span>}</td>
-                      <td className="oil-owner">{step?.owner || (step ? '—' : '')}</td>
-                      <td className="cell-until">
-                        {step &&
-                          (step.due === null ? (
-                            <span className="muted">{tp.noDue}</span>
-                          ) : (
-                            <>
-                              <span className={s === 'overdue' ? 'cell-short' : s === 'week' ? 'pack-warn' : undefined}>{dayLabel(step.due)}</span>
-                              <small className={`cell-note${s === 'overdue' ? ' cell-short' : ''}`}>
-                                {s === 'overdue' ? tp.overdueDays.replace('{n}', String(today - step.due)) : s === 'week' ? tp.thisWeek : `CW ${isoWeek(step.due).week}`}
-                              </small>
-                            </>
-                          ))}
-                        {item.shifts.length > 0 && <small className="cell-note oil-shifted">{tp.shifted.replace('{n}', String(item.shifts.length))}</small>}
-                      </td>
-                    </tr>,
-                    expanded && (
-                      <tr key={`${item.id}-detail`} className={`oil-detail-row pack-${s}`}>
-                        <td colSpan={7}>
-                          <PackDetail
-                            item={item}
-                            today={today}
-                            name={name.trim()}
-                            owners={owners}
-                            projects={projects}
-                            change={(fn) => change(item.id, fn)}
-                            remove={() => remove(item.id)}
-                            close={() => setOpenId(null)}
-                            dayLabel={dayLabel}
-                          />
+      {view === 'timeline' && (
+        <div className="panel">
+          {shown.length === 0 ? (
+            <p className="muted">{list.items.length === 0 ? tp.emptyList : tp.empty}</p>
+          ) : (
+            <PackagingTimeline
+              items={shown}
+              today={today}
+              scale={scale}
+              onOpen={(id) => {
+                setView('list');
+                setOpenId(id);
+              }}
+            />
+          )}
+        </div>
+      )}
+
+      {view === 'list' && (
+        <div className="panel">
+          {list.items.length === 0 ? (
+            <p className="muted">{tp.emptyList}</p>
+          ) : shown.length === 0 ? (
+            <p className="muted">{tp.empty}</p>
+          ) : (
+            <div className="table-scroll">
+              <table className="table table-data oil-table pack-table">
+                <thead>
+                  <tr>
+                    <th className="n">{tp.table.id}</th>
+                    <th>{tp.table.item}</th>
+                    <th>{tp.table.steps}</th>
+                    <th>{tp.table.last}</th>
+                    <th>{tp.table.waiting}</th>
+                    <th>{tp.table.owner}</th>
+                    <th>{tp.table.due}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {shown.map((item) => {
+                    const s = status(item);
+                    const expanded = openId === item.id;
+                    const k = currentIndex(item);
+                    const step = item.steps[k];
+                    const last = lastDone(item);
+                    return [
+                      <tr key={item.id} className={`oil-row pack-${s}${expanded ? ' oil-row-open' : ''}`} onClick={() => setOpenId(expanded ? null : item.id)}>
+                        <td className="n">
+                          <strong>{item.id}</strong>
                         </td>
-                      </tr>
-                    ),
-                  ];
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-        <ul className="cov-legend">
-          <li className="muted">{tp.legendSteps}</li>
-          {(['done', 'current', 'late', 'next'] as const).map((k) => (
-            <li key={k}>
-              <i className={`pack-dot pack-dot-${k}`} aria-hidden="true" /> {tp.stepKinds[k]}
-            </li>
-          ))}
-        </ul>
-        <ul className="cov-legend">
-          <li className="muted">{tp.legend}</li>
-          {(['overdue', 'week', 'open', 'done', 'cancelled'] as const).map((s) => (
-            <li key={s}>
-              <span className={`oil-chip pack-chip-${s}`}>{tp.status[s]}</span>
-            </li>
-          ))}
-        </ul>
-      </div>
+                        <td className="oil-text">
+                          <strong className="oil-clamp" title={item.title}>
+                            {item.title || tp.noTitle}
+                          </strong>
+                          {(item.project || item.note) && (
+                            <small className="muted oil-clamp" title={item.note}>
+                              {[item.project, item.note].filter(Boolean).join(' · ')}
+                            </small>
+                          )}
+                        </td>
+                        <td>{item.steps.length ? <StepChain item={item} today={today} /> : <span className="muted">{tp.noSteps}</span>}</td>
+                        <td className="pack-last">
+                          {last ? (
+                            <>
+                              ✓ {last.text} <span className="muted">· {formatDayShort(dayToIso(last.done!), locale)}</span>
+                            </>
+                          ) : (
+                            <span className="muted">—</span>
+                          )}
+                        </td>
+                        <td className="pack-waiting">
+                          {step ? <strong>{step.text || '—'}</strong> : <span className={`oil-chip oil-chip-${s === 'cancelled' ? 'cancelled' : 'done'}`}>{tp.status[s]}</span>}
+                        </td>
+                        <td className="oil-owner">{step?.owner || (step ? '—' : '')}</td>
+                        <td className="cell-until">
+                          {step &&
+                            (step.due === null ? (
+                              <span className="muted">{tp.noDue}</span>
+                            ) : (
+                              <>
+                                <span className={s === 'overdue' ? 'cell-short' : s === 'week' ? 'pack-warn' : undefined}>{dayLabel(step.due)}</span>
+                                <small className={`cell-note${s === 'overdue' ? ' cell-short' : ''}`}>
+                                  {s === 'overdue' ? tp.overdueDays.replace('{n}', String(today - step.due)) : s === 'week' ? tp.thisWeek : `CW ${isoWeek(step.due).week}`}
+                                </small>
+                              </>
+                            ))}
+                          {item.shifts.length > 0 && <small className="cell-note oil-shifted">{tp.shifted.replace('{n}', String(item.shifts.length))}</small>}
+                        </td>
+                      </tr>,
+                      expanded && (
+                        <tr key={`${item.id}-detail`} className={`oil-detail-row pack-${s}`}>
+                          <td colSpan={7}>
+                            <PackDetail
+                              item={item}
+                              today={today}
+                              name={name.trim()}
+                              owners={owners}
+                              projects={projects}
+                              change={(fn) => change(item.id, fn)}
+                              remove={() => remove(item.id)}
+                              close={() => setOpenId(null)}
+                              dayLabel={dayLabel}
+                            />
+                          </td>
+                        </tr>
+                      ),
+                    ];
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+          <ul className="cov-legend">
+            <li className="muted">{tp.legendSteps}</li>
+            {(['done', 'current', 'late', 'next'] as const).map((k) => (
+              <li key={k}>
+                <i className={`pack-dot pack-dot-${k}`} aria-hidden="true" /> {tp.stepKinds[k]}
+              </li>
+            ))}
+          </ul>
+          <ul className="cov-legend">
+            <li className="muted">{tp.legend}</li>
+            {(['overdue', 'week', 'open', 'done', 'cancelled'] as const).map((s) => (
+              <li key={s}>
+                <span className={`oil-chip pack-chip-${s}`}>{tp.status[s]}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </section>
   );
 }
@@ -620,7 +690,14 @@ function StepRow({
       <div className="pack-step-body">
         <div className="pack-step-row">
           <input className="pack-step-text" aria-label={`${td.step} ${n}`} placeholder={td.stepPlaceholder} value={step.text} onChange={(e) => change((s) => ({ ...s, text: e.target.value }))} />
-          <input className="pack-step-owner" aria-label={`${td.owner} ${n}`} placeholder={td.owner} list={ownersId} value={step.owner} onChange={(e) => change((s) => ({ ...s, owner: e.target.value }))} />
+          <input
+            className="pack-step-owner"
+            aria-label={`${td.owner} ${n}`}
+            placeholder={td.owner}
+            list={ownersId}
+            value={step.owner}
+            onChange={(e) => change((s) => ({ ...s, owner: e.target.value }))}
+          />
           <input
             type="date"
             aria-label={`${td.due} ${n}`}

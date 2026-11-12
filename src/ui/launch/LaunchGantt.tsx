@@ -1,20 +1,17 @@
-import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
-import { dayToIso, isoWeek, mondayOf, parseDay, type DayNumber } from '../../core/dates';
+import { useState } from 'react';
+import { dayToIso, parseDay, type DayNumber } from '../../core/dates';
 import { formatDayShort, formatQuantity, type Locale } from '../../core/format';
 import {
   clampProgress,
   customerColors,
-  DAY_WIDTH,
   groupStatus,
   internalOf,
   isPassed,
-  nextMonth,
   progressOf,
   renameProject,
   shiftDays,
   spanOf,
   statusOf,
-  timelineRange,
   timeProgress,
   updateProject,
   withEnd,
@@ -27,6 +24,7 @@ import {
   type LaunchScale,
 } from '../../core/launch';
 import { useI18n } from '../../i18n/I18nProvider';
+import { useTimeline } from '../timeline/useTimeline';
 
 export type Selection = { type: 'item'; id: number } | { type: 'project'; name: string } | null;
 
@@ -55,54 +53,6 @@ const PROGRESS_QUICK = [0, 25, 50, 75, 100];
 /** Počet barev zákaznických fází (gantt-c0 … gantt-c5), pak se opakují. */
 const CUSTOMER_COLORS = 6;
 const COLUMNS = 5;
-
-interface Segment {
-  start: DayNumber;
-  end: DayNumber;
-  label: string;
-  title?: string;
-}
-
-/** Popisky osy: horní řádek měsíce (u čtvrtletí čtvrtletí), dolní kalendářní týdny (u čtvrtletí měsíce). */
-function scaleSegments(from: DayNumber, to: DayNumber, scale: LaunchScale, locale: string): { top: Segment[]; bottom: Segment[]; months: DayNumber[] } {
-  const months: DayNumber[] = [];
-  for (let m = from; m < to; m = nextMonth(m)) months.push(m);
-  const monthName = (d: DayNumber, month: 'long' | 'short') =>
-    new Intl.DateTimeFormat(locale === 'cs' ? 'cs-CZ' : 'en-GB', {
-      month,
-      ...(month === 'long' ? { year: 'numeric' } : {}),
-      timeZone: 'UTC',
-    }).format(new Date(d * 86_400_000));
-  const monthSegments = (month: 'long' | 'short') =>
-    months.map((m) => ({
-      start: m,
-      end: Math.min(nextMonth(m), to),
-      label: monthName(m, month),
-    }));
-  if (scale === 'quarter') {
-    const top: Segment[] = [];
-    for (const m of months) {
-      const [y, mo] = dayToIso(m).split('-').map(Number) as [number, number];
-      const q = Math.floor((mo - 1) / 3) + 1;
-      const label = `Q${q} ${y}`;
-      const last = top.at(-1);
-      if (last?.label === label) last.end = Math.min(nextMonth(m), to);
-      else top.push({ start: m, end: Math.min(nextMonth(m), to), label });
-    }
-    return { top, bottom: monthSegments('short'), months };
-  }
-  const bottom: Segment[] = [];
-  for (let d = mondayOf(from); d < to; d += 7) {
-    const w = isoWeek(d).week;
-    bottom.push({
-      start: Math.max(d, from),
-      end: Math.min(d + 7, to),
-      label: scale === 'week' ? `CW ${w}` : String(w),
-      title: `CW ${w}`,
-    });
-  }
-  return { top: monthSegments('long'), bottom, months };
-}
 
 export function LaunchGantt({
   plan,
@@ -146,34 +96,9 @@ export function LaunchGantt({
 }) {
   const { t, locale } = useI18n();
   const tl = t.launch;
-  const { from, to } = timelineRange(rangeItems, today);
-  const px = DAY_WIDTH[scale];
-  const width = Math.round((to - from) * px);
-  const x = (d: DayNumber) => Math.round((d - from) * px);
-  const { top, bottom, months } = scaleSegments(from, to, scale, locale);
-  // Po otevření a změně měřítka se osa posune tak, aby dnešek byl vidět (s dvěma týdny před ním).
-  const scroller = useRef<HTMLDivElement>(null);
-  const todayX = x(Math.max(from, today - 14));
-  useEffect(() => {
-    if (scroller.current) scroller.current.scrollLeft = todayX;
-  }, [scale, todayX]);
+  const span = spanOf(rangeItems);
+  const { px, x, scroller, track, head } = useTimeline({ days: span ? [span.start, span.end] : [], today, scale, locale, todayLabel: tl.today, axisLabel: tl.table.timeline });
   const short = (d: DayNumber) => formatDayShort(dayToIso(d), locale);
-  const trackStyle = {
-    width: `${width}px`,
-    minWidth: `${width}px`,
-    '--gantt-week': `${7 * px}px`,
-    '--gantt-offset': `${x(mondayOf(from))}px`,
-  } as CSSProperties;
-  const todayLine = today >= from && today < to ? <span className="gantt-today" style={{ left: `${x(today) + px / 2}px` }} aria-hidden="true" /> : null;
-  const monthLines = months.slice(1).map((m) => <span key={m} className="gantt-month-line" style={{ left: `${x(m)}px` }} aria-hidden="true" />);
-
-  const track = (content: ReactNode) => (
-    <td className={`gantt-track${scale === 'quarter' ? '' : ' gantt-weeks'}`} style={trackStyle}>
-      {monthLines}
-      {todayLine}
-      {content}
-    </td>
-  );
 
   // Zákaznické termíny: barva podle fáze v projektu; interní řádky: barva podle plnění (stavu).
   const colors = new Map(plan.projects.map((p) => [p.name, customerColors(plan.items.filter((i) => i.project === p.name))]));
@@ -308,43 +233,9 @@ export function LaunchGantt({
             <th className="gantt-due" rowSpan={2}>
               {tl.table.due}
             </th>
-            <th className="gantt-scale" style={{ width: `${width}px`, minWidth: `${width}px` }} aria-label={tl.table.timeline}>
-              {top.map((s) => (
-                <span
-                  key={s.start}
-                  className="gantt-seg gantt-seg-top"
-                  style={{
-                    left: `${x(s.start)}px`,
-                    width: `${x(s.end) - x(s.start)}px`,
-                  }}
-                >
-                  {s.label}
-                </span>
-              ))}
-            </th>
+            {head.top}
           </tr>
-          <tr>
-            <th className="gantt-scale gantt-scale-bottom" style={{ width: `${width}px`, minWidth: `${width}px` }}>
-              {bottom.map((s) => (
-                <span
-                  key={s.start}
-                  className="gantt-seg"
-                  style={{
-                    left: `${x(s.start)}px`,
-                    width: `${x(s.end) - x(s.start)}px`,
-                  }}
-                  title={s.title}
-                >
-                  {x(s.end) - x(s.start) >= 16 ? s.label : ''}
-                </span>
-              ))}
-              {today >= from && today < to && (
-                <span className="gantt-today-tag" style={{ left: `${x(today) + px / 2}px` }}>
-                  {tl.today}
-                </span>
-              )}
-            </th>
-          </tr>
+          <tr>{head.bottom}</tr>
         </thead>
         <tbody>
           {rows.map((row) => {
