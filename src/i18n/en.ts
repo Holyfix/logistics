@@ -1820,7 +1820,7 @@ export const en: Messages = {
       kind: 'Kind',
       sorting: 'For sorting',
       missing: 'Short pcs',
-      prioNote: 'For quality: only uncovered parts and how many pieces they lack per planned build day – these must be sorted from the locations before sorting (locations excluded from the MC and MF stock). For sorting = pieces in those locations (red when not enough); Short pcs = total uncovered. Within each kind by when the part runs short, on a tie more missing pieces first. Packed and shipped doors and parts missing in the key are not counted.',
+      prioNote: 'For quality: Middlefield (MF) only, only uncovered parts and how many pieces they lack per planned build day – these must be sorted from the locations before sorting (locations excluded from the MF stock). For sorting = pieces in those locations (red when not enough); Short pcs = total uncovered. Sorted by when the part runs short, on a tie more missing pieces first. Packed and shipped doors and parts missing in the key are not counted.',
       matrixNote: 'All cars from the matrix in planned build order (without the filters from the app), door status in the Order Status Matrix colours. MC and MF: green in stock, red short, grey missing in the key, blue MC = TPO Maincarrier (not counted); no badge = packed or shipped doors (status 50+), not counted.',
     },
   },

@@ -436,12 +436,12 @@ Klíč MC/MF musí ležet ve složce `Sekvence`: mimo ni by se podle „Mapping�
   stavby, záporné červeně, zítřek zeleně orámovaný) a list **Potřeba po dnech** (kusy dílu sečtené po dnech plánované
   stavby, červeně dny, kdy sklad nestačí, součet za Maincarrier a Middlefield); díly v pořadí priority (druh, pak
   díly, které chybí nejdřív) s „chybí od“ (čas stavby, vůz a dveře).
-- Export obsahuje vždy všechno (bez filtrů z aplikace); na listech Coverage, Potřeba po dnech a PRIO Sorting jsou
+- Export obsahuje vždy všechno (bez filtrů z aplikace); na listech Coverage a Potřeba po dnech jsou
   Maincarrier a Middlefield skupiny, které jde v Excelu sbalit a rozbalit (tlačítka −/+ vlevo, jako u odvolávek);
   řádek skupiny ukazuje počet dílů, u Potřeby po dnech i součty po dnech.
-- List **PRIO Sorting** (pro kvalitu): jen **nepokryté** díly a kolik kusů jim chybí po dnech plánované stavby – ty je
-  potřeba vytřídit z lokací před sortingem (lokace vyřazené ze skladu MC a MF se do skladu nepočítají, takže záporné
-  pokrytí = nezkontrolované kusy). Sloupce: pořadí v rámci druhu, díl, druh, sklad, **K sortingu** (kusy ve vyřazených
+- List **PRIO Sorting** (pro kvalitu): jen **Middlefield (MF)**, Maincarrier se pro sorting nesleduje; jen **nepokryté**
+  díly a kolik kusů jim chybí po dnech plánované stavby – ty je potřeba vytřídit z lokací před sortingem (lokace
+  vyřazené ze skladu MF se do skladu nepočítají, takže záporné pokrytí = nezkontrolované kusy). Sloupce: pořadí, díl, druh, sklad, **K sortingu** (kusy ve vyřazených
   lokacích; červeně, když nestačí), **Chybí ks** (celkem nepokryto), chybí od a chybějící kusy po dnech. Řazení podle
   toho, kdy díl začne chybět, při shodě víc chybějících kusů dřív.
 - **Chybějící klíč** ukazuje modul **Data** (panel Sekvence) jako u kontroly mapování ostatních modulů: kombinace druhu,
