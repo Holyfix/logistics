@@ -19,7 +19,7 @@ Pořadí skupin na rozcestníku (karty se čtou shora dolů po sloupcích):
 | Zákazníci | **Mimořádné přepravy** | Kolik stojí mimořádné přepravy a proč vznikají? | Později |
 | Materiál a sklad | **Komponenty** | Máme materiál na výrobu? | Fáze 4 (probíhá) |
 | Materiál a sklad | **Zásoby** | Nemáme zásob moc nebo málo? | Fáze 9 (probíhá), přehled, díly a blokace hotové |
-| Materiál a sklad | **Obaly** | Na kolik dílů a dní vystačí obaly? | Fáze 5 |
+| Materiál a sklad | **Obaly** | Na co se u obalů čeká, kdo to má a do kdy? (později i na kolik dní vystačí) | Sledování bodů hotové, inventura obalů Fáze 5 |
 | Výroba | **Plánování** | Co a kdy vyrobit na linkách, aby byl zákazník pokrytý? | Fáze 7 (probíhá), montáž hotová |
 | Dodavatelé | **Příjem** | Co má dnes a zítra přijet a co je po termínu? | Fáze 9 |
 | Dodavatelé | **Dodavatelé** (OTD inbound) | Dodávají nám dodavatelé včas? | Později |
@@ -184,6 +184,25 @@ Filtry projekt, kategorie, strana (LHD/RHD) a varianta z kmenových dat se ovliv
 - Později: FOA, SLH a IMM navázané na plán montáže přes kusovník, plán vs. skutečnost a prostoje (z MES)
 
 ### Obaly
+**Sledování bodů (hotové):**
+- ✅ Bod (nový obal, úprava, nákup): název, projekt, stav / poznámka a řada **kroků** – každý krok má text, kdo
+  a termín (datum); aktuální krok = první nesplněný = **na co se čeká**
+- ✅ Seznam jako OIL: pruh u řádku podle aktuálního kroku (červená po termínu, oranžová termín do neděle, modrá
+  otevřeno, zelená hotovo, šedá zrušeno), kroky jako řetízek kroužků (splněno / čeká se / další), naposledy splněný
+  krok s datem, **Čeká se na – Kdo – Termín** (po termínu N d, tento týden, CW); řazení po termínu → tento týden →
+  podle termínu, hotové a zrušené na konci
+- ✅ Ukazatele: otevřené body (hotové, zrušené), po termínu, tento týden, kroky bez termínu
+- ✅ Filtry Otevřené / Po termínu / Tento týden / Hotové / Vše, projekt, kdo (odpovědný za aktuální krok), hledání
+- ✅ Detail: kroky pod sebou (text, kdo, termín, ✓ Splněno s dnem splnění, Vrátit, posun nahoru / dolů, smazání),
+  + Přidat krok; první termín se nastaví hned, změna termínu je posun s povinným důvodem a jménem (historie posunů);
+  komentáře s datem a autorem; zrušení bodu a trvalé smazání
+- ✅ **Import checklistu** z Excelu: list se sloupci Description, Status, Step 0, Step 1 … – body se přidají na konec;
+  z textu kroku se oddělí termín (`16.11.`, `16.11.2026`, `CW50`, `CW02/27` = pátek týdne) a jméno v závorce
+  (`… - 20.11. (Novák)`); krok se dvěma termíny zůstane celý k ruční úpravě
+- ✅ Uložení do `Obaly/Obaly.xlsx` (listy Obaly, Kroky, Komentáře, Posuny termínu); na rozcestníku počet bodů po
+  termínu / tento týden
+
+**Inventura obalů (Fáze 5):**
 - **Zápis:** každé ráno se zapíše počet obalů podle inventury (po typech obalů)
 - **Výpočet:** počet obalů × počet dílů v obalu = kolik dílů lze zabalit. Porovnáním s odvolávkami vyjde, na kolik dní obaly vystačí.
 - Vývoj stavu obalů v čase
@@ -296,5 +315,5 @@ Filtry projekt, kategorie, strana (LHD/RHD) a varianta z kmenových dat se ovliv
 
 ## Zápis dat
 
-Plánování, OIL, KPI a Launch už do sdílené složky zapisují (`Plan/`, `OIL/OIL.xlsx`, `KPI/KPI.xlsx`, `Launch/Launch.xlsx`); Obaly a později Mimořádné přepravy přibudou. Bez serveru se záznamy ukládají
+Plánování, OIL, KPI, Launch a Obaly už do sdílené složky zapisují (`Plan/`, `OIL/OIL.xlsx`, `KPI/KPI.xlsx`, `Launch/Launch.xlsx`, `Obaly/Obaly.xlsx`); později Mimořádné přepravy přibudou. Bez serveru se záznamy ukládají
 jako malé samostatné soubory do sdílené složky (návrh v [ADR 0003](adr/0003-zapis-do-sdilene-slozky.md)).

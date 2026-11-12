@@ -10,6 +10,7 @@ import type { PlanSettings } from '../core/planning/settings';
 import type { KpiData } from '../core/kpi';
 import type { OilList } from '../core/oil';
 import type { LaunchPlan } from '../core/launch';
+import type { PackList } from '../core/packaging';
 import type { SkillData } from '../core/skills';
 import type { VacationData } from '../core/vacations';
 import type { MatrixOrder } from '../core/material/matrix';
@@ -47,6 +48,8 @@ export interface LoadedData {
   kpi: { path: string; lastModified: number; data: KpiData } | null;
   /** Launch (Launch/Launch.xlsx): nejnovější soubor; bez souboru chybí. */
   launch?: { path: string; lastModified: number; plan: LaunchPlan };
+  /** Obaly (Obaly/Obaly.xlsx): nejnovější soubor aplikace; checklist ve složce se nenačítá (jde importovat v modulu). */
+  packaging?: { path: string; lastModified: number; list: PackList };
   /** Dovolené (People/Holiday/Dovolene.xlsx): nejnovější soubor; bez souboru chybí. */
   vacations?: { path: string; lastModified: number; data: VacationData };
   /** Exporty docházky (obvykle šifrované): jen obsah souborů, rozšifrují se až v modulu Docházka heslem. */
@@ -98,6 +101,11 @@ async function parseInWorker(request: Omit<ParseRequest, 'id' | 'buffer'> & { fi
  * Export docházky: rozšifrování heslem a zpracování na pozadí. Obsah souboru se předá kopií (originál zůstane
  * v načtených datech pro další odemčení); heslo se nikam neukládá.
  */
+/** Import checklistu obalů (soubor vybraný v modulu Obaly). */
+export function parsePackagingFile(name: string, buffer: ArrayBuffer): Promise<ParseResponse> {
+  return sendToWorker({ kind: 'packaging', format: 'xlsx', name }, buffer);
+}
+
 export function parseAttendance(file: { path: string; buffer: ArrayBuffer }, password: string): Promise<ParseResponse> {
   return sendToWorker({ kind: 'attendance', format: 'xlsx', name: file.path, password }, file.buffer.slice(0));
 }
@@ -128,6 +136,7 @@ export async function loadFolder(source: FolderSource, onProgress: (p: LoadProgr
   const oilFiles = files.filter((f) => classifyPath(f.path) === 'oil').sort((a, b) => b.lastModified - a.lastModified);
   const kpiFiles = files.filter((f) => classifyPath(f.path) === 'kpi').sort((a, b) => b.lastModified - a.lastModified);
   const launchFiles = files.filter((f) => classifyPath(f.path) === 'launch').sort((a, b) => b.lastModified - a.lastModified);
+  const packagingFiles = files.filter((f) => classifyPath(f.path) === 'packaging').sort((a, b) => b.lastModified - a.lastModified);
   const vacationFiles = files.filter((f) => classifyPath(f.path) === 'vacations').sort((a, b) => b.lastModified - a.lastModified);
   const skillFiles = files.filter((f) => classifyPath(f.path) === 'skills').sort((a, b) => b.lastModified - a.lastModified);
   const attendanceFiles = files.filter((f) => classifyPath(f.path) === 'attendance').sort((a, b) => a.path.localeCompare(b.path));
@@ -149,7 +158,7 @@ export async function loadFolder(source: FolderSource, onProgress: (p: LoadProgr
   }
 
   const parsed: { file: SourceFile; exp: CallOffExport }[] = [];
-  const total = calloffFiles.length + (masterFiles.length > 0 ? 1 : 0) + coverageFiles.size + (stockFiles.length > 0 ? 1 : 0) + bomFiles.length + planFiles.length + (settingsFiles.length > 0 ? 1 : 0) + (oilFiles.length > 0 ? 1 : 0) + (kpiFiles.length > 0 ? 1 : 0) + (launchFiles.length > 0 ? 1 : 0) + (vacationFiles.length > 0 ? 1 : 0) + (skillFiles.length > 0 ? 1 : 0) + transitFiles.length + sequenceFiles.length;
+  const total = calloffFiles.length + (masterFiles.length > 0 ? 1 : 0) + coverageFiles.size + (stockFiles.length > 0 ? 1 : 0) + bomFiles.length + planFiles.length + (settingsFiles.length > 0 ? 1 : 0) + (oilFiles.length > 0 ? 1 : 0) + (kpiFiles.length > 0 ? 1 : 0) + (launchFiles.length > 0 ? 1 : 0) + packagingFiles.length + (vacationFiles.length > 0 ? 1 : 0) + (skillFiles.length > 0 ? 1 : 0) + transitFiles.length + sequenceFiles.length;
   let done = 0;
   onProgress({ done, total });
 
@@ -300,6 +309,18 @@ export async function loadFolder(source: FolderSource, onProgress: (p: LoadProgr
     onProgress({ done: ++done, total });
   }
 
+  // Obaly: platí nejnovější soubor aplikace; checklist (Description | Step 0 …) se jen importuje v modulu.
+  let packaging: LoadedData['packaging'];
+  for (const file of packagingFiles) {
+    const response = await parseInWorker({ kind: 'packaging', format: 'xlsx', name: file.path, file: file.file });
+    if (response.kind === 'packaging' && response.result.ok && response.result.source === 'app') {
+      if (packaging) failed.push({ path: file.path, reason: 'superseded', detail: packaging.path });
+      else packaging = { path: file.path, lastModified: file.lastModified, list: response.result.value };
+    } else if (response.kind === 'packaging' && !response.result.ok) failed.push({ path: file.path, reason: 'missingColumns', detail: response.result.columns.join(', ') });
+    else if (response.kind === 'error') failed.push({ path: file.path, reason: 'unreadable', detail: response.message });
+    onProgress({ done: ++done, total });
+  }
+
   // Lidé: Dovolené a Skill Matrix – platí nejnovější soubor každého druhu.
   let vacations: LoadedData['vacations'];
   let skills: LoadedData['skills'];
@@ -353,6 +374,7 @@ export async function loadFolder(source: FolderSource, onProgress: (p: LoadProgr
     oil,
     kpi,
     ...(launch ? { launch } : {}),
+    ...(packaging ? { packaging } : {}),
     ...(vacations ? { vacations } : {}),
     ...(skills ? { skills } : {}),
     ...(attendance.length ? { attendance } : {}),

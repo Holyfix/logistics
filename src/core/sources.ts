@@ -1,6 +1,6 @@
 // Rozpoznání souborů ve sdílené složce podle cesty a názvu.
 
-export type SourceKind = 'calloffs' | 'masterdata' | 'coverage' | 'stock' | 'bom' | 'plan' | 'planSettings' | 'oil' | 'kpi' | 'launch' | 'vacations' | 'skills' | 'attendance' | 'transit' | 'sequence' | 'ignored';
+export type SourceKind = 'calloffs' | 'masterdata' | 'coverage' | 'stock' | 'bom' | 'plan' | 'planSettings' | 'oil' | 'kpi' | 'launch' | 'packaging' | 'vacations' | 'skills' | 'attendance' | 'transit' | 'sequence' | 'ignored';
 export type SourceFormat = 'csv' | 'xlsx';
 
 function normalize(s: string): string {
@@ -28,6 +28,7 @@ export function formatOf(path: string): SourceFormat | null {
  * OIL: Excel ve složce „oil“ nebo s názvem začínajícím „oil“.
  * KPI: Excel ve složce „kpi“ nebo s názvem začínajícím „kpi“.
  * Launch: Excel ve složce „launch“ nebo s názvem začínajícím „launch“ (náběh projektů).
+ * Obaly: Excel ve složce „obaly“ / „packaging“ nebo s názvem začínajícím „obaly“ (sledování bodů pro obaly).
  * Docházka: Excel ve složce „dochazka“ / „attendance“, nebo s názvem začínajícím „pruchody“ / „dochazka“ / „attendance“
  *   (export docházky, obvykle zašifrovaný heslem).
  * Lidé: Excel ve složce „Holiday“ / „Dovolene“ nebo s názvem začínajícím „dovolen“ / „vacation“ (Dovolené, např.
@@ -45,6 +46,7 @@ export function classifyPath(path: string): SourceKind {
   if (folders.some((f) => /^(sekvence|sequence)$/.test(f))) return 'sequence';
   // Dřívější složka samostatné stránky pokrytí materiálu: soubory z ní se nečtou (patří do složky Sekvence).
   if (folders.some((f) => /^(material|materialy?)$/.test(f))) return 'ignored';
+  if (folders.some((f) => /^(obaly|packaging)$/.test(f)) || /^obaly[ _.-]/.test(name)) return formatOf(path) === 'xlsx' ? 'packaging' : 'ignored';
   if (folders.includes('launch') || /^launch[ _.-]/.test(name)) return formatOf(path) === 'xlsx' ? 'launch' : 'ignored';
   if (folders.some((f) => /^(dochazka|attendance)$/.test(f)) || /^(pruchody|dochazk|attendance)/.test(name)) return formatOf(path) === 'xlsx' ? 'attendance' : 'ignored';
   if (folders.some((f) => /^(holidays?|dovolene|vacations?)$/.test(f)) || /^(dovolen|vacation)/.test(name)) return formatOf(path) === 'xlsx' ? 'vacations' : 'ignored';
