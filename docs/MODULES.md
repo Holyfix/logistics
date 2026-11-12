@@ -192,6 +192,10 @@ Filtry projekt, kategorie, strana (LHD/RHD) a varianta z kmenových dat se ovliv
   krok s datem, **Čeká se na – Kdo – Termín** (po termínu N d, tento týden, CW); řazení po termínu → tento týden →
   podle termínu, hotové a zrušené na konci
 - ✅ Ukazatele: otevřené body (hotové, zrušené), po termínu, tento týden, kroky bez termínu
+- ✅ **Časová osa (Gantt)** – přepínač Seznam / Časová osa (prohlížeč si ho pamatuje), stejné filtry jako seznam:
+  týdny (CW a pondělí), čára Dnes, u bodu pruh od prvního do posledního kroku (zeleně splněná část) a kroky jako
+  kosočtverce (splněno zeleně v den splnění, aktuální krok oranžově, po termínu červeně, další šedě); ▸ rozbalí kroky
+  na vlastní řádky, kroky bez termínu ve sloupci Bez termínu; kliknutí na název nebo kosočtverec otevře detail v seznamu
 - ✅ Filtry Otevřené / Po termínu / Tento týden / Hotové / Vše, projekt, kdo (odpovědný za aktuální krok), hledání
 - ✅ Detail: kroky pod sebou (text, kdo, termín, ✓ Splněno s dnem splnění, Vrátit, posun nahoru / dolů, smazání),
   + Přidat krok; první termín se nastaví hned, změna termínu je posun s povinným důvodem a jménem (historie posunů);
