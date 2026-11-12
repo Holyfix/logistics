@@ -317,4 +317,14 @@ describe('export Sekvence', () => {
     expect(prio!.data[7]![5]).not.toHaveProperty('textColor');
     expect(prio!.outline!.slice(6, 8)).toEqual([undefined, { level: 1 }]);
   });
+
+  it('list PRIO Sorting: jen Middlefield, nepokrytý Maincarrier v něm není', () => {
+    const short = buildMaterialCoverage({ matrix, key: key.value, stock: { MC: new Map(), MF: new Map([['MF-1', 1]]) }, today: day(5) });
+    expect(short.parts.find((p) => p.item === 'MC-1')?.firstShort).toBeTruthy();
+    const sheet = sequenceReport(short.parts, short.days, texts, { boundary: day(6), shortText: () => '', sortingStock: () => null, cars: short.cars, carTexts: () => ({ planned: '', material: '', tone: 'ok' }) })[3]!;
+    const items = sheet.data.map((row) => values(row)[1]);
+    expect(items).toContain('MF-1');
+    expect(items).not.toContain('MC-1');
+    expect(sheet.data.some((row) => values(row).some((v) => typeof v === 'string' && v.startsWith('Maincarrier')))).toBe(false);
+  });
 });

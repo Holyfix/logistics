@@ -1822,7 +1822,7 @@ export const cs = {
       kind: 'Druh',
       sorting: 'K sortingu',
       missing: 'Chybí ks',
-      prioNote: 'Pro kvalitu: jen nepokryté díly a kolik kusů jim chybí po dnech plánované stavby – ty je potřeba vytřídit z lokací před sortingem (lokace vyřazené ze skladu MC a MF). K sortingu = kusy v těchto lokacích (červeně, když nestačí); Chybí ks = celkem nepokryto. V každém druhu podle toho, kdy díl začne chybět, při shodě víc chybějících kusů dřív. Zabalené a odeslané dveře a díly, které chybí v klíči, se nepočítají.',
+      prioNote: 'Pro kvalitu: jen Middlefield (MF), jen nepokryté díly a kolik kusů jim chybí po dnech plánované stavby – ty je potřeba vytřídit z lokací před sortingem (lokace vyřazené ze skladu MF). K sortingu = kusy v těchto lokacích (červeně, když nestačí); Chybí ks = celkem nepokryto. Řazení podle toho, kdy díl začne chybět, při shodě víc chybějících kusů dřív. Zabalené a odeslané dveře a díly, které chybí v klíči, se nepočítají.',
       matrixNote: 'Všechny vozy z matice v pořadí plánované stavby (bez filtrů z aplikace), stav dveří v barvách Order Status Matrix. MC a MF: zeleně na skladě, červeně chybí, šedě chybí v klíči, modře MC = TPO Maincarrier (nepočítá se); bez štítku zabalené nebo odeslané dveře (stav 50+), které se nepočítají.',
     },
   },

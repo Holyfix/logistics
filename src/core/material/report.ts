@@ -219,7 +219,7 @@ export function sequenceReport(
   });
   const head = [...titleRows(texts, width), ...headerRows(labels, days, boundary, texts)];
 
-  // PRIO Sorting (pro kvalitu): jen nepokryté díly a kolik kusů jim chybí po dnech – to je potřeba vytřídit z lokací
+  // PRIO Sorting (pro kvalitu): jen Middlefield, jen nepokryté díly a kolik kusů jim chybí po dnech – to je potřeba vytřídit z lokací
   // před sortingem (do skladu se nepočítají). Chybějící kusy dne = o kolik vzroste nepokrytá potřeba (−stav skladu).
   // V každém druhu podle toho, kdy díl začne chybět (při shodě víc chybějících kusů dřív), s pořadím v rámci druhu.
   const uncovered = (p: PartCoverage) => {
@@ -234,9 +234,12 @@ export function sequenceReport(
     return { overdue: short((p.stock ?? 0) - p.overdue), perDay, total: short(p.balance.at(-1) ?? (p.stock ?? 0) - p.overdue) };
   };
   const shortAt = (p: PartCoverage) => (p.firstShort ? (p.firstShort.planned ?? -Infinity) : Infinity);
-  const prioLabels = [texts.order, texts.item, texts.kind, texts.description, texts.stock, texts.sorting, texts.missing, ...(anyOverdue ? [texts.overdue] : []), texts.shortFrom];
+  // Jen Middlefield: Maincarrier se pro sorting nesleduje.
+  const prioGroups = groups.filter((g) => g.kind === 'MF');
+  const prioOverdue = prioGroups.some((g) => g.list.some((p) => p.overdue > 0));
+  const prioLabels = [texts.order, texts.item, texts.kind, texts.description, texts.stock, texts.sorting, texts.missing, ...(prioOverdue ? [texts.overdue] : []), texts.shortFrom];
   const prioWidth = prioLabels.length + days.length;
-  const prioRows = groups.flatMap(({ kind, list }): Row[] => {
+  const prioRows = prioGroups.flatMap(({ kind, list }): Row[] => {
     const sorted = list
       .filter((p) => p.firstShort)
       .map((p) => ({ p, u: uncovered(p) }))
@@ -255,7 +258,7 @@ export function sequenceReport(
             qty(p.stock ?? 0),
             toSort === null ? { value: '' } : { ...qty(toSort), ...(toSort < u.total ? { textColor: C.down } : {}) },
             { ...qty(u.total), fontWeight: 'bold', textColor: C.down },
-            ...(anyOverdue ? [u.overdue ? { ...qty(u.overdue), fontWeight: 'bold' as const, textColor: C.down } : { value: '' }] : []),
+            ...(prioOverdue ? [u.overdue ? { ...qty(u.overdue), fontWeight: 'bold' as const, textColor: C.down } : { value: '' }] : []),
             { value: shortText(p), textColor: C.down },
             ...u.perDay.map((q, k): ReportCell => {
               const d = days[k]!;
@@ -279,7 +282,7 @@ export function sequenceReport(
       [...titleRows(texts, prioWidth), ...headerRows(prioLabels, days, boundary, texts)],
       prioRows,
       [[], prioNote],
-      [{ width: 7 }, { width: 18 }, { width: 6 }, { width: 34 }, { width: 9 }, { width: 10 }, { width: 9 }, ...(anyOverdue ? [{ width: 10 }] : []), { width: 30 }, ...days.map(() => ({ width: 8 }))],
+      [{ width: 7 }, { width: 18 }, { width: 6 }, { width: 34 }, { width: 9 }, { width: 10 }, { width: 9 }, ...(prioOverdue ? [{ width: 10 }] : []), { width: 30 }, ...days.map(() => ({ width: 8 }))],
     ),
   ];
 }
